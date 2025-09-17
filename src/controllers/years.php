@@ -1,0 +1,90 @@
+<?php
+require_once __DIR__ . '/../helpers.php';
+
+function years_index(PDO $pdo){
+  require_login(); $u=uid();
+  // Determine min/max year from transactions & loan_payments & basic_incomes
+  $q = $pdo->prepare("SELECT MIN(EXTRACT(YEAR FROM d))::int AS y_min, MAX(EXTRACT(YEAR FROM d))::int AS y_max FROM (
+      SELECT occurred_on AS d FROM transactions WHERE user_id=?
+      UNION ALL SELECT paid_on FROM loan_payments lp JOIN loans l ON l.id=lp.loan_id AND l.user_id=?
+      UNION ALL SELECT valid_from FROM basic_incomes WHERE user_id=?
+  ) s");
+  $q->execute([$u,$u,$u]); $row=$q->fetch();
+  $ymin = $row && $row['y_min'] ? (int)$row['y_min'] : (int)date('Y');
+  $ymax = $row && $row['y_max'] ? (int)$row['y_max'] : (int)date('Y');
+  // Build yearly aggregates
+  $agg=$pdo->prepare("SELECT EXTRACT(YEAR FROM occurred_on)::int y,
+     SUM(CASE WHEN kind='income' THEN amount ELSE 0 END) income,
+     SUM(CASE WHEN kind='spending' THEN amount ELSE 0 END) spending
+     FROM transactions WHERE user_id=? GROUP BY y ORDER BY y DESC");
+  $agg->execute([$u]); $byYear=[]; foreach($agg as $r){ $byYear[(int)$r['y']]=$r; }
+  view('years/index', compact('ymin','ymax','byYear'));
+}
+
+function year_detail(PDO $pdo, int $year){
+  require_login(); $u=uid();
+  // Monthly sums for the year
+  $q=$pdo->prepare("SELECT EXTRACT(MONTH FROM occurred_on)::int m,
+     SUM(CASE WHEN kind='income' THEN amount ELSE 0 END) income,
+     SUM(CASE WHEN kind='spending' THEN amount ELSE 0 END) spending
+     FROM transactions WHERE user_id=? AND EXTRACT(YEAR FROM occurred_on)=? GROUP BY m ORDER BY m");
+  $q->execute([$u,$year]); $rows = $q->fetchAll();
+  // Map 1..12
+  $byMonth = array_fill(1,12,['income'=>0,'spending'=>0]);
+  foreach($rows as $r){ $byMonth[(int)$r['m']] = ['income'=>(float)$r['income'],'spending'=>(float)$r['spending']]; }
+  view('years/year', compact('year','byMonth'));
+}
+
+function month_detail(PDO $pdo, int $year, int $month){
+  require_login(); $u=uid();
+  // Transactions for month
+  $tx=$pdo->prepare("SELECT t.*, c.label AS cat_label FROM transactions t
+    LEFT JOIN categories c ON c.id=t.category_id
+    WHERE t.user_id=? AND EXTRACT(YEAR FROM occurred_on)=? AND EXTRACT(MONTH FROM occurred_on)=?
+    ORDER BY occurred_on DESC, id DESC");
+  $tx->execute([$u,$year,$month]); $tx=$tx->fetchAll();
+  $sumIn=0; $sumOut=0; foreach($tx as $r){ if($r['kind']==='income') $sumIn+=$r['amount']; else $sumOut+=$r['amount']; }
+
+  // Goals snapshot
+  $g=$pdo->prepare("SELECT SUM(current_amount) c, SUM(target_amount) t FROM goals WHERE user_id=? AND status='active'");
+  $g->execute([$u]); $g=$g->fetch();
+
+  // Emergency fund snapshot
+  $e=$pdo->prepare('SELECT total,target_amount,currency FROM emergency_fund WHERE user_id=?');
+  $e->execute([$u]); $e=$e->fetch();
+
+  // Scheduled payments due in that month
+  $sp=$pdo->prepare("SELECT id,title,amount,currency,next_due FROM scheduled_payments WHERE user_id=? AND next_due >= make_date(?, ?, 1) AND next_due < (make_date(?, ?, 1) + INTERVAL '1 month') ORDER BY next_due");
+  $sp->execute([$u,$year,$month,$year,$month]); $scheduled=$sp->fetchAll();
+
+  // Loan payments in that month
+  $lp=$pdo->prepare("SELECT l.name, lp.* FROM loan_payments lp JOIN loans l ON l.id=lp.loan_id AND l.user_id=?
+                     WHERE lp.paid_on >= make_date(?, ?, 1) AND lp.paid_on < (make_date(?, ?, 1) + INTERVAL '1 month')
+                     ORDER BY lp.paid_on DESC");
+  $lp->execute([$u,$year,$month,$year,$month]); $loanPayments=$lp->fetchAll();
+
+  // Categories for quick add
+  $cats = $pdo->prepare('SELECT id,label,kind FROM categories WHERE user_id=? ORDER BY kind,label');
+  $cats->execute([$u]); $cats=$cats->fetchAll();
+
+  view('years/month', compact('year','month','tx','sumIn','sumOut','g','e','scheduled','loanPayments','cats'));
+}
+
+/* Month‑scoped transaction POST endpoints (redirect back to the month page) */
+function month_tx_add(PDO $pdo){ verify_csrf(); require_login();
+  $y=(int)$_POST['y']; $m=(int)$_POST['m']; $u=uid();
+  $stmt=$pdo->prepare('INSERT INTO transactions(user_id,kind,category_id,amount,currency,occurred_on,note) VALUES(?,?,?,?,?,?,?)');
+  $stmt->execute([$u, $_POST['kind']==='income'?'income':'spending', !empty($_POST['category_id'])?(int)$_POST['category_id']:null, (float)$_POST['amount'], $_POST['currency']??'HUF', $_POST['occurred_on']??date('Y-m-d'), trim($_POST['note']??'')]);
+  redirect('/years/'.$y.'/'.$m);
+}
+function month_tx_edit(PDO $pdo){ verify_csrf(); require_login();
+  $y=(int)$_POST['y']; $m=(int)$_POST['m']; $u=uid();
+  $stmt=$pdo->prepare('UPDATE transactions SET kind=?, category_id=?, amount=?, currency=?, occurred_on=?, note=?, updated_at=NOW() WHERE id=? AND user_id=?');
+  $stmt->execute([$_POST['kind']==='income'?'income':'spending', !empty($_POST['category_id'])?(int)$_POST['category_id']:null, (float)$_POST['amount'], $_POST['currency']??'HUF', $_POST['occurred_on']??date('Y-m-d'), trim($_POST['note']??''), (int)$_POST['id'], $u]);
+  redirect('/years/'.$y.'/'.$m);
+}
+function month_tx_delete(PDO $pdo){ verify_csrf(); require_login();
+  $y=(int)$_POST['y']; $m=(int)$_POST['m']; $u=uid();
+  $pdo->prepare('DELETE FROM transactions WHERE id=? AND user_id=?')->execute([(int)$_POST['id'],$u]);
+  redirect('/years/'.$y.'/'.$m);
+}

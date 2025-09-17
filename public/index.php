@@ -185,7 +185,39 @@ switch ($path) {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') { emergency_tx_delete($pdo); }
         redirect('/emergency');
         break;
-    // TODO: add routes for years/months
+    
+    case '/years':
+        require_login();
+        require __DIR__ . '/../src/controllers/years.php';
+        years_index($pdo);
+        break;
+    case (preg_match('#^/years/([0-9]{4})$#', $path, $m) ? true : false):
+        require_login();
+        require __DIR__ . '/../src/controllers/years.php';
+        year_detail($pdo, (int)$m[1]);
+        break;
+    case (preg_match('#^/years/([0-9]{4})/([0-9]{1,2})$#', $path, $m) ? true : false):
+        require_login();
+        require __DIR__ . '/../src/controllers/years.php';
+        month_detail($pdo, (int)$m[1], (int)$m[2]);
+        break;
+
+    /* Month‑scoped tx helpers so forms can redirect back to the month page */
+    case '/months/tx/add':
+        require_login();
+        require __DIR__ . '/../src/controllers/years.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { month_tx_add($pdo); }
+        break;
+    case '/months/tx/edit':
+        require_login();
+        require __DIR__ . '/../src/controllers/years.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { month_tx_edit($pdo); }
+        break;
+    case '/months/tx/delete':
+        require_login();
+        require __DIR__ . '/../src/controllers/years.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { month_tx_delete($pdo); }
+        break;
 
     default:
         http_response_code(404);
