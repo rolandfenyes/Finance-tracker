@@ -113,7 +113,31 @@ switch ($path) {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') { loan_payment_add($pdo); }
         redirect('/loans');
         break;
-    // TODO: add routes for stocks, scheduled-payments, emergency-fund, years/months
+
+    case '/stocks':
+        require_login();
+        require __DIR__ . '/../src/controllers/stocks.php';
+        stocks_index($pdo);
+        break;
+    case '/stocks/buy':
+        require_login();
+        require __DIR__ . '/../src/controllers/stocks.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { trade_buy($pdo); }
+        redirect('/stocks');
+        break;
+    case '/stocks/sell':
+        require_login();
+        require __DIR__ . '/../src/controllers/stocks.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { trade_sell($pdo); }
+        redirect('/stocks');
+        break;
+    case '/stocks/trade/delete':
+        require_login();
+        require __DIR__ . '/../src/controllers/stocks.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { trade_delete($pdo); }
+        redirect('/stocks');
+        break;
+    // TODO: add routes for scheduled-payments, emergency-fund, years/months
 
     default:
         http_response_code(404);
