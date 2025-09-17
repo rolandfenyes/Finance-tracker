@@ -32,8 +32,9 @@ switch ($path) {
         break;
 
     case '/current-month':
-        require __DIR__ . '/../src/controllers/current_month.php';
-        current_month_controller($pdo);
+        require_login();
+        require __DIR__ . '/../src/controllers/month.php';
+        month_show($pdo); // current month
         break;
 
     case '/transactions/add':
@@ -246,8 +247,8 @@ switch ($path) {
         break;
     case (preg_match('#^/years/([0-9]{4})/([0-9]{1,2})$#', $path, $m) ? true : false):
         require_login();
-        require __DIR__ . '/../src/controllers/years.php';
-        month_detail($pdo, (int)$m[1], (int)$m[2]);
+        require __DIR__ . '/../src/controllers/month.php';
+        month_show($pdo, (int)$m[1], (int)$m[2]); // specific year/month
         break;
 
     /* Month‑scoped tx helpers so forms can redirect back to the month page */
