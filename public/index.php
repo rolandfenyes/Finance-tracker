@@ -82,6 +82,29 @@ switch ($path) {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') { currency_set_main($pdo); }
         redirect('/settings/currencies');
         break;
+    case '/settings/basic-incomes':
+        require_login();
+        require __DIR__ . '/../src/controllers/settings_incomes.php';
+        incomes_index($pdo);
+        break;
+    case '/settings/basic-incomes/add':
+        require_login();
+        require __DIR__ . '/../src/controllers/settings_incomes.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { incomes_add($pdo); }
+        redirect('/settings/basic-incomes');
+        break;
+    case '/settings/basic-incomes/edit':
+        require_login();
+        require __DIR__ . '/../src/controllers/settings_incomes.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { incomes_edit($pdo); }
+        redirect('/settings/basic-incomes');
+        break;
+    case '/settings/basic-incomes/delete':
+        require_login();
+        require __DIR__ . '/../src/controllers/settings_incomes.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { incomes_delete($pdo); }
+        redirect('/settings/basic-incomes');
+        break;
     
 
     case '/goals':

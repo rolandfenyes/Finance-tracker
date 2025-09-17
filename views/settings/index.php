@@ -41,6 +41,6 @@
         </li>
       <?php endforeach; ?>
     </ul>
-    <p class="text-xs text-gray-400 mt-2">(Add CRUD for basic incomes; supports raises via `valid_from`)</p>
+    <p class="text-sm mt-3"><a class="text-accent" href="/settings/basic-incomes">Manage basic incomes →</a></p>
   </div>
 </section>
