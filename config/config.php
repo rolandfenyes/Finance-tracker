@@ -4,8 +4,8 @@ return [
         'host' => '127.0.0.1',
         'port' => '5432',
         'name' => 'moneymap',
-        'user' => 'postgres',
-        'pass' => 'postgres',
+        'user' => 'rolandcsabafenyes',
+        'pass' => 'asd',
     ],
     'app' => [
         'name' => 'MoneyMap',

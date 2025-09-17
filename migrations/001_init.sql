@@ -116,7 +116,7 @@ CREATE TABLE IF NOT EXISTS stock_trades (
   currency TEXT REFERENCES currencies(code)
 );
 
-CREATE VIEW IF NOT EXISTS v_stock_positions AS
+CREATE OR REPLACE VIEW v_stock_positions AS
 SELECT user_id, symbol,
   SUM(CASE WHEN side='buy' THEN quantity ELSE -quantity END) AS qty,
   CASE WHEN SUM(CASE WHEN side='buy' THEN quantity ELSE -quantity END) <> 0
