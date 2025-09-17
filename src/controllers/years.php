@@ -36,7 +36,9 @@ function year_detail(PDO $pdo, int $year){
 }
 
 function month_detail(PDO $pdo, int $year, int $month){
+  require_once __DIR__ . '/../fx.php';
   require_login(); $u=uid();
+
   // Transactions for month
   $tx=$pdo->prepare("SELECT t.*, c.label AS cat_label FROM transactions t
     LEFT JOIN categories c ON c.id=t.category_id
@@ -47,6 +49,7 @@ function month_detail(PDO $pdo, int $year, int $month){
     // month boundaries
   $first = sprintf('%04d-%02d-01', $year, $month);
   $last  = date('Y-m-t', strtotime($first));
+  $main  = fx_user_main($pdo, $u);
 
   // Transactions for month
   $tx=$pdo->prepare("SELECT t.*, c.label AS cat_label
@@ -56,15 +59,16 @@ function month_detail(PDO $pdo, int $year, int $month){
     ORDER BY t.occurred_on DESC, t.id DESC");
   $tx->execute([$u,$first,$last]); $tx=$tx->fetchAll();
 
-  $sumIn=0; $sumOut=0;
-  foreach($tx as $r){ if($r['kind']==='income') $sumIn+=$r['amount']; else $sumOut+=$r['amount']; }
-
-  // add basic incomes active in this month
-  $qBi=$pdo->prepare("
-    SELECT COALESCE(SUM(amount),0) FROM basic_incomes
-    WHERE user_id=? AND valid_from <= ?::date AND (valid_to IS NULL OR valid_to >= ?::date)
-  ");
-  $qBi->execute([$u,$last,$first]); $sumIn += (float)$qBi->fetchColumn();
+  $sumIn_native=0; $sumOut_native=0; $sumIn_main=0; $sumOut_main=0;
+  foreach($bi as $b){
+      $amt = (float)$b['amount'];
+      $cur = strtoupper($b['currency'] ?? $main);   // <— enforce
+      $sumIn_native += $amt;
+      $sumIn_main   += fx_convert_basic_income($pdo, $amt, $cur, $main, $y, $m);
+  }
+  // basic incomes
+  $bi=$pdo->prepare("SELECT amount,currency FROM basic_incomes WHERE user_id=? AND valid_from<=?::date AND (valid_to IS NULL OR valid_to>=?::date)");
+  $bi->execute([$u,$last,$first]); foreach($bi as $b){ $sumIn_native+=(float)$b['amount']; $sumIn_main+=fx_convert_basic_income($pdo,(float)$b['amount'],$b['currency']?:$main,$main,$year,$month); }
 
 
   // Goals snapshot
@@ -89,7 +93,7 @@ function month_detail(PDO $pdo, int $year, int $month){
   $cats = $pdo->prepare('SELECT id,label,kind FROM categories WHERE user_id=? ORDER BY kind,label');
   $cats->execute([$u]); $cats=$cats->fetchAll();
 
-  view('years/month', compact('year','month','tx','sumIn','sumOut','g','e','scheduled','loanPayments','cats'));
+  view('years/month', compact(`$sumIn_main,$sumOut_main,$sumIn_native,$sumOut_native,$main`));
 }
 
 /* Month‑scoped transaction POST endpoints (redirect back to the month page) */

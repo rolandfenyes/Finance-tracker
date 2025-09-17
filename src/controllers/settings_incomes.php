@@ -24,7 +24,8 @@ function incomes_add(PDO $pdo){
     if ($label === '') { $_SESSION['flash'] = 'Label required.'; return; }
 
     $amount     = (float)($_POST['amount'] ?? 0);
-    $currency   = $_POST['currency'] ?? 'HUF';
+    $currency = strtoupper(trim($_POST['currency'] ?? ''));
+    if ($currency === '') $currency = 'HUF';
     $valid_from = $_POST['valid_from'] ?: date('Y-m-d');
 
     $pdo->beginTransaction();

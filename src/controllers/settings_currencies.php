@@ -15,32 +15,35 @@ function currencies_index(PDO $pdo){
 }
 
 function currency_add(PDO $pdo){
-    verify_csrf(); require_login(); $u = uid();
-
+    verify_csrf(); require_login(); $u=uid();
     $code = strtoupper(trim($_POST['code'] ?? ''));
-    if ($code === '') return; // nothing selected
+    if ($code === '') return;
 
     // ensure currency exists
-    $exists = $pdo->prepare('SELECT 1 FROM currencies WHERE code = ?');
+    $exists = $pdo->prepare('SELECT 1 FROM currencies WHERE code=?');
     $exists->execute([$code]);
     if (!$exists->fetchColumn()) return;
 
-    // first currency for this user becomes main
-    $has = $pdo->prepare('SELECT COUNT(*) FROM user_currencies WHERE user_id = ?');
+    // first currency becomes main
+    $has = $pdo->prepare('SELECT COUNT(*) FROM user_currencies WHERE user_id=?');
     $has->execute([$u]);
     $isMain = ((int)$has->fetchColumn() === 0);
 
-    // insert with an explicit boolean binding
     $stmt = $pdo->prepare(
-        'INSERT INTO user_currencies(user_id, code, is_main)
-         VALUES (?, ?, ?)
-         ON CONFLICT (user_id, code) DO NOTHING'
+      'INSERT INTO user_currencies(user_id, code, is_main)
+       VALUES(?, ?, ?)
+       ON CONFLICT (user_id, code) DO NOTHING'
     );
     $stmt->bindValue(1, $u, PDO::PARAM_INT);
     $stmt->bindValue(2, $code, PDO::PARAM_STR);
-    $stmt->bindValue(3, $isMain, PDO::PARAM_BOOL);   // <— key change
+    $stmt->bindValue(3, $isMain, PDO::PARAM_BOOL);
     $stmt->execute();
+
+    // --- NEW: prefetch month-start rates so BI and summaries work immediately
+    require_once __DIR__ . '/../fx.php';
+    try { fx_prefetch_month_starts($pdo, $code, 18, 6); } catch (Throwable $e) { /* ignore */ }
 }
+
 
 
 function currency_remove(PDO $pdo){

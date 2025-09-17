@@ -4,6 +4,7 @@ $config = require __DIR__ . '/../config/config.php';
 require __DIR__ . '/../config/db.php';
 require __DIR__ . '/../src/helpers.php';
 require __DIR__ . '/../src/auth.php';
+require __DIR__ . '/../src/fx.php';
 
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $base = rtrim($config['app']['base_url'], '/');

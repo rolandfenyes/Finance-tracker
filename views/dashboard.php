@@ -2,32 +2,17 @@
 <section class="grid md:grid-cols-3 gap-4">
   <div class="bg-white rounded-2xl p-5 shadow-glass">
     <h2 class="font-medium">Net This Month</h2>
-    <?php require_login(); $u=uid();
-      $first = date('Y-m-01'); $last = date('Y-m-t');
-
-      // tx sums
-      $stmt=$pdo->prepare("
-        SELECT
-          COALESCE(SUM(CASE WHEN kind='income'   THEN amount ELSE 0 END),0) AS income_tx,
-          COALESCE(SUM(CASE WHEN kind='spending' THEN amount ELSE 0 END),0) AS spending_tx
-        FROM transactions
-        WHERE user_id=? AND occurred_on BETWEEN ?::date AND ?::date
-      ");
-      $stmt->execute([$u,$first,$last]);
-      $row=$stmt->fetch();
-      $incomeTx=(float)$row['income_tx']; $spendingTx=(float)$row['spending_tx'];
-
-      // basic incomes active this month
-      $bi=$pdo->prepare("
-        SELECT COALESCE(SUM(amount),0)
-        FROM basic_incomes
-        WHERE user_id=? AND valid_from <= ?::date AND (valid_to IS NULL OR valid_to >= ?::date)
-      ");
-      $bi->execute([$u,$last,$first]); $basic=(float)$bi->fetchColumn();
-
-      $net = ($incomeTx + $basic) - $spendingTx;
-    ?>
-    <p class="text-2xl mt-2 font-semibold"><?= moneyfmt($net) ?></p>
+    <?php require_login(); $u=uid(); require_once __DIR__.'/../config/db.php'; require_once __DIR__.'/../src/fx.php';
+      $first = date('Y-m-01'); $last = date('Y-m-t'); $main = fx_user_main($pdo,$u);
+      // Transactions
+      $tx=$pdo->prepare("SELECT kind, amount, currency, occurred_on FROM transactions WHERE user_id=? AND occurred_on BETWEEN ?::date AND ?::date");
+      $tx->execute([$u,$first,$last]); $sumIn=0; $sumOut=0; foreach($tx as $r){ $amt_main=fx_convert($pdo,(float)$r['amount'],$r['currency']?:$main,$main,$r['occurred_on']); if($r['kind']==='income') $sumIn+=$amt_main; else $sumOut+=$amt_main; }
+      // Basic incomes
+      $y=(int)date('Y'); $m=(int)date('n');
+      $bi=$pdo->prepare("SELECT amount,currency FROM basic_incomes WHERE user_id=? AND valid_from<=?::date AND (valid_to IS NULL OR valid_to>=?::date)");
+      $bi->execute([$u,$last,$first]); foreach($bi as $b){ $sumIn += fx_convert_basic_income($pdo,(float)$b['amount'],$b['currency']?:$main,$main,$y,$m); }
+      $net=$sumIn-$sumOut; ?>
+    <p class="text-2xl mt-2 font-semibold"><?= moneyfmt($net,$main) ?></p>
   </div>
   <div class="bg-white rounded-2xl p-5 shadow-glass">
     <h2 class="font-medium">Goals Progress</h2>

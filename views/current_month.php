@@ -1,10 +1,38 @@
 <section class="grid md:grid-cols-3 gap-4">
   <div class="bg-white rounded-2xl p-5 shadow-glass">
-    <h2 class="font-medium">This Month (<?= $y ?>‑<?= str_pad($m,2,'0',STR_PAD_LEFT) ?>)</h2>
-    <p class="mt-2 text-sm text-gray-500">Income: <strong><?= moneyfmt($sumIn) ?></strong></p>
-    <p class="mt-1 text-sm text-gray-500">Spending: <strong><?= moneyfmt($sumOut) ?></strong></p>
-    <p class="mt-1 text-sm">Net: <strong><?= moneyfmt($sumIn - $sumOut) ?></strong></p>
+    <h2 class="font-medium">This Month (<?= $y ?>-<?= str_pad($m,2,'0',STR_PAD_LEFT) ?>)</h2>
+
+    <p class="mt-2 text-sm text-gray-500">Income (main <?= htmlspecialchars($main) ?>):
+      <strong><?= moneyfmt($sumIn_main, $main) ?></strong>
+    </p>
+    <p class="mt-1 text-sm text-gray-500">Spending (main <?= htmlspecialchars($main) ?>):
+      <strong><?= moneyfmt($sumOut_main, $main) ?></strong>
+    </p>
+    <p class="mt-1 text-sm">Net (main):
+      <strong><?= moneyfmt($sumIn_main - $sumOut_main, $main) ?></strong>
+    </p>
+
+    <div class="mt-3 text-xs text-gray-500 space-y-1">
+      <div>
+        Native income:
+        <?php if (!empty($sumIn_native_by_cur)): ?>
+          <?php foreach ($sumIn_native_by_cur as $c=>$a): ?>
+            <span class="inline-block mr-2"><?= moneyfmt($a, $c) ?></span>
+          <?php endforeach; ?>
+        <?php else: ?>0.00<?php endif; ?>
+      </div>
+      <div>
+        Native spending:
+        <?php if (!empty($sumOut_native_by_cur)): ?>
+          <?php foreach ($sumOut_native_by_cur as $c=>$a): ?>
+            <span class="inline-block mr-2"><?= moneyfmt($a, $c) ?></span>
+          <?php endforeach; ?>
+        <?php else: ?>0.00<?php endif; ?>
+      </div>
+    </div>
   </div>
+
+
   <div class="bg-white rounded-2xl p-5 shadow-glass md:col-span-2">
     <h3 class="font-semibold mb-3">Quick Add</h3>
     <form class="grid sm:grid-cols-6 gap-2" method="post" action="/transactions/add">

@@ -1,10 +1,11 @@
 <?php $ym = sprintf('%04d-%02d', $year, $month); ?>
 <section class="grid md:grid-cols-3 gap-4">
   <div class="bg-white rounded-2xl p-5 shadow-glass">
-    <h2 class="font-medium"><?= date('F Y', mktime(0,0,0,$month,1,$year)) ?></h2>
-    <p class="mt-2 text-sm text-gray-500">Income: <strong><?= moneyfmt($sumIn) ?></strong></p>
-    <p class="mt-1 text-sm text-gray-500">Spending: <strong><?= moneyfmt($sumOut) ?></strong></p>
-    <p class="mt-1 text-sm">Net: <strong><?= moneyfmt($sumIn - $sumOut) ?></strong></p>
+    <h2 class="font-medium">This Month (<?= $y ?>‑<?= str_pad($m,2,'0',STR_PAD_LEFT) ?>)</h2>
+  <p class="mt-2 text-sm text-gray-500">Income (main <?= htmlspecialchars($main) ?>): <strong><?= moneyfmt($sumIn_main,$main) ?></strong></p>
+  <p class="mt-1 text-sm text-gray-500">Spending (main <?= htmlspecialchars($main) ?>): <strong><?= moneyfmt($sumOut_main,$main) ?></strong></p>
+  <p class="mt-1 text-sm">Net (main): <strong><?= moneyfmt($sumIn_main - $sumOut_main,$main) ?></strong></p>
+  <p class="mt-3 text-xs text-gray-400">Native totals (sum of entered amounts): Inc <?= moneyfmt($sumIn_native) ?> · Sp <?= moneyfmt($sumOut_native) ?></p>
   </div>
   <div class="bg-white rounded-2xl p-5 shadow-glass md:col-span-2">
     <h3 class="font-semibold mb-3">Quick Add</h3>
