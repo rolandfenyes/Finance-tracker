@@ -1,10 +1,12 @@
 <?php
 function view(string $name, array $data = []) {
-    extract($data);
+    global $pdo;            // <-- bring the PDO from global scope into this function
+    extract($data);         // makes $row, etc. available to the view
     include __DIR__ . '/../views/layout/header.php';
     include __DIR__ . '/../views/' . $name . '.php';
     include __DIR__ . '/../views/layout/footer.php';
 }
+
 
 function redirect(string $to) {
     header('Location: ' . $to);
