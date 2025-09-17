@@ -161,7 +161,31 @@ switch ($path) {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') { scheduled_delete($pdo); }
         redirect('/scheduled');
         break;
-    // TODO: add routes for emergency-fund, years/months
+
+    case '/emergency':
+        require_login();
+        require __DIR__ . '/../src/controllers/emergency.php';
+        emergency_index($pdo);
+        break;
+    case '/emergency/set':
+        require_login();
+        require __DIR__ . '/../src/controllers/emergency.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { emergency_set($pdo); }
+        redirect('/emergency');
+        break;
+    case '/emergency/tx/add':
+        require_login();
+        require __DIR__ . '/../src/controllers/emergency.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { emergency_tx_add($pdo); }
+        redirect('/emergency');
+        break;
+    case '/emergency/tx/delete':
+        require_login();
+        require __DIR__ . '/../src/controllers/emergency.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { emergency_tx_delete($pdo); }
+        redirect('/emergency');
+        break;
+    // TODO: add routes for years/months
 
     default:
         http_response_code(404);
