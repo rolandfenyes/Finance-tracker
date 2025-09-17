@@ -61,6 +61,7 @@ switch ($path) {
         require __DIR__ . '/../src/controllers/settings.php';
         settings_controller($pdo);
         break;
+    // Currencies
     case '/settings/currencies':
         require_login();
         require __DIR__ . '/../src/controllers/settings_currencies.php';
@@ -84,6 +85,7 @@ switch ($path) {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') { currency_set_main($pdo); }
         redirect('/settings/currencies');
         break;
+    // Basic incomes
     case '/settings/basic-incomes':
         require_login();
         require __DIR__ . '/../src/controllers/settings_incomes.php';
@@ -107,6 +109,31 @@ switch ($path) {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') { incomes_delete($pdo); }
         redirect('/settings/basic-incomes');
         break;
+    // Categories
+    case '/settings/categories':
+        require_login();
+        require __DIR__ . '/../src/controllers/categories.php';
+        categories_index($pdo);
+        break;
+    case '/settings/categories/add':
+        require_login();
+        require __DIR__ . '/../src/controllers/categories.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { categories_add($pdo); }
+        redirect('/settings/categories');
+        break;
+    case '/settings/categories/edit':
+        require_login();
+        require __DIR__ . '/../src/controllers/categories.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { categories_edit($pdo); }
+        redirect('/settings/categories');
+        break;
+    case '/settings/categories/delete':
+        require_login();
+        require __DIR__ . '/../src/controllers/categories.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { categories_delete($pdo); }
+        redirect('/settings/categories');
+        break;
+
     
 
     case '/goals':

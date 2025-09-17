@@ -55,6 +55,19 @@
       .btn-primary { @apply bg-gray-900 text-white hover:opacity-90 active:opacity-80; }
       .btn-ghost   { @apply border border-gray-300 text-gray-700 hover:bg-gray-50; }
       .btn-danger  { @apply border border-red-300 text-red-600 hover:bg-red-50; }
+
+      /* Base containers */
+      .card { @apply bg-white rounded-2xl p-5 shadow-glass; }
+      .tile { @apply card transition hover:shadow-md; } /* clickable card */
+
+      /* Headers & text */
+      .card-kicker { @apply text-xs uppercase tracking-wide text-gray-500; }
+      .card-title  { @apply text-lg font-semibold; }
+      .card-subtle { @apply text-sm text-gray-500; }
+
+      /* Lists inside cards */
+      .card-list  { @apply divide-y rounded-xl border; }
+      .list-row   { @apply flex items-center justify-between p-3; }
     }
   </style>
 
