@@ -7,10 +7,17 @@ function current_month_controller(PDO $pdo) {
     $m = (int)date('n');
 
     // Fetch transactions of current month
-    $stmt = $pdo->prepare("SELECT t.*, c.label AS cat_label FROM transactions t
-        LEFT JOIN categories c ON c.id=t.category_id
-        WHERE user_id=? AND EXTRACT(YEAR FROM occurred_on)=? AND EXTRACT(MONTH FROM occurred_on)=?
-        ORDER BY occurred_on DESC");
+    $stmt = $pdo->prepare("SELECT t.*, c.label AS cat_label
+        FROM transactions t
+        LEFT JOIN categories c
+        ON c.id = t.category_id
+        AND c.user_id = t.user_id
+        WHERE t.user_id = ?
+        AND EXTRACT(YEAR FROM t.occurred_on) = ?
+        AND EXTRACT(MONTH FROM t.occurred_on) = ?
+        ORDER BY t.occurred_on DESC, t.id DESC
+    ");
+
     $stmt->execute([$u,$y,$m]);
     $tx = $stmt->fetchAll();
 
