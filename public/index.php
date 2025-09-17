@@ -59,6 +59,30 @@ switch ($path) {
         require __DIR__ . '/../src/controllers/settings.php';
         settings_controller($pdo);
         break;
+    case '/settings/currencies':
+        require_login();
+        require __DIR__ . '/../src/controllers/settings_currencies.php';
+        currencies_index($pdo);
+        break;
+    case '/settings/currencies/add':
+        require_login();
+        require __DIR__ . '/../src/controllers/settings_currencies.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { currency_add($pdo); }
+        redirect('/settings/currencies');
+        break;
+    case '/settings/currencies/remove':
+        require_login();
+        require __DIR__ . '/../src/controllers/settings_currencies.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { currency_remove($pdo); }
+        redirect('/settings/currencies');
+        break;
+    case '/settings/currencies/main':
+        require_login();
+        require __DIR__ . '/../src/controllers/settings_currencies.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { currency_set_main($pdo); }
+        redirect('/settings/currencies');
+        break;
+    
 
     case '/goals':
         require_login();
@@ -218,6 +242,8 @@ switch ($path) {
         require __DIR__ . '/../src/controllers/years.php';
         if ($_SERVER['REQUEST_METHOD'] === 'POST') { month_tx_delete($pdo); }
         break;
+
+    
 
     default:
         http_response_code(404);

@@ -14,7 +14,7 @@
         </li>
       <?php endforeach; ?>
     </ul>
-    <p class="text-xs text-gray-400 mt-2">(Add set/unset main handlers as needed)</p>
+    <p class="text-sm mt-3"><a class="text-accent" href="/settings/currencies">Manage currencies →</a></p>
   </div>
 </section>
 
