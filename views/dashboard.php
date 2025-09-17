@@ -2,11 +2,30 @@
 <section class="grid md:grid-cols-3 gap-4">
   <div class="bg-white rounded-2xl p-5 shadow-glass">
     <h2 class="font-medium">Net This Month</h2>
-    <?php
-      $stmt=$pdo->prepare("SELECT kind, SUM(amount) s FROM transactions WHERE user_id=? AND date_trunc('month',occurred_on)=date_trunc('month',CURRENT_DATE) GROUP BY kind");
-      $stmt->execute([$u]);
-      $sums=['income'=>0,'spending'=>0]; foreach($stmt as $r){$sums[$r['kind']] = (float)$r['s'];}
-      $net=$sums['income']-$sums['spending'];
+    <?php require_login(); $u=uid();
+      $first = date('Y-m-01'); $last = date('Y-m-t');
+
+      // tx sums
+      $stmt=$pdo->prepare("
+        SELECT
+          COALESCE(SUM(CASE WHEN kind='income'   THEN amount ELSE 0 END),0) AS income_tx,
+          COALESCE(SUM(CASE WHEN kind='spending' THEN amount ELSE 0 END),0) AS spending_tx
+        FROM transactions
+        WHERE user_id=? AND occurred_on BETWEEN ?::date AND ?::date
+      ");
+      $stmt->execute([$u,$first,$last]);
+      $row=$stmt->fetch();
+      $incomeTx=(float)$row['income_tx']; $spendingTx=(float)$row['spending_tx'];
+
+      // basic incomes active this month
+      $bi=$pdo->prepare("
+        SELECT COALESCE(SUM(amount),0)
+        FROM basic_incomes
+        WHERE user_id=? AND valid_from <= ?::date AND (valid_to IS NULL OR valid_to >= ?::date)
+      ");
+      $bi->execute([$u,$last,$first]); $basic=(float)$bi->fetchColumn();
+
+      $net = ($incomeTx + $basic) - $spendingTx;
     ?>
     <p class="text-2xl mt-2 font-semibold"><?= moneyfmt($net) ?></p>
   </div>

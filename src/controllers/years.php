@@ -43,7 +43,29 @@ function month_detail(PDO $pdo, int $year, int $month){
     WHERE t.user_id=? AND EXTRACT(YEAR FROM occurred_on)=? AND EXTRACT(MONTH FROM occurred_on)=?
     ORDER BY occurred_on DESC, id DESC");
   $tx->execute([$u,$year,$month]); $tx=$tx->fetchAll();
-  $sumIn=0; $sumOut=0; foreach($tx as $r){ if($r['kind']==='income') $sumIn+=$r['amount']; else $sumOut+=$r['amount']; }
+  
+    // month boundaries
+  $first = sprintf('%04d-%02d-01', $year, $month);
+  $last  = date('Y-m-t', strtotime($first));
+
+  // Transactions for month
+  $tx=$pdo->prepare("SELECT t.*, c.label AS cat_label
+    FROM transactions t
+    LEFT JOIN categories c ON c.id=t.category_id AND c.user_id=t.user_id
+    WHERE t.user_id=? AND t.occurred_on BETWEEN ?::date AND ?::date
+    ORDER BY t.occurred_on DESC, t.id DESC");
+  $tx->execute([$u,$first,$last]); $tx=$tx->fetchAll();
+
+  $sumIn=0; $sumOut=0;
+  foreach($tx as $r){ if($r['kind']==='income') $sumIn+=$r['amount']; else $sumOut+=$r['amount']; }
+
+  // add basic incomes active in this month
+  $qBi=$pdo->prepare("
+    SELECT COALESCE(SUM(amount),0) FROM basic_incomes
+    WHERE user_id=? AND valid_from <= ?::date AND (valid_to IS NULL OR valid_to >= ?::date)
+  ");
+  $qBi->execute([$u,$last,$first]); $sumIn += (float)$qBi->fetchColumn();
+
 
   // Goals snapshot
   $g=$pdo->prepare("SELECT SUM(current_amount) c, SUM(target_amount) t FROM goals WHERE user_id=? AND status='active'");
