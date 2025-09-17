@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+    .field {
+        @apply grid gap-1;
+    }
+    .label {
+        @apply text-sm font-medium text-gray-700;
+    }
+    .help {
+        @apply text-xs text-gray-400;
+    }
+
+    /* Inputs, selects, textareas */
+    .input,
+    .select,
+    .input-select,
+    .textarea {
+        @apply w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm
+           focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900;
+    }
+
+    .textarea {
+        @apply min-h-[92px];
+    }
+
+    /* Input group (Amount + Currency) */
+    .input-group {
+        @apply flex items-stretch rounded-xl border border-gray-300 bg-white shadow-sm overflow-hidden;
+    }
+    .input-group > .input {
+        @apply border-0 rounded-none flex-1 shadow-none;
+    }
+    .input-select {
+        @apply border-0 rounded-none bg-gray-50 px-2;
+    }
+
+    /* Buttons */
+    .btn {
+        @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition;
+    }
+    .btn-primary {
+        @apply bg-gray-900 text-white hover:opacity-90 active:opacity-80;
+    }
+    .btn-ghost {
+        @apply border border-gray-300 text-gray-700 hover:bg-gray-50;
+    }
+    .btn-danger {
+        @apply border border-red-300 text-red-600 hover:bg-red-50;
+    }
+}

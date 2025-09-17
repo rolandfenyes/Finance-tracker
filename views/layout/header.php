@@ -20,6 +20,44 @@
       }
     }
   </script>
+  <style type="text/tailwindcss">
+    @layer components {
+      .card { @apply bg-white rounded-2xl p-5 shadow-glass; }
+      .field { @apply grid gap-1; }
+      .label { @apply text-sm font-medium text-gray-700; }
+      .help  { @apply text-xs text-gray-400; }
+
+      .input, .select, .input-select, .textarea {
+        @apply w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm
+              focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900;
+      }
+      .textarea { @apply min-h-[92px]; }
+
+      .input-group { @apply flex rounded-xl border border-gray-300 bg-white shadow-sm overflow-hidden; }
+      .input-group > .input { @apply border-0 rounded-none flex-1 shadow-none; }
+      .input-select { @apply border-0 rounded-none bg-gray-50 px-2; }
+
+      .input-group { @apply relative flex items-stretch rounded-xl border border-gray-300 bg-white shadow-sm overflow-hidden; }
+      .input-group .ig-input  { @apply flex-1 px-3 py-2 text-sm bg-white outline-none; }
+      .input-group .ig-select { @apply px-3 pr-8 text-sm bg-white outline-none; }
+
+      /* unify heights & remove browser styles */
+      .input-group .ig-input,
+      .input-group .ig-select { @apply h-10; }
+      .input-group .ig-select { appearance:none; -webkit-appearance:none; -moz-appearance:none; }
+
+      /* hide number spinners */
+      .ig-input[type=number]::-webkit-outer-spin-button,
+      .ig-input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+      .ig-input[type=number] { -moz-appearance: textfield; }
+
+      .btn { @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition; }
+      .btn-primary { @apply bg-gray-900 text-white hover:opacity-90 active:opacity-80; }
+      .btn-ghost   { @apply border border-gray-300 text-gray-700 hover:bg-gray-50; }
+      .btn-danger  { @apply border border-red-300 text-red-600 hover:bg-red-50; }
+    }
+  </style>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}</style>

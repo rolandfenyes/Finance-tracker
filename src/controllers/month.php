@@ -74,9 +74,14 @@ function month_show(PDO $pdo, ?int $year = null, ?int $month = null) {
   $e=$pdo->prepare('SELECT total,target_amount,currency FROM emergency_fund WHERE user_id=?');
   $e->execute([$u]); $e=$e->fetch();
 
+  // User currencies (for selectors), main first
+  $uc = $pdo->prepare('SELECT code, is_main FROM user_currencies WHERE user_id=? ORDER BY is_main DESC, code');
+  $uc->execute([$u]);
+  $userCurrencies = $uc->fetchAll();
+
   view('month/index', compact(
     'tx','y','m','first','last','main',
     'sumIn_main','sumOut_main','sumIn_native_by_cur','sumOut_native_by_cur',
-    'cats','scheduled','g','e'
+    'cats','scheduled','g','e', 'userCurrencies'
   ));
 }
