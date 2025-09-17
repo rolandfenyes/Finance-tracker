@@ -97,18 +97,69 @@ function month_detail(PDO $pdo, int $year, int $month){
 }
 
 /* Month‑scoped transaction POST endpoints (redirect back to the month page) */
-function month_tx_add(PDO $pdo){ verify_csrf(); require_login();
-  $y=(int)$_POST['y']; $m=(int)$_POST['m']; $u=uid();
-  $stmt=$pdo->prepare('INSERT INTO transactions(user_id,kind,category_id,amount,currency,occurred_on,note) VALUES(?,?,?,?,?,?,?)');
-  $stmt->execute([$u, $_POST['kind']==='income'?'income':'spending', !empty($_POST['category_id'])?(int)$_POST['category_id']:null, (float)$_POST['amount'], $_POST['currency']??'HUF', $_POST['occurred_on']??date('Y-m-d'), trim($_POST['note']??'')]);
-  redirect('/years/'.$y.'/'.$m);
+function month_tx_add(PDO $pdo){
+  verify_csrf(); require_login(); $u = uid();
+
+  $kind = $_POST['kind'] === 'spending' ? 'spending' : 'income';
+  $category_id = ($_POST['category_id'] ?? '') !== '' ? (int)$_POST['category_id'] : null;
+  $amount = (float)($_POST['amount'] ?? 0);
+  $currency = strtoupper(trim($_POST['currency'] ?? ''));
+  $occurred_on = $_POST['occurred_on'] ?? date('Y-m-d');
+  $note = trim($_POST['note'] ?? '');
+
+  // determine user's main currency at insert time
+  $main = fx_user_main($pdo, $u) ?: $currency ?: 'HUF';
+
+  // compute rate & main amount using available rate for that day
+  $rate = fx_rate_from_to($pdo, $currency ?: $main, $main, $occurred_on);
+  if ($rate === null) { $rate = 1.0; } // graceful fallback; you can throw instead
+  $amount_main = round($amount * $rate, 2);
+
+  $stmt = $pdo->prepare("
+    INSERT INTO transactions (user_id, kind, category_id, amount, currency, occurred_on, note,
+                              main_currency, fx_rate_to_main, amount_main)
+    VALUES (?, ?, ?, ?, ?, ?::date, ?, ?, ?, ?)
+  ");
+  $stmt->execute([$u, $kind, $category_id, $amount, ($currency ?: $main), $occurred_on, $note,
+                  $main, $rate, $amount_main]);
+
+  // redirect back
+  $y = (int)($_POST['y'] ?? date('Y')); $m = (int)($_POST['m'] ?? date('n'));
+  redirect("/years/$y/$m");
 }
-function month_tx_edit(PDO $pdo){ verify_csrf(); require_login();
-  $y=(int)$_POST['y']; $m=(int)$_POST['m']; $u=uid();
-  $stmt=$pdo->prepare('UPDATE transactions SET kind=?, category_id=?, amount=?, currency=?, occurred_on=?, note=?, updated_at=NOW() WHERE id=? AND user_id=?');
-  $stmt->execute([$_POST['kind']==='income'?'income':'spending', !empty($_POST['category_id'])?(int)$_POST['category_id']:null, (float)$_POST['amount'], $_POST['currency']??'HUF', $_POST['occurred_on']??date('Y-m-d'), trim($_POST['note']??''), (int)$_POST['id'], $u]);
-  redirect('/years/'.$y.'/'.$m);
+
+function month_tx_edit(PDO $pdo){
+  verify_csrf(); require_login(); $u=uid();
+
+  $id = (int)($_POST['id'] ?? 0);
+  if (!$id) return;
+
+  $kind = $_POST['kind'] === 'spending' ? 'spending' : 'income';
+  $amount = (float)($_POST['amount'] ?? 0);
+  $currency = strtoupper(trim($_POST['currency'] ?? ''));
+  $occurred_on = $_POST['occurred_on'] ?? date('Y-m-d');
+  $note = trim($_POST['note'] ?? '');
+
+  // keep main as the user's current main; or load stored main if you prefer historical
+  $main = fx_user_main($pdo, $u);
+
+  $rate = fx_rate_from_to($pdo, $currency ?: $main, $main, $occurred_on);
+  if ($rate === null) { $rate = 1.0; }
+  $amount_main = round($amount * $rate, 2);
+
+  $stmt = $pdo->prepare("
+    UPDATE transactions
+       SET kind=?, amount=?, currency=?, occurred_on=?::date, note=?,
+           fx_rate_to_main=?, amount_main=?, main_currency=?
+     WHERE id=? AND user_id=?
+  ");
+  $stmt->execute([$kind, $amount, ($currency ?: $main), $occurred_on, $note,
+                  $rate, $amount_main, $main, $id, $u]);
+
+  $y=(int)($_POST['y'] ?? date('Y')); $m=(int)($_POST['m'] ?? date('n'));
+  redirect("/years/$y/$m");
 }
+
 function month_tx_delete(PDO $pdo){ verify_csrf(); require_login();
   $y=(int)$_POST['y']; $m=(int)$_POST['m']; $u=uid();
   $pdo->prepare('DELETE FROM transactions WHERE id=? AND user_id=?')->execute([(int)$_POST['id'],$u]);

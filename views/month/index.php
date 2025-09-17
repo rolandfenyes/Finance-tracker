@@ -155,15 +155,20 @@
           <td class="py-2 pr-3 capitalize"><?= htmlspecialchars($row['kind']) ?></td>
           <td class="py-2 pr-3"><?= htmlspecialchars($row['cat_label'] ?? '—') ?></td>
 
-          <!-- Native -->
-          <td class="py-2 pr-3 font-medium text-right">
-            <?= moneyfmt($row['amount'], $nativeCur) ?>
-          </td>
+          <?php
+            $nativeCur = $row['currency'] ?: $main;
+            // prefer DB-stored value; fallback to compute if NULL (for legacy rows)
+            if ($row['amount_main'] !== null && $row['main_currency']) {
+              $amtMain = (float)$row['amount_main'];
+              $mainCur = $row['main_currency'];
+            } else {
+              $amtMain = fx_convert($pdo, (float)$row['amount'], $nativeCur, $main, $row['occurred_on']);
+              $mainCur = $main;
+            }
+          ?>
+          <td class="py-2 pr-3 text-right font-medium"><?= moneyfmt($row['amount'], $nativeCur) ?></td>
+          <td class="py-2 pr-3 text-right"><?= moneyfmt($amtMain, $mainCur) ?></td>
 
-          <!-- Converted to main -->
-          <td class="py-2 pr-3 text-right">
-            <span class="font-medium"><?= moneyfmt($amtMain, $main) ?></span>
-          </td>
 
           <td class="py-2 pr-3 text-gray-500"><?= htmlspecialchars($row['note'] ?? '') ?></td>
           <td class="py-2 pr-3">

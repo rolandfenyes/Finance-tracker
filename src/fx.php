@@ -157,3 +157,15 @@ function fx_prefetch_month_starts(PDO $pdo, string $code, int $monthsBack = 18, 
     }
   }
 }
+
+// FROM->TO multiplicative rate for a given date (latest<=date). Returns 1.0 if same currency.
+function fx_rate_from_to(PDO $pdo, string $from, string $to, string $date): ?float {
+  $from = strtoupper($from); $to = strtoupper($to);
+  if ($from === $to) return 1.0;
+
+  $eur_to_from = fx_get_eur_to($pdo, $from, $date); // may auto-fetch/cache
+  $eur_to_to   = fx_get_eur_to($pdo, $to,   $date);
+  if (!$eur_to_from || !$eur_to_to) return null;
+  // amount_in_to = amount_in_from * (EUR->TO / EUR->FROM)
+  return $eur_to_to / $eur_to_from;
+}
