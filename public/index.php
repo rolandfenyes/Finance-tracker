@@ -1,0 +1,91 @@
+<?php
+session_start();
+$config = require __DIR__ . '/../config/config.php';
+require __DIR__ . '/../config/db.php';
+require __DIR__ . '/../src/helpers.php';
+require __DIR__ . '/../src/auth.php';
+
+$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$base = rtrim($config['app']['base_url'], '/');
+if ($base && str_starts_with($path, $base)) {
+    $path = substr($path, strlen($base));
+}
+$path = rtrim($path, '/') ?: '/';
+
+// Simple routing
+switch ($path) {
+    case '/':
+        if (!is_logged_in()) { view('auth/login'); break; }
+        view('dashboard');
+        break;
+    case '/register':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { handle_register($pdo); }
+        view('auth/register');
+        break;
+    case '/login':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { handle_login($pdo); }
+        view('auth/login');
+        break;
+    case '/logout':
+        handle_logout();
+        break;
+
+    case '/current-month':
+        require __DIR__ . '/../src/controllers/current_month.php';
+        current_month_controller($pdo);
+        break;
+
+    case '/transactions/add':
+        require_login();
+        require __DIR__ . '/../src/controllers/transactions.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { tx_add($pdo); }
+        redirect('/current-month');
+        break;
+    case '/transactions/edit':
+        require_login();
+        require __DIR__ . '/../src/controllers/transactions.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { tx_edit($pdo); }
+        redirect('/current-month');
+        break;
+    case '/transactions/delete':
+        require_login();
+        require __DIR__ . '/../src/controllers/transactions.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { tx_delete($pdo); }
+        redirect('/current-month');
+        break;
+
+    case '/settings':
+        require_login();
+        require __DIR__ . '/../src/controllers/settings.php';
+        settings_controller($pdo);
+        break;
+
+    case '/goals':
+        require_login();
+        require __DIR__ . '/../src/controllers/goals.php';
+        goals_index($pdo);
+        break;
+    case '/goals/add':
+        require_login();
+        require __DIR__ . '/../src/controllers/goals.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { goals_add($pdo); }
+        redirect('/goals');
+        break;
+    case '/goals/edit':
+        require_login();
+        require __DIR__ . '/../src/controllers/goals.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { goals_edit($pdo); }
+        redirect('/goals');
+        break;
+    case '/goals/delete':
+        require_login();
+        require __DIR__ . '/../src/controllers/goals.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { goals_delete($pdo); }
+        redirect('/goals');
+        break;
+    // TODO: add routes for loans, stocks, scheduled-payments, emergency-fund, years/months
+
+    default:
+        http_response_code(404);
+        echo 'Not Found';
+}
