@@ -83,7 +83,37 @@ switch ($path) {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') { goals_delete($pdo); }
         redirect('/goals');
         break;
-    // TODO: add routes for loans, stocks, scheduled-payments, emergency-fund, years/months
+
+    case '/loans':
+        require_login();
+        require __DIR__ . '/../src/controllers/loans.php';
+        loans_index($pdo);
+        break;
+    case '/loans/add':
+        require_login();
+        require __DIR__ . '/../src/controllers/loans.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { loans_add($pdo); }
+        redirect('/loans');
+        break;
+    case '/loans/edit':
+        require_login();
+        require __DIR__ . '/../src/controllers/loans.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { loans_edit($pdo); }
+        redirect('/loans');
+        break;
+    case '/loans/delete':
+        require_login();
+        require __DIR__ . '/../src/controllers/loans.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { loans_delete($pdo); }
+        redirect('/loans');
+        break;
+    case '/loans/payment/add':
+        require_login();
+        require __DIR__ . '/../src/controllers/loans.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { loan_payment_add($pdo); }
+        redirect('/loans');
+        break;
+    // TODO: add routes for stocks, scheduled-payments, emergency-fund, years/months
 
     default:
         http_response_code(404);
