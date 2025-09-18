@@ -45,22 +45,15 @@
     </p>
   </div>
 
-  <!-- Cashflow Rules -->
   <div class="card">
     <div class="card-kicker">Planning</div>
     <h2 class="card-title mt-1">Cashflow Rules</h2>
-    <ul class="mt-3 card-list text-sm">
-      <?php foreach($rules as $r): ?>
-        <li class="list-row">
-          <span><?= htmlspecialchars($r['label']) ?></span>
-          <span class="font-medium"><?= (float)$r['percent'] ?>%</span>
-        </li>
-      <?php endforeach; if (!count($rules)): ?>
-        <li class="list-row card-subtle">No rules defined yet.</li>
-      <?php endif; ?>
-    </ul>
-    <p class="card-subtle mt-3">(CRUD coming soon)</p>
+    <p class="card-subtle mt-1">Define how each income is allocated (e.g., 50% needs, 20% savings).</p>
+    <div class="card-subtle mt-3">
+      <a class="text-accent" href="/settings/cashflow">Manage rules →</a>
+    </div>
   </div>
+
 
 
   <!-- Categories -->
@@ -71,6 +64,6 @@
     <p class="card-subtle mt-3">
       <a class="text-accent" href="/settings/categories">Manage categories →</a>
     </p>
-</div>
+  </div>
 
 </section>

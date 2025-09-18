@@ -133,6 +133,30 @@ switch ($path) {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') { categories_delete($pdo); }
         redirect('/settings/categories');
         break;
+    // Cashflow Rules
+    case '/settings/cashflow':
+        require_login();
+        require __DIR__ . '/../src/controllers/cashflow.php';
+        cashflow_index($pdo);
+        break;
+    case '/settings/cashflow/add':
+        require_login();
+        require __DIR__ . '/../src/controllers/cashflow.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { cashflow_add($pdo); }
+        redirect('/settings/cashflow');
+        break;
+    case '/settings/cashflow/edit':
+        require_login();
+        require __DIR__ . '/../src/controllers/cashflow.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { cashflow_edit($pdo); }
+        redirect('/settings/cashflow');
+        break;
+    case '/settings/cashflow/delete':
+        require_login();
+        require __DIR__ . '/../src/controllers/cashflow.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { cashflow_delete($pdo); }
+        redirect('/settings/cashflow');
+        break;
 
     
 
