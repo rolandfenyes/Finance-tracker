@@ -14,10 +14,17 @@
           <option value="income">Income</option>
           <option value="spending">Spending</option>
         </select>
-        <input name="label" class="input sm:col-span-3" placeholder="Label (e.g., Salary / Groceries)" required />
+        <input name="label" class="input sm:col-span-2" placeholder="Label (e.g., Salary / Groceries)" required />
+        <select name="cashflow_rule_id" class="select sm:col-span-2">
+          <option value="">No rule</option>
+          <?php foreach ($rules as $r): ?>
+            <option value="<?= (int)$r['id'] ?>"><?= htmlspecialchars($r['label']) ?></option>
+          <?php endforeach; ?>
+        </select>
         <input name="color" type="color" value="#6B7280" class="h-10 w-16 rounded-xl border border-gray-300 sm:col-span-1" />
-        <button class="btn btn-primary sm:col-span-6">Add</button>
+        <button class="btn btn-primary sm:col-span-5">Add</button>
       </form>
+
 
       <p class="help mt-2">These categories appear in the “Quick Add” and transaction forms.</p>
     </div>
@@ -28,7 +35,7 @@
       <?php
         $income = array_values(array_filter($rows, fn($r)=>$r['kind']==='income'));
         $spend  = array_values(array_filter($rows, fn($r)=>$r['kind']==='spending'));
-        $renderList = function($list,$title,$usage){
+        $renderList = function($list,$title,$usage) use ($rules){
       ?>
         <div class="mb-5">
           <div class="text-sm font-semibold text-gray-600 mb-2"><?= htmlspecialchars($title) ?></div>
@@ -39,19 +46,20 @@
               <li class="p-3">
                 <details class="group">
                   <summary class="flex items-center justify-between gap-3 cursor-pointer list-none">
-                    <?php $dot = $c['color'] ?: '#6B7280'; $used = (int)($usage[$c['id']] ?? 0); ?>
-                    <div class="flex items-center gap-3 min-w-0 group-open:hidden">
-                      <span class="inline-block h-3 w-3 rounded-full" style="background: <?= htmlspecialchars($dot) ?>;"></span>
-                      <div class="min-w-0">
-                        <div class="flex items-center gap-2">
-                          <span class="font-medium truncate"><?= htmlspecialchars($c['label']) ?></span>
-                          <span class="chip"><?= $c['kind']==='income' ? 'Income' : 'Spending' ?></span>
-                        </div>
-                        <?php if ($used): ?>
-                          <div class="text-xs text-gray-500"><?= $used ?> transaction<?= $used!==1?'s':'' ?></div>
-                        <?php endif; ?>
-                      </div>
+                    <?php
+                      $ruleName = null;
+                      if (!empty($rules)) {
+                        foreach ($rules as $rul) { if ((int)$rul['id'] === (int)($c['cashflow_rule_id'] ?? 0)) { $ruleName = $rul['label']; break; } }
+                      }
+                    ?>
+                    <div class="flex items-center gap-2">
+                      <span class="inline-block h-3 w-3 rounded-full" style="background: <?= htmlspecialchars($c['color'] ?? '#6B7280') ?>;"></span>
+                      <div class="font-medium"><?= htmlspecialchars($c['label']) ?></div>
+                      <?php if ($ruleName): ?>
+                        <span class="chip"><?= htmlspecialchars($ruleName) ?></span>
+                      <?php endif; ?>
                     </div>
+
                     <span class="row-btn">Edit</span>
                   </summary>
 
@@ -77,9 +85,23 @@
                       <div class="field sm:col-span-3">
                         <label class="label">Color</label>
                         <div class="flex items-center gap-2">
-                          <input name="color" type="color" value="<?= htmlspecialchars($dot) ?>" class="color-input" />
+                          <input name="color" type="color"
+                                value="<?= htmlspecialchars($dot) ?>"
+                                class="h-10 w-16 rounded-xl border border-gray-300 col-span-1" />
+
                         </div>
                       </div>
+
+                      <select name="cashflow_rule_id" class="select col-span-6">
+                        <option value="">No rule</option>
+                        <?php foreach ($rules as $r): ?>
+                          <option value="<?= (int)$r['id'] ?>"
+                            <?= ((int)($c['cashflow_rule_id'] ?? 0) === (int)$r['id']) ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($r['label']) ?>
+                          </option>
+                        <?php endforeach; ?>
+                      </select>
+
 
                       <div class="sm:col-span-12 flex gap-2 justify-end">
                         <button class="btn btn-primary">Save</button>

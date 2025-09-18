@@ -157,6 +157,12 @@ switch ($path) {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') { cashflow_delete($pdo); }
         redirect('/settings/cashflow');
         break;
+    case '/settings/cashflow/assign':
+        require_login();
+        require __DIR__ . '/../src/controllers/cashflow.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { cashflow_assign($pdo); }
+        redirect('/settings/cashflow');
+        break;
 
     
 
