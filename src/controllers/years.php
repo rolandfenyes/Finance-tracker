@@ -165,3 +165,97 @@ function month_tx_delete(PDO $pdo){ verify_csrf(); require_login();
   $pdo->prepare('DELETE FROM transactions WHERE id=? AND user_id=?')->execute([(int)$_POST['id'],$u]);
   redirect('/years/'.$y.'/'.$m);
 }
+
+function month_read_filters(): array {
+  // Read GET filters; normalize
+  return [
+    'q'           => trim($_GET['q'] ?? ''),                 // text search (note)
+    'category_id' => $_GET['category_id'] !== '' ? (int)$_GET['category_id'] : null,
+    'kind'        => in_array($_GET['kind'] ?? '', ['income','spending'], true) ? $_GET['kind'] : null,
+    'date_from'   => $_GET['date_from'] ?? null,
+    'date_to'     => $_GET['date_to']   ?? null,
+    'amt_min'     => ($_GET['amt_min'] ?? '') !== '' ? (float)$_GET['amt_min'] : null,
+    'amt_max'     => ($_GET['amt_max'] ?? '') !== '' ? (float)$_GET['amt_max'] : null,
+    'currency'    => $_GET['currency'] ?? null,
+  ];
+}
+
+function month_where_clause(array $flt, int $userId, string $first, string $last): array {
+  // Build WHERE + params for REAL transactions; keep them inside month, then apply filters.
+  $w = ['t.user_id = ?','t.occurred_on BETWEEN ?::date AND ?::date'];
+  $p = [$userId, $first, $last];
+
+  if ($flt['q'] !== '') { $w[] = ' (t.note ILIKE ? OR c.label ILIKE ?) '; $p[] = '%'.$flt['q'].'%'; $p[] = '%'.$flt['q'].'%'; }
+  if ($flt['category_id']) { $w[] = ' t.category_id = ? '; $p[] = $flt['category_id']; }
+  if ($flt['kind'])        { $w[] = ' t.kind = ? '; $p[] = $flt['kind']; }
+  if ($flt['date_from'])   { $w[] = ' t.occurred_on >= ?::date '; $p[] = $flt['date_from']; }
+  if ($flt['date_to'])     { $w[] = ' t.occurred_on <= ?::date '; $p[] = $flt['date_to']; }
+  if ($flt['amt_min']!==null){ $w[] = ' t.amount >= ? '; $p[] = $flt['amt_min']; }
+  if ($flt['amt_max']!==null){ $w[] = ' t.amount <= ? '; $p[] = $flt['amt_max']; }
+  if ($flt['currency'])    { $w[] = ' t.currency = ? '; $p[] = $flt['currency']; }
+
+  return ['('.implode(') AND (',$w).')', $p];
+}
+
+function month_tx_list(PDO $pdo){ // mobile lazy-load fragment
+  require_login(); $u=uid();
+  $y=(int)($_GET['y'] ?? date('Y')); $m=(int)($_GET['m'] ?? date('n'));
+  $first = sprintf('%04d-%02d-01',$y,$m); $last = date('Y-m-t',strtotime($first));
+  $page = max(1,(int)($_GET['page'] ?? 1));
+  $per  = 15;
+  $flt  = month_read_filters();
+  [$where,$params] = month_where_clause($flt,$u,$first,$last);
+
+  $sql = "SELECT t.*, c.label AS cat_label, c.color AS cat_color
+          FROM transactions t
+          LEFT JOIN categories c ON c.id=t.category_id AND c.user_id=t.user_id
+          WHERE $where
+          ORDER BY t.occurred_on DESC, t.id DESC
+          LIMIT $per OFFSET ".(($page-1)*$per);
+  $stmt=$pdo->prepare($sql); $stmt->execute($params); $rows=$stmt->fetchAll();
+
+  // render the same mobile cards HTML only (no shell)
+  $main = fx_user_main($pdo,$u);
+  ob_start();
+  foreach($rows as $row){
+    $nativeCur = $row['currency'] ?: $main;
+    if (isset($row['amount_main']) && $row['amount_main']!==null && !empty($row['main_currency'])){
+      $amtMain=(float)$row['amount_main']; $mainCur=$row['main_currency'];
+    } else {
+      $amtMain=fx_convert($pdo,(float)$row['amount'],$nativeCur,$main,$row['occurred_on']); $mainCur=$main;
+    }
+    $dot = $row['cat_color'] ?? '#6B7280';
+    $sameCur = strtoupper($nativeCur)===strtoupper($mainCur);
+    ?>
+    <div class="rounded-xl border p-3">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2 text-sm">
+            <span class="font-medium"><?= htmlspecialchars($row['occurred_on']) ?></span>
+          </div>
+          <div class="mt-1 flex items-center gap-2">
+            <span class="capitalize text-xs px-2 py-0.5 rounded-full border"><?= htmlspecialchars($row['kind']) ?></span>
+            <span class="inline-flex items-center gap-2 text-sm">
+              <span class="inline-block h-2.5 w-2.5 rounded-full" style="background-color: <?= htmlspecialchars($dot) ?>;"></span>
+              <?= htmlspecialchars($row['cat_label'] ?? '—') ?>
+            </span>
+          </div>
+        </div>
+        <div class="text-right shrink-0">
+          <div class="text-[13px] text-gray-500">Native</div>
+          <div class="font-medium"><?= moneyfmt($row['amount'],$nativeCur) ?></div>
+          <?php if(!$sameCur): ?>
+            <div class="text-[13px] text-gray-500 mt-1"><?= htmlspecialchars($mainCur) ?></div>
+            <div class="font-medium"><?= moneyfmt($amtMain,$mainCur) ?></div>
+          <?php endif; ?>
+        </div>
+      </div>
+      <?php if (!empty($row['note'])): ?>
+        <div class="mt-2 text-xs text-gray-500"><?= htmlspecialchars($row['note']) ?></div>
+      <?php endif; ?>
+    </div>
+    <?php
+  }
+  $html = ob_get_clean();
+  header('Content-Type: text/html; charset=utf-8'); echo $html; exit;
+}

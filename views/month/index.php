@@ -413,6 +413,43 @@
       </div>
     <?php endforeach; ?>
   </div>
+  <?php
+    // compute if there are more pages for mobile (reuse desktop count)
+    $hasMoreMobile = ($totalPages > 1 && $page < $totalPages);
+  ?>
+  <div class="md:hidden mt-3 flex justify-center">
+    <button id="tx-loadmore" class="btn btn-ghost" 
+            data-next="<?= $page+1 ?>" 
+            data-last="<?= $totalPages ?>"
+            data-url="/months/tx/list?<?= http_build_query(array_merge($_GET,['y'=>$y,'m'=>$m])) ?>">
+      Load more
+    </button>
+  </div>
+
+  <script>
+  (function(){
+    const btn = document.getElementById('tx-loadmore');
+    if (!btn) return;
+    let next = parseInt(btn.dataset.next || '2',10);
+    const last = parseInt(btn.dataset.last || '1',10);
+    const baseUrl = btn.dataset.url;
+
+    if (next>last) btn.style.display='none';
+
+    btn.addEventListener('click', async ()=>{
+      btn.disabled = true; btn.textContent = 'Loading…';
+      const url = baseUrl.replace(/([?&])page=\d+/,'$1page='+next) + (baseUrl.includes('page=') ? '' : '&page='+next);
+      const res = await fetch(url, {headers:{'X-Requested-With':'fetch'}});
+      const html = await res.text();
+      const list = btn.closest('section').querySelector('.md\\:hidden.space-y-3');
+      list.insertAdjacentHTML('beforeend', html);
+      next++;
+      if (next>last){ btn.style.display='none'; }
+      else { btn.disabled=false; btn.textContent='Load more'; btn.dataset.next = String(next); }
+    });
+  })();
+  </script>
+
 
   <!-- Desktop: classic table -->
   <div class="hidden md:block overflow-x-auto">
@@ -536,6 +573,18 @@
         <?php endforeach; ?>
       </tbody>
     </table>
+    <?php if ($totalPages > 1): 
+      $qs = $_GET; unset($qs['page']); $base = '/years/'.$y.'/'.$m;
+      $mk = function($p) use ($base,$qs){ $qs['page']=$p; return $base.'?'.http_build_query($qs); };
+    ?>
+      <div class="hidden md:flex items-center justify-between mt-3 text-sm">
+        <div class="text-gray-500">Page <?= $page ?> / <?= $totalPages ?></div>
+        <div class="flex gap-2">
+          <a class="btn btn-ghost <?= $page<=1?'pointer-events-none opacity-40':'' ?>" href="<?= $page>1?$mk($page-1):'#' ?>">Prev</a>
+          <a class="btn btn-ghost <?= $page>=$totalPages?'pointer-events-none opacity-40':'' ?>" href="<?= $page<$totalPages?$mk($page+1):'#' ?>">Next</a>
+        </div>
+      </div>
+    <?php endif; ?>
   </div>
 </section>
 <script>

@@ -294,6 +294,12 @@ switch ($path) {
         require __DIR__ . '/../src/controllers/years.php';
         if ($_SERVER['REQUEST_METHOD'] === 'POST') { month_tx_delete($pdo); }
         break;
+    // Month tx: mobile lazy-load fragment (HTML cards)
+    case '/months/tx/list':
+        require_login();
+        require __DIR__ . '/../src/controllers/years.php';
+        month_tx_list($pdo); // returns HTML fragment & exits
+        break;
 
     
 
