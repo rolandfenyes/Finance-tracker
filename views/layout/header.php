@@ -22,6 +22,16 @@
   </script>
   <style type="text/tailwindcss">
     @layer components {
+      .chip{ @apply inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700 border; }
+      .row-btn{ @apply border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-xl px-3 py-1.5 text-sm; }
+      .edit-panel{ @apply mt-3 bg-gray-50 rounded-xl p-4 border; }
+      .color-input{ @apply h-10 w-14 rounded-lg border border-gray-300; }
+
+      details[open] ~ .header-line,
+      details[open] .header-line {
+        @apply hidden;
+      }
+
       .card { @apply bg-white rounded-2xl p-5 shadow-glass; }
       .field { @apply grid gap-1; }
       .label { @apply text-sm font-medium text-gray-700; }

@@ -4,10 +4,12 @@ require_once __DIR__ . '/../helpers.php';
 function categories_index(PDO $pdo){
     require_login(); $u = uid();
 
-    $q = $pdo->prepare("SELECT id, label, kind
-                        FROM categories
-                        WHERE user_id=?
-                        ORDER BY kind, lower(label)");
+    $q = $pdo->prepare("
+        SELECT id, label, kind, color
+        FROM categories
+        WHERE user_id=?
+        ORDER BY kind, lower(label)
+        ");
     $q->execute([$u]);
     $rows = $q->fetchAll();
 
@@ -27,16 +29,17 @@ function categories_add(PDO $pdo){
     verify_csrf(); require_login(); $u=uid();
     $kind  = ($_POST['kind'] ?? '') === 'spending' ? 'spending' : 'income';
     $label = trim($_POST['label'] ?? '');
+    $color = sanitize_hex($_POST['color'] ?? null) ?? '#6B7280'; // default gray
     if ($label==='') return;
 
-    // prevent dup per user/kind/label
     $stmt = $pdo->prepare(
-        "INSERT INTO categories(user_id,label,kind)
-         VALUES (?,?,?)
+        "INSERT INTO categories(user_id,label,kind,color)
+         VALUES (?,?,?,?)
          ON CONFLICT DO NOTHING"
     );
-    $stmt->execute([$u,$label,$kind]);
+    $stmt->execute([$u,$label,$kind,$color]);
 }
+
 
 function categories_edit(PDO $pdo){
     verify_csrf(); require_login(); $u=uid();
@@ -44,11 +47,13 @@ function categories_edit(PDO $pdo){
     if (!$id) return;
     $kind  = ($_POST['kind'] ?? '') === 'spending' ? 'spending' : 'income';
     $label = trim($_POST['label'] ?? '');
+    $color = sanitize_hex($_POST['color'] ?? null) ?? '#6B7280';
     if ($label==='') return;
 
-    $stmt = $pdo->prepare("UPDATE categories SET label=?, kind=? WHERE id=? AND user_id=?");
-    $stmt->execute([$label,$kind,$id,$u]);
+    $stmt = $pdo->prepare("UPDATE categories SET label=?, kind=?, color=? WHERE id=? AND user_id=?");
+    $stmt->execute([$label,$kind,$color,$id,$u]);
 }
+
 
 function categories_delete(PDO $pdo){
     verify_csrf(); require_login(); $u=uid();
@@ -63,4 +68,12 @@ function categories_delete(PDO $pdo){
         // $pdo->prepare("UPDATE transactions SET category_id=NULL WHERE user_id=? AND category_id=?")->execute([$u,$id]);
         // $pdo->prepare("DELETE FROM categories WHERE id=? AND user_id=?")->execute([$id,$u]);
     }
+}
+
+function sanitize_hex(?string $v): ?string {
+    $v = trim((string)$v);
+    if ($v === '') return null;
+    // allow '#abc' or '#aabbcc' (case-insensitive)
+    if (preg_match('/^#([0-9a-f]{3}|[0-9a-f]{6})$/i', $v)) return strtoupper($v);
+    return null;
 }

@@ -133,6 +133,17 @@
   <h3 class="font-semibold mb-3">Transactions</h3>
 
   <table class="min-w-full text-sm">
+    <?php if (!empty($cats)): ?>
+      <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+        <?php foreach ($cats as $c): ?>
+          <span class="inline-flex items-center gap-1">
+            <span class="inline-block h-2.5 w-2.5 rounded-full"
+                  style="background: <?= htmlspecialchars($c['color'] ?? '#6B7280') ?>;"></span>
+            <?= htmlspecialchars($c['label']) ?>
+          </span>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
     <thead>
       <tr class="text-left border-b">
         <th class="py-2 pr-3">Date</th>
@@ -145,74 +156,103 @@
       </tr>
     </thead>
     <tbody>
-      <?php foreach ($tx as $row): ?>
+      <?php foreach ($allTx as $row): ?>
         <?php
+          $isVirtual = !empty($row['is_virtual']);
           $nativeCur = $row['currency'] ?: $main;
-          $amtMain   = fx_convert($pdo, (float)$row['amount'], $nativeCur, $main, $row['occurred_on']);
-        ?>
-        <tr class="border-b hover:bg-gray-50">
-          <td class="py-2 pr-3"><?= htmlspecialchars($row['occurred_on']) ?></td>
-          <td class="py-2 pr-3 capitalize"><?= htmlspecialchars($row['kind']) ?></td>
-          <td class="py-2 pr-3"><?= htmlspecialchars($row['cat_label'] ?? '—') ?></td>
 
-          <?php
-            $nativeCur = $row['currency'] ?: $main;
-            // prefer DB-stored value; fallback to compute if NULL (for legacy rows)
-            if ($row['amount_main'] !== null && $row['main_currency']) {
+          // For virtual we already provided amount_main; for real prefer stored value
+          if ($isVirtual && isset($row['amount_main'])) {
+            $amtMain = (float)$row['amount_main'];
+            $mainCur = $row['main_currency'] ?? $main;
+          } else {
+            if (isset($row['amount_main']) && $row['amount_main'] !== null && !empty($row['main_currency'])) {
               $amtMain = (float)$row['amount_main'];
               $mainCur = $row['main_currency'];
             } else {
               $amtMain = fx_convert($pdo, (float)$row['amount'], $nativeCur, $main, $row['occurred_on']);
               $mainCur = $main;
             }
-          ?>
-          <td class="py-2 pr-3 text-right font-medium"><?= moneyfmt($row['amount'], $nativeCur) ?></td>
-          <td class="py-2 pr-3 text-right"><?= moneyfmt($amtMain, $mainCur) ?></td>
-
-
-          <td class="py-2 pr-3 text-gray-500"><?= htmlspecialchars($row['note'] ?? '') ?></td>
+          }
+        ?>
+        <tr class="border-b hover:bg-gray-50 <?= $isVirtual ? 'opacity-95' : '' ?>">
           <td class="py-2 pr-3">
-            <details><summary class="cursor-pointer text-accent">Edit</summary>
-              <form class="mt-2 grid sm:grid-cols-6 gap-2" method="post" action="/months/tx/edit">
-                <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-                <input type="hidden" name="y" value="<?= $y ?>" />
-                <input type="hidden" name="m" value="<?= $m ?>" />
-                <input type="hidden" name="id" value="<?= $row['id'] ?>" />
+            <?= htmlspecialchars($row['occurred_on']) ?>
+            <?php if ($isVirtual): ?>
+              <span class="ml-1 inline-flex items-center text-[11px] text-gray-500">
+                <!-- lock icon -->
+                🔒
+              </span>
+            <?php endif; ?>
+          </td>
+          <td class="py-2 pr-3 capitalize"><?= htmlspecialchars($row['kind']) ?></td>
+          <td class="py-2 pr-3">
+            <span class="inline-flex items-center gap-2">
+              <span class="inline-block h-2.5 w-2.5 rounded-full"
+                    style="background: <?= htmlspecialchars($row['cat_color'] ?? '#6B7280') ?>;"></span>
+              <?= htmlspecialchars($row['cat_label'] ?? '—') ?>
+            </span>
+            <?php if ($isVirtual && $row['virtual_type']==='scheduled'): ?>
+              <span class="text-xs text-gray-500 ml-1">(auto)</span>
+            <?php elseif ($isVirtual && $row['virtual_type']==='basic_income'): ?>
+              <span class="text-xs text-gray-500 ml-1">(auto)</span>
+            <?php endif; ?>
+          </td>
 
-                <select name="kind" class="select">
-                  <option <?= $row['kind']==='income'?'selected':'' ?> value="income">Income</option>
-                  <option <?= $row['kind']==='spending'?'selected':'' ?> value="spending">Spending</option>
-                </select>
+          <!-- Native -->
+          <td class="py-2 pr-3 font-medium text-right">
+            <?= moneyfmt($row['amount'], $nativeCur) ?>
+          </td>
 
-                <input name="amount" type="number" step="0.01" value="<?= $row['amount'] ?>" class="input" required />
+          <!-- Main -->
+          <td class="py-2 pr-3 text-right">
+            <span class="font-medium"><?= moneyfmt($amtMain, $mainCur) ?></span>
+          </td>
 
-                <select name="currency" class="select">
-                  <?php foreach ($userCurrencies as $c): ?>
-                    <option value="<?= htmlspecialchars($c['code']) ?>"
-                      <?= ($row['currency']===$c['code'] ? 'selected' : ($c['is_main'] && !$row['currency'] ? 'selected' : '')) ?>>
-                      <?= htmlspecialchars($c['code']) ?>
-                    </option>
-                  <?php endforeach; ?>
-                  <?php if (!count($userCurrencies)): ?><option value="HUF">HUF</option><?php endif; ?>
-                </select>
+          <td class="py-2 pr-3 text-gray-500">
+            <?= htmlspecialchars($row['note'] ?? '') ?>
+          </td>
 
-                <input name="occurred_on" type="date" value="<?= $row['occurred_on'] ?>" class="input" />
-                <input name="note" value="<?= htmlspecialchars($row['note'] ?? '') ?>" class="input" />
-                <button class="btn btn-primary">Save</button>
-              </form>
-
-              <form class="mt-2" method="post" action="/months/tx/delete" onsubmit="return confirm('Delete transaction?')">
-                <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-                <input type="hidden" name="y" value="<?= $y ?>" />
-                <input type="hidden" name="m" value="<?= $m ?>" />
-                <input type="hidden" name="id" value="<?= $row['id'] ?>" />
-                <button class="btn btn-danger">Remove</button>
-              </form>
-            </details>
+          <td class="py-2 pr-3">
+            <?php if (!$isVirtual): ?>
+              <details><summary class="cursor-pointer text-accent">Edit</summary>
+                <form class="mt-2 grid sm:grid-cols-6 gap-2" method="post" action="/months/tx/edit">
+                  <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+                  <input type="hidden" name="y" value="<?= $y ?>" />
+                  <input type="hidden" name="m" value="<?= $m ?>" />
+                  <input type="hidden" name="id" value="<?= $row['id'] ?>" />
+                  <select name="kind" class="select">
+                    <option <?= $row['kind']==='income'?'selected':'' ?> value="income">Income</option>
+                    <option <?= $row['kind']==='spending'?'selected':'' ?> value="spending">Spending</option>
+                  </select>
+                  <input name="amount" type="number" step="0.01" value="<?= $row['amount'] ?>" class="input" required />
+                  <select name="currency" class="select">
+                    <?php foreach ($userCurrencies as $c): ?>
+                      <option value="<?= htmlspecialchars($c['code']) ?>" <?= ($row['currency']===$c['code'] ? 'selected' : ($c['is_main'] && !$row['currency'] ? 'selected' : '')) ?>>
+                        <?= htmlspecialchars($c['code']) ?>
+                      </option>
+                    <?php endforeach; ?>
+                    <?php if (!count($userCurrencies)): ?><option value="HUF">HUF</option><?php endif; ?>
+                  </select>
+                  <input name="occurred_on" type="date" value="<?= $row['occurred_on'] ?>" class="input" />
+                  <input name="note" value="<?= htmlspecialchars($row['note'] ?? '') ?>" class="input" />
+                  <button class="btn btn-primary">Save</button>
+                </form>
+                <form class="mt-2" method="post" action="/months/tx/delete" onsubmit="return confirm('Delete transaction?')">
+                  <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+                  <input type="hidden" name="y" value="<?= $y ?>" />
+                  <input type="hidden" name="m" value="<?= $m ?>" />
+                  <input type="hidden" name="id" value="<?= $row['id'] ?>" />
+                  <button class="btn btn-danger">Remove</button>
+                </form>
+              </details>
+            <?php else: ?>
+              <span class="text-xs text-gray-400">Auto-generated</span>
+            <?php endif; ?>
           </td>
         </tr>
       <?php endforeach; ?>
-    </tbody>
+    </tbody>  
   </table>
 </section>
 
