@@ -1,6 +1,6 @@
 <section class="bg-white rounded-2xl p-5 shadow-glass">
   <h1 class="text-xl font-semibold">Scheduled Payments</h1>
-  <p class="text-sm text-gray-500">Use RRULE like <code class="bg-gray-100 px-1 rounded">FREQ=MONTHLY;BYMONTHDAY=10</code> or <code class="bg-gray-100 px-1 rounded">FREQ=WEEKLY;BYDAY=MO</code>.</p>
+  <p class="text-sm text-gray-500">Set up recurring payments.</p>
 
   <details class="mt-4">
     <summary class="cursor-pointer text-accent">Add scheduled payment</summary>
@@ -144,7 +144,7 @@
         <th class="py-2 pr-3">Amount</th>
         <th class="py-2 pr-3">Currency</th>
         <th class="py-2 pr-3">Repeats</th>
-        <th class="py-2 pr-3">Next Due</th>
+        <th class="py-2 pr-3">First payment</th>
         <th class="py-2 pr-3">Actions</th>
       </tr>
     </thead>
@@ -154,9 +154,11 @@
           <td class="py-2 pr-3 font-medium"><?= htmlspecialchars($r['title']) ?></td>
           <td class="py-2 pr-3 font-medium"><?= moneyfmt($r['amount']) ?></td>
           <td class="py-2 pr-3"><?= htmlspecialchars($r['currency']) ?></td>
-          <td class="py-2 pr-3 text-sm text-gray-600" data-rrule="<?= htmlspecialchars($r['rrule'] ?? '') ?>"></td>
+          <td class="py-2 pr-3 text-sm text-gray-600">
+            <span class="rrule-summary" data-rrule="<?= htmlspecialchars($r['rrule'] ?? '') ?>"></span>
+          </td>
           <td class="py-2 pr-3"><?= htmlspecialchars($r['next_due'] ?? '—') ?></td>
-          <td class="py-2 pr-3">
+          <td class="py-2 pr-3 flex flex-row justify-between">
             <?php if (!empty($r['cat_label'])): ?>
               <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs mr-2">
                 <span class="inline-block h-2.5 w-2.5 rounded-full" style="background-color: <?= htmlspecialchars($r['cat_color']) ?>;"></span>
@@ -164,25 +166,27 @@
               </span>
             <?php endif; ?>
 
-            <button
-              type="button"
-              class="btn btn-primary !py-1 !px-3"
-              data-edit-scheduled
-              data-id="<?= (int)$r['id'] ?>"
-              data-title="<?= htmlspecialchars($r['title']) ?>"
-              data-amount="<?= htmlspecialchars($r['amount']) ?>"
-              data-currency="<?= htmlspecialchars($r['currency']) ?>"
-              data-next_due="<?= htmlspecialchars($r['next_due']) ?>"
-              data-category_id="<?= (int)($r['category_id'] ?? 0) ?>"
-              data-rrule="<?= htmlspecialchars($r['rrule'] ?? '') ?>"
-            >Edit</button>
-
-            <form method="post" action="/scheduled/delete" class="inline"
-                  onsubmit="return confirm('Delete this scheduled item?');">
-              <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-              <input type="hidden" name="id" value="<?= (int)$r['id'] ?>" />
-              <button class="btn btn-danger !py-1 !px-3">Remove</button>
-            </form>
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                class="btn btn-primary !py-1 !px-3"
+                data-edit-scheduled
+                data-id="<?= (int)$r['id'] ?>"
+                data-title="<?= htmlspecialchars($r['title']) ?>"
+                data-amount="<?= htmlspecialchars($r['amount']) ?>"
+                data-currency="<?= htmlspecialchars($r['currency']) ?>"
+                data-next_due="<?= htmlspecialchars($r['next_due']) ?>"
+                data-category_id="<?= (int)($r['category_id'] ?? 0) ?>"
+                data-rrule="<?= htmlspecialchars($r['rrule'] ?? '') ?>"
+              >Edit</button>
+  
+              <form method="post" action="/scheduled/delete" class="inline"
+                    onsubmit="return confirm('Delete this scheduled item?');">
+                <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+                <input type="hidden" name="id" value="<?= (int)$r['id'] ?>" />
+                <button class="btn btn-danger !py-1 !px-3">Remove</button>
+              </form>
+            </div>
           </td>
 
         </tr>
@@ -572,7 +576,7 @@ function rrSummary(rrule){
 
 // Render summaries in the table (replace raw text)
 document.addEventListener('DOMContentLoaded', ()=>{
-  document.querySelectorAll('[data-rrule]').forEach(el=>{
+  document.querySelectorAll('.rrule-summary[data-rrule]').forEach(el=>{
     const r = el.getAttribute('data-rrule') || '';
     el.textContent = rrSummary(r);
   });
