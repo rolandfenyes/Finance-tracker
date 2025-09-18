@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../helpers.php';
 require_once __DIR__ . '/../fx.php';
+require_once __DIR__ . '/../recurrence.php';
 
 function month_show(PDO $pdo, ?int $year = null, ?int $month = null) {
   require_login();
@@ -153,36 +154,52 @@ function month_show(PDO $pdo, ?int $year = null, ?int $month = null) {
   }
 
 
-  // (B) Scheduled payments due inside month (spending on due date)
-  $sp = $pdo->prepare("
-    SELECT id, title, amount, currency, next_due
-    FROM scheduled_payments
-    WHERE user_id=? AND next_due BETWEEN ?::date AND ?::date
-    ORDER BY next_due
+  // (B) Scheduled payments — expand occurrences for the viewed month
+  $allSched = $pdo->prepare("
+    SELECT s.id, s.title, s.amount, s.currency, s.next_due, s.rrule, s.category_id,
+          c.label AS cat_label,
+          COALESCE(NULLIF(c.color,''),'#6B7280') AS cat_color
+      FROM scheduled_payments s
+      LEFT JOIN categories c
+            ON c.id = s.category_id AND c.user_id = s.user_id
+    WHERE s.user_id = ?
+    ORDER BY s.next_due NULLS LAST, lower(s.title)
   ");
-  $sp->execute([$u, $first, $last]);
-  foreach ($sp as $s) {
+  $allSched->execute([$u]);
+
+  foreach ($allSched as $s) {
     $amt = (float)$s['amount'];
     $cur = strtoupper($s['currency'] ?: $main);
-    $due = $s['next_due'];
-    $amt_main = fx_convert($pdo, $amt, $cur, $main, $due);
+    $title = $s['title'];
+    $dtstart = $s['next_due'];             // DTSTART
+    $rr = trim($s['rrule'] ?? '');
 
-    $rowV = [
-      'id'            => null,
-      'is_virtual'    => true,
-      'virtual_type'  => 'scheduled',
-      'occurred_on'   => $due,
-      'kind'          => 'spending',
-      'cat_label'     => 'Scheduled: '.$s['title'],
-      'cat_color'     => '#F59E0B', // amber
-      'amount'        => $amt,
-      'currency'      => $cur,
-      'amount_main'   => $amt_main,
-      'main_currency' => $main,
-      'note'          => null,
-    ];
-    if ($matchVirtual($rowV)) $virtualTx[] = $rowV;
+    // Expand occurrences for current month window
+    $dates = rrule_expand($dtstart, $rr, $first, $last); // returns array of 'Y-m-d'
+    if (!$dates) continue;
+
+    foreach ($dates as $due) {
+      $amt_main = fx_convert($pdo, $amt, $cur, $main, $due);
+
+      $rowV = [
+        'id'            => null,
+        'is_virtual'    => true,
+        'virtual_type'  => 'scheduled',
+        'occurred_on'   => $due,
+        'kind'          => 'spending',
+        'category_id'   => $s['category_id'] ?? null,
+        'cat_label'     => ($s['cat_label'] ?: 'Scheduled'),
+        'cat_color'     => ($s['cat_color'] ?: '#F59E0B'),
+        'amount'        => $amt,
+        'currency'      => $cur,
+        'amount_main'   => $amt_main,
+        'main_currency' => $main,
+        'note'          => $title,
+      ];
+      if ($matchVirtual($rowV)) $virtualTx[] = $rowV;
+    }
   }
+
 
   // -------------------- TOTALS (from FULL filtered real + filtered virtual) --------------------
 
