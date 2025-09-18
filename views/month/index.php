@@ -45,37 +45,6 @@
     </div>
   </div>
 
-  <!-- <div class="bg-white rounded-2xl p-5 shadow-glass">
-    <h2 class="font-medium">This Month (<?= $ym ?>)</h2>
-    <p class="mt-2 text-sm text-gray-500">Income (main <?= htmlspecialchars($main) ?>):
-      <strong><?= moneyfmt($sumIn_main,$main) ?></strong>
-    </p>
-    <p class="mt-1 text-sm text-gray-500">Spending (main <?= htmlspecialchars($main) ?>):
-      <strong><?= moneyfmt($sumOut_main,$main) ?></strong>
-    </p>
-    <p class="mt-1 text-sm">Net (main):
-      <strong><?= moneyfmt($sumIn_main-$sumOut_main,$main) ?></strong>
-    </p>
-    <div class="mt-3 text-xs text-gray-500 space-y-1">
-      <div>
-        Native income:
-        <?php if (!empty($sumIn_native_by_cur)): ?>
-          <?php foreach ($sumIn_native_by_cur as $c=>$a): ?>
-            <span class="inline-block mr-2"><?= moneyfmt($a,$c) ?></span>
-          <?php endforeach; ?>
-        <?php else: ?>0.00<?php endif; ?>
-      </div>
-      <div>
-        Native spending:
-        <?php if (!empty($sumOut_native_by_cur)): ?>
-          <?php foreach ($sumOut_native_by_cur as $c=>$a): ?>
-            <span class="inline-block mr-2"><?= moneyfmt($a,$c) ?></span>
-          <?php endforeach; ?>
-        <?php else: ?>0.00<?php endif; ?>
-      </div>
-    </div>
-  </div> -->
-
   <div class="bg-white rounded-2xl p-5 shadow-glass md:col-span-2">
     <h3 class="text-base font-semibold mb-3">Quick Add</h3>
 
@@ -223,7 +192,7 @@
   </div>
 
   <!-- Daily Spending (bars) + 7-day MA (line) -->
-  <div class="bg-white rounded-2xl p-5 shadow-glass">
+  <div class="bg-white rounded-2xl p-5 shadow-glass  h-80">
     <h3 class="font-semibold mb-3">Daily Spending (<?= htmlspecialchars($main) ?>)</h3>
     <?php
       $rows = $allTx ?? $tx ?? [];
@@ -321,103 +290,99 @@
 
 </section>
 
-<section class="mt-6 bg-white rounded-2xl p-5 shadow-glass overflow-x-auto">
+<section class="mt-6 bg-white rounded-2xl p-5 shadow-glass">
   <h3 class="font-semibold mb-3">Transactions</h3>
 
-  <table class="min-w-full text-sm">
-    <?php if (!empty($cats)): ?>
-      <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
-        <?php foreach ($cats as $c): ?>
-          <span class="inline-flex items-center gap-1">
-            <span class="inline-block h-2.5 w-2.5 rounded-full"
-                  style="background: <?= htmlspecialchars($c['color'] ?? '#6B7280') ?>;"></span>
-            <?= htmlspecialchars($c['label']) ?>
-          </span>
-        <?php endforeach; ?>
-      </div>
-    <?php endif; ?>
-    <thead>
-      <tr class="text-left border-b">
-        <th class="py-2 pr-3">Date</th>
-        <th class="py-2 pr-3">Kind</th>
-        <th class="py-2 pr-3">Category</th>
-        <th class="py-2 pr-3 text-right">Amount (native)</th>
-        <th class="py-2 pr-3 text-right">Amount (<?= htmlspecialchars($main) ?>)</th>
-        <th class="py-2 pr-3">Note</th>
-        <th class="py-2 pr-3">Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      <?php foreach ($allTx as $row): ?>
-        <?php
-          $isVirtual = !empty($row['is_virtual']);
-          $nativeCur = $row['currency'] ?: $main;
+  <?php if (!empty($cats)): ?>
+    <div class="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+      <?php foreach ($cats as $c): ?>
+        <span class="inline-flex items-center gap-1">
+          <span class="inline-block h-2.5 w-2.5 rounded-full"
+                style="background-color: <?= htmlspecialchars($c['color'] ?? '#6B7280') ?>;"></span>
+          <?= htmlspecialchars($c['label']) ?>
+        </span>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
 
-          // For virtual we already provided amount_main; for real prefer stored value
-          if ($isVirtual && isset($row['amount_main'])) {
+  <!-- Mobile: stacked cards -->
+  <div class="md:hidden space-y-3">
+    <?php foreach ($allTx as $row): ?>
+      <?php
+        $isVirtual = !empty($row['is_virtual']);
+        $nativeCur = $row['currency'] ?: $main;
+
+        if ($isVirtual && isset($row['amount_main'])) {
+          $amtMain = (float)$row['amount_main'];
+          $mainCur = $row['main_currency'] ?? $main;
+        } else {
+          if (isset($row['amount_main']) && $row['amount_main'] !== null && !empty($row['main_currency'])) {
             $amtMain = (float)$row['amount_main'];
-            $mainCur = $row['main_currency'] ?? $main;
+            $mainCur = $row['main_currency'];
           } else {
-            if (isset($row['amount_main']) && $row['amount_main'] !== null && !empty($row['main_currency'])) {
-              $amtMain = (float)$row['amount_main'];
-              $mainCur = $row['main_currency'];
-            } else {
-              $amtMain = fx_convert($pdo, (float)$row['amount'], $nativeCur, $main, $row['occurred_on']);
-              $mainCur = $main;
-            }
+            $amtMain = fx_convert($pdo, (float)$row['amount'], $nativeCur, $main, $row['occurred_on']);
+            $mainCur = $main;
           }
-        ?>
-        <tr class="border-b hover:bg-gray-50 <?= $isVirtual ? 'opacity-95' : '' ?>">
-          <td class="py-2 pr-3">
-            <?= htmlspecialchars($row['occurred_on']) ?>
-            <?php if ($isVirtual): ?>
-              <span class="ml-1 inline-flex items-center text-[11px] text-gray-500">
-                <!-- lock icon -->
-                🔒
+        }
+        $dot = $row['cat_color'] ?? '#6B7280';
+      ?>
+      <div class="rounded-xl border p-3 <?= $isVirtual ? 'opacity-95' : '' ?>">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <div class="flex items-center gap-2 text-sm">
+              <span class="font-medium"><?= htmlspecialchars($row['occurred_on']) ?></span>
+              <?php if ($isVirtual): ?>
+                <span class="text-[11px] text-gray-500">🔒 auto</span>
+              <?php endif; ?>
+            </div>
+            <div class="mt-1 flex items-center gap-2">
+              <span class="capitalize text-xs px-2 py-0.5 rounded-full border">
+                <?= htmlspecialchars($row['kind']) ?>
               </span>
+              <span class="inline-flex items-center gap-2 text-sm">
+                <span class="inline-block h-2.5 w-2.5 rounded-full" style="background-color: <?= htmlspecialchars($dot) ?>;"></span>
+                <?= htmlspecialchars($row['cat_label'] ?? '—') ?>
+              </span>
+            </div>
+          </div>
+
+          <?php
+            $sameCur = strtoupper($nativeCur) === strtoupper($mainCur);
+          ?>
+          <div class="text-right shrink-0">
+            <div class="text-[13px] text-gray-500">Native</div>
+            <div class="font-medium"><?= moneyfmt($row['amount'], $nativeCur) ?></div>
+
+            <?php if (!$sameCur): ?>
+              <div class="text-[13px] text-gray-500 mt-1"><?= htmlspecialchars($mainCur) ?></div>
+              <div class="font-medium"><?= moneyfmt($amtMain, $mainCur) ?></div>
             <?php endif; ?>
-          </td>
-          <td class="py-2 pr-3 capitalize"><?= htmlspecialchars($row['kind']) ?></td>
-          <td class="py-2 pr-3">
-            <span class="inline-flex items-center gap-2">
-              <span class="inline-block h-2.5 w-2.5 rounded-full"
-                    style="background: <?= htmlspecialchars($row['cat_color'] ?? '#6B7280') ?>;"></span>
-              <?= htmlspecialchars($row['cat_label'] ?? '—') ?>
-            </span>
-            <?php if ($isVirtual && $row['virtual_type']==='scheduled'): ?>
-              <span class="text-xs text-gray-500 ml-1">(auto)</span>
-            <?php elseif ($isVirtual && $row['virtual_type']==='basic_income'): ?>
-              <span class="text-xs text-gray-500 ml-1">(auto)</span>
-            <?php endif; ?>
-          </td>
+          </div>
 
-          <!-- Native -->
-          <td class="py-2 pr-3 font-medium text-right">
-            <?= moneyfmt($row['amount'], $nativeCur) ?>
-          </td>
+        </div>
 
-          <!-- Main -->
-          <td class="py-2 pr-3 text-right">
-            <span class="font-medium"><?= moneyfmt($amtMain, $mainCur) ?></span>
-          </td>
+        <?php if (!empty($row['note'])): ?>
+          <div class="mt-2 text-xs text-gray-500"><?= htmlspecialchars($row['note']) ?></div>
+        <?php endif; ?>
 
-          <td class="py-2 pr-3 text-gray-500">
-            <?= htmlspecialchars($row['note'] ?? '') ?>
-          </td>
-
-          <td class="py-2 pr-3">
-            <?php if (!$isVirtual): ?>
-              <details><summary class="cursor-pointer text-accent">Edit</summary>
-                <form class="mt-2 grid sm:grid-cols-6 gap-2" method="post" action="/months/tx/edit">
+        <div class="mt-3">
+          <?php if (!$isVirtual): ?>
+            <details class="group">
+              <summary class="btn btn-ghost cursor-pointer">Edit</summary>
+              <div class="mt-2 bg-gray-50 rounded-xl p-3 border">
+                <form class="grid gap-2 sm:grid-cols-6 items-end" method="post" action="/months/tx/edit">
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                   <input type="hidden" name="y" value="<?= $y ?>" />
                   <input type="hidden" name="m" value="<?= $m ?>" />
                   <input type="hidden" name="id" value="<?= $row['id'] ?>" />
+
                   <select name="kind" class="select">
                     <option <?= $row['kind']==='income'?'selected':'' ?> value="income">Income</option>
                     <option <?= $row['kind']==='spending'?'selected':'' ?> value="spending">Spending</option>
                   </select>
+
                   <input name="amount" type="number" step="0.01" value="<?= $row['amount'] ?>" class="input" required />
+
                   <select name="currency" class="select">
                     <?php foreach ($userCurrencies as $c): ?>
                       <option value="<?= htmlspecialchars($c['code']) ?>" <?= ($row['currency']===$c['code'] ? 'selected' : ($c['is_main'] && !$row['currency'] ? 'selected' : '')) ?>>
@@ -426,10 +391,12 @@
                     <?php endforeach; ?>
                     <?php if (!count($userCurrencies)): ?><option value="HUF">HUF</option><?php endif; ?>
                   </select>
+
                   <input name="occurred_on" type="date" value="<?= $row['occurred_on'] ?>" class="input" />
                   <input name="note" value="<?= htmlspecialchars($row['note'] ?? '') ?>" class="input" />
                   <button class="btn btn-primary">Save</button>
                 </form>
+
                 <form class="mt-2" method="post" action="/months/tx/delete" onsubmit="return confirm('Delete transaction?')">
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                   <input type="hidden" name="y" value="<?= $y ?>" />
@@ -437,14 +404,152 @@
                   <input type="hidden" name="id" value="<?= $row['id'] ?>" />
                   <button class="btn btn-danger">Remove</button>
                 </form>
-              </details>
-            <?php else: ?>
-              <span class="text-xs text-gray-400">Auto-generated</span>
-            <?php endif; ?>
-          </td>
+              </div>
+            </details>
+          <?php else: ?>
+            <span class="text-xs text-gray-400">Auto-generated</span>
+          <?php endif; ?>
+        </div>
+      </div>
+    <?php endforeach; ?>
+  </div>
+
+  <!-- Desktop: classic table -->
+  <div class="hidden md:block overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead>
+        <tr class="text-left border-b">
+          <th class="py-2 pr-3">Date</th>
+          <th class="py-2 pr-3">Kind</th>
+          <th class="py-2 pr-3">Category</th>
+          <th class="py-2 pr-3 text-right">Amount (native)</th>
+          <th class="py-2 pr-3 text-right">Amount (<?= htmlspecialchars($main) ?>)</th>
+          <th class="py-2 pr-3">Note</th>
+          <th class="py-2 pr-3">Actions</th>
         </tr>
-      <?php endforeach; ?>
-    </tbody>  
-  </table>
+      </thead>
+      <tbody>
+        <?php foreach ($allTx as $row): ?>
+          <?php
+            $isVirtual = !empty($row['is_virtual']);
+            $nativeCur = $row['currency'] ?: $main;
+            if ($isVirtual && isset($row['amount_main'])) {
+              $amtMain = (float)$row['amount_main']; $mainCur = $row['main_currency'] ?? $main;
+            } else {
+              if (isset($row['amount_main']) && $row['amount_main'] !== null && !empty($row['main_currency'])) {
+                $amtMain = (float)$row['amount_main']; $mainCur = $row['main_currency'];
+              } else { $amtMain = fx_convert($pdo, (float)$row['amount'], $nativeCur, $main, $row['occurred_on']); $mainCur = $main; }
+            }
+          ?>
+          <tr class="border-b hover:bg-gray-50 <?= $isVirtual ? 'opacity-95' : '' ?>">
+            <td class="py-2 pr-3">
+              <?= htmlspecialchars($row['occurred_on']) ?>
+              <?php if ($isVirtual): ?><span class="ml-1 text-[11px] text-gray-500">🔒</span><?php endif; ?>
+            </td>
+            <td class="py-2 pr-3 capitalize"><?= htmlspecialchars($row['kind']) ?></td>
+            <td class="py-2 pr-3">
+              <span class="inline-flex items-center gap-2">
+                <span class="inline-block h-2.5 w-2.5 rounded-full"
+                      style="background-color: <?= htmlspecialchars($row['cat_color'] ?? '#6B7280') ?>;"></span>
+                <?= htmlspecialchars($row['cat_label'] ?? '—') ?>
+              </span>
+              <?php if ($isVirtual): ?><span class="text-xs text-gray-500 ml-1">(auto)</span><?php endif; ?>
+            </td>
+            <td class="py-2 pr-3 font-medium text-right"><?= moneyfmt($row['amount'], $nativeCur) ?></td>
+            <td class="py-2 pr-3 text-right"><span class="font-medium"><?= moneyfmt($amtMain, $mainCur) ?></span></td>
+            <td class="py-2 pr-3 text-gray-500"><?= htmlspecialchars($row['note'] ?? '') ?></td>
+            <td class="py-2 pr-3">
+              <?php if (!$isVirtual): ?>
+                <button type="button" class="btn btn-ghost" onclick="openTxModal('tx<?= $row['id'] ?>')">Edit</button>
+                <form class="inline" method="post" action="/months/tx/delete" onsubmit="return confirm('Delete transaction?')">
+                  <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+                  <input type="hidden" name="y" value="<?= $y ?>" />
+                  <input type="hidden" name="m" value="<?= $m ?>" />
+                  <input type="hidden" name="id" value="<?= $row['id'] ?>" />
+                  <button class="btn btn-danger">Remove</button>
+                </form>
+
+                <!-- Modal -->
+                <dialog id="tx<?= $row['id'] ?>" class="rounded-2xl p-0 w-[720px] max-w-[95vw] shadow-2xl">
+                  <form method="dialog" class="m-0">
+                    <div class="flex items-center justify-between px-5 py-3 border-b">
+                      <div class="font-semibold">Edit Transaction — <?= htmlspecialchars($row['occurred_on']) ?></div>
+                      <button class="btn btn-ghost" value="close">Close</button>
+                    </div>
+                  </form>
+
+                  <div class="p-5">
+                    <form class="grid gap-3 md:grid-cols-12 items-end" method="post" action="/months/tx/edit">
+                      <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+                      <input type="hidden" name="y" value="<?= $y ?>" />
+                      <input type="hidden" name="m" value="<?= $m ?>" />
+                      <input type="hidden" name="id" value="<?= $row['id'] ?>" />
+
+                      <div class="field md:col-span-3">
+                        <label class="label">Type</label>
+                        <select name="kind" class="select">
+                          <option <?= $row['kind']==='income'?'selected':'' ?> value="income">Income</option>
+                          <option <?= $row['kind']==='spending'?'selected':'' ?> value="spending">Spending</option>
+                        </select>
+                      </div>
+
+                      <div class="field md:col-span-3">
+                        <label class="label">Amount</label>
+                        <input name="amount" type="number" step="0.01" value="<?= $row['amount'] ?>" class="input" required />
+                      </div>
+
+                      <div class="field md:col-span-2">
+                        <label class="label">Currency</label>
+                        <select name="currency" class="select">
+                          <?php foreach ($userCurrencies as $c): ?>
+                            <option value="<?= htmlspecialchars($c['code']) ?>"
+                              <?= ($row['currency']===$c['code'] ? 'selected' : ($c['is_main'] && !$row['currency'] ? 'selected' : '')) ?>>
+                              <?= htmlspecialchars($c['code']) ?>
+                            </option>
+                          <?php endforeach; ?>
+                          <?php if (!count($userCurrencies)): ?><option value="HUF">HUF</option><?php endif; ?>
+                        </select>
+                      </div>
+
+                      <div class="field md:col-span-4">
+                        <label class="label">Date</label>
+                        <input name="occurred_on" type="date" value="<?= $row['occurred_on'] ?>" class="input" />
+                      </div>
+
+                      <div class="field md:col-span-12">
+                        <label class="label">Note</label>
+                        <input name="note" value="<?= htmlspecialchars($row['note'] ?? '') ?>" class="input" />
+                      </div>
+
+                      <div class="md:col-span-12 flex justify-end gap-2">
+                        <button class="btn btn-primary">Save</button>
+                      </div>
+                    </form>
+                  </div>
+                </dialog>
+              <?php else: ?>
+                <span class="text-xs text-gray-400">Auto-generated</span>
+              <?php endif; ?>
+            </td>
+
+          </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
 </section>
+<script>
+  function openTxModal(id){
+    const dlg = document.getElementById(id);
+    if (dlg && typeof dlg.showModal === 'function') dlg.showModal();
+    else if (dlg) dlg.setAttribute('open','');
+  }
+  // Close on backdrop click
+  document.addEventListener('click', (e)=>{
+    const dlg = e.target.closest('dialog[open]');
+    if (dlg && e.target === dlg) dlg.close();
+  });
+</script>
+
+
 
