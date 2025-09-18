@@ -14,6 +14,11 @@ function month_show(PDO $pdo, ?int $year = null, ?int $month = null) {
   $last  = date('Y-m-t', strtotime($first));
   $main  = fx_user_main($pdo, $u);
 
+  // Totals (initialize before using in any loop)
+  $sumIn_native_by_cur = [];
+  $sumOut_native_by_cur = [];
+  $sumIn_main = 0.0; $sumOut_main = 0.0;
+
   // -------------------- FILTERS & PAGINATION --------------------
   $flt = [
     'q'           => trim($_GET['q'] ?? ''), // note/category search
@@ -96,7 +101,7 @@ function month_show(PDO $pdo, ?int $year = null, ?int $month = null) {
     // kind
     if ($flt['kind'] && $row['kind'] !== $flt['kind']) return false;
     // category filter: virtuals have no category_id → exclude when filter present
-    if ($flt['category_id']) return false;
+    if ($flt['category_id'] && (int)($row['category_id'] ?? 0) !== (int)$flt['category_id']) return false;
     // currency filter (native)
     if ($flt['currency'] && strtoupper($row['currency'] ?? '') !== strtoupper($flt['currency'])) return false;
     // amount range (native)
@@ -111,33 +116,42 @@ function month_show(PDO $pdo, ?int $year = null, ?int $month = null) {
     return true;
   };
 
-  // (A) Basic incomes (income on 1st)
+  // (A) Basic incomes active this month (income on 1st) — build virtual rows only
   $bi = $pdo->prepare("
-    SELECT label, amount, currency
-    FROM basic_incomes
-    WHERE user_id=? AND valid_from<=?::date AND (valid_to IS NULL OR valid_to>=?::date)
+    SELECT b.label, b.amount, b.currency, b.category_id,
+          c.label AS cat_label, COALESCE(NULLIF(c.color,''),'#6B7280') AS cat_color
+    FROM basic_incomes b
+    LEFT JOIN categories c
+          ON c.id = b.category_id AND c.user_id = b.user_id
+    WHERE b.user_id=? AND b.valid_from<=?::date AND (b.valid_to IS NULL OR b.valid_to>=?::date)
   ");
-  $bi->execute([$u, $last, $first]);
+  $bi->execute([$u,$last,$first]);
+
   foreach ($bi as $b) {
     $amt = (float)$b['amount'];
     $cur = strtoupper($b['currency'] ?: $main);
     $amt_main = fx_convert_basic_income($pdo, $amt, $cur, $main, $y, $m);
+
     $rowV = [
       'id'            => null,
       'is_virtual'    => true,
       'virtual_type'  => 'basic_income',
       'occurred_on'   => $first,
       'kind'          => 'income',
-      'cat_label'     => 'Basic Income',
-      'cat_color'     => '#2563EB', // blue
-      'amount'        => $amt,
-      'currency'      => $cur,
-      'amount_main'   => $amt_main,
+      'category_id'   => $b['category_id'] ?? null,
+      'cat_label'     => ($b['cat_label'] ?: 'Basic Income'),
+      'cat_color'     => ($b['cat_color'] ?: '#2563EB'),
+      'amount'        => $amt,          // native
+      'currency'      => $cur,          // native
+      'amount_main'   => $amt_main,     // precomputed main
       'main_currency' => $main,
       'note'          => $b['label'] ? ('Label: '.$b['label']) : null,
     ];
+
+    // respect filters for virtuals
     if ($matchVirtual($rowV)) $virtualTx[] = $rowV;
   }
+
 
   // (B) Scheduled payments due inside month (spending on due date)
   $sp = $pdo->prepare("
@@ -171,9 +185,6 @@ function month_show(PDO $pdo, ?int $year = null, ?int $month = null) {
   }
 
   // -------------------- TOTALS (from FULL filtered real + filtered virtual) --------------------
-  $sumIn_native_by_cur = [];
-  $sumOut_native_by_cur = [];
-  $sumIn_main = 0.0; $sumOut_main = 0.0;
 
   $adder = function($r) use (&$sumIn_native_by_cur,&$sumOut_native_by_cur,&$sumIn_main,&$sumOut_main,$main,$pdo) {
     $amt  = (float)$r['amount'];

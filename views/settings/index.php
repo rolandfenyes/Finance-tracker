@@ -26,6 +26,16 @@
     </p>
   </div>
 
+  <!-- Cashflow -->
+  <div class="card">
+    <div class="card-kicker">Planning</div>
+    <h2 class="card-title mt-1">Cashflow Rules</h2>
+    <p class="card-subtle mt-1">Define how each income is allocated (e.g., 50% needs, 20% savings).</p>
+    <div class="card-subtle mt-3">
+      <a class="text-accent" href="/settings/cashflow">Manage rules →</a>
+    </div>
+  </div>
+
   <!-- Basic incomes -->
   <div class="card">
     <div class="card-kicker">Income</div>
@@ -45,20 +55,9 @@
     </p>
   </div>
 
-  <div class="card">
-    <div class="card-kicker">Planning</div>
-    <h2 class="card-title mt-1">Cashflow Rules</h2>
-    <p class="card-subtle mt-1">Define how each income is allocated (e.g., 50% needs, 20% savings).</p>
-    <div class="card-subtle mt-3">
-      <a class="text-accent" href="/settings/cashflow">Manage rules →</a>
-    </div>
-  </div>
-
-
-
   <!-- Categories -->
   <div class="card">
-    <div class="card-kicker">Settings</div>
+    <div class="card-kicker">Transactions</div>
     <h2 class="card-title mt-1">Categories</h2>
     <p class="card-subtle mt-2">Add, rename, or remove income &amp; spending categories.</p>
     <p class="card-subtle mt-3">
