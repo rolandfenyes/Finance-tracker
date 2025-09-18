@@ -1,6 +1,51 @@
 <?php $ym = sprintf('%04d-%02d', $y, $m); ?>
 <section class="grid md:grid-cols-3 gap-4">
-  <div class="bg-white rounded-2xl p-5 shadow-glass">
+  <div class="bg-white rounded-2xl p-6 shadow-glass">
+    <h2 class="text-lg font-semibold mb-4"><?= $ym ?></h2>
+
+    <!-- Net focus -->
+    <?php $net = $sumIn_main - $sumOut_main; ?>
+    <div class="text-center mb-6">
+      <div class="text-sm text-gray-500">Net (<?= htmlspecialchars($main) ?>)</div>
+      <div class="text-3xl font-bold <?= $net>=0 ? 'text-green-600' : 'text-red-600' ?>">
+        <?= moneyfmt($net, $main) ?>
+      </div>
+    </div>
+
+    <!-- Income vs Spending -->
+    <div class="grid grid-cols-2 gap-4 text-sm">
+      <div class="p-3 rounded-xl bg-green-50 text-green-700 text-center">
+        <div class="font-medium">Income</div>
+        <div class="text-md font-semibold"><?= moneyfmt($sumIn_main, $main) ?></div>
+      </div>
+      <div class="p-3 rounded-xl bg-red-50 text-red-700 text-center">
+        <div class="font-medium">Spending</div>
+        <div class="text-md font-semibold"><?= moneyfmt($sumOut_main, $main) ?></div>
+      </div>
+    </div>
+
+    <!-- Native breakdown -->
+    <div class="mt-6 text-xs text-gray-500 space-y-1">
+      <div>
+        <span class="font-medium text-gray-600">Native income:</span>
+        <?php if (!empty($sumIn_native_by_cur)): ?>
+          <?php foreach ($sumIn_native_by_cur as $c=>$a): ?>
+            <span class="inline-block mr-2"><?= moneyfmt($a, $c) ?></span>
+          <?php endforeach; ?>
+        <?php else: ?>0.00<?php endif; ?>
+      </div>
+      <div>
+        <span class="font-medium text-gray-600">Native spending:</span>
+        <?php if (!empty($sumOut_native_by_cur)): ?>
+          <?php foreach ($sumOut_native_by_cur as $c=>$a): ?>
+            <span class="inline-block mr-2"><?= moneyfmt($a, $c) ?></span>
+          <?php endforeach; ?>
+        <?php else: ?>0.00<?php endif; ?>
+      </div>
+    </div>
+  </div>
+
+  <!-- <div class="bg-white rounded-2xl p-5 shadow-glass">
     <h2 class="font-medium">This Month (<?= $ym ?>)</h2>
     <p class="mt-2 text-sm text-gray-500">Income (main <?= htmlspecialchars($main) ?>):
       <strong><?= moneyfmt($sumIn_main,$main) ?></strong>
@@ -29,7 +74,7 @@
         <?php else: ?>0.00<?php endif; ?>
       </div>
     </div>
-  </div>
+  </div> -->
 
   <div class="bg-white rounded-2xl p-5 shadow-glass md:col-span-2">
     <h3 class="text-base font-semibold mb-3">Quick Add</h3>
@@ -98,35 +143,182 @@
 </section>
 
 <section class="mt-6 grid md:grid-cols-2 gap-6">
-  <!-- Spending by Category (month) -->
-  <div class="bg-white rounded-2xl p-5 shadow-glass h-80">
-    <h3 class="font-semibold mb-3">Spending by Category</h3>
+  <!-- Spending by category -->
+  <div class="bg-white rounded-2xl p-5 shadow-glass h-80 overflow-hidden">
+    <h3 class="font-semibold mb-3">Spending by Category (<?= htmlspecialchars($main) ?>)</h3>
     <?php
-      $sp=$pdo->prepare("SELECT COALESCE(c.label,'Uncategorized') lb, SUM(t.amount) s
-         FROM transactions t LEFT JOIN categories c ON c.id=t.category_id
-         WHERE t.user_id=? AND t.kind='spending' AND t.occurred_on BETWEEN ?::date AND ?::date
-         GROUP BY lb ORDER BY s DESC");
-      $sp->execute([uid(),$first,$last]); $labels=[]; $data=[];
-      foreach($sp as $r){ $labels[]=$r['lb']; $data[]=(float)$r['s']; }
+      // Build grouped sums from $allTx in MAIN currency
+      $grp = []; $cols = [];
+      foreach (($allTx ?? []) as $r) {
+        if (($r['kind'] ?? '') !== 'spending') continue;
+        // amount in main currency
+        if (isset($r['amount_main']) && $r['amount_main'] !== null && !empty($r['main_currency'])) {
+          $amtMain = (float)$r['amount_main'];
+        } else {
+          $nativeCur = $r['currency'] ?: $main;
+          $amtMain = fx_convert($pdo, (float)$r['amount'], $nativeCur, $main, $r['occurred_on']);
+        }
+        $label = $r['cat_label'] ?? 'Uncategorized';
+        $color = $r['cat_color'] ?? '#6B7280';
+        // squash tiny negatives/rounding noise
+        if ($amtMain <= 0) continue;
+        $grp[$label] = ($grp[$label] ?? 0) + $amtMain;
+        if (!isset($cols[$label])) $cols[$label] = $color;
+      }
+      // sort desc
+      arsort($grp);
+      $labels = array_keys($grp);
+      $data   = array_values($grp);
+      $colors = array_map(fn($k)=>$cols[$k] ?? '#6B7280', $labels);
     ?>
-    <canvas id="spendcat-month" class="w-full h-64"></canvas>
-    <script>renderDoughnut('spendcat-month', <?= json_encode($labels) ?>, <?= json_encode($data) ?>);</script>
+      <div class="relative h-60 w-full">
+        <canvas id="spendcat-month" class="absolute inset-0"></canvas>
+      </div>
+    <script>
+      (function(){
+        const el = document.getElementById('spendcat-month');
+        if (!el) return;
+        const labels = <?= json_encode($labels) ?>;
+        const data   = <?= json_encode($data) ?>;
+        const colors = <?= json_encode($colors) ?>;
+
+        // guard: nothing to show
+        if (!labels.length) {
+          el.outerHTML = '<div class="text-sm text-gray-500">No spending this month.</div>';
+          return;
+        }
+
+        // ensure Chart.js present
+        if (typeof Chart === 'undefined') {
+          const s = document.createElement('script');
+          s.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+          s.onload = draw;
+          document.head.appendChild(s);
+        } else {
+          draw();
+        }
+
+        function draw(){
+          new Chart(el.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+              labels,
+              datasets: [{ data, backgroundColor: colors }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { position: 'right' },
+                tooltip: { callbacks: {
+                  label: (ctx) => `${ctx.label}: ${Number(ctx.parsed).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})} <?= $main ?>`
+                }}
+              },
+              cutout: '55%'
+            }
+          });
+        }
+      })();
+    </script>
   </div>
 
-  <!-- Daily Flow -->
-  <div class="bg-white rounded-2xl p-5 shadow-glass h-80">
-    <h3 class="font-semibold mb-3">Daily Flow</h3>
+  <!-- Daily Spending (bars) + 7-day MA (line) -->
+  <div class="bg-white rounded-2xl p-5 shadow-glass">
+    <h3 class="font-semibold mb-3">Daily Spending (<?= htmlspecialchars($main) ?>)</h3>
     <?php
-      $q=$pdo->prepare("SELECT occurred_on::date d,
-         SUM(CASE WHEN kind='income' THEN amount ELSE -amount END) v
-         FROM transactions WHERE user_id=? AND occurred_on BETWEEN ?::date AND ?::date
-         GROUP BY d ORDER BY d");
-      $q->execute([uid(),$first,$last]); $labels=[]; $data=[];
-      foreach($q as $r){ $labels[]=$r['d']; $data[]=(float)$r['v']; }
+      $rows = $allTx ?? $tx ?? [];
+
+      // prepare day list for the month
+      $cursor = new DateTime($first);
+      $end    = new DateTime($last);
+      $days   = [];
+      while ($cursor <= $end) { $days[] = $cursor->format('Y-m-d'); $cursor->modify('+1 day'); }
+
+      // spending per day (MAIN currency, positive)
+      $spend = array_fill_keys($days, 0.0);
+      foreach ($rows as $r) {
+        if (($r['kind'] ?? '') !== 'spending') continue;
+        $d = substr($r['occurred_on'], 0, 10);
+        if (!isset($spend[$d])) continue;
+
+        // amount -> main
+        if (isset($r['amount_main']) && $r['amount_main'] !== null && !empty($r['main_currency'])) {
+          $amtMain = (float)$r['amount_main'];
+        } else {
+          $from = $r['currency'] ?: $main;
+          $amtMain = fx_convert($pdo, (float)$r['amount'], $from, $main, $r['occurred_on']);
+        }
+        $spend[$d] += max(0, $amtMain);
+      }
+
+      // 7-day rolling average
+      $labels = array_keys($spend);
+      $vals   = array_values($spend);
+      $ma7    = [];
+      $win = 7;
+      for ($i=0; $i<count($vals); $i++) {
+        $start = max(0, $i-$win+1);
+        $slice = array_slice($vals, $start, $i-$start+1);
+        $ma7[] = round(array_sum($slice)/max(1,count($slice)), 2);
+      }
     ?>
-    <canvas id="flow-month" class="w-full h-64"></canvas>
-    <script>renderLineChart('flow-month', <?= json_encode($labels) ?>, <?= json_encode($data) ?>);</script>
+    <div class="relative h-56 md:h-64">
+      <canvas id="daily-spend" class="absolute inset-0 w-full h-full"></canvas>
+    </div>
+
+    <script>
+    (function(){
+      const el = document.getElementById('daily-spend');
+      if (!el) return;
+
+      const labels = <?= json_encode($labels) ?>;
+      const bars   = <?= json_encode(array_map(fn($v)=>round($v,2), $vals)) ?>;
+      const avg7   = <?= json_encode($ma7) ?>;
+
+      const allZero = (arr)=>arr.every(v => Math.abs(v) < 1e-9);
+      if (!labels.length || (allZero(bars))) {
+        el.parentElement.innerHTML = '<div class="text-sm text-gray-500">No spending this month.</div>';
+        return;
+      }
+
+      function draw(){
+        new Chart(el.getContext('2d'), {
+          data: {
+            labels,
+            datasets: [
+              { type:'bar',  label:'Spending', data:bars, borderWidth:0 },
+              { type:'line', label:'7-day Avg', data:avg7, borderWidth:2, tension:0.25, pointRadius:0, fill:false }
+            ]
+          },
+          options: {
+            responsive:true, maintainAspectRatio:false,
+            interaction:{ mode:'index', intersect:false },
+            plugins:{
+              legend:{ position:'bottom' },
+              tooltip:{ callbacks:{ label:(ctx)=>{
+                const v = Number(ctx.parsed.y).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+                return `${ctx.dataset.label}: ${v} <?= $main ?>`;
+              }}}
+            },
+            scales:{
+              x:{ grid:{ display:false }, ticks:{ maxTicksLimit:10 } },
+              y:{ grid:{ color:'rgba(0,0,0,0.05)' } }
+            }
+          }
+        });
+      }
+
+      if (typeof Chart === 'undefined') {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+        s.onload = draw; document.head.appendChild(s);
+      } else { draw(); }
+    })();
+    </script>
   </div>
+
+
+
 </section>
 
 <section class="mt-6 bg-white rounded-2xl p-5 shadow-glass overflow-x-auto">
