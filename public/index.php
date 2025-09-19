@@ -31,6 +31,21 @@ switch ($path) {
         handle_logout();
         break;
 
+    case '/language':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            verify_csrf();
+            $locale = $_POST['locale'] ?? default_locale();
+            set_locale($locale);
+            $redirectTo = $_POST['redirect_to'] ?? '/';
+            if (!is_string($redirectTo) || !str_starts_with($redirectTo, '/')) {
+                $redirectTo = '/';
+            }
+            redirect($redirectTo ?: '/');
+        } else {
+            redirect('/');
+        }
+        break;
+
     case '/current-month':
         require_login();
         require __DIR__ . '/../src/controllers/month.php';

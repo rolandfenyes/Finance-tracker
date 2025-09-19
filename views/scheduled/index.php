@@ -1,24 +1,39 @@
+<?php
+  $weekdayOptions = [
+    'MO' => __('dates.weekdays.mo.short'),
+    'TU' => __('dates.weekdays.tu.short'),
+    'WE' => __('dates.weekdays.we.short'),
+    'TH' => __('dates.weekdays.th.short'),
+    'FR' => __('dates.weekdays.fr.short'),
+    'SA' => __('dates.weekdays.sa.short'),
+    'SU' => __('dates.weekdays.su.short'),
+  ];
+  foreach ($weekdayOptions as $code => $label) {
+    if ($label === 'dates.weekdays.' . strtolower($code) . '.short') { $weekdayOptions[$code] = $code; }
+  }
+?>
+
 <section class="bg-white rounded-2xl p-5 shadow-glass">
-  <h1 class="text-xl font-semibold">Scheduled Payments</h1>
-  <p class="text-sm text-gray-500">Set up recurring payments.</p>
+  <h1 class="text-xl font-semibold"><?= htmlspecialchars(__('scheduled.title')) ?></h1>
+  <p class="text-sm text-gray-500"><?= htmlspecialchars(__('scheduled.subtitle')) ?></p>
 
   <details class="mt-4">
-    <summary class="cursor-pointer text-accent">Add scheduled payment</summary>
+    <summary class="cursor-pointer text-accent"><?= htmlspecialchars(__('scheduled.add')) ?></summary>
     <form method="post" action="/scheduled/add" class="grid gap-3 sm:grid-cols-12">
       <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
 
       <div class="sm:col-span-4">
-        <label class="label">Title</label>
-        <input name="title" class="input" placeholder="e.g., Rent" required />
+        <label class="label"><?= htmlspecialchars(__('scheduled.form.title')) ?></label>
+        <input name="title" class="input" placeholder="<?= htmlspecialchars(__('scheduled.form.title_placeholder')) ?>" required />
       </div>
 
       <div class="sm:col-span-2">
-        <label class="label">Amount</label>
+        <label class="label"><?= htmlspecialchars(__('scheduled.form.amount')) ?></label>
         <input name="amount" type="number" step="0.01" class="input" required />
       </div>
 
       <div class="sm:col-span-2">
-        <label class="label">Currency</label>
+        <label class="label"><?= htmlspecialchars(__('scheduled.form.currency')) ?></label>
         <select name="currency" class="select">
           <?php if (!empty($userCurrencies)): ?>
             <?php foreach ($userCurrencies as $curRow):
@@ -26,7 +41,7 @@
               $isMain = !empty($curRow['is_main']);
             ?>
               <option value="<?= $code ?>" <?= $isMain ? 'selected' : '' ?>><?= $code ?></option>
-            <?php endforeach; ?>
+          <?php endforeach; ?>
           <?php else: ?>
             <option value="HUF">HUF</option>
           <?php endif; ?>
@@ -35,14 +50,14 @@
       </div>
 
       <div class="sm:col-span-2">
-        <label class="label">First due</label>
+        <label class="label"><?= htmlspecialchars(__('scheduled.form.first_due')) ?></label>
         <input name="next_due" type="date" class="input" required />
       </div>
 
       <div class="sm:col-span-2">
-        <label class="label">Category</label>
+        <label class="label"><?= htmlspecialchars(__('common.category')) ?></label>
         <select name="category_id" class="select">
-          <option value="">No category</option>
+          <option value=""><?= htmlspecialchars(__('common.no_category')) ?></option>
           <?php foreach ($categories as $c): ?>
             <option value="<?= (int)$c['id'] ?>"><?= htmlspecialchars($c['label']) ?></option>
           <?php endforeach; ?>
@@ -54,30 +69,28 @@
         <input type="hidden" name="rrule" id="rrule-add" />
         <div class="grid md:grid-cols-12 gap-2">
           <div class="md:col-span-3">
-            <label class="label">Repeats</label>
+            <label class="label"><?= htmlspecialchars(__('recurrence.builder.repeats')) ?></label>
             <select class="select" id="rb-freq-add">
-              <option value="">Does not repeat</option>
-              <option value="DAILY">Daily</option>
-              <option value="WEEKLY">Weekly</option>
-              <option value="MONTHLY">Monthly</option>
-              <option value="YEARLY">Yearly</option>
+              <option value=""><?= htmlspecialchars(__('recurrence.builder.does_not_repeat')) ?></option>
+              <option value="DAILY"><?= htmlspecialchars(__('recurrence.builder.daily')) ?></option>
+              <option value="WEEKLY"><?= htmlspecialchars(__('recurrence.builder.weekly')) ?></option>
+              <option value="MONTHLY"><?= htmlspecialchars(__('recurrence.builder.monthly')) ?></option>
+              <option value="YEARLY"><?= htmlspecialchars(__('recurrence.builder.yearly')) ?></option>
             </select>
           </div>
           <div class="md:col-span-2">
-            <label class="label">Every</label>
+            <label class="label"><?= htmlspecialchars(__('recurrence.builder.every')) ?></label>
             <input type="number" min="1" value="1" id="rb-interval-add" class="input" />
           </div>
 
           <!-- Weekly options -->
           <div class="md:col-span-7" id="rb-weekly-add" style="display:none">
-            <label class="label">On</label>
+            <label class="label"><?= htmlspecialchars(__('recurrence.builder.on')) ?></label>
             <div class="flex flex-wrap gap-2 text-sm">
-              <?php
-                $days = ['MO'=>'Mon','TU'=>'Tue','WE'=>'Wed','TH'=>'Thu','FR'=>'Fri','SA'=>'Sat','SU'=>'Sun'];
-                foreach($days as $code=>$lbl): ?>
+              <?php foreach($weekdayOptions as $code=>$lbl): ?>
                 <label class="inline-flex items-center gap-1">
                   <input type="checkbox" value="<?= $code ?>" class="rb-byday-add">
-                  <span><?= $lbl ?></span>
+                  <span><?= htmlspecialchars($lbl) ?></span>
                 </label>
               <?php endforeach; ?>
             </div>
@@ -85,19 +98,19 @@
 
           <!-- Monthly options -->
           <div class="md:col-span-7" id="rb-monthly-add" style="display:none">
-            <label class="label">Day of month</label>
-            <input type="number" min="1" max="31" id="rb-bymonthday-add" class="input" placeholder="e.g., 10" />
+            <label class="label"><?= htmlspecialchars(__('recurrence.builder.day_of_month')) ?></label>
+            <input type="number" min="1" max="31" id="rb-bymonthday-add" class="input" placeholder="10" />
           </div>
 
           <!-- Yearly options -->
           <div class="md:col-span-7" id="rb-yearly-add" style="display:none">
             <div class="grid grid-cols-2 gap-2">
               <div>
-                <label class="label">Month</label>
+                <label class="label"><?= htmlspecialchars(__('recurrence.builder.month')) ?></label>
                 <input type="number" min="1" max="12" id="rb-bymonth-add" class="input" placeholder="1-12" />
               </div>
               <div>
-                <label class="label">Day</label>
+                <label class="label"><?= htmlspecialchars(__('recurrence.builder.day')) ?></label>
                 <input type="number" min="1" max="31" id="rb-bymday-add" class="input" placeholder="1-31" />
               </div>
             </div>
@@ -106,19 +119,19 @@
           <!-- Ends -->
           <div class="md:col-span-12 grid md:grid-cols-12 gap-2">
             <div class="md:col-span-3">
-              <label class="label">Ends</label>
+              <label class="label"><?= htmlspecialchars(__('recurrence.builder.ends')) ?></label>
               <select class="select" id="rb-endtype-add">
-                <option value="none">Never</option>
-                <option value="count">After # times</option>
-                <option value="until">On date</option>
+                <option value="none"><?= htmlspecialchars(__('recurrence.builder.never')) ?></option>
+                <option value="count"><?= htmlspecialchars(__('recurrence.builder.after_times')) ?></option>
+                <option value="until"><?= htmlspecialchars(__('recurrence.builder.until')) ?></option>
               </select>
             </div>
             <div class="md:col-span-2" id="rb-count-wrap-add" style="display:none">
-              <label class="label">Count</label>
+              <label class="label"><?= htmlspecialchars(__('recurrence.builder.count')) ?></label>
               <input type="number" min="1" id="rb-count-add" class="input" />
             </div>
             <div class="md:col-span-3" id="rb-until-wrap-add" style="display:none">
-              <label class="label">Until</label>
+              <label class="label"><?= htmlspecialchars(__('recurrence.builder.until')) ?></label>
               <input type="date" id="rb-until-add" class="input" />
             </div>
             <div class="md:col-span-4 flex items-end justify-end">
@@ -129,7 +142,7 @@
       </div>
 
       <div class="sm:col-span-12 flex justify-end">
-        <button class="btn btn-primary">Add</button>
+        <button class="btn btn-primary"><?= htmlspecialchars(__('common.add')) ?></button>
       </div>
     </form>
 
@@ -138,7 +151,7 @@
 
 <section class="mt-6 bg-white rounded-2xl p-5 shadow-glass">
   <div class="flex items-center justify-between mb-3">
-    <h2 class="font-semibold">Scheduled payments</h2>
+    <h2 class="font-semibold"><?= htmlspecialchars(__('scheduled.list.title')) ?></h2>
   </div>
 
   <!-- Desktop table -->
@@ -146,12 +159,12 @@
     <table class="min-w-full text-sm">
       <thead>
         <tr class="text-left border-b">
-          <th class="py-2 pr-3">Title</th>
-          <th class="py-2 pr-3">Amount</th>
-          <th class="py-2 pr-3">Currency</th>
-          <th class="py-2 pr-3">Repeats</th>
-          <th class="py-2 pr-3">First payment</th>
-          <th class="py-2 pr-3">Category</th>
+          <th class="py-2 pr-3"><?= htmlspecialchars(__('scheduled.list.columns.title')) ?></th>
+          <th class="py-2 pr-3"><?= htmlspecialchars(__('scheduled.list.columns.amount')) ?></th>
+          <th class="py-2 pr-3"><?= htmlspecialchars(__('scheduled.list.columns.currency')) ?></th>
+          <th class="py-2 pr-3"><?= htmlspecialchars(__('scheduled.list.columns.repeats')) ?></th>
+          <th class="py-2 pr-3"><?= htmlspecialchars(__('scheduled.list.columns.first_payment')) ?></th>
+          <th class="py-2 pr-3"><?= htmlspecialchars(__('scheduled.list.columns.category')) ?></th>
         </tr>
       </thead>
       <tbody>
@@ -185,13 +198,13 @@
                     data-next_due="<?= htmlspecialchars($r['next_due']) ?>"
                     data-category_id="<?= (int)($r['category_id'] ?? 0) ?>"
                     data-rrule="<?= htmlspecialchars($r['rrule'] ?? '') ?>"
-                  >Edit</button>
-  
+                  ><?= htmlspecialchars(__('common.edit')) ?></button>
+
                   <form method="post" action="/scheduled/delete" class="inline"
-                        onsubmit="return confirm('Delete this scheduled item?');">
+                        onsubmit="return confirm(<?= json_encode(__('scheduled.list.delete_confirm')) ?>);">
                     <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                     <input type="hidden" name="id" value="<?= (int)$r['id'] ?>" />
-                    <button class="btn btn-danger !py-1 !px-3">Remove</button>
+                    <button class="btn btn-danger !py-1 !px-3"><?= htmlspecialchars(__('common.remove')) ?></button>
                   </form>
                 </div>
               </div>
@@ -225,11 +238,11 @@
 
         <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
           <div class="rounded-lg bg-gray-50 p-2">
-            <div class="text-gray-500">First payment</div>
+            <div class="text-gray-500"><?= htmlspecialchars(__('scheduled.list.first_payment')) ?></div>
             <div class="font-medium"><?= htmlspecialchars($r['next_due'] ?? '—') ?></div>
           </div>
           <div class="rounded-lg bg-gray-50 p-2">
-            <div class="text-gray-500">Repeats</div>
+            <div class="text-gray-500"><?= htmlspecialchars(__('scheduled.list.repeats')) ?></div>
             <div class="font-medium">
               <span class="rrule-summary" data-rrule="<?= htmlspecialchars($r['rrule'] ?? '') ?>"></span>
             </div>
@@ -248,13 +261,13 @@
             data-next_due="<?= htmlspecialchars($r['next_due']) ?>"
             data-category_id="<?= (int)($r['category_id'] ?? 0) ?>"
             data-rrule="<?= htmlspecialchars($r['rrule'] ?? '') ?>"
-          >Edit</button>
+          ><?= htmlspecialchars(__('common.edit')) ?></button>
 
           <form method="post" action="/scheduled/delete" class="inline"
-                onsubmit="return confirm('Delete this scheduled item?');">
+                onsubmit="return confirm(<?= json_encode(__('scheduled.list.delete_confirm')) ?>);">
             <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
             <input type="hidden" name="id" value="<?= (int)$r['id'] ?>" />
-            <button class="btn btn-danger !py-1.5 !px-3">Remove</button>
+            <button class="btn btn-danger !py-1.5 !px-3"><?= htmlspecialchars(__('common.remove')) ?></button>
           </form>
         </div>
       </div>
@@ -300,6 +313,7 @@ function wireRR(id){
 
   const out     = $(`rrule-${id}`);
   const sum     = $(`rb-summary-${id}`);
+  const oneTimeLabel = (typeof t === 'function') ? t('recurrence.summary.one_time') : 'One-time';
 
   function toggleEnds(){
     const mode = endtype ? endtype.value : 'none';
@@ -325,7 +339,7 @@ function wireRR(id){
     if (!out) return;
     let r = [];
     const f = freq ? freq.value : '';
-    if (!f){ out.value=''; sum && (sum.textContent='One-time'); return; }
+    if (!f){ out.value=''; sum && (sum.textContent=oneTimeLabel); return; }
 
     r.push('FREQ='+f);
 
@@ -359,7 +373,7 @@ function wireRR(id){
     if (typeof rrSummary === 'function') {
       sum && (sum.textContent = rrSummary(out.value));
     } else {
-      sum && (sum.textContent = out.value || 'One-time');
+      sum && (sum.textContent = out.value || oneTimeLabel);
     }
   }
 
@@ -419,8 +433,8 @@ document.querySelectorAll('input[id^="rrule-"]').forEach(h => {
   <div class="modal-panel">
     <!-- Header -->
     <div class="modal-header">
-      <h3 id="sched-title" class="font-semibold">Edit Scheduled Payment</h3>
-      <button class="icon-btn" aria-label="Close" data-close-sched>✕</button>
+      <h3 id="sched-title" class="font-semibold"><?= htmlspecialchars(__('scheduled.modal.title')) ?></h3>
+      <button class="icon-btn" aria-label="<?= htmlspecialchars(__('common.close')) ?>" data-close-sched>✕</button>
     </div>
 
     <!-- Scrollable body -->
@@ -431,17 +445,17 @@ document.querySelectorAll('input[id^="rrule-"]').forEach(h => {
         <input type="hidden" name="rrule" id="rrule-dlg" />
 
         <div class="md:col-span-5">
-          <label class="label">Title</label>
+          <label class="label"><?= htmlspecialchars(__('scheduled.form.title')) ?></label>
           <input name="title" id="sched-title-input" class="input" required />
         </div>
 
         <div class="md:col-span-3">
-          <label class="label">Amount</label>
+          <label class="label"><?= htmlspecialchars(__('scheduled.form.amount')) ?></label>
           <input name="amount" id="sched-amount" type="number" step="0.01" class="input" required />
         </div>
 
         <div class="md:col-span-2">
-          <label class="label">Currency</label>
+          <label class="label"><?= htmlspecialchars(__('scheduled.form.currency')) ?></label>
           <select name="currency" id="sched-currency" class="select">
             <?php foreach ($userCurrencies as $curRow): $code = htmlspecialchars($curRow['code']??''); ?>
               <option value="<?= $code ?>"><?= $code ?></option>
@@ -450,14 +464,14 @@ document.querySelectorAll('input[id^="rrule-"]').forEach(h => {
         </div>
 
         <div class="md:col-span-2">
-          <label class="label">First payment</label>
+          <label class="label"><?= htmlspecialchars(__('scheduled.list.first_payment')) ?></label>
           <input name="next_due" id="sched-nextdue" type="date" class="input" required />
         </div>
 
         <div class="md:col-span-12 md:col-span-4">
-          <label class="label">Category</label>
+          <label class="label"><?= htmlspecialchars(__('common.category')) ?></label>
           <select name="category_id" id="sched-category" class="select">
-            <option value="">No category</option>
+            <option value=""><?= htmlspecialchars(__('common.no_category')) ?></option>
             <?php foreach ($categories as $c): ?>
               <option value="<?= (int)$c['id'] ?>"><?= htmlspecialchars($c['label']) ?></option>
             <?php endforeach; ?>
@@ -468,29 +482,29 @@ document.querySelectorAll('input[id^="rrule-"]').forEach(h => {
         <div class="md:col-span-12 rounded-xl border p-3">
           <div class="grid md:grid-cols-12 gap-2">
             <div class="md:col-span-3">
-              <label class="label">Repeats</label>
+              <label class="label"><?= htmlspecialchars(__('recurrence.builder.repeats')) ?></label>
               <select class="select" id="rb-freq-dlg">
-                <option value="">Does not repeat</option>
-                <option value="DAILY">Daily</option>
-                <option value="WEEKLY">Weekly</option>
-                <option value="MONTHLY">Monthly</option>
-                <option value="YEARLY">Yearly</option>
+                <option value=""><?= htmlspecialchars(__('recurrence.builder.does_not_repeat')) ?></option>
+                <option value="DAILY"><?= htmlspecialchars(__('recurrence.builder.daily')) ?></option>
+                <option value="WEEKLY"><?= htmlspecialchars(__('recurrence.builder.weekly')) ?></option>
+                <option value="MONTHLY"><?= htmlspecialchars(__('recurrence.builder.monthly')) ?></option>
+                <option value="YEARLY"><?= htmlspecialchars(__('recurrence.builder.yearly')) ?></option>
               </select>
             </div>
 
             <div class="md:col-span-2">
-              <label class="label">Every</label>
+              <label class="label"><?= htmlspecialchars(__('recurrence.builder.every')) ?></label>
               <input type="number" min="1" value="1" id="rb-interval-dlg" class="input" />
             </div>
 
             <!-- Weekly -->
             <div class="md:col-span-7" id="rb-weekly-dlg" style="display:none">
-              <label class="label">On</label>
+              <label class="label"><?= htmlspecialchars(__('recurrence.builder.on')) ?></label>
               <div class="flex flex-wrap gap-2 text-sm">
-                <?php foreach(['MO'=>'Mon','TU'=>'Tue','WE'=>'Wed','TH'=>'Thu','FR'=>'Fri','SA'=>'Sat','SU'=>'Sun'] as $code=>$lbl): ?>
+                <?php foreach($weekdayOptions as $code=>$lbl): ?>
                   <label class="inline-flex items-center gap-1">
                     <input type="checkbox" value="<?= $code ?>" class="rb-byday-dlg">
-                    <span><?= $lbl ?></span>
+                    <span><?= htmlspecialchars($lbl) ?></span>
                   </label>
                 <?php endforeach; ?>
               </div>
@@ -498,19 +512,19 @@ document.querySelectorAll('input[id^="rrule-"]').forEach(h => {
 
             <!-- Monthly -->
             <div class="md:col-span-7" id="rb-monthly-dlg" style="display:none">
-              <label class="label">Day of month</label>
-              <input type="number" min="1" max="31" id="rb-bymonthday-dlg" class="input" placeholder="e.g., 10" />
+              <label class="label"><?= htmlspecialchars(__('recurrence.builder.day_of_month')) ?></label>
+              <input type="number" min="1" max="31" id="rb-bymonthday-dlg" class="input" placeholder="10" />
             </div>
 
             <!-- Yearly -->
             <div class="md:col-span-7" id="rb-yearly-dlg" style="display:none">
               <div class="grid grid-cols-2 gap-2">
                 <div>
-                  <label class="label">Month</label>
+                  <label class="label"><?= htmlspecialchars(__('recurrence.builder.month')) ?></label>
                   <input type="number" min="1" max="12" id="rb-bymonth-dlg" class="input" />
                 </div>
                 <div>
-                  <label class="label">Day</label>
+                  <label class="label"><?= htmlspecialchars(__('recurrence.builder.day')) ?></label>
                   <input type="number" min="1" max="31" id="rb-bymday-dlg" class="input" />
                 </div>
               </div>
@@ -519,19 +533,19 @@ document.querySelectorAll('input[id^="rrule-"]').forEach(h => {
             <!-- Ends -->
             <div class="md:col-span-12 grid md:grid-cols-12 gap-2">
               <div class="md:col-span-3">
-                <label class="label">Ends</label>
+                <label class="label"><?= htmlspecialchars(__('recurrence.builder.ends')) ?></label>
                 <select class="select" id="rb-endtype-dlg">
-                  <option value="none">Never</option>
-                  <option value="count">After # times</option>
-                  <option value="until">On date</option>
+                  <option value="none"><?= htmlspecialchars(__('recurrence.builder.never')) ?></option>
+                  <option value="count"><?= htmlspecialchars(__('recurrence.builder.after_times')) ?></option>
+                  <option value="until"><?= htmlspecialchars(__('recurrence.builder.until')) ?></option>
                 </select>
               </div>
               <div class="md:col-span-2" id="rb-count-wrap-dlg" style="display:none">
-                <label class="label">Count</label>
+                <label class="label"><?= htmlspecialchars(__('recurrence.builder.count')) ?></label>
                 <input type="number" min="1" id="rb-count-dlg" class="input" />
               </div>
               <div class="md:col-span-3" id="rb-until-wrap-dlg" style="display:none">
-                <label class="label">Until</label>
+                <label class="label"><?= htmlspecialchars(__('recurrence.builder.until')) ?></label>
                 <input type="date" id="rb-until-dlg" class="input" />
               </div>
               <div class="md:col-span-4 flex items-end justify-end">
@@ -545,8 +559,8 @@ document.querySelectorAll('input[id^="rrule-"]').forEach(h => {
 
     <!-- Sticky footer -->
     <div class="modal-footer flex items-center justify-end gap-2">
-      <button type="button" class="btn" data-close-sched>Cancel</button>
-      <button type="submit" class="btn btn-primary" form="sched-form" id="sched-save">Save</button>
+      <button type="button" class="btn" data-close-sched><?= htmlspecialchars(__('common.cancel')) ?></button>
+      <button type="submit" class="btn btn-primary" form="sched-form" id="sched-save"><?= htmlspecialchars(__('common.save')) ?></button>
     </div>
   </div>
 </div>
@@ -621,20 +635,79 @@ document.querySelectorAll('input[id^="rrule-"]').forEach(h => {
   }
 
   function rrSummary(rrule){
-    if (!rrule) return 'One-time';
+    const hasT = typeof t === 'function';
+    const oneTime = hasT ? t('recurrence.summary.one_time') : 'One-time';
+    if (!rrule) return oneTime;
     const p = parseRR(rrule);
-    if (!p.FREQ) return 'One-time';
+    if (!p.FREQ) return oneTime;
 
-    const every = (n,unit)=> n>1 ? `Every ${n} ${unit}s` : `Every ${unit}`;
-    const end = (p.COUNT ? `, ${p.COUNT} times`
-              : p.UNTIL ? `, until ${p.UNTIL.slice(0,4)}-${p.UNTIL.slice(4,6)}-${p.UNTIL.slice(6,8)}`
-              : '');
+    const unitMap = { DAILY: 'day', WEEKLY: 'week', MONTHLY: 'month', YEARLY: 'year' };
+    const every = (n, unitKey) => {
+      if (!unitKey) return '';
+      if (!hasT) { return n > 1 ? `Every ${n} ${unitKey}s` : `Every ${unitKey}`; }
+      const key = n > 1 ? 'recurrence.summary.every_interval' : 'recurrence.summary.every_single';
+      const params = n > 1
+        ? { interval: n, unit: t(`recurrence.units.${unitKey}.plural`) }
+        : { unit: t(`recurrence.units.${unitKey}.singular`) };
+      return t(key, params);
+    };
 
-    if (p.FREQ==='DAILY')   return `${every(p.INTERVAL,'day')}${end}`;
-    if (p.FREQ==='WEEKLY')  return `${every(p.INTERVAL,'week')}${p.BYDAY.length? ' on '+p.BYDAY.join(', '):''}${end}`;
-    if (p.FREQ==='MONTHLY') return `${every(p.INTERVAL,'month')}${p.BYMONTHDAY? ' on day '+p.BYMONTHDAY:''}${end}`;
-    if (p.FREQ==='YEARLY')  return `${every(p.INTERVAL,'year')}${(p.BYMONTH? ' on '+String(p.BYMONTH).padStart(2,'0')+'-'+(p.BYMONTHDAY??''): '')}${end}`;
-    return 'Repeats';
+    const parts = [];
+    const unitKey = unitMap[p.FREQ] || '';
+    const base = every(p.INTERVAL || 1, unitKey);
+    if (base) parts.push(base);
+
+    let details = '';
+    if (p.FREQ === 'WEEKLY') {
+      const days = Array.isArray(p.BYDAY) ? p.BYDAY.map(code => {
+        const key = `dates.weekdays.${code.toLowerCase()}.short`;
+        if (!hasT) return code;
+        const label = t(key);
+        return label === key ? code : label;
+      }).filter(Boolean) : [];
+      if (days.length) {
+        details = hasT ? t('recurrence.summary.on_days', { days: days.join(', ') }) : `on ${days.join(', ')}`;
+      }
+    } else if (p.FREQ === 'MONTHLY' && p.BYMONTHDAY != null) {
+      details = hasT ? t('recurrence.summary.on_day_of_month', { day: p.BYMONTHDAY }) : `on day ${p.BYMONTHDAY}`;
+    } else if (p.FREQ === 'YEARLY') {
+      const month = p.BYMONTH != null ? p.BYMONTH : null;
+      const day = p.BYMONTHDAY != null ? p.BYMONTHDAY : null;
+      if (month !== null || day !== null) {
+        let label = '';
+        if (month !== null) {
+          if (hasT) {
+            const key = `dates.months.${month}.short`;
+            const translated = t(key);
+            label = translated === key ? String(month).padStart(2, '0') : translated;
+          } else {
+            label = String(month).padStart(2, '0');
+          }
+        }
+        if (day !== null) {
+          const dayStr = String(day).padStart(2, '0');
+          label = label ? `${label} ${dayStr}` : dayStr;
+        }
+        details = hasT ? t('recurrence.summary.on_date', { date: label }) : `on ${label}`;
+      }
+    }
+    if (details) parts.push(details);
+
+    let ending = '';
+    if (p.COUNT) {
+      ending = hasT ? t('recurrence.summary.count', { count: p.COUNT }) : `after ${p.COUNT} times`;
+    } else if (p.UNTIL) {
+      const formatted = p.UNTIL.length >= 8
+        ? `${p.UNTIL.slice(0,4)}-${p.UNTIL.slice(4,6)}-${p.UNTIL.slice(6,8)}`
+        : p.UNTIL;
+      ending = hasT ? t('recurrence.summary.until', { date: formatted }) : `until ${formatted}`;
+    }
+    if (ending) parts.push(ending);
+
+    if (!parts.length) {
+      return hasT ? t('recurrence.summary.repeats') : 'Repeats';
+    }
+    return parts.join(' ');
   }
 
   // Render summaries in the table (replace raw text)

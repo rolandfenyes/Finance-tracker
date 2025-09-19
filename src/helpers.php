@@ -7,7 +7,6 @@ function view(string $name, array $data = []) {
     include __DIR__ . '/../views/layout/footer.php';
 }
 
-
 function redirect(string $to) {
     header('Location: ' . $to);
     exit;
@@ -22,10 +21,95 @@ function csrf_token(): string {
     return $_SESSION['csrf'];
 }
 function verify_csrf() {
-    if (($_POST['csrf'] ?? '') !== ($_SESSION['csrf'] ?? '')) { http_response_code(400); die('Bad CSRF'); }
+    if (($_POST['csrf'] ?? '') !== ($_SESSION['csrf'] ?? '')) {
+        http_response_code(400);
+        die(__('errors.bad_csrf'));
+    }
 }
 
 function moneyfmt($amount, $code='') { return number_format((float)$amount, 2) . ($code?" $code":""); }
+
+function supported_locales(): array {
+    return ['en', 'hu'];
+}
+
+function available_locales(): array {
+    $labels = trans_array('locales');
+    $result = [];
+    foreach (supported_locales() as $code) {
+        $result[$code] = $labels[$code] ?? $code;
+    }
+    return $result;
+}
+
+function default_locale(): string {
+    return 'en';
+}
+
+function current_locale(): string {
+    $locale = $_SESSION['locale'] ?? default_locale();
+    if (!in_array($locale, supported_locales(), true)) {
+        $locale = default_locale();
+    }
+    return $locale;
+}
+
+function set_locale(string $locale): void {
+    if (in_array($locale, supported_locales(), true)) {
+        $_SESSION['locale'] = $locale;
+    }
+}
+
+function translations(?string $locale = null): array {
+    static $cache = [];
+    $locale = $locale ?? current_locale();
+    if (!isset($cache[$locale])) {
+        $path = __DIR__ . '/../lang/' . $locale . '.php';
+        $cache[$locale] = file_exists($path) ? require $path : [];
+    }
+    return $cache[$locale];
+}
+
+function translation_lookup(array $translations, string $key) {
+    $parts = explode('.', $key);
+    $value = $translations;
+    foreach ($parts as $part) {
+        if (!is_array($value) || !array_key_exists($part, $value)) {
+            return null;
+        }
+        $value = $value[$part];
+    }
+    return $value;
+}
+
+function trans_raw(string $key) {
+    $locale = current_locale();
+    $value = translation_lookup(translations($locale), $key);
+    if ($value === null && $locale !== default_locale()) {
+        $value = translation_lookup(translations(default_locale()), $key);
+    }
+    return $value;
+}
+
+function __(string $key, array $replace = []): string {
+    $value = trans_raw($key);
+    if ($value === null) {
+        $value = $key;
+    } elseif (!is_string($value)) {
+        $value = is_scalar($value) ? (string)$value : $key;
+    }
+    if ($replace) {
+        foreach ($replace as $k => $v) {
+            $value = str_replace(':' . $k, (string)$v, $value);
+        }
+    }
+    return $value;
+}
+
+function trans_array(string $key): array {
+    $value = trans_raw($key);
+    return is_array($value) ? $value : [];
+}
 
 function normalize_hex(?string $val): string {
     $val = trim((string)$val);

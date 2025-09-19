@@ -131,7 +131,7 @@ function loans_add(PDO $pdo){
     ? (float)$_POST['monthly_amount']
     : ($months > 0 ? loan_monthly_payment($principal, $interest, $months) + $insurance_monthly : 0.0);
 
-  if ($name === '' || $principal <= 0) { $_SESSION['flash']='Name & principal required.'; redirect('/loans'); }
+  if ($name === '' || $principal <= 0) { $_SESSION['flash'] = __('flash.loan_name_required'); redirect('/loans'); }
 
   $pdo->beginTransaction();
   try {
@@ -152,16 +152,16 @@ function loans_add(PDO $pdo){
 
       $sp = $pdo->prepare("INSERT INTO scheduled_payments(user_id,title,amount,currency,next_due,rrule,category_id,loan_id)
                            VALUES (?,?,?,?,?,?,NULL,?) RETURNING id");
-      $sp->execute([$u, "Loan: ".$name, $monthly_amount, $sched_currency, $first_due, $rrule, $loanId]);
+      $sp->execute([$u, __('loans.schedule_title_prefix', ['name' => $name]), $monthly_amount, $sched_currency, $first_due, $rrule, $loanId]);
       $newSpId = (int)$sp->fetchColumn();
       $pdo->prepare("UPDATE loans SET scheduled_payment_id=? WHERE id=? AND user_id=?")->execute([$newSpId,$loanId,$u]);
     }
 
     $pdo->commit();
-    $_SESSION['flash']='Loan saved.';
+    $_SESSION['flash'] = __('flash.loan_saved');
   } catch (Throwable $e) {
     $pdo->rollBack();
-    $_SESSION['flash']='Failed to save loan.';
+    $_SESSION['flash'] = __('flash.loan_save_failed');
   }
   redirect('/loans');
 }
@@ -245,7 +245,7 @@ function loans_edit(PDO $pdo){
         INSERT INTO scheduled_payments(user_id, title, amount, currency, next_due, rrule, category_id, loan_id)
         VALUES (?,?,?,?,?,?,NULL,?) RETURNING id
       ");
-      $sp->execute([$u, "Loan: ".$name, $monthly_amount, $sched_currency, $first_due, $rrule, $id]);
+      $sp->execute([$u, __('loans.schedule_title_prefix', ['name' => $name]), $monthly_amount, $sched_currency, $first_due, $rrule, $id]);
       $newSpId = (int)$sp->fetchColumn();
 
       $pdo->prepare("UPDATE loans SET scheduled_payment_id=? WHERE id=? AND user_id=?")
@@ -254,10 +254,10 @@ function loans_edit(PDO $pdo){
     // else: keep existing link as-is
 
     $pdo->commit();
-    $_SESSION['flash'] = 'Loan updated.';
+    $_SESSION['flash'] = __('flash.loan_updated');
   } catch (Throwable $e) {
     $pdo->rollBack();
-    $_SESSION['flash'] = 'Failed to update loan.';
+    $_SESSION['flash'] = __('flash.loan_update_failed');
     // throw $e; // uncomment while debugging locally
   }
 
