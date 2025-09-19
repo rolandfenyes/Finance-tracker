@@ -41,7 +41,7 @@ function incomes_add(PDO $pdo){
     verify_csrf(); require_login(); $u = uid();
 
     $label      = trim($_POST['label'] ?? '');
-    if ($label === '') { $_SESSION['flash'] = 'Label required.'; return; }
+    if ($label === '') { $_SESSION['flash'] = __('flash.label_required'); return; }
 
     $amount     = (float)($_POST['amount'] ?? 0);
     $currency   = strtoupper(trim($_POST['currency'] ?? ''));
@@ -77,10 +77,10 @@ function incomes_add(PDO $pdo){
         $ins->execute([$u, $label, $amount, $currency, $valid_from, $catId]);
 
         $pdo->commit();
-        $_SESSION['flash'] = 'Income saved.';
+        $_SESSION['flash'] = __('flash.income_saved');
     } catch (Throwable $e) {
         $pdo->rollBack();
-        $_SESSION['flash'] = 'Save failed.';
+        $_SESSION['flash'] = __('flash.income_save_failed');
         // throw $e; // uncomment to debug locally
     }
 }
