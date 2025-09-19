@@ -65,6 +65,7 @@
       .btn-primary { @apply bg-gray-900 text-white hover:opacity-90 active:opacity-80; }
       .btn-ghost   { @apply border border-gray-300 text-gray-700 hover:bg-gray-50; }
       .btn-danger  { @apply border border-red-300 text-red-600 hover:bg-red-50; }
+      .btn-emerald { background:#059669; color:#fff; border-radius:.75rem; padding:.5rem .9rem; }
 
       /* Base containers */
       .card { @apply bg-white rounded-2xl p-5 shadow-glass; }
@@ -78,6 +79,26 @@
       /* Lists inside cards */
       .card-list  { @apply divide-y rounded-xl border; }
       .list-row   { @apply flex items-center justify-between p-3; }
+
+      /* Modal base */
+      .modal { position: fixed; inset: 0; z-index: 50; }
+      .modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.45); }
+      .modal-panel {
+        position: relative;
+        margin: 2.5rem auto; /* 40px top/bot */
+        max-width: 52rem;    /* ~ 832px */
+        width: calc(100% - 2rem);
+        background: #fff;
+        display: flex; flex-direction: column;
+        box-shadow: 0 25px 50px -12px rgba(0,0,0,.25);
+      }
+      .modal-header { padding: 1rem 1.25rem; border-bottom: 1px solid #e5e7eb; display:flex; align-items:center; justify-content:space-between; }
+      .modal-body   { padding: 1.25rem; max-height: calc(80vh - 7rem); overflow:auto; }
+      .modal-footer { padding: .75rem 1.25rem; border-top: 1px solid #e5e7eb; position: sticky; bottom: 0; }
+      .icon-btn { padding: .25rem .5rem; border-radius: .5rem; }
+      .icon-btn:hover { background: #f3f4f6; }
+
+
     }
   </style>
 
