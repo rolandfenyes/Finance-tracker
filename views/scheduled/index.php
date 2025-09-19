@@ -151,7 +151,7 @@
           <th class="py-2 pr-3">Currency</th>
           <th class="py-2 pr-3">Repeats</th>
           <th class="py-2 pr-3">First payment</th>
-          <th class="py-2 pr-3">Actions</th>
+          <th class="py-2 pr-3">Category</th>
         </tr>
       </thead>
       <tbody>
