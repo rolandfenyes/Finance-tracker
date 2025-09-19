@@ -6,7 +6,7 @@ function handle_register(PDO $pdo) {
     $pass = $_POST['password'] ?? '';
     $name = trim($_POST['full_name'] ?? '');
     if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($pass) < 8) {
-        $_SESSION['flash'] = 'Invalid email or password too short';
+        $_SESSION['flash'] = __('flash.invalid_register');
         redirect('/register');
     }
     $hash = password_hash($pass, PASSWORD_DEFAULT);
@@ -23,7 +23,7 @@ function handle_register(PDO $pdo) {
         for ($i=1;$i<=7;$i++) { $pdo->prepare('INSERT INTO baby_steps(user_id,step,status) VALUES(?,?,?)')->execute([$uid,$i,'in_progress']); }
         redirect('/');
     } catch (PDOException $e) {
-        $_SESSION['flash'] = 'Registration failed.';
+        $_SESSION['flash'] = __('flash.registration_failed');
         redirect('/register');
     }
 }
@@ -40,7 +40,7 @@ function handle_login(PDO $pdo) {
         $_SESSION['uid'] = (int)$row['id'];
         redirect('/');
     }
-    $_SESSION['flash'] = 'Invalid credentials';
+    $_SESSION['flash'] = __('flash.invalid_credentials');
     redirect('/login');
 }
 
