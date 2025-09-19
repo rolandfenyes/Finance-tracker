@@ -213,6 +213,12 @@ switch ($path) {
             goals_link_schedule($pdo);
         }
         break;
+    case '/goals/unlink-schedule':
+        if ($method === 'POST') {
+            require __DIR__ . '/../src/controllers/goals.php';            
+            goals_unlink_schedule($pdo);
+        }
+        break;
     case '/goals/tx/add':
         if ($method === 'POST') {
             require __DIR__ . '/../src/controllers/goals.php';

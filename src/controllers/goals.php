@@ -5,45 +5,51 @@ require_once __DIR__ . '/../fx.php';
 function goals_index(PDO $pdo){
   require_login(); $u = uid();
 
-  // goals + linked schedule (if any)
+  // Each goal + its linked schedule (latest by next_due/id)
   $q = $pdo->prepare("
     SELECT g.*,
-           sp.id    AS sched_id,
-           sp.title AS sched_title,
-           sp.amount AS sched_amount,
-           sp.currency AS sched_currency,
-           sp.next_due AS sched_next_due,
-           sp.rrule    AS sched_rrule
-      FROM goals g
-      LEFT JOIN scheduled_payments sp
-             ON sp.goal_id = g.id AND sp.user_id = g.user_id
-     WHERE g.user_id=?
-     ORDER BY (g.status='active') DESC, lower(g.title)
+          sp.id        AS sched_id,
+          sp.title     AS sched_title,
+          sp.amount    AS sched_amount,
+          sp.currency  AS sched_currency,
+          sp.next_due  AS sched_next_due,
+          sp.rrule     AS sched_rrule
+    FROM goals g
+    LEFT JOIN LATERAL (
+      SELECT id, title, amount, currency, next_due, rrule
+      FROM scheduled_payments s
+      WHERE s.user_id = g.user_id AND s.goal_id = g.id
+      ORDER BY s.next_due DESC NULLS LAST, id DESC
+      LIMIT 1
+    ) sp ON TRUE
+    WHERE g.user_id = ?
+    ORDER BY g.id DESC
   ");
+
   $q->execute([$u]);
   $rows = $q->fetchAll();
 
-  // user currencies for selects
-  $uc = $pdo->prepare("SELECT code,is_main FROM user_currencies WHERE user_id=? ORDER BY is_main DESC, code");
-  $uc->execute([$u]);
-  $userCurrencies = $uc->fetchAll(PDO::FETCH_ASSOC) ?: [['code'=>'HUF','is_main'=>true]];
-
-  // existing schedules to pick from (not already linked to a loan/goal if you prefer)
+  // For the select dropdown: all schedules of the user
   $sp = $pdo->prepare("
-    SELECT id,title,amount,currency,next_due,rrule
-      FROM scheduled_payments
-     WHERE user_id=? AND goal_id IS NULL
-     ORDER BY lower(title)
+    SELECT id, title, amount, currency, next_due, rrule
+    FROM scheduled_payments
+    WHERE user_id = ?
+    ORDER BY lower(title)
   ");
   $sp->execute([$u]);
   $scheduledList = $sp->fetchAll();
 
-  // categories (optional; many people tag goal contributions)
-  $cs = $pdo->prepare("SELECT id,label FROM categories WHERE user_id=? ORDER BY lower(label)");
-  $cs->execute([$u]);
-  $categories = $cs->fetchAll();
+  // currencies (if you show currency selectors on the page)
+  $uc = $pdo->prepare("SELECT code,is_main FROM user_currencies WHERE user_id=? ORDER BY is_main DESC, code");
+  $uc->execute([$u]);
+  $userCurrencies = $uc->fetchAll(PDO::FETCH_ASSOC) ?: [['code'=>'HUF','is_main'=>true]];
 
-  view('goals/index', compact('rows','userCurrencies','scheduledList','categories'));
+  $cs = $pdo->prepare("SELECT id,label,COALESCE(NULLIF(color,''),'#6B7280') AS color
+                        FROM categories WHERE user_id=? ORDER BY lower(label)");
+  $cs->execute([$u]);
+  $categories = $cs->fetchAll(PDO::FETCH_ASSOC);
+
+  view('goals/index', compact('rows','scheduledList','userCurrencies','categories'));
 }
 
 /** Create a goal */
@@ -118,7 +124,7 @@ function goals_create_schedule(PDO $pdo){
   // Title: use provided or fallback to "Goal: <name>"
   $title = trim($_POST['title'] ?? $_POST['sched_title'] ?? '');
   if ($title === '') {
-    $t = $pdo->prepare('SELECT name FROM goals WHERE id=? AND user_id=?');
+    $t = $pdo->prepare('SELECT title FROM goals WHERE id=? AND user_id=?');
     $t->execute([$goalId, $u]);
     $gname = $t->fetchColumn();
     $title = $gname ? ('Goal: ' . $gname) : 'Goal contribution';
@@ -187,23 +193,38 @@ function goals_create_schedule(PDO $pdo){
 }
 
 function goals_link_schedule(PDO $pdo){
-  verify_csrf(); require_login();
-  $u = uid();
+  verify_csrf(); require_login(); $u = uid();
 
   $goalId = (int)($_POST['goal_id'] ?? 0);
-  $schedId= (int)($_POST['scheduled_payment_id'] ?? 0);
+  $spId   = (int)($_POST['scheduled_payment_id'] ?? 0);
+  if (!$goalId || !$spId) { redirect('/goals'); }
 
-  // Ensure both belong to user
-  $g = $pdo->prepare('SELECT 1 FROM goals WHERE id=? AND user_id=?'); $g->execute([$goalId,$u]);
-  $s = $pdo->prepare('SELECT 1 FROM scheduled_payments WHERE id=? AND user_id=?'); $s->execute([$schedId,$u]);
-  if (!$g->fetch() || !$s->fetch()) { $_SESSION['flash'] = 'Invalid link.'; redirect('/goals'); }
+  $pdo->beginTransaction();
+  try {
+    // Ensure both belong to user
+    $okG = $pdo->prepare("SELECT 1 FROM goals WHERE id=? AND user_id=?");
+    $okG->execute([$goalId,$u]);
+    $okS = $pdo->prepare("SELECT 1 FROM scheduled_payments WHERE id=? AND user_id=?");
+    $okS->execute([$spId,$u]);
+    if (!$okG->fetch() || !$okS->fetch()) { throw new RuntimeException('Not found'); }
 
-  $pdo->prepare('UPDATE scheduled_payments SET goal_id=? WHERE id=? AND user_id=?')
-      ->execute([$goalId,$schedId,$u]);
+    // Unlink any other schedules pointing to this goal (keep a single link)
+    $pdo->prepare("UPDATE scheduled_payments SET goal_id=NULL WHERE user_id=? AND goal_id=? AND id<>?")
+        ->execute([$u,$goalId,$spId]);
 
-  $_SESSION['flash'] = 'Schedule linked to goal.';
+    // Link this one
+    $pdo->prepare("UPDATE scheduled_payments SET goal_id=? WHERE id=? AND user_id=?")
+        ->execute([$goalId,$spId,$u]);
+
+    $pdo->commit();
+    $_SESSION['flash'] = 'Schedule linked to goal.';
+  } catch(Throwable $e){
+    $pdo->rollBack();
+    $_SESSION['flash'] = 'Failed to link schedule.';
+  }
   redirect('/goals');
 }
+
 
 function goals_tx_add(PDO $pdo){
   verify_csrf(); require_login();
@@ -300,5 +321,24 @@ function goals_tx_delete(PDO $pdo){
     $pdo->rollBack();
     $_SESSION['flash'] = 'Could not remove contribution.';
   }
+  redirect('/goals');
+}
+
+function goals_unlink_schedule(PDO $pdo){
+  verify_csrf(); require_login(); $u = uid();
+
+  $goalId = (int)($_POST['goal_id'] ?? 0);
+  if (!$goalId) { redirect('/goals'); }
+
+  // Make sure the goal belongs to the user
+  $chk = $pdo->prepare("SELECT 1 FROM goals WHERE id=? AND user_id=?");
+  $chk->execute([$goalId,$u]);
+  if (!$chk->fetch()) { redirect('/goals'); }
+
+  // Unlink any schedule pointing at this goal (keep schedules intact)
+  $pdo->prepare("UPDATE scheduled_payments SET goal_id=NULL WHERE user_id=? AND goal_id=?")
+      ->execute([$u,$goalId]);
+
+  $_SESSION['flash'] = 'Schedule unlinked.';
   redirect('/goals');
 }
