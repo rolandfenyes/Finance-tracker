@@ -13,6 +13,18 @@ if ($base && str_starts_with($path, $base)) {
 }
 $path = rtrim($path, '/') ?: '/';
 
+// Normalize request info for the router
+$method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');           // "GET", "POST", etc.
+$path   = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+
+// (optional) honor method override from forms like _method=DELETE
+if ($method === 'POST' && !empty($_POST['_method'])) {
+    $override = strtoupper(trim($_POST['_method']));
+    if (in_array($override, ['PUT', 'PATCH', 'DELETE'], true)) {
+        $method = $override;
+    }
+}
+
 // Simple routing
 switch ($path) {
     case '/':
@@ -189,6 +201,29 @@ switch ($path) {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') { goals_delete($pdo); }
         redirect('/goals');
         break;
+    case '/goals/create-schedule':
+        if ($method === 'POST') {
+            require __DIR__ . '/../src/controllers/goals.php';
+            goals_create_schedule($pdo);
+        }
+        break;
+    case '/goals/link-schedule':
+        if ($method === 'POST') {
+            require __DIR__ . '/../src/controllers/goals.php';
+            goals_link_schedule($pdo);
+        }
+        break;
+    case '/goals/tx/add':
+        if ($method === 'POST') {
+            require __DIR__ . '/../src/controllers/goals.php';
+            goals_tx_add($pdo);
+        }
+        break;
+    case '/goals/tx/delete':
+        require __DIR__ . '/../src/controllers/goals.php';
+        goals_tx_delete($pdo);
+        break;
+
 
     case '/loans':
         require_login();

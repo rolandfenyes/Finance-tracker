@@ -200,6 +200,44 @@ function month_show(PDO $pdo, ?int $year = null, ?int $month = null) {
     }
   }
 
+  // (C) Goal contributions (manual)
+  $q = $pdo->prepare("
+    SELECT
+        gc.id,
+        gc.user_id,
+        gc.goal_id,
+        gc.amount,
+        gc.currency,
+        gc.occurred_on,
+        g.title AS goal_title
+    FROM goal_contributions gc
+    JOIN goals g
+      ON g.id = gc.goal_id
+    AND g.user_id = ?
+    WHERE gc.user_id = ?
+      AND gc.occurred_on BETWEEN ?::date AND ?::date
+    ORDER BY gc.occurred_on, gc.id
+  ");
+  $q->execute([$u, $u, $first, $last]);
+  $goalTx = $q->fetchAll();
+
+  foreach ($goalTx as $gc) {
+    $rowV = [
+      'id'            => null,
+      'is_virtual'    => true,
+      'virtual_type'  => 'goal_contribution',
+      'occurred_on'   => $gc['occurred_on'],
+      'kind'          => 'spending',
+      'category_id'   => null,
+      'cat_label'     => 'Goal',
+      'cat_color'     => '#10B981',
+      'amount'        => (float)$gc['amount'],
+      'currency'      => strtoupper($gc['currency'] ?: $main),
+      'note'          => 'Goal: ' . ($gc['goal_title'] ?: 'Contribution'),
+    ];
+    if ($matchVirtual($rowV)) $virtualTx[] = $rowV;
+  }
+
 
   // -------------------- TOTALS (from FULL filtered real + filtered virtual) --------------------
 

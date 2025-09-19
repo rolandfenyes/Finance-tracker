@@ -26,6 +26,7 @@
       .row-btn{ @apply border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-xl px-3 py-1.5 text-sm; }
       .edit-panel{ @apply mt-3 bg-gray-50 rounded-xl p-4 border; }
       .color-input{ @apply h-10 w-14 rounded-lg border border-gray-300; }
+      .tab-btn.active { background:#0f172a0d; font-weight:600; border-bottom:2px solid #111827; }
 
       details[open] ~ .header-line,
       details[open] .header-line {
