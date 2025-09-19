@@ -83,20 +83,53 @@
       /* Modal base */
       .modal { position: fixed; inset: 0; z-index: 50; }
       .modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.45); }
-      .modal-panel {
-        position: relative;
-        margin: 2.5rem auto; /* 40px top/bot */
-        max-width: 52rem;    /* ~ 832px */
-        width: calc(100% - 2rem);
-        background: #fff;
-        display: flex; flex-direction: column;
-        box-shadow: 0 25px 50px -12px rgba(0,0,0,.25);
-      }
       .modal-header { padding: 1rem 1.25rem; border-bottom: 1px solid #e5e7eb; display:flex; align-items:center; justify-content:space-between; }
       .modal-body   { padding: 1.25rem; max-height: calc(80vh - 7rem); overflow:auto; }
       .modal-footer { padding: .75rem 1.25rem; border-top: 1px solid #e5e7eb; position: sticky; bottom: 0; }
       .icon-btn { padding: .25rem .5rem; border-radius: .5rem; }
       .icon-btn:hover { background: #f3f4f6; }
+
+      /* Make the panel rounded and clip children so header/footer match */
+      .modal-panel {
+        border-radius: 1rem;          /* rounded-xl */
+        overflow: hidden;             /* ensures header/footer corners are rounded too */
+      }
+
+      /* Default (desktop/tablet) */
+      .modal-panel {
+        position: relative;
+        margin: 2.5rem auto;
+        max-width: 52rem;       /* ~832px */
+        width: calc(100% - 2rem);
+        background: #fff;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 25px 50px -12px rgba(0,0,0,.25);
+        border-radius: 1rem;
+        overflow: hidden;
+      }
+
+      /* Mobile fullscreen modal */
+      @media (max-width: 767px) {
+        .modal-panel {
+          margin: 0;             /* remove outer margin */
+          width: 100%;
+          max-width: 100%;
+          height: 100%;          /* take up entire height */
+          max-height: 100%;
+          border-radius: 0;      /* no rounded corners in fullscreen */
+        }
+
+        .modal-body {
+          max-height: calc(100vh - 6rem); /* leave room for header + footer */
+          overflow-y: auto;
+        }
+
+        .modal-header,
+        .modal-footer {
+          border-radius: 0;
+        }
+      }
 
 
     }

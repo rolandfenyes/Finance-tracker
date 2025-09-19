@@ -136,63 +136,130 @@
   </details>
 </section>
 
-<section class="mt-6 bg-white rounded-2xl p-5 shadow-glass overflow-x-auto">
-  <table class="min-w-full text-sm">
-    <thead>
-      <tr class="text-left border-b">
-        <th class="py-2 pr-3">Title</th>
-        <th class="py-2 pr-3">Amount</th>
-        <th class="py-2 pr-3">Currency</th>
-        <th class="py-2 pr-3">Repeats</th>
-        <th class="py-2 pr-3">First payment</th>
-        <th class="py-2 pr-3">Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      <?php foreach($rows as $r): ?>
-        <tr class="border-b">
-          <td class="py-2 pr-3 font-medium"><?= htmlspecialchars($r['title']) ?></td>
-          <td class="py-2 pr-3 font-medium"><?= moneyfmt($r['amount']) ?></td>
-          <td class="py-2 pr-3"><?= htmlspecialchars($r['currency']) ?></td>
-          <td class="py-2 pr-3 text-sm text-gray-600">
-            <span class="rrule-summary" data-rrule="<?= htmlspecialchars($r['rrule'] ?? '') ?>"></span>
-          </td>
-          <td class="py-2 pr-3"><?= htmlspecialchars($r['next_due'] ?? '—') ?></td>
-          <td class="py-2 pr-3 flex flex-row justify-between">
-            <?php if (!empty($r['cat_label'])): ?>
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs mr-2">
-                <span class="inline-block h-2.5 w-2.5 rounded-full" style="background-color: <?= htmlspecialchars($r['cat_color']) ?>;"></span>
-                <?= htmlspecialchars($r['cat_label']) ?>
-              </span>
-            <?php endif; ?>
+<section class="mt-6 bg-white rounded-2xl p-5 shadow-glass">
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="font-semibold">Scheduled payments</h2>
+  </div>
 
-            <div class="flex items-center gap-2">
-              <button
-                type="button"
-                class="btn btn-primary !py-1 !px-3"
-                data-edit-scheduled
-                data-id="<?= (int)$r['id'] ?>"
-                data-title="<?= htmlspecialchars($r['title']) ?>"
-                data-amount="<?= htmlspecialchars($r['amount']) ?>"
-                data-currency="<?= htmlspecialchars($r['currency']) ?>"
-                data-next_due="<?= htmlspecialchars($r['next_due']) ?>"
-                data-category_id="<?= (int)($r['category_id'] ?? 0) ?>"
-                data-rrule="<?= htmlspecialchars($r['rrule'] ?? '') ?>"
-              >Edit</button>
-  
-              <form method="post" action="/scheduled/delete" class="inline"
-                    onsubmit="return confirm('Delete this scheduled item?');">
-                <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-                <input type="hidden" name="id" value="<?= (int)$r['id'] ?>" />
-                <button class="btn btn-danger !py-1 !px-3">Remove</button>
-              </form>
-            </div>
-          </td>
-
+  <!-- Desktop table -->
+  <div class="hidden md:block overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead>
+        <tr class="text-left border-b">
+          <th class="py-2 pr-3">Title</th>
+          <th class="py-2 pr-3">Amount</th>
+          <th class="py-2 pr-3">Currency</th>
+          <th class="py-2 pr-3">Repeats</th>
+          <th class="py-2 pr-3">First payment</th>
+          <th class="py-2 pr-3">Actions</th>
         </tr>
-      <?php endforeach; ?>
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        <?php foreach($rows as $r): ?>
+          <tr class="border-b">
+            <td class="py-2 pr-3 font-medium"><?= htmlspecialchars($r['title']) ?></td>
+            <td class="py-2 pr-3 font-medium"><?= moneyfmt($r['amount']) ?></td>
+            <td class="py-2 pr-3"><?= htmlspecialchars($r['currency']) ?></td>
+            <td class="py-2 pr-3 text-sm text-gray-600">
+              <span class="rrule-summary" data-rrule="<?= htmlspecialchars($r['rrule'] ?? '') ?>"></span>
+            </td>
+            <td class="py-2 pr-3"><?= htmlspecialchars($r['next_due'] ?? '—') ?></td>
+            <td class="py-2 pr-3">
+              <div class="flex flex-row justify-between items-center gap-2 flex-wrap">
+                <?php if (!empty($r['cat_label'])): ?>
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs">
+                    <span class="inline-block h-2.5 w-2.5 rounded-full" style="background-color: <?= htmlspecialchars($r['cat_color']) ?>;"></span>
+                    <?= htmlspecialchars($r['cat_label']) ?>
+                  </span>
+                <?php endif; ?>
+
+                <div class="flex flex-row gap-2">
+                  <button
+                    type="button"
+                    class="btn btn-primary !py-1 !px-3"
+                    data-edit-scheduled
+                    data-id="<?= (int)$r['id'] ?>"
+                    data-title="<?= htmlspecialchars($r['title']) ?>"
+                    data-amount="<?= htmlspecialchars($r['amount']) ?>"
+                    data-currency="<?= htmlspecialchars($r['currency']) ?>"
+                    data-next_due="<?= htmlspecialchars($r['next_due']) ?>"
+                    data-category_id="<?= (int)($r['category_id'] ?? 0) ?>"
+                    data-rrule="<?= htmlspecialchars($r['rrule'] ?? '') ?>"
+                  >Edit</button>
+  
+                  <form method="post" action="/scheduled/delete" class="inline"
+                        onsubmit="return confirm('Delete this scheduled item?');">
+                    <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+                    <input type="hidden" name="id" value="<?= (int)$r['id'] ?>" />
+                    <button class="btn btn-danger !py-1 !px-3">Remove</button>
+                  </form>
+                </div>
+              </div>
+            </td>
+          </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Mobile cards -->
+  <div class="md:hidden space-y-3">
+    <?php foreach($rows as $r): ?>
+      <div class="rounded-xl border p-4">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <div class="font-medium"><?= htmlspecialchars($r['title']) ?></div>
+            <?php if (!empty($r['cat_label'])): ?>
+              <div class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px]">
+                <span class="inline-block h-2 w-2 rounded-full" style="background-color: <?= htmlspecialchars($r['cat_color']) ?>;"></span>
+                <?= htmlspecialchars($r['cat_label']) ?>
+              </div>
+            <?php endif; ?>
+          </div>
+
+          <div class="text-right">
+            <div class="font-semibold"><?= moneyfmt($r['amount']) ?></div>
+            <div class="text-xs text-gray-500"><?= htmlspecialchars($r['currency']) ?></div>
+          </div>
+        </div>
+
+        <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+          <div class="rounded-lg bg-gray-50 p-2">
+            <div class="text-gray-500">First payment</div>
+            <div class="font-medium"><?= htmlspecialchars($r['next_due'] ?? '—') ?></div>
+          </div>
+          <div class="rounded-lg bg-gray-50 p-2">
+            <div class="text-gray-500">Repeats</div>
+            <div class="font-medium">
+              <span class="rrule-summary" data-rrule="<?= htmlspecialchars($r['rrule'] ?? '') ?>"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-3 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            class="btn btn-primary !py-1.5 !px-3"
+            data-edit-scheduled
+            data-id="<?= (int)$r['id'] ?>"
+            data-title="<?= htmlspecialchars($r['title']) ?>"
+            data-amount="<?= htmlspecialchars($r['amount']) ?>"
+            data-currency="<?= htmlspecialchars($r['currency']) ?>"
+            data-next_due="<?= htmlspecialchars($r['next_due']) ?>"
+            data-category_id="<?= (int)($r['category_id'] ?? 0) ?>"
+            data-rrule="<?= htmlspecialchars($r['rrule'] ?? '') ?>"
+          >Edit</button>
+
+          <form method="post" action="/scheduled/delete" class="inline"
+                onsubmit="return confirm('Delete this scheduled item?');">
+            <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+            <input type="hidden" name="id" value="<?= (int)$r['id'] ?>" />
+            <button class="btn btn-danger !py-1.5 !px-3">Remove</button>
+          </form>
+        </div>
+      </div>
+    <?php endforeach; ?>
+  </div>
 </section>
 
 <script>
@@ -346,22 +413,18 @@ document.querySelectorAll('input[id^="rrule-"]').forEach(h => {
 </script>
 
 <!-- Modal: Scheduled Editor -->
-<div id="sched-modal" class="fixed inset-0 z-50 hidden">
-  <div class="absolute inset-0 bg-black/40" data-close-sched></div>
+<div id="sched-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="sched-title">
+  <div class="modal-backdrop" data-close-sched></div>
 
-  <div class="absolute inset-x-0 bottom-0 md:inset-auto md:top-1/2 md:left-1/2
-              w-full md:w-auto md:max-w-3xl bg-white
-              rounded-t-2xl md:rounded-2xl shadow-xl
-              md:-translate-x-1/2 md:-translate-y-1/2
-              flex flex-col max-h-[90vh]">
+  <div class="modal-panel">
     <!-- Header -->
-    <div class="flex items-center justify-between p-4 border-b">
-      <h3 class="font-semibold">Edit Scheduled Payment</h3>
-      <button class="text-gray-500 hover:text-gray-700" data-close-sched aria-label="Close">✕</button>
+    <div class="modal-header">
+      <h3 id="sched-title" class="font-semibold">Edit Scheduled Payment</h3>
+      <button class="icon-btn" aria-label="Close" data-close-sched>✕</button>
     </div>
 
     <!-- Scrollable body -->
-    <div class="p-4 overflow-y-auto flex-1">
+    <div class="modal-body">
       <form id="sched-form" method="post" action="/scheduled/edit" class="grid gap-3 md:grid-cols-12">
         <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
         <input type="hidden" name="id" id="sched-id" />
@@ -369,7 +432,7 @@ document.querySelectorAll('input[id^="rrule-"]').forEach(h => {
 
         <div class="md:col-span-5">
           <label class="label">Title</label>
-          <input name="title" id="sched-title" class="input" required />
+          <input name="title" id="sched-title-input" class="input" required />
         </div>
 
         <div class="md:col-span-3">
@@ -380,16 +443,14 @@ document.querySelectorAll('input[id^="rrule-"]').forEach(h => {
         <div class="md:col-span-2">
           <label class="label">Currency</label>
           <select name="currency" id="sched-currency" class="select">
-            <?php foreach ($userCurrencies as $curRow):
-              $code = htmlspecialchars($curRow['code'] ?? '');
-            ?>
+            <?php foreach ($userCurrencies as $curRow): $code = htmlspecialchars($curRow['code']??''); ?>
               <option value="<?= $code ?>"><?= $code ?></option>
             <?php endforeach; ?>
           </select>
         </div>
 
         <div class="md:col-span-2">
-          <label class="label">Next due</label>
+          <label class="label">First payment</label>
           <input name="next_due" id="sched-nextdue" type="date" class="input" required />
         </div>
 
@@ -416,6 +477,7 @@ document.querySelectorAll('input[id^="rrule-"]').forEach(h => {
                 <option value="YEARLY">Yearly</option>
               </select>
             </div>
+
             <div class="md:col-span-2">
               <label class="label">Every</label>
               <input type="number" min="1" value="1" id="rb-interval-dlg" class="input" />
@@ -478,107 +540,121 @@ document.querySelectorAll('input[id^="rrule-"]').forEach(h => {
             </div>
           </div>
         </div>
-
       </form>
     </div>
-    <!-- Footer buttons -->
-    <div class="m-4 md:col-span-12 flex items-center justify-end gap-2 pt-2">
+
+    <!-- Sticky footer -->
+    <div class="modal-footer flex items-center justify-end gap-2">
       <button type="button" class="btn" data-close-sched>Cancel</button>
-      <button class="btn btn-primary">Save</button>
+      <button type="submit" class="btn btn-primary" form="sched-form" id="sched-save">Save</button>
     </div>
   </div>
 </div>
 
+
 <script>
-// --- open/close helpers ---
-const modal = document.getElementById('sched-modal');
-function openSched(){ modal.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); }
-function closeSched(){ modal.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }
+  // --- open/close helpers ---
+  const modal = document.getElementById('sched-modal');
+  function openSched(){ modal.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); }
+  function closeSched(){ modal.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }
 
-// Close handlers
-modal.querySelectorAll('[data-close-sched]').forEach(el=>el.addEventListener('click', closeSched));
-document.addEventListener('keydown', e=>{ if(e.key==='Escape' && !modal.classList.contains('hidden')) closeSched(); });
+  // Close handlers
+  modal.querySelectorAll('[data-close-sched]').forEach(el=>el.addEventListener('click', closeSched));
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape' && !modal.classList.contains('hidden')) closeSched(); });
 
-// --- populate modal from data-* on button ---
-document.querySelectorAll('[data-edit-scheduled]').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    const get = (k)=>btn.getAttribute(k) || '';
+  // --- populate modal from data-* on button ---
+  document.querySelectorAll('[data-edit-scheduled]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const get = (k)=>btn.getAttribute(k) || '';
 
-    // Fill basics
-    document.getElementById('sched-id').value       = get('data-id');
-    document.getElementById('sched-title').value    = get('data-title');
-    document.getElementById('sched-amount').value   = get('data-amount');
-    document.getElementById('sched-nextdue').value  = get('data-next_due');
+      // Fill basics
+      document.getElementById('sched-id').value       = get('data-id');
+      document.getElementById('sched-title-input').value    = get('data-title');
+      document.getElementById('sched-amount').value   = get('data-amount');
+      document.getElementById('sched-nextdue').value  = get('data-next_due');
 
-    // Currency select
-    const cur = get('data-currency').toUpperCase();
-    const curSel = document.getElementById('sched-currency');
-    if (curSel) {
-      Array.from(curSel.options).forEach(o=>o.selected = (o.value.toUpperCase()===cur));
-    }
+      // Currency select
+      const cur = get('data-currency').toUpperCase();
+      const curSel = document.getElementById('sched-currency');
+      if (curSel) {
+        Array.from(curSel.options).forEach(o=>o.selected = (o.value.toUpperCase()===cur));
+      }
 
-    // Category
-    const catId = get('data-category_id');
-    const catSel = document.getElementById('sched-category');
-    if (catSel) {
-      Array.from(catSel.options).forEach(o=>o.selected = (o.value === String(catId)));
-    }
+      // Category
+      const catId = get('data-category_id');
+      const catSel = document.getElementById('sched-category');
+      if (catSel) {
+        Array.from(catSel.options).forEach(o=>o.selected = (o.value === String(catId)));
+      }
 
-    // RRULE: write to hidden, then wire + prefill UI via wireRR
-    document.getElementById('rrule-dlg').value = get('data-rrule') || '';
+      // RRULE: write to hidden, then wire + prefill UI via wireRR
+      document.getElementById('rrule-dlg').value = get('data-rrule') || '';
 
-    // (Re)wire the recurrence builder for 'dlg'
-    if (typeof wireRR === 'function') {
-      wireRR('dlg'); // parses existing hidden rrule and updates inputs/summary
-      const freqEl = document.getElementById('rb-freq-dlg');
-      if (freqEl) freqEl.dispatchEvent(new Event('change')); // show correct sections
-    }
+      // (Re)wire the recurrence builder for 'dlg'
+      if (typeof wireRR === 'function') {
+        wireRR('dlg'); // parses existing hidden rrule and updates inputs/summary
+        const freqEl = document.getElementById('rb-freq-dlg');
+        if (freqEl) freqEl.dispatchEvent(new Event('change')); // show correct sections
+      }
 
-    openSched();
+      openSched();
+    });
   });
-});
 </script>
 
 <script>
-function parseRR(rule){
-  const out = { FREQ:'', INTERVAL:1, BYDAY:[], BYMONTHDAY:null, BYMONTH:null, COUNT:null, UNTIL:null };
-  if (!rule) return out;
-  rule.split(';').forEach(part=>{
-    const [k,v] = part.split('=');
-    if (!k || !v) return;
-    if (k==='FREQ') out.FREQ = v;
-    else if (k==='INTERVAL') out.INTERVAL = Math.max(1, parseInt(v||'1',10));
-    else if (k==='BYDAY') out.BYDAY = v.split(',').filter(Boolean);
-    else if (k==='BYMONTHDAY') out.BYMONTHDAY = parseInt(v,10);
-    else if (k==='BYMONTH') out.BYMONTH = parseInt(v,10);
-    else if (k==='COUNT') out.COUNT = parseInt(v,10);
-    else if (k==='UNTIL') out.UNTIL = v;
+  function parseRR(rule){
+    const out = { FREQ:'', INTERVAL:1, BYDAY:[], BYMONTHDAY:null, BYMONTH:null, COUNT:null, UNTIL:null };
+    if (!rule) return out;
+    rule.split(';').forEach(part=>{
+      const [k,v] = part.split('=');
+      if (!k || !v) return;
+      if (k==='FREQ') out.FREQ = v;
+      else if (k==='INTERVAL') out.INTERVAL = Math.max(1, parseInt(v||'1',10));
+      else if (k==='BYDAY') out.BYDAY = v.split(',').filter(Boolean);
+      else if (k==='BYMONTHDAY') out.BYMONTHDAY = parseInt(v,10);
+      else if (k==='BYMONTH') out.BYMONTH = parseInt(v,10);
+      else if (k==='COUNT') out.COUNT = parseInt(v,10);
+      else if (k==='UNTIL') out.UNTIL = v;
+    });
+    return out;
+  }
+
+  function rrSummary(rrule){
+    if (!rrule) return 'One-time';
+    const p = parseRR(rrule);
+    if (!p.FREQ) return 'One-time';
+
+    const every = (n,unit)=> n>1 ? `Every ${n} ${unit}s` : `Every ${unit}`;
+    const end = (p.COUNT ? `, ${p.COUNT} times`
+              : p.UNTIL ? `, until ${p.UNTIL.slice(0,4)}-${p.UNTIL.slice(4,6)}-${p.UNTIL.slice(6,8)}`
+              : '');
+
+    if (p.FREQ==='DAILY')   return `${every(p.INTERVAL,'day')}${end}`;
+    if (p.FREQ==='WEEKLY')  return `${every(p.INTERVAL,'week')}${p.BYDAY.length? ' on '+p.BYDAY.join(', '):''}${end}`;
+    if (p.FREQ==='MONTHLY') return `${every(p.INTERVAL,'month')}${p.BYMONTHDAY? ' on day '+p.BYMONTHDAY:''}${end}`;
+    if (p.FREQ==='YEARLY')  return `${every(p.INTERVAL,'year')}${(p.BYMONTH? ' on '+String(p.BYMONTH).padStart(2,'0')+'-'+(p.BYMONTHDAY??''): '')}${end}`;
+    return 'Repeats';
+  }
+
+  // Render summaries in the table (replace raw text)
+  document.addEventListener('DOMContentLoaded', ()=>{
+    document.querySelectorAll('.rrule-summary[data-rrule]').forEach(el=>{
+      const r = el.getAttribute('data-rrule') || '';
+      el.textContent = rrSummary(r);
+    });
   });
-  return out;
-}
+</script>
 
-function rrSummary(rrule){
-  if (!rrule) return 'One-time';
-  const p = parseRR(rrule);
-  if (!p.FREQ) return 'One-time';
-
-  const every = (n,unit)=> n>1 ? `Every ${n} ${unit}s` : `Every ${unit}`;
-  const end = (p.COUNT ? `, ${p.COUNT} times`
-             : p.UNTIL ? `, until ${p.UNTIL.slice(0,4)}-${p.UNTIL.slice(4,6)}-${p.UNTIL.slice(6,8)}`
-             : '');
-
-  if (p.FREQ==='DAILY')   return `${every(p.INTERVAL,'day')}${end}`;
-  if (p.FREQ==='WEEKLY')  return `${every(p.INTERVAL,'week')}${p.BYDAY.length? ' on '+p.BYDAY.join(', '):''}${end}`;
-  if (p.FREQ==='MONTHLY') return `${every(p.INTERVAL,'month')}${p.BYMONTHDAY? ' on day '+p.BYMONTHDAY:''}${end}`;
-  if (p.FREQ==='YEARLY')  return `${every(p.INTERVAL,'year')}${(p.BYMONTH? ' on '+String(p.BYMONTH).padStart(2,'0')+'-'+(p.BYMONTHDAY??''): '')}${end}`;
-  return 'Repeats';
-}
-
-// Render summaries in the table (replace raw text)
-document.addEventListener('DOMContentLoaded', ()=>{
-  document.querySelectorAll('.rrule-summary[data-rrule]').forEach(el=>{
-    const r = el.getAttribute('data-rrule') || '';
-    el.textContent = rrSummary(r);
-  });
-});
+<script>
+  // Keep rrule-dlg in sync right before submit (prevents stale value edge-cases)
+  const schedForm = document.getElementById('sched-form');
+  if (schedForm) {
+    schedForm.addEventListener('submit', () => {
+      if (typeof wireRR === 'function') wireRR('dlg'); // rebuild once
+      // Optional: guard against double submit
+      const saveBtn = document.getElementById('sched-save');
+      saveBtn && (saveBtn.disabled = true);
+    });
+  }
 </script>

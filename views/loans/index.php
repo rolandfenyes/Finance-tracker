@@ -304,7 +304,7 @@
 <div id="loan-edit-<?= (int)$l['id'] ?>" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="loan-edit-title-<?= (int)$l['id'] ?>">
   <div class="modal-backdrop" data-close></div>
 
-  <div class="modal-panel rounded-2xl overflow-hidden">
+  <div class="modal-panel overflow-hidden">
     <!-- Header -->
     <div class="modal-header">
       <h3 id="loan-edit-title-<?= (int)$l['id'] ?>" class="font-semibold">Edit loan</h3>
