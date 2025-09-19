@@ -154,12 +154,12 @@
         $items = [
           ['href'=>'/',            'label'=>'Dashboard',      'match'=>'#^/$#'],
           ['href'=>'/current-month','label'=>'Current Month', 'match'=>'#^/current-month$#'],
-          ['href'=>'/years',       'label'=>'Years',          'match'=>'#^/years(?:/.*)?$#'],
           ['href'=>'/goals',       'label'=>'Goals',          'match'=>'#^/goals(?:/.*)?$#'],
           ['href'=>'/loans',       'label'=>'Loans',          'match'=>'#^/loans(?:/.*)?$#'],
-          ['href'=>'/stocks',      'label'=>'Stocks',         'match'=>'#^/stocks(?:/.*)?$#'],
-          ['href'=>'/scheduled',   'label'=>'Scheduled',      'match'=>'#^/scheduled(?:/.*)?$#'],
           ['href'=>'/emergency',   'label'=>'Emergency',      'match'=>'#^/emergency(?:/.*)?$#'],
+          ['href'=>'/scheduled',   'label'=>'Scheduled',      'match'=>'#^/scheduled(?:/.*)?$#'],
+          ['href'=>'/stocks',      'label'=>'Stocks',         'match'=>'#^/stocks(?:/.*)?$#'],
+          ['href'=>'/years',       'label'=>'Years',          'match'=>'#^/years(?:/.*)?$#'],
           ['href'=>'/settings',    'label'=>'Settings',       'match'=>'#^/settings$#'],
         ];
 
