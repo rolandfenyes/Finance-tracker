@@ -1,3 +1,9 @@
+<?php
+$kindLabels = [
+  'income' => __('transactions.kind.income'),
+  'spending' => __('transactions.kind.spending'),
+];
+?>
 <?php $ym = sprintf('%04d-%02d', $y, $m); ?>
 <section class="grid md:grid-cols-3 gap-4">
   <div class="bg-white rounded-2xl p-6 shadow-glass">
@@ -6,7 +12,7 @@
     <!-- Net focus -->
     <?php $net = $sumIn_main - $sumOut_main; ?>
     <div class="text-center mb-6">
-      <div class="text-sm text-gray-500">Net (<?= htmlspecialchars($main) ?>)</div>
+      <div class="text-sm text-gray-500"><?= htmlspecialchars(__('month.net', ['currency' => $main])) ?></div>
       <div class="text-3xl font-bold <?= $net>=0 ? 'text-green-600' : 'text-red-600' ?>">
         <?= moneyfmt($net, $main) ?>
       </div>
@@ -15,11 +21,11 @@
     <!-- Income vs Spending -->
     <div class="grid grid-cols-2 gap-4 text-sm">
       <div class="p-3 rounded-xl bg-green-50 text-green-700 text-center">
-        <div class="font-medium">Income</div>
+        <div class="font-medium"><?= __('month.income') ?></div>
         <div class="text-md font-semibold"><?= moneyfmt($sumIn_main, $main) ?></div>
       </div>
       <div class="p-3 rounded-xl bg-red-50 text-red-700 text-center">
-        <div class="font-medium">Spending</div>
+        <div class="font-medium"><?= __('month.spending') ?></div>
         <div class="text-md font-semibold"><?= moneyfmt($sumOut_main, $main) ?></div>
       </div>
     </div>
@@ -27,7 +33,7 @@
     <!-- Native breakdown -->
     <div class="mt-6 text-xs text-gray-500 space-y-1">
       <div>
-        <span class="font-medium text-gray-600">Native income:</span>
+        <span class="font-medium text-gray-600"><?= __('month.native_income') ?></span>
         <?php if (!empty($sumIn_native_by_cur)): ?>
           <?php foreach ($sumIn_native_by_cur as $c=>$a): ?>
             <span class="inline-block mr-2"><?= moneyfmt($a, $c) ?></span>
@@ -35,7 +41,7 @@
         <?php else: ?>0.00<?php endif; ?>
       </div>
       <div>
-        <span class="font-medium text-gray-600">Native spending:</span>
+        <span class="font-medium text-gray-600"><?= __('month.native_spending') ?></span>
         <?php if (!empty($sumOut_native_by_cur)): ?>
           <?php foreach ($sumOut_native_by_cur as $c=>$a): ?>
             <span class="inline-block mr-2"><?= moneyfmt($a, $c) ?></span>
@@ -46,7 +52,7 @@
   </div>
 
   <div class="bg-white rounded-2xl p-5 shadow-glass md:col-span-2">
-    <h3 class="text-base font-semibold mb-3">Quick Add</h3>
+    <h3 class="text-base font-semibold mb-3"><?= __('month.quick_add') ?></h3>
 
     <form class="grid gap-4 md:grid-cols-12 md:items-end" method="post" action="/months/tx/add">
       <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
@@ -55,27 +61,27 @@
 
       <!-- Type -->
       <div class="field md:col-span-2">
-        <label class="label">Type</label>
+        <label class="label"><?= __('month.type') ?></label>
         <select name="kind" class="select">
-          <option value="income">Income</option>
-          <option value="spending">Spending</option>
+          <option value="income"><?= __('month.income') ?></option>
+          <option value="spending"><?= __('month.spending') ?></option>
         </select>
       </div>
 
       <!-- Category -->
       <div class="field md:col-span-3">
-        <label class="label">Category</label>
+        <label class="label"><?= __('month.category') ?></label>
         <select name="category_id" class="select">
-          <option value="">— Category —</option>
+          <option value=""><?= __('month.category_placeholder') ?></option>
           <?php foreach($cats as $c): ?>
-            <option value="<?= $c['id'] ?>"><?= ucfirst($c['kind']) ?> · <?= htmlspecialchars($c['label']) ?></option>
+            <option value="<?= $c['id'] ?>"><?= htmlspecialchars($kindLabels[$c['kind']] ?? $c['kind']) ?> · <?= htmlspecialchars($c['label']) ?></option>
           <?php endforeach; ?>
         </select>
       </div>
 
       <!-- Amount + Currency -->
       <div class="field md:col-span-4">
-        <label class="label">Amount</label>
+        <label class="label"><?= __('month.amount') ?></label>
         <div class="grid grid-cols-5 gap-2">
           <input name="amount" type="number" step="0.01" class="input col-span-3" placeholder="0.00" required />
           <select name="currency" class="select col-span-2">
@@ -93,19 +99,19 @@
 
       <!-- Date -->
       <div class="field md:col-span-2">
-        <label class="label">Date</label>
+        <label class="label"><?= __('month.date') ?></label>
         <input name="occurred_on" type="date" value="<?= $ym ?>-01" class="input" />
       </div>
 
       <!-- Note -->
       <div class="field md:col-span-8">
-        <label class="label">Note <span class="help">(optional)</span></label>
-        <input name="note" class="input" placeholder="Add a short note…" />
+        <label class="label"><?= __('month.note') ?> <span class="help"><?= __('common.optional') ?></span></label>
+        <input name="note" class="input" placeholder="<?= __('month.note_placeholder') ?>" />
       </div>
 
       <!-- Submit -->
       <div class="md:col-span-4 flex md:justify-end">
-        <button class="btn btn-primary w-full md:w-auto">Add</button>
+        <button class="btn btn-primary w-full md:w-auto"><?= __('common.add') ?></button>
       </div>
     </form>
   </div>
@@ -114,10 +120,11 @@
 <section class="mt-6 grid md:grid-cols-2 gap-6">
   <!-- Spending by category -->
   <div class="bg-white rounded-2xl p-5 shadow-glass h-80 overflow-hidden">
-    <h3 class="font-semibold mb-3">Spending by Category (<?= htmlspecialchars($main) ?>)</h3>
+    <h3 class="font-semibold mb-3"><?= htmlspecialchars(__('month.spending_by_category_currency', ['currency' => $main])) ?></h3>
     <?php
       // Build grouped sums from $allTx in MAIN currency
       $grp = []; $cols = [];
+      $uncategorizedLabel = __('transactions.uncategorized');
       foreach (($allTx ?? []) as $r) {
         if (($r['kind'] ?? '') !== 'spending') continue;
         // amount in main currency
@@ -127,7 +134,7 @@
           $nativeCur = $r['currency'] ?: $main;
           $amtMain = fx_convert($pdo, (float)$r['amount'], $nativeCur, $main, $r['occurred_on']);
         }
-        $label = $r['cat_label'] ?? 'Uncategorized';
+        $label = $r['cat_label'] ?? $uncategorizedLabel;
         $color = $r['cat_color'] ?? '#6B7280';
         // squash tiny negatives/rounding noise
         if ($amtMain <= 0) continue;
@@ -153,7 +160,7 @@
 
         // guard: nothing to show
         if (!labels.length) {
-          el.outerHTML = '<div class="text-sm text-gray-500">No spending this month.</div>';
+          el.outerHTML = '<div class="text-sm text-gray-500">'+t('month.no_spending')+'</div>';
           return;
         }
 
@@ -180,7 +187,7 @@
               plugins: {
                 legend: { position: 'right' },
                 tooltip: { callbacks: {
-                  label: (ctx) => `${ctx.label}: ${Number(ctx.parsed).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})} <?= $main ?>`
+                  label: (ctx) => `${ctx.label}: ${Number(ctx.parsed).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})} <?= htmlspecialchars($main) ?>`
                 }}
               },
               cutout: '55%'
@@ -193,7 +200,7 @@
 
   <!-- Daily Spending (bars) + 7-day MA (line) -->
   <div class="bg-white rounded-2xl p-5 shadow-glass  h-80">
-    <h3 class="font-semibold mb-3">Daily Spending (<?= htmlspecialchars($main) ?>)</h3>
+    <h3 class="font-semibold mb-3"><?= htmlspecialchars(__('month.daily_spending_currency', ['currency' => $main])) ?></h3>
     <?php
       $rows = $allTx ?? $tx ?? [];
 
@@ -246,7 +253,7 @@
 
       const allZero = (arr)=>arr.every(v => Math.abs(v) < 1e-9);
       if (!labels.length || (allZero(bars))) {
-        el.parentElement.innerHTML = '<div class="text-sm text-gray-500">No spending this month.</div>';
+        el.parentElement.innerHTML = '<div class="text-sm text-gray-500">'+t('month.no_spending')+'</div>';
         return;
       }
 
@@ -255,8 +262,8 @@
           data: {
             labels,
             datasets: [
-              { type:'bar',  label:'Spending', data:bars, borderWidth:0 },
-              { type:'line', label:'7-day Avg', data:avg7, borderWidth:2, tension:0.25, pointRadius:0, fill:false }
+              { type:'bar',  label:t('month.dataset_spending'), data:bars, borderWidth:0 },
+              { type:'line', label:t('month.dataset_avg'), data:avg7, borderWidth:2, tension:0.25, pointRadius:0, fill:false }
             ]
           },
           options: {
@@ -266,7 +273,7 @@
               legend:{ position:'bottom' },
               tooltip:{ callbacks:{ label:(ctx)=>{
                 const v = Number(ctx.parsed.y).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-                return `${ctx.dataset.label}: ${v} <?= $main ?>`;
+                return `${ctx.dataset.label}: ${v} <?= htmlspecialchars($main) ?>`;
               }}}
             },
             scales:{
@@ -291,7 +298,7 @@
 </section>
 
 <section class="mt-6 bg-white rounded-2xl p-5 shadow-glass">
-  <h3 class="font-semibold mb-3">Transactions</h3>
+  <h3 class="font-semibold mb-3"><?= __('month.transactions') ?></h3>
 
   <?php if (!empty($cats)): ?>
     <div class="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
@@ -332,12 +339,12 @@
             <div class="flex items-center gap-2 text-sm">
               <span class="font-medium"><?= htmlspecialchars($row['occurred_on']) ?></span>
               <?php if ($isVirtual): ?>
-                <span class="text-[11px] text-gray-500">🔒 auto</span>
+                <span class="text-[11px] text-gray-500"><?= __('month.locked_auto') ?></span>
               <?php endif; ?>
             </div>
             <div class="mt-1 flex items-center gap-2">
               <span class="capitalize text-xs px-2 py-0.5 rounded-full border">
-                <?= htmlspecialchars($row['kind']) ?>
+                <?= htmlspecialchars($kindLabels[$row['kind']] ?? $row['kind']) ?>
               </span>
               <span class="inline-flex items-center gap-2 text-sm">
                 <span class="inline-block h-2.5 w-2.5 rounded-full" style="background-color: <?= htmlspecialchars($dot) ?>;"></span>
@@ -350,7 +357,7 @@
             $sameCur = strtoupper($nativeCur) === strtoupper($mainCur);
           ?>
           <div class="text-right shrink-0">
-            <div class="text-[13px] text-gray-500">Native</div>
+            <div class="text-[13px] text-gray-500"><?= __('month.native_label') ?></div>
             <div class="font-medium"><?= moneyfmt($row['amount'], $nativeCur) ?></div>
 
             <?php if (!$sameCur): ?>
@@ -368,7 +375,7 @@
         <div class="mt-3">
           <?php if (!$isVirtual): ?>
             <details class="group">
-              <summary class="btn btn-ghost cursor-pointer">Edit</summary>
+              <summary class="btn btn-ghost cursor-pointer"><?= __('common.edit') ?></summary>
               <div class="mt-2 bg-gray-50 rounded-xl p-3 border">
                 <form class="grid gap-2 sm:grid-cols-6 items-end" method="post" action="/months/tx/edit">
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
@@ -377,8 +384,8 @@
                   <input type="hidden" name="id" value="<?= $row['id'] ?>" />
 
                   <select name="kind" class="select">
-                    <option <?= $row['kind']==='income'?'selected':'' ?> value="income">Income</option>
-                    <option <?= $row['kind']==='spending'?'selected':'' ?> value="spending">Spending</option>
+                    <option <?= $row['kind']==='income'?'selected':'' ?> value="income"><?= __('month.income') ?></option>
+                    <option <?= $row['kind']==='spending'?'selected':'' ?> value="spending"><?= __('month.spending') ?></option>
                   </select>
 
                   <input name="amount" type="number" step="0.01" value="<?= $row['amount'] ?>" class="input" required />
@@ -394,20 +401,20 @@
 
                   <input name="occurred_on" type="date" value="<?= $row['occurred_on'] ?>" class="input" />
                   <input name="note" value="<?= htmlspecialchars($row['note'] ?? '') ?>" class="input" />
-                  <button class="btn btn-primary">Save</button>
+                  <button class="btn btn-primary"><?= __('common.save') ?></button>
                 </form>
 
-                <form class="mt-2" method="post" action="/months/tx/delete" onsubmit="return confirm('Delete transaction?')">
+                <form class="mt-2" method="post" action="/months/tx/delete" onsubmit="return confirm('<?= __('month.delete_confirm') ?>')">
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                   <input type="hidden" name="y" value="<?= $y ?>" />
                   <input type="hidden" name="m" value="<?= $m ?>" />
                   <input type="hidden" name="id" value="<?= $row['id'] ?>" />
-                  <button class="btn btn-danger">Remove</button>
+                  <button class="btn btn-danger"><?= __('common.remove') ?></button>
                 </form>
               </div>
             </details>
           <?php else: ?>
-            <span class="text-xs text-gray-400">Auto-generated</span>
+            <span class="text-xs text-gray-400"><?= __('month.auto_generated') ?></span>
           <?php endif; ?>
         </div>
       </div>
@@ -422,7 +429,7 @@
             data-next="<?= $page+1 ?>" 
             data-last="<?= $totalPages ?>"
             data-url="/months/tx/list?<?= http_build_query(array_merge($_GET,['y'=>$y,'m'=>$m])) ?>">
-      Load more
+      <?= __('common.load_more') ?>
     </button>
   </div>
 
@@ -437,7 +444,7 @@
     if (next>last) btn.style.display='none';
 
     btn.addEventListener('click', async ()=>{
-      btn.disabled = true; btn.textContent = 'Loading…';
+      btn.disabled = true; btn.textContent = t('common.loading');
       const url = baseUrl.replace(/([?&])page=\d+/,'$1page='+next) + (baseUrl.includes('page=') ? '' : '&page='+next);
       const res = await fetch(url, {headers:{'X-Requested-With':'fetch'}});
       const html = await res.text();
@@ -445,7 +452,7 @@
       list.insertAdjacentHTML('beforeend', html);
       next++;
       if (next>last){ btn.style.display='none'; }
-      else { btn.disabled=false; btn.textContent='Load more'; btn.dataset.next = String(next); }
+      else { btn.disabled=false; btn.textContent=t('common.load_more'); btn.dataset.next = String(next); }
     });
   })();
   </script>
@@ -456,13 +463,13 @@
     <table class="min-w-full text-sm">
       <thead>
         <tr class="text-left border-b">
-          <th class="py-2 pr-3">Date</th>
-          <th class="py-2 pr-3">Kind</th>
-          <th class="py-2 pr-3">Category</th>
-          <th class="py-2 pr-3 text-right">Amount (native)</th>
-          <th class="py-2 pr-3 text-right">Amount (<?= htmlspecialchars($main) ?>)</th>
-          <th class="py-2 pr-3">Note</th>
-          <th class="py-2 pr-3">Actions</th>
+          <th class="py-2 pr-3"><?= __('common.date') ?></th>
+          <th class="py-2 pr-3"><?= __('month.type') ?></th>
+          <th class="py-2 pr-3"><?= __('month.category') ?></th>
+          <th class="py-2 pr-3 text-right"><?= __('month.table_amount_native') ?></th>
+          <th class="py-2 pr-3 text-right"><?= __('month.table_amount_main', ['currency' => $main]) ?></th>
+          <th class="py-2 pr-3"><?= __('common.note') ?></th>
+          <th class="py-2 pr-3"><?= __('common.actions') ?></th>
         </tr>
       </thead>
       <tbody>
@@ -483,35 +490,35 @@
               <?= htmlspecialchars($row['occurred_on']) ?>
               <?php if ($isVirtual): ?><span class="ml-1 text-[11px] text-gray-500">🔒</span><?php endif; ?>
             </td>
-            <td class="py-2 pr-3 capitalize"><?= htmlspecialchars($row['kind']) ?></td>
+            <td class="py-2 pr-3 capitalize"><?= htmlspecialchars($kindLabels[$row['kind']] ?? $row['kind']) ?></td>
             <td class="py-2 pr-3">
               <span class="inline-flex items-center gap-2">
                 <span class="inline-block h-2.5 w-2.5 rounded-full"
                       style="background-color: <?= htmlspecialchars($row['cat_color'] ?? '#6B7280') ?>;"></span>
                 <?= htmlspecialchars($row['cat_label'] ?? '—') ?>
               </span>
-              <?php if ($isVirtual): ?><span class="text-xs text-gray-500 ml-1">(auto)</span><?php endif; ?>
+              <?php if ($isVirtual): ?><span class="text-xs text-gray-500 ml-1"><?= __('month.auto_badge') ?></span><?php endif; ?>
             </td>
             <td class="py-2 pr-3 font-medium text-right"><?= moneyfmt($row['amount'], $nativeCur) ?></td>
             <td class="py-2 pr-3 text-right"><span class="font-medium"><?= moneyfmt($amtMain, $mainCur) ?></span></td>
             <td class="py-2 pr-3 text-gray-500"><?= htmlspecialchars($row['note'] ?? '') ?></td>
             <td class="py-2 pr-3">
               <?php if (!$isVirtual): ?>
-                <button type="button" class="btn btn-ghost" onclick="openTxModal('tx<?= $row['id'] ?>')">Edit</button>
-                <form class="inline" method="post" action="/months/tx/delete" onsubmit="return confirm('Delete transaction?')">
+                <button type="button" class="btn btn-ghost" onclick="openTxModal('tx<?= $row['id'] ?>')"><?= __('common.edit') ?></button>
+                <form class="inline" method="post" action="/months/tx/delete" onsubmit="return confirm('<?= __('month.delete_confirm') ?>')">
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                   <input type="hidden" name="y" value="<?= $y ?>" />
                   <input type="hidden" name="m" value="<?= $m ?>" />
                   <input type="hidden" name="id" value="<?= $row['id'] ?>" />
-                  <button class="btn btn-danger">Remove</button>
+                  <button class="btn btn-danger"><?= __('common.remove') ?></button>
                 </form>
 
                 <!-- Modal -->
                 <dialog id="tx<?= $row['id'] ?>" class="rounded-2xl p-0 w-[720px] max-w-[95vw] shadow-2xl">
                   <form method="dialog" class="m-0">
                     <div class="flex items-center justify-between px-5 py-3 border-b">
-                      <div class="font-semibold">Edit Transaction — <?= htmlspecialchars($row['occurred_on']) ?></div>
-                      <button class="btn btn-ghost" value="close">Close</button>
+                      <div class="font-semibold"><?= __('month.edit_transaction_title', ['date' => htmlspecialchars($row['occurred_on'])]) ?></div>
+                      <button class="btn btn-ghost" value="close"><?= __('common.close') ?></button>
                     </div>
                   </form>
 
@@ -523,20 +530,20 @@
                       <input type="hidden" name="id" value="<?= $row['id'] ?>" />
 
                       <div class="field md:col-span-3">
-                        <label class="label">Type</label>
+                        <label class="label"><?= __('month.type') ?></label>
                         <select name="kind" class="select">
-                          <option <?= $row['kind']==='income'?'selected':'' ?> value="income">Income</option>
-                          <option <?= $row['kind']==='spending'?'selected':'' ?> value="spending">Spending</option>
+                          <option <?= $row['kind']==='income'?'selected':'' ?> value="income"><?= __('month.income') ?></option>
+                          <option <?= $row['kind']==='spending'?'selected':'' ?> value="spending"><?= __('month.spending') ?></option>
                         </select>
                       </div>
 
                       <div class="field md:col-span-3">
-                        <label class="label">Amount</label>
+                        <label class="label"><?= __('month.amount') ?></label>
                         <input name="amount" type="number" step="0.01" value="<?= $row['amount'] ?>" class="input" required />
                       </div>
 
                       <div class="field md:col-span-2">
-                        <label class="label">Currency</label>
+                        <label class="label"><?= __('common.currency') ?></label>
                         <select name="currency" class="select">
                           <?php foreach ($userCurrencies as $c): ?>
                             <option value="<?= htmlspecialchars($c['code']) ?>"
@@ -549,23 +556,23 @@
                       </div>
 
                       <div class="field md:col-span-4">
-                        <label class="label">Date</label>
+                        <label class="label"><?= __('month.date') ?></label>
                         <input name="occurred_on" type="date" value="<?= $row['occurred_on'] ?>" class="input" />
                       </div>
 
                       <div class="field md:col-span-12">
-                        <label class="label">Note</label>
+                        <label class="label"><?= __('common.note') ?></label>
                         <input name="note" value="<?= htmlspecialchars($row['note'] ?? '') ?>" class="input" />
                       </div>
 
                       <div class="md:col-span-12 flex justify-end gap-2">
-                        <button class="btn btn-primary">Save</button>
+                        <button class="btn btn-primary"><?= __('common.save') ?></button>
                       </div>
                     </form>
                   </div>
                 </dialog>
               <?php else: ?>
-                <span class="text-xs text-gray-400">Auto-generated</span>
+                <span class="text-xs text-gray-400"><?= __('month.auto_generated') ?></span>
               <?php endif; ?>
             </td>
 
@@ -578,10 +585,10 @@
       $mk = function($p) use ($base,$qs){ $qs['page']=$p; return $base.'?'.http_build_query($qs); };
     ?>
       <div class="hidden md:flex items-center justify-between mt-3 text-sm">
-        <div class="text-gray-500">Page <?= $page ?> / <?= $totalPages ?></div>
+        <div class="text-gray-500"><?= __('month.page_status', ['current' => $page, 'total' => $totalPages]) ?></div>
         <div class="flex gap-2">
-          <a class="btn btn-ghost <?= $page<=1?'pointer-events-none opacity-40':'' ?>" href="<?= $page>1?$mk($page-1):'#' ?>">Prev</a>
-          <a class="btn btn-ghost <?= $page>=$totalPages?'pointer-events-none opacity-40':'' ?>" href="<?= $page<$totalPages?$mk($page+1):'#' ?>">Next</a>
+          <a class="btn btn-ghost <?= $page<=1?'pointer-events-none opacity-40':'' ?>" href="<?= $page>1?$mk($page-1):'#' ?>"><?= __('common.prev') ?></a>
+          <a class="btn btn-ghost <?= $page>=$totalPages?'pointer-events-none opacity-40':'' ?>" href="<?= $page<$totalPages?$mk($page+1):'#' ?>"><?= __('common.next') ?></a>
         </div>
       </div>
     <?php endif; ?>
