@@ -1,64 +1,18 @@
 <?php
 require_once __DIR__ . '/../helpers.php';
 
-// function categories_index(PDO $pdo){
-//     require_login(); $u = uid();
-
-//     $q = $pdo->prepare("
-//         SELECT id, label, kind, color
-//         FROM categories
-//         WHERE user_id=?
-//         ORDER BY kind, lower(label)
-//         ");
-//     $q->execute([$u]);
-//     $rows = $q->fetchAll();
-
-//     // counts to help user see if a category is used (optional)
-//     $cnt = $pdo->prepare("SELECT category_id, COUNT(*) n
-//                           FROM transactions
-//                           WHERE user_id=?
-//                           GROUP BY category_id");
-//     $cnt->execute([$u]);
-//     $usage = [];
-//     foreach ($cnt as $r) { $usage[(int)$r['category_id']] = (int)$r['n']; }
-
-//     view('settings/categories', compact('rows','usage'));
-// }
-
-// function categories_add(PDO $pdo){
-//     verify_csrf(); require_login(); $u=uid();
-//     $kind  = ($_POST['kind'] ?? '') === 'spending' ? 'spending' : 'income';
-//     $label = trim($_POST['label'] ?? '');
-//     $color = sanitize_hex($_POST['color'] ?? null) ?? '#6B7280'; // default gray
-//     if ($label==='') return;
-
-//     $stmt = $pdo->prepare(
-//         "INSERT INTO categories(user_id,label,kind,color)
-//          VALUES (?,?,?,?)
-//          ON CONFLICT DO NOTHING"
-//     );
-//     $stmt->execute([$u,$label,$kind,$color]);
-// }
-
-
-// function categories_edit(PDO $pdo){
-//     verify_csrf(); require_login(); $u=uid();
-//     $id    = (int)($_POST['id'] ?? 0);
-//     if (!$id) return;
-//     $kind  = ($_POST['kind'] ?? '') === 'spending' ? 'spending' : 'income';
-//     $label = trim($_POST['label'] ?? '');
-//     $color = sanitize_hex($_POST['color'] ?? null) ?? '#6B7280';
-//     if ($label==='') return;
-
-//     $stmt = $pdo->prepare("UPDATE categories SET label=?, kind=?, color=? WHERE id=? AND user_id=?");
-//     $stmt->execute([$label,$kind,$color,$id,$u]);
-// }
-
-
 function categories_delete(PDO $pdo){
     verify_csrf(); require_login(); $u=uid();
     $id = (int)($_POST['id'] ?? 0);
     if (!$id) return;
+
+    $cat = $pdo->prepare("SELECT system_key FROM categories WHERE id=? AND user_id=?");
+    $cat->execute([(int)$_POST['id'], uid()]);
+    $sys = $cat->fetchColumn();
+    if (in_array($sys, ['ef_add','ef_withdraw'], true)) {
+    $_SESSION['flash'] = 'This built-in category can’t be deleted.';
+    redirect('/categories');
+    }
 
     // If you have FK ON DELETE SET NULL, this will succeed; otherwise it may fail.
     try {
@@ -82,7 +36,7 @@ function categories_index(PDO $pdo){
     require_login(); $u = uid();
 
     $stmt = $pdo->prepare("
-      SELECT id, label, kind, color, cashflow_rule_id
+      SELECT id, label, kind, color, cashflow_rule_id, system_key
       FROM categories
       WHERE user_id=?
       ORDER BY kind, lower(label)

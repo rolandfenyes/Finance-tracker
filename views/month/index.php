@@ -293,18 +293,6 @@
 <section class="mt-6 bg-white rounded-2xl p-5 shadow-glass">
   <h3 class="font-semibold mb-3">Transactions</h3>
 
-  <?php if (!empty($cats)): ?>
-    <div class="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
-      <?php foreach ($cats as $c): ?>
-        <span class="inline-flex items-center gap-1">
-          <span class="inline-block h-2.5 w-2.5 rounded-full"
-                style="background-color: <?= htmlspecialchars($c['color'] ?? '#6B7280') ?>;"></span>
-          <?= htmlspecialchars($c['label']) ?>
-        </span>
-      <?php endforeach; ?>
-    </div>
-  <?php endif; ?>
-
   <!-- Mobile: stacked cards -->
   <div class="md:hidden space-y-3">
     <?php foreach ($allTx as $row): ?>
@@ -469,40 +457,60 @@
         <?php foreach ($allTx as $row): ?>
           <?php
             $isVirtual = !empty($row['is_virtual']);
+            $isEF      = isset($row['source']) && $row['source'] === 'ef';
+            $isLocked  = !empty($row['locked']) || $isEF; // ← use $row, not $r
+
             $nativeCur = $row['currency'] ?: $main;
+
             if ($isVirtual && isset($row['amount_main'])) {
-              $amtMain = (float)$row['amount_main']; $mainCur = $row['main_currency'] ?? $main;
+              $amtMain = (float)$row['amount_main'];
+              $mainCur = $row['main_currency'] ?? $main;
             } else {
               if (isset($row['amount_main']) && $row['amount_main'] !== null && !empty($row['main_currency'])) {
-                $amtMain = (float)$row['amount_main']; $mainCur = $row['main_currency'];
-              } else { $amtMain = fx_convert($pdo, (float)$row['amount'], $nativeCur, $main, $row['occurred_on']); $mainCur = $main; }
+                $amtMain = (float)$row['amount_main'];
+                $mainCur = $row['main_currency'];
+              } else {
+                $amtMain = fx_convert($pdo, (float)$row['amount'], $nativeCur, $main, $row['occurred_on']);
+                $mainCur = $main;
+              }
             }
           ?>
           <tr class="border-b hover:bg-gray-50 <?= $isVirtual ? 'opacity-95' : '' ?>">
             <td class="py-2 pr-3">
               <?= htmlspecialchars($row['occurred_on']) ?>
-              <?php if ($isVirtual): ?><span class="ml-1 text-[11px] text-gray-500">🔒</span><?php endif; ?>
+              <?php if ($isVirtual || $isLocked): ?>
+                <span class="ml-1 text-[11px] text-gray-500">🔒</span>
+              <?php endif; ?>
             </td>
+
             <td class="py-2 pr-3 capitalize"><?= htmlspecialchars($row['kind']) ?></td>
+
             <td class="py-2 pr-3">
               <span class="inline-flex items-center gap-2">
                 <span class="inline-block h-2.5 w-2.5 rounded-full"
                       style="background-color: <?= htmlspecialchars($row['cat_color'] ?? '#6B7280') ?>;"></span>
                 <?= htmlspecialchars($row['cat_label'] ?? '—') ?>
               </span>
-              <?php if ($isVirtual): ?><span class="text-xs text-gray-500 ml-1">(auto)</span><?php endif; ?>
+              <?php if ($isVirtual): ?>
+                <span class="text-xs text-gray-500 ml-1">(auto)</span>
+              <?php endif; ?>
+              <?php if (!$isVirtual && $isEF): ?>
+                <span class="text-xs text-emerald-600 ml-1">(Emergency Fund)</span>
+              <?php endif; ?>
             </td>
+
             <td class="py-2 pr-3 font-medium text-right"><?= moneyfmt($row['amount'], $nativeCur) ?></td>
             <td class="py-2 pr-3 text-right"><span class="font-medium"><?= moneyfmt($amtMain, $mainCur) ?></span></td>
             <td class="py-2 pr-3 text-gray-500"><?= htmlspecialchars($row['note'] ?? '') ?></td>
+
             <td class="py-2 pr-3">
-              <?php if (!$isVirtual): ?>
-                <button type="button" class="btn btn-ghost" onclick="openTxModal('tx<?= $row['id'] ?>')">Edit</button>
+              <?php if (!$isVirtual && !$isLocked): ?>
+                <button type="button" class="btn btn-ghost" onclick="openTxModal('tx<?= (int)$row['id'] ?>')">Edit</button>
                 <form class="inline" method="post" action="/months/tx/delete" onsubmit="return confirm('Delete transaction?')">
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-                  <input type="hidden" name="y" value="<?= $y ?>" />
-                  <input type="hidden" name="m" value="<?= $m ?>" />
-                  <input type="hidden" name="id" value="<?= $row['id'] ?>" />
+                  <input type="hidden" name="y" value="<?= (int)$y ?>" />
+                  <input type="hidden" name="m" value="<?= (int)$m ?>" />
+                  <input type="hidden" name="id" value="<?= (int)$row['id'] ?>" />
                   <button class="btn btn-danger">Remove</button>
                 </form>
 
@@ -565,11 +573,13 @@
                   </div>
                 </dialog>
               <?php else: ?>
-                <span class="text-xs text-gray-400">Auto-generated</span>
+                <span class="text-xs text-gray-400">
+                  <?= $isVirtual ? 'Auto-generated' : ($isEF ? 'Locked (Emergency Fund)' : 'Locked') ?>
+                </span>
               <?php endif; ?>
             </td>
-
           </tr>
+
         <?php endforeach; ?>
       </tbody>
     </table>

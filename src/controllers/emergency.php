@@ -188,39 +188,53 @@ function emergency_set_target(PDO $pdo){
 function emergency_add(PDO $pdo){
   verify_csrf(); require_login(); $u = uid();
 
-  $amount   = (float)($_POST['amount'] ?? 0);
-  $date     = $_POST['occurred_on'] ?: date('Y-m-d');
-  $note     = trim($_POST['note'] ?? '');
-
+  $amount = (float)($_POST['amount'] ?? 0);
+  $date   = $_POST['occurred_on'] ?: date('Y-m-d');
+  $note   = trim($_POST['note'] ?? '');
   if ($amount <= 0) { $_SESSION['flash']='Amount must be positive.'; redirect('/emergency'); }
 
-  // load EF currency
-  $q = $pdo->prepare('SELECT currency FROM emergency_fund WHERE user_id=?');
-  $q->execute([$u]); $efCur = $q->fetchColumn() ?: (fx_user_main($pdo,$u) ?: 'HUF');
+  // EF & main currencies
+  $row = $pdo->prepare('SELECT currency FROM emergency_fund WHERE user_id=?');
+  $row->execute([$u]); $efCur = $row->fetchColumn() ?: (fx_user_main($pdo,$u) ?: 'HUF');
   $main = fx_user_main($pdo,$u) ?: $efCur;
 
-  // convert snapshot to main (store rate & main value for stable history)
-  if ($efCur === $main) {
-    $rate = 1.0; $amtMain = $amount;
-  } else {
-    // If your fx_convert exposes the rate, you can split it; else compute via 1 → rate
-    $amtMain = fx_convert($pdo, $amount, $efCur, $main, $date);
-    // derive an effective rate
-    $one    = fx_convert($pdo, 1, $efCur, $main, $date);
-    $rate   = $one > 0 ? $one : ($amtMain / max($amount, 1e-9));
-  }
+  // FX snapshot
+  $amtMain = ($efCur === $main) ? $amount : fx_convert($pdo, $amount, $efCur, $main, $date);
+  $one     = ($efCur === $main) ? 1.0     : fx_convert($pdo, 1, $efCur, $main, $date);
+  $rate    = $one > 0 ? $one : ($amtMain / max($amount, 1e-9));
+
+  require_once __DIR__.'/../helpers_ef.php';
+  $cats = ef_ensure_categories($pdo, $u); // returns ['ef_add'=>id, 'ef_withdraw'=>id]
 
   $pdo->beginTransaction();
   try{
-    $ins = $pdo->prepare("INSERT INTO emergency_fund_tx(user_id, occurred_on, kind, amount_native, currency_native, amount_main, main_currency, rate_used, note)
-                          VALUES (?,?,?,?,?,?,?,?,?)");
+    // 1) EF ledger row
+    $ins = $pdo->prepare("
+      INSERT INTO emergency_fund_tx
+        (user_id, occurred_on, kind, amount_native, currency_native, amount_main, main_currency, rate_used, note)
+      VALUES (?,?,?,?,?,?,?,?,?)
+      RETURNING id
+    ");
     $ins->execute([$u,$date,'add',$amount,$efCur,$amtMain,$main,$rate,$note]);
+    $efTxId = (int)$ins->fetchColumn();
 
-    // bump total (in EF currency)
-    $pdo->prepare("INSERT INTO emergency_fund(user_id,total,target_amount,currency)
-                   VALUES(?, ?, 0, ?)
-                   ON CONFLICT (user_id) DO UPDATE SET total = emergency_fund.total + EXCLUDED.total, currency = EXCLUDED.currency")
-        ->execute([$u,$amount,$efCur]);
+    // 2) Increase EF total (in EF currency)
+    $pdo->prepare("
+      INSERT INTO emergency_fund(user_id,total,target_amount,currency)
+      VALUES(?, ?, 0, ?)
+      ON CONFLICT (user_id)
+      DO UPDATE SET total = emergency_fund.total + EXCLUDED.total,
+                    currency = EXCLUDED.currency
+    ")->execute([$u,$amount,$efCur]);
+
+    // 3) Mirror into transactions as SPENDING (money leaves wallet to EF)
+    $txNote = $note !== '' ? $note : 'Emergency Fund contribution';
+    $tins = $pdo->prepare("
+      INSERT INTO transactions
+        (user_id, occurred_on, kind, amount, currency, category_id, note, source, source_ref_id, locked, ef_tx_id)
+      VALUES (?, ?, 'spending', ?, ?, ?, ?, 'ef', ?, TRUE, ?)
+    ");
+    $tins->execute([$u, $date, $amount, $efCur, (int)$cats['ef_add'], $txNote, $efTxId, $efTxId]);
 
     $pdo->commit();
     $_SESSION['flash']='Money added.';
@@ -234,32 +248,46 @@ function emergency_add(PDO $pdo){
 function emergency_withdraw(PDO $pdo){
   verify_csrf(); require_login(); $u = uid();
 
-  $amount   = (float)($_POST['amount'] ?? 0);
-  $date     = $_POST['occurred_on'] ?: date('Y-m-d');
-  $note     = trim($_POST['note'] ?? '');
-
+  $amount = (float)($_POST['amount'] ?? 0);
+  $date   = $_POST['occurred_on'] ?: date('Y-m-d');
+  $note   = trim($_POST['note'] ?? '');
   if ($amount <= 0) { $_SESSION['flash']='Amount must be positive.'; redirect('/emergency'); }
 
-  $q = $pdo->prepare('SELECT currency FROM emergency_fund WHERE user_id=?');
-  $q->execute([$u]); $efCur = $q->fetchColumn() ?: (fx_user_main($pdo,$u) ?: 'HUF');
+  $row = $pdo->prepare('SELECT currency FROM emergency_fund WHERE user_id=?');
+  $row->execute([$u]); $efCur = $row->fetchColumn() ?: (fx_user_main($pdo,$u) ?: 'HUF');
   $main = fx_user_main($pdo,$u) ?: $efCur;
 
-  if ($efCur === $main) {
-    $rate = 1.0; $amtMain = $amount;
-  } else {
-    $amtMain = fx_convert($pdo, $amount, $efCur, $main, $date);
-    $one     = fx_convert($pdo, 1, $efCur, $main, $date);
-    $rate    = $one > 0 ? $one : ($amtMain / max($amount, 1e-9));
-  }
+  $amtMain = ($efCur === $main) ? $amount : fx_convert($pdo, $amount, $efCur, $main, $date);
+  $one     = ($efCur === $main) ? 1.0     : fx_convert($pdo, 1, $efCur, $main, $date);
+  $rate    = $one > 0 ? $one : ($amtMain / max($amount, 1e-9));
+
+  require_once __DIR__.'/../helpers_ef.php';
+  $cats = ef_ensure_categories($pdo, $u);
 
   $pdo->beginTransaction();
   try{
-    $ins = $pdo->prepare("INSERT INTO emergency_fund_tx(user_id, occurred_on, kind, amount_native, currency_native, amount_main, main_currency, rate_used, note)
-                          VALUES (?,?,?,?,?,?,?,?,?)");
+    // 1) EF ledger row
+    $ins = $pdo->prepare("
+      INSERT INTO emergency_fund_tx
+        (user_id, occurred_on, kind, amount_native, currency_native, amount_main, main_currency, rate_used, note)
+      VALUES (?,?,?,?,?,?,?,?,?)
+      RETURNING id
+    ");
     $ins->execute([$u,$date,'withdraw',$amount,$efCur,$amtMain,$main,$rate,$note]);
+    $efTxId = (int)$ins->fetchColumn();
 
+    // 2) Decrease EF total
     $pdo->prepare("UPDATE emergency_fund SET total = GREATEST(0, COALESCE(total,0) - ?) WHERE user_id=?")
         ->execute([$amount,$u]);
+
+    // 3) Mirror into transactions as INCOME (money returns from EF)
+    $txNote = $note !== '' ? $note : 'Emergency Fund withdrawal';
+    $tins = $pdo->prepare("
+      INSERT INTO transactions
+        (user_id, occurred_on, kind, amount, currency, category_id, note, source, source_ref_id, locked, ef_tx_id)
+      VALUES (?, ?, 'income', ?, ?, ?, ?, 'ef', ?, TRUE, ?)
+    ");
+    $tins->execute([$u, $date, $amount, $efCur, (int)$cats['ef_withdraw'], $txNote, $efTxId, $efTxId]);
 
     $pdo->commit();
     $_SESSION['flash']='Withdrawal recorded.';
@@ -281,7 +309,7 @@ function emergency_tx_delete(PDO $pdo){
 
   $pdo->beginTransaction();
   try{
-    // reverse total
+    // Reverse EF total
     if ($tx['kind'] === 'add') {
       $pdo->prepare("UPDATE emergency_fund SET total = GREATEST(0, COALESCE(total,0) - ?) WHERE user_id=?")
           ->execute([(float)$tx['amount_native'],$u]);
@@ -289,7 +317,16 @@ function emergency_tx_delete(PDO $pdo){
       $pdo->prepare("UPDATE emergency_fund SET total = COALESCE(total,0) + ? WHERE user_id=?")
           ->execute([(float)$tx['amount_native'],$u]);
     }
+
+    // Delete mirrored transaction(s) by either linkage
+    $pdo->prepare("
+      DELETE FROM transactions
+      WHERE user_id=? AND (ef_tx_id = ? OR (source='ef' AND source_ref_id = ?))
+    ")->execute([$u,$id,$id]);
+
+    // Delete EF entry
     $pdo->prepare("DELETE FROM emergency_fund_tx WHERE id=? AND user_id=?")->execute([$id,$u]);
+
     $pdo->commit();
     $_SESSION['flash']='Entry removed.';
   } catch(Throwable $e){

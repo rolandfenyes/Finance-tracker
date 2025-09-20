@@ -42,32 +42,34 @@
           <ul class="divide-y rounded-xl border">
             <?php if (!count($list)): ?>
               <li class="p-3 text-sm text-gray-500">No categories yet.</li>
-            <?php else: foreach($list as $c): $used = (int)($usage[$c['id']] ?? 0); ?>
+            <?php else: foreach($list as $c): 
+              $used   = (int)($usage[$c['id']] ?? 0);
+              $isEF   = in_array($c['system_key'] ?? '', ['ef_add','ef_withdraw'], true);
+              // derive rule name for this category (if any)
+              $ruleName = null;
+              if (!empty($rules)) {
+                foreach ($rules as $rul) {
+                  if ((int)$rul['id'] === (int)($c['cashflow_rule_id'] ?? 0)) { $ruleName = $rul['label']; break; }
+                }
+              }
+            ?>
               <li class="p-3">
                 <details class="group">
                   <summary class="flex items-center justify-between gap-3 cursor-pointer list-none">
-                    <?php
-                      $ruleName = null;
-                      if (!empty($rules)) {
-                        foreach ($rules as $rul) { if ((int)$rul['id'] === (int)($c['cashflow_rule_id'] ?? 0)) { $ruleName = $rul['label']; break; } }
-                      }
-                    ?>
                     <div class="flex items-center gap-2">
                       <span class="inline-block h-3 w-3 rounded-full" style="background: <?= htmlspecialchars($c['color'] ?? '#6B7280') ?>;"></span>
                       <div class="font-medium"><?= htmlspecialchars($c['label']) ?></div>
-                      <?php if ($ruleName): ?>
-                        <span class="chip"><?= htmlspecialchars($ruleName) ?></span>
-                      <?php endif; ?>
+                      <?php if ($isEF): ?><span class="chip">Protected</span><?php endif; ?>
+                      <?php if ($ruleName): ?><span class="chip"><?= htmlspecialchars($ruleName) ?></span><?php endif; ?>
                     </div>
-
                     <span class="row-btn">Edit</span>
                   </summary>
 
                   <div class="edit-panel">
-                    <!-- edit form here -->  
+                    <!-- EDIT form -->
                     <form class="grid gap-3 sm:grid-cols-12 items-end" method="post" action="/settings/categories/edit">
                       <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-                      <input type="hidden" name="id" value="<?= $c['id'] ?>" />
+                      <input type="hidden" name="id" value="<?= (int)$c['id'] ?>" />
 
                       <div class="field sm:col-span-3">
                         <label class="label">Type</label>
@@ -84,42 +86,43 @@
 
                       <div class="field sm:col-span-3">
                         <label class="label">Color</label>
-                        <div class="flex items-center gap-2">
-                          <input name="color" type="color"
-                                value="<?= htmlspecialchars($dot) ?>"
-                                class="h-10 w-16 rounded-xl border border-gray-300 col-span-1" />
-
-                        </div>
+                        <input name="color" type="color"
+                              value="<?= htmlspecialchars($c['color'] ?? '#6B7280') ?>"
+                              class="h-10 w-16 rounded-xl border border-gray-300" />
                       </div>
 
-                      <select name="cashflow_rule_id" class="select col-span-6">
-                        <option value="">No rule</option>
-                        <?php foreach ($rules as $r): ?>
-                          <option value="<?= (int)$r['id'] ?>"
-                            <?= ((int)($c['cashflow_rule_id'] ?? 0) === (int)$r['id']) ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($r['label']) ?>
-                          </option>
-                        <?php endforeach; ?>
-                      </select>
-
+                      <div class="field sm:col-span-6">
+                        <label class="label">Cashflow rule</label>
+                        <select name="cashflow_rule_id" class="select">
+                          <option value="">No rule</option>
+                          <?php foreach ($rules as $r): ?>
+                            <option value="<?= (int)$r['id'] ?>"
+                              <?= ((int)($c['cashflow_rule_id'] ?? 0) === (int)$r['id']) ? 'selected' : '' ?>>
+                              <?= htmlspecialchars($r['label']) ?>
+                            </option>
+                          <?php endforeach; ?>
+                        </select>
+                      </div>
 
                       <div class="sm:col-span-12 flex gap-2 justify-end">
                         <button class="btn btn-primary">Save</button>
-                        <form method="post" action="/settings/categories/delete"
-                              onsubmit="return confirm('Delete this category? Transactions will remain without a category.');">
-                          <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-                          <input type="hidden" name="id" value="<?= $c['id'] ?>" />
-                          <button class="btn btn-danger">Remove</button>
-                        </form>
+                        <?php if (!$isEF): ?>
+                          <!-- DELETE form as a separate sibling form (no nesting) -->
+                          <form method="post" action="/settings/categories/delete"
+                                onsubmit="return confirm('Delete this category? Transactions will remain without a category.');" class="inline">
+                            <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+                            <input type="hidden" name="id" value="<?= (int)$c['id'] ?>" />
+                            <button class="btn btn-danger">Remove</button>
+                          </form>
+                        <?php else: ?>
+                        <?php endif; ?>
                       </div>
                     </form>
                   </div>
                 </details>
               </li>
-
-
-
             <?php endforeach; endif; ?>
+
           </ul>
         </div>
       <?php }; $renderList($income,'Income',$usage); $renderList($spend,'Spending',$usage); ?>
