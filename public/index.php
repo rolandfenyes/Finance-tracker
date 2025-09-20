@@ -43,12 +43,14 @@ switch ($path) {
         handle_logout();
         break;
 
+    // Current Month
     case '/current-month':
         require_login();
         require __DIR__ . '/../src/controllers/month.php';
         month_show($pdo); // current month
         break;
 
+    // Transactions
     case '/transactions/add':
         require_login();
         require __DIR__ . '/../src/controllers/transactions.php';
@@ -68,11 +70,13 @@ switch ($path) {
         redirect('/current-month');
         break;
 
+    // Settings
     case '/settings':
         require_login();
         require __DIR__ . '/../src/controllers/settings.php';
         settings_controller($pdo);
         break;
+
     // Currencies
     case '/settings/currencies':
         require_login();
@@ -97,6 +101,7 @@ switch ($path) {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') { currency_set_main($pdo); }
         redirect('/settings/currencies');
         break;
+
     // Basic incomes
     case '/settings/basic-incomes':
         require_login();
@@ -121,6 +126,7 @@ switch ($path) {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') { incomes_delete($pdo); }
         redirect('/settings/basic-incomes');
         break;
+
     // Categories
     case '/settings/categories':
         require_login();
@@ -145,6 +151,7 @@ switch ($path) {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') { categories_delete($pdo); }
         redirect('/settings/categories');
         break;
+
     // Cashflow Rules
     case '/settings/cashflow':
         require_login();
@@ -176,8 +183,7 @@ switch ($path) {
         redirect('/settings/cashflow');
         break;
 
-    
-
+    // Goals
     case '/goals':
         require_login();
         require __DIR__ . '/../src/controllers/goals.php';
@@ -230,7 +236,7 @@ switch ($path) {
         goals_tx_delete($pdo);
         break;
 
-
+    // Loans
     case '/loans':
         require_login();
         require __DIR__ . '/../src/controllers/loans.php';
@@ -267,6 +273,7 @@ switch ($path) {
         redirect('/loals');
         break;
 
+    // Stocks
     case '/stocks':
         require_login();
         require __DIR__ . '/../src/controllers/stocks.php';
@@ -291,6 +298,7 @@ switch ($path) {
         redirect('/stocks');
         break;
 
+    // Scheduled
     case '/scheduled':
         require_login();
         require __DIR__ . '/../src/controllers/scheduled.php';
@@ -315,30 +323,38 @@ switch ($path) {
         redirect('/scheduled');
         break;
 
+    // Emergency Fund
     case '/emergency':
         require_login();
-        require __DIR__ . '/../src/controllers/emergency.php';
+        require __DIR__.'/../src/controllers/emergency.php';
         emergency_index($pdo);
         break;
-    case '/emergency/set':
+    case '/emergency/target':
         require_login();
-        require __DIR__ . '/../src/controllers/emergency.php';
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') { emergency_set($pdo); }
+        require __DIR__.'/../src/controllers/emergency.php';
+        if ($_SERVER['REQUEST_METHOD']==='POST') emergency_set_target($pdo);
         redirect('/emergency');
         break;
-    case '/emergency/tx/add':
+    case '/emergency/add':
         require_login();
-        require __DIR__ . '/../src/controllers/emergency.php';
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') { emergency_tx_add($pdo); }
+        require __DIR__.'/../src/controllers/emergency.php';
+        if ($_SERVER['REQUEST_METHOD']==='POST') emergency_add($pdo);
+        redirect('/emergency');
+        break;
+    case '/emergency/withdraw':
+        require_login();
+        require __DIR__.'/../src/controllers/emergency.php';
+        if ($_SERVER['REQUEST_METHOD']==='POST') emergency_withdraw($pdo);
         redirect('/emergency');
         break;
     case '/emergency/tx/delete':
         require_login();
-        require __DIR__ . '/../src/controllers/emergency.php';
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') { emergency_tx_delete($pdo); }
+        require __DIR__.'/../src/controllers/emergency.php';
+        if ($_SERVER['REQUEST_METHOD']==='POST') emergency_tx_delete($pdo);
         redirect('/emergency');
         break;
-    
+
+    // Years
     case '/years':
         require_login();
         require __DIR__ . '/../src/controllers/years.php';

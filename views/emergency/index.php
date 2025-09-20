@@ -1,53 +1,229 @@
 <section class="bg-white rounded-2xl p-5 shadow-glass">
   <h1 class="text-xl font-semibold">Emergency Fund</h1>
-  <?php $pct = ($fund && $fund['target_amount']>0)? round($fund['total']/$fund['target_amount']*100):0; ?>
-  <p class="text-sm mt-1">Total: <?= $fund? moneyfmt($fund['total'],$fund['currency']) : '—' ?></p>
-  <div class="mt-2 bg-gray-100 h-2 rounded"><div class="h-2 bg-accent rounded" style="width: <?=$pct?>%"></div></div>
-  <p class="text-xs text-gray-500 mt-1">Target: <?= $fund? moneyfmt($fund['target_amount'],$fund['currency']) : '—' ?> (<?=$pct?>%)</p>
+  <?php if (!empty($_SESSION['flash'])): ?>
+    <p class="mt-2 text-sm text-emerald-700"><?= $_SESSION['flash']; unset($_SESSION['flash']); ?></p>
+  <?php endif; ?>
 
-  <details class="mt-4">
-    <summary class="cursor-pointer text-accent">Set target</summary>
-    <form class="mt-3 grid sm:grid-cols-4 gap-2" method="post" action="/emergency/set">
-      <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-      <input name="target_amount" type="number" step="0.01" value="<?= $fund['target_amount']??'' ?>" class="rounded-xl border-gray-300" placeholder="Target amount" required>
-      <input name="currency" value="<?= $fund['currency']??'HUF' ?>" class="rounded-xl border-gray-300">
-      <button class="bg-gray-900 text-white rounded-xl px-4">Save</button>
-    </form>
-  </details>
+  <!-- Target / balance -->
+  <div class="grid gap-4 md:grid-cols-12 mt-4">
+    <div class="md:col-span-6 rounded-xl border p-4">
+      <?php if (!empty($suggest)): ?>
+        <div class="mt-4">
+          <div class="text-sm font-medium mb-1">Suggestion</div>
+          <p class="text-xs text-gray-500 mb-2">
+            Be able to survive without income. Smaller milestones help maintain momentum.
+          </p>
 
-  <details class="mt-4">
-    <summary class="cursor-pointer text-accent">Add transaction</summary>
-    <form class="mt-3 grid sm:grid-cols-5 gap-2" method="post" action="/emergency/tx/add">
-      <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-      <select name="kind" class="rounded-xl border-gray-300"><option value="deposit">Deposit</option><option value="withdraw">Withdraw</option></select>
-      <input name="amount" type="number" step="0.01" class="rounded-xl border-gray-300" placeholder="Amount" required>
-      <input name="occurred_on" type="date" value="<?= date('Y-m-d') ?>" class="rounded-xl border-gray-300">
-      <input name="note" class="rounded-xl border-gray-300" placeholder="Note">
-      <button class="bg-gray-900 text-white rounded-xl px-4">Save</button>
-    </form>
-  </details>
+          <?php if (!empty($suggest['done'])): ?>
+            <!-- Done state (9+ months reached) -->
+            <div class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-sm text-emerald-700">
+              <span class="font-medium"><?= htmlspecialchars($suggest['label']) ?></span>
+            </div>
+            <div class="mt-1 text-[11px] text-gray-500">
+              <?= htmlspecialchars($suggest['desc']) ?>
+            </div>
+
+          <?php else: ?>
+            <!-- Normal milestone suggestion -->
+            <button type="button"
+                    class="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm hover:bg-gray-50"
+                    data-suggest-amount="<?= htmlspecialchars(number_format($suggest['amount_ef'], 2, '.', '')) ?>"
+                    data-suggest-currency="<?= htmlspecialchars($suggest['currency_ef']) ?>">
+              <span class="font-medium"><?= moneyfmt($suggest['amount_ef'], $suggest['currency_ef']) ?></span>
+              <span class="text-xs text-gray-500">· <?= htmlspecialchars($suggest['label']) ?></span>
+            </button>
+
+            <?php if (strtoupper($suggest['currency_ef']) !== strtoupper($suggest['currency_main'])): ?>
+              <div class="mt-2 text-[11px] text-gray-500">
+                ≈ <?= moneyfmt($suggest['amount_main'], $suggest['currency_main']) ?> (<?= htmlspecialchars($suggest['label']) ?>)
+              </div>
+            <?php endif; ?>
+
+            <div class="mt-1 text-[11px] text-gray-400">
+              <?= htmlspecialchars($suggest['desc']) ?>
+            </div>
+          <?php endif; ?>
+        </div>
+      <?php endif; ?>
+
+
+
+      <form class="grid sm:grid-cols-12 gap-3" method="post" action="/emergency/target">
+        <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+        <div class="sm:col-span-7">
+          <label class="label">Target amount</label>
+          <input name="target_amount" type="number" step="0.01" class="input" value="<?= htmlspecialchars($ef_target) ?>" required />
+        </div>
+        <div class="sm:col-span-5">
+          <label class="label">Currency</label>
+          <select name="currency" class="select">
+            <?php foreach($userCurrencies as $uc): $code = $uc['code']; ?>
+              <option value="<?= htmlspecialchars($code) ?>" <?= strtoupper($code)===strtoupper($ef_cur)?'selected':'' ?>>
+                <?= htmlspecialchars($code) ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="sm:col-span-12 flex justify-end">
+          <button class="btn btn-primary">Save target</button>
+        </div>
+      </form>
+
+      <div class="mt-3 text-sm text-gray-700">
+        <div>Saved: <strong><?= moneyfmt($ef_total, $ef_cur) ?></strong> of <?= moneyfmt($ef_target, $ef_cur) ?></div>
+        <?php if (strtoupper($ef_cur)!==strtoupper($main)): ?>
+          <div class="text-xs text-gray-500 mt-1">
+            ≈ <?= moneyfmt($total_main, $main) ?> / <?= moneyfmt($target_main, $main) ?> (current FX)
+          </div>
+        <?php endif; ?>
+        <?php
+          $pct = $ef_target>0 ? min(100, max(0, $ef_total/$ef_target*100)) : 0;
+        ?>
+        <div class="mt-2 h-2 bg-gray-100 rounded-full">
+          <div class="h-2 bg-emerald-500 rounded-full" style="width: <?= number_format($pct,2,'.','') ?>%"></div>
+        </div>
+        <div class="mt-1 text-xs text-gray-600"><?= number_format($pct,1) ?>%</div>
+      </div>
+    </div>
+
+    <!-- Quick actions (always in target currency) -->
+    <div class="md:col-span-6 grid gap-3">
+      <form method="post" action="/emergency/add" class="rounded-xl border p-4 grid sm:grid-cols-12 gap-3">
+        <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+        <div class="sm:col-span-5">
+          <label class="label">Date</label>
+          <input name="occurred_on" type="date" class="input" value="<?= date('Y-m-d') ?>" />
+        </div>
+        <div class="sm:col-span-5">
+          <label class="label">Add money (<?= htmlspecialchars($ef_cur) ?>)</label>
+          <input name="amount" type="number" step="0.01" class="input" placeholder="0.00" required />
+        </div>
+        <div class="sm:col-span-12">
+          <label class="label">Note (optional)</label>
+          <input name="note" class="input" placeholder="e.g., paycheck buffer" />
+        </div>
+        <div class="sm:col-span-12 flex justify-end">
+          <button class="btn btn-emerald">Add</button>
+        </div>
+      </form>
+
+      <form method="post" action="/emergency/withdraw" class="rounded-xl border p-4 grid sm:grid-cols-12 gap-3">
+        <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+        <div class="sm:col-span-5">
+          <label class="label">Date</label>
+          <input name="occurred_on" type="date" class="input" value="<?= date('Y-m-d') ?>" />
+        </div>
+        <div class="sm:col-span-5">
+          <label class="label">Withdrawal (<?= htmlspecialchars($ef_cur) ?>)</label>
+          <input name="amount" type="number" step="0.01" class="input" placeholder="0.00" required />
+        </div>
+        <div class="sm:col-span-12">
+          <label class="label">Note (optional)</label>
+          <input name="note" class="input" placeholder="e.g., car repair" />
+        </div>
+        <div class="sm:col-span-12 flex justify-end">
+          <button class="btn btn-danger">Withdraw</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </section>
 
-<section class="mt-6 bg-white rounded-2xl p-5 shadow-glass overflow-x-auto">
-  <h2 class="font-semibold mb-3">Transactions</h2>
-  <table class="min-w-full text-sm">
-    <thead><tr class="text-left border-b"><th class="py-2 pr-3">Date</th><th class="py-2 pr-3">Kind</th><th class="py-2 pr-3">Amount</th><th class="py-2 pr-3">Note</th><th class="py-2 pr-3">Actions</th></tr></thead>
-    <tbody>
-      <?php foreach($tx as $t): ?>
-        <tr class="border-b">
-          <td class="py-2 pr-3"><?= htmlspecialchars($t['occurred_on']) ?></td>
-          <td class="py-2 pr-3 capitalize"><?= htmlspecialchars($t['kind']) ?></td>
-          <td class="py-2 pr-3 font-medium"><?= moneyfmt($t['amount']) ?></td>
-          <td class="py-2 pr-3 text-gray-500"><?= htmlspecialchars($t['note']??'') ?></td>
-          <td class="py-2 pr-3">
-            <form method="post" action="/emergency/tx/delete" onsubmit="return confirm('Delete transaction?')">
-              <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-              <input type="hidden" name="id" value="<?= $t['id'] ?>" />
-              <button class="text-red-600">Remove</button>
-            </form>
-          </td>
+<section class="mt-6 bg-white rounded-2xl p-5 shadow-glass">
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="font-semibold">History</h2>
+  </div>
+
+  <!-- Desktop table -->
+  <div class="hidden md:block overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead>
+        <tr class="text-left border-b">
+          <th class="py-2 pr-3 w-[18%]">Date</th>
+          <th class="py-2 pr-3 w-[18%]">Type</th>
+          <th class="py-2 pr-3 w-[22%]">Amount</th>
+          <th class="py-2 pr-3 w-[22%]">≈ Main</th>
+          <th class="py-2 pr-3 w-[20%]">Note</th>
+          <th class="py-2 pr-0 text-right">Actions</th>
         </tr>
-      <?php endforeach; ?>
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        <?php foreach($rows as $r): ?>
+          <tr class="border-b">
+            <td class="py-2 pr-3"><?= htmlspecialchars($r['occurred_on']) ?></td>
+            <td class="py-2 pr-3">
+              <?php if ($r['kind']==='add'): ?>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Add money</span>
+              <?php else: ?>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">Withdrawal</span>
+              <?php endif; ?>
+            </td>
+            <td class="py-2 pr-3 font-medium"><?= moneyfmt($r['amount_native'], $r['currency_native']) ?></td>
+            <td class="py-2 pr-3 text-gray-600"><?= moneyfmt($r['amount_main'], $r['main_currency']) ?></td>
+            <td class="py-2 pr-3 text-gray-600"><?= htmlspecialchars($r['note'] ?? '') ?></td>
+            <td class="py-2 pr-0 text-right">
+              <form method="post" action="/emergency/tx/delete" onsubmit="return confirm('Delete entry?')" class="inline-block">
+                <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+                <input type="hidden" name="id" value="<?= (int)$r['id'] ?>" />
+                <button class="btn btn-danger !py-1 !px-3">Delete</button>
+              </form>
+            </td>
+          </tr>
+        <?php endforeach; if (!count($rows)): ?>
+          <tr><td colspan="6" class="py-6 text-center text-gray-500">No entries yet.</td></tr>
+        <?php endif; ?>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Mobile list -->
+  <div class="md:hidden space-y-3">
+    <?php foreach($rows as $r): ?>
+      <div class="rounded-xl border p-4">
+        <div class="flex items-center justify-between">
+          <div class="text-sm text-gray-500"><?= htmlspecialchars($r['occurred_on']) ?></div>
+          <?php if ($r['kind']==='add'): ?>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs">Add</span>
+          <?php else: ?>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-xs">Withdrawal</span>
+          <?php endif; ?>
+        </div>
+        <div class="mt-2 font-semibold"><?= moneyfmt($r['amount_native'], $r['currency_native']) ?></div>
+        <?php if (strtoupper($r['currency_native'])!==strtoupper($r['main_currency'])): ?>
+          <div class="text-xs text-gray-500">≈ <?= moneyfmt($r['amount_main'], $r['main_currency']) ?></div>
+        <?php endif; ?>
+        <?php if (!empty($r['note'])): ?>
+          <div class="mt-1 text-sm text-gray-600"><?= htmlspecialchars($r['note']) ?></div>
+        <?php endif; ?>
+        <div class="mt-3 flex justify-end">
+          <form method="post" action="/emergency/tx/delete" onsubmit="return confirm('Delete entry?')">
+            <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+            <input type="hidden" name="id" value="<?= (int)$r['id'] ?>" />
+            <button class="btn btn-danger !py-1 !px-3">Delete</button>
+          </form>
+        </div>
+      </div>
+    <?php endforeach; ?>
+  </div>
 </section>
+
+<script>
+  document.addEventListener('click', (e)=>{
+    const b = e.target.closest('[data-suggest-amount]');
+    if (!b) return;
+    const amt = b.getAttribute('data-suggest-amount');
+    const cur = b.getAttribute('data-suggest-currency');
+
+    const form       = document.querySelector('form[action="/emergency/target"]');
+    const targetInp  = form?.querySelector('input[name="target_amount"]');
+    const curSelect  = form?.querySelector('select[name="currency"]');
+
+    if (targetInp) targetInp.value = amt;
+    if (curSelect && cur) {
+      Array.from(curSelect.options).forEach(o => o.selected = (o.value.toUpperCase() === cur.toUpperCase()));
+    }
+
+    b.classList.add('ring-2','ring-emerald-300');
+    setTimeout(()=> b.classList.remove('ring-2','ring-emerald-300'), 600);
+  });
+</script>
