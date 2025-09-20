@@ -5,10 +5,16 @@ function loans_index(PDO $pdo){
   require_login(); $u=uid();
 
   $q = $pdo->prepare("
-    SELECT l.*, sp.title AS sched_title, sp.rrule AS sched_rrule, sp.next_due AS sched_next_due
+    SELECT l.*,
+          sp.title    AS sched_title,
+          sp.amount   AS sched_amount,     -- NEW
+          sp.currency AS sched_currency,   -- NEW
+          sp.rrule    AS sched_rrule,
+          sp.next_due AS sched_next_due
     FROM loans l
-    LEFT JOIN scheduled_payments sp ON sp.id=l.scheduled_payment_id AND sp.user_id=l.user_id
-    WHERE l.user_id=?
+    LEFT JOIN scheduled_payments sp
+          ON sp.id = l.scheduled_payment_id AND sp.user_id = l.user_id
+    WHERE l.user_id = ?
     ORDER BY COALESCE(l.start_date, CURRENT_DATE) DESC, l.id DESC
   ");
   $q->execute([$u]);
@@ -16,9 +22,9 @@ function loans_index(PDO $pdo){
 
   // Sum of recorded principal payments for each loan (for users who DON’T confirm history)
   $sumStmt = $pdo->prepare("
-    SELECT loan_id, COALESCE(SUM(principal_component),0) AS p
-    FROM loan_payments WHERE loan_id = ?
-    GROUP BY loan_id
+    SELECT COALESCE(SUM(principal_component),0) AS p
+    FROM loan_payments
+    WHERE loan_id = ?
   ");
 
   // Enrich rows with computed progress using amortization
@@ -70,7 +76,7 @@ function loans_index(PDO $pdo){
     } else {
       // Actual recorded principal only
       $sumStmt->execute([(int)$l['id']]);
-      $actualP = (float)$sumStmt->fetchColumn();
+      $actualP = (float)$sumStmt->fetchColumn(); // ← now correct
       $l['_principal_paid'] = $actualP;
       $l['_interest_paid']  = null;
       $l['_est_balance']    = max(0.0, $principal - $actualP);
@@ -86,7 +92,19 @@ function loans_index(PDO $pdo){
   $uc = $pdo->prepare("SELECT code,is_main FROM user_currencies WHERE user_id=? ORDER BY is_main DESC, code");
   $uc->execute([$u]); $userCurrencies = $uc->fetchAll(PDO::FETCH_ASSOC) ?: [['code'=>'HUF','is_main'=>true]];
   $sp = $pdo->prepare("SELECT id,title,amount,currency,next_due,rrule FROM scheduled_payments WHERE user_id=? ORDER BY lower(title)");
-  $sp->execute([$u]); $scheduledList = $sp->fetchAll(PDO::FETCH_ASSOC);
+  $sp->execute([$u]); 
+  
+  // Only schedules that are free (not linked to any loan or goal) OR already linked to this record
+  $sp = $pdo->prepare("
+    SELECT id, title, amount, currency, next_due, rrule, loan_id, goal_id
+    FROM scheduled_payments
+    WHERE user_id = ?
+      AND (loan_id IS NULL AND goal_id IS NULL) -- free ones
+    ORDER BY lower(title)
+  ");
+  $sp->execute([$u]);
+  $scheduledList = $sp->fetchAll(PDO::FETCH_ASSOC);
+
 
   view('loans/index', compact('rows','userCurrencies','scheduledList'));
 }
@@ -369,3 +387,23 @@ function amortization_to_date_precise(
   ];
 }
 
+// src/controllers/goals.php
+function goals_unlink_schedule(PDO $pdo){
+  verify_csrf(); require_login();
+  $u = uid();
+  $goalId = (int)($_POST['goal_id'] ?? 0);
+  if (!$goalId){ redirect('/goals'); }
+
+  $pdo->beginTransaction();
+  try {
+    // Clear any scheduled payments pointing to this goal
+    $pdo->prepare("UPDATE scheduled_payments SET goal_id=NULL WHERE user_id=? AND goal_id=?")
+        ->execute([$u, $goalId]);
+    $pdo->commit();
+    $_SESSION['flash'] = 'Schedule unlinked.';
+  } catch(Throwable $e){
+    $pdo->rollBack();
+    $_SESSION['flash'] = 'Failed to unlink schedule.';
+  }
+  redirect('/goals');
+}

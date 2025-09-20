@@ -260,6 +260,12 @@ switch ($path) {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') { loan_payment_add($pdo); }
         redirect('/loans');
         break;
+    case '/loals/unlink-schedule':
+        require_login();
+        require __DIR__ . '/../src/controllers/goals.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { goals_unlink_schedule($pdo); }
+        redirect('/loals');
+        break;
 
     case '/stocks':
         require_login();

@@ -377,65 +377,153 @@
       </div>
 
       <!-- Right: schedule -->
-      <div class="md:col-span-5 space-y-3">
-        <div class="field">
-          <label class="label">Link existing schedule</label>
-          <select name="scheduled_payment_id" class="select">
-            <option value="">— None —</option>
-            <?php foreach($scheduledList as $sp): ?>
-              <option value="<?= (int)$sp['id'] ?>" <?= ((int)($l['scheduled_payment_id']??0)===(int)$sp['id'])?'selected':'' ?>>
-                <?= htmlspecialchars($sp['title']) ?> (<?= moneyfmt($sp['amount'],$sp['currency']) ?>)
-              </option>
-            <?php endforeach; ?>
-          </select>
+      <!-- Right: schedule (Goals-style) -->
+      <div class="md:col-span-5 grid gap-4">
 
-          <?php if (!empty($l['scheduled_payment_id'])): ?>
-          <label class="mt-2 inline-flex items-center gap-2 text-sm">
-            <input type="checkbox" name="unlink_schedule" value="1" />
-            <span>Unlink current schedule</span>
-          </label>
-          <?php endif; ?>
+        <h4 class="font-semibold">Repayment schedule</h4>
 
-          <p class="help">Pick an existing schedule, or create a new one below.</p>
-        </div>
+        <?php if (!empty($l['scheduled_payment_id'])): ?>
+          <!-- Linked card -->
+          <div class="rounded-xl border p-3 bg-gray-50" id="loan-linked-card-<?= (int)$l['id'] ?>">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="font-medium"><?= htmlspecialchars($l['sched_title'] ?? 'Linked schedule') ?></div>
+                <div class="text-xs text-gray-600">
+                  <?php if (isset($l['sched_amount'], $l['sched_currency'])): ?>
+                    <?= moneyfmt((float)$l['sched_amount'], $l['sched_currency']) ?>
+                  <?php endif; ?>
+                  <?php if (!empty($l['sched_rrule'])): ?>
+                    · <span class="rrule-summary" data-rrule="<?= htmlspecialchars($l['sched_rrule']) ?>"></span>
+                  <?php endif; ?>
+                  <?php if (!empty($l['sched_next_due'])): ?>
+                    · next <?= htmlspecialchars($l['sched_next_due']) ?>
+                  <?php endif; ?>
+                </div>
+              </div>
+              <!-- Unlink -->
+              <form method="post" action="/loans/edit" class="shrink-0" id="loan-unlink-form-<?= (int)$l['id'] ?>">
+                <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+                <input type="hidden" name="id" value="<?= (int)$l['id'] ?>" />
+                <input type="hidden" name="unlink_schedule" value="1" />
+                <button class="btn btn-danger !py-1 !px-3" data-unlink-loan="<?= (int)$l['id'] ?>">Unlink</button>
+              </form>
+            </div>
+          </div>
 
-        <div class="my-2 flex items-center gap-3 text-xs text-gray-400">
-          <div class="h-px flex-1 bg-gray-200"></div><span>or</span><div class="h-px flex-1 bg-gray-200"></div>
-        </div>
+          <!-- Hidden containers that will show after unlink (JS will reveal immediately; server will also refresh) -->
+          <div class="hidden" id="loan-link-wrap-<?= (int)$l['id'] ?>">
+            <!-- Link existing schedule -->
+            <form method="post" action="/loans/edit" class="grid gap-2">
+              <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+              <input type="hidden" name="id" value="<?= (int)$l['id'] ?>" />
+              <label class="label">Link existing schedule</label>
+              <select name="scheduled_payment_id" class="select">
+                <option value="">— None —</option>
+                <?php foreach($scheduledList as $sp): ?>
+                  <option value="<?= (int)$sp['id'] ?>">
+                    <?= htmlspecialchars($sp['title']) ?>
+                    (<?= moneyfmt($sp['amount'], $sp['currency']) ?><?= $sp['next_due'] ? ', next '.$sp['next_due'] : '' ?>)
+                  </option>
+                <?php endforeach; ?>
+              </select>
+              <div class="flex justify-end"><button class="btn">Apply</button></div>
+            </form>
 
-        <div class="space-y-3">
-          <label class="inline-flex items-center gap-2">
-            <input type="checkbox" name="create_schedule" value="1" />
-            <span>Create a monthly schedule</span>
-          </label>
+            <div class="my-2 flex items-center gap-3 text-xs text-gray-400">
+              <div class="h-px flex-1 bg-gray-200"></div><span>or</span><div class="h-px flex-1 bg-gray-200"></div>
+            </div>
 
-          <div class="grid sm:grid-cols-12 gap-3">
-            <div class="field sm:col-span-6">
+            <!-- Create schedule -->
+            <form method="post" action="/loans/edit" class="grid sm:grid-cols-12 gap-3">
+              <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+              <input type="hidden" name="id" value="<?= (int)$l['id'] ?>" />
+              <input type="hidden" name="create_schedule" value="1" />
+              <div class="sm:col-span-6">
+                <label class="label">First due</label>
+                <input name="first_due" type="date" class="input" value="<?= htmlspecialchars($l['start_date']) ?>" />
+              </div>
+              <div class="sm:col-span-6">
+                <label class="label">Due day</label>
+                <input name="due_day" type="number" min="1" max="31" class="input" value="<?= htmlspecialchars($l['payment_day'] ?? '') ?>" />
+              </div>
+              <div class="sm:col-span-6">
+                <label class="label">Monthly amount</label>
+                <input name="monthly_amount" type="number" step="0.01" class="input" placeholder="Auto-calc if empty" />
+              </div>
+              <div class="sm:col-span-6">
+                <label class="label">Currency</label>
+                <select name="currency" class="select">
+                  <?php foreach (($userCurrencies ?? [['code'=>'HUF','is_main'=>true]]) as $uc): $code=$uc['code']; ?>
+                    <option value="<?= htmlspecialchars($code) ?>" <?= strtoupper($l['currency'])===strtoupper($code)?'selected':'' ?>>
+                      <?= htmlspecialchars($code) ?>
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+                <p class="help">Defaults to the loan currency.</p>
+              </div>
+              <div class="sm:col-span-12 flex justify-end">
+                <button class="btn btn-primary">Create schedule</button>
+              </div>
+            </form>
+          </div>
+
+        <?php else: ?>
+          <!-- No linked schedule: show link + create immediately -->
+          <form method="post" action="/loans/edit" class="grid gap-2">
+            <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+            <input type="hidden" name="id" value="<?= (int)$l['id'] ?>" />
+            <label class="label">Link existing schedule</label>
+            <select name="scheduled_payment_id" class="select">
+              <option value="">— None —</option>
+              <?php foreach($scheduledList as $sp): ?>
+                <option value="<?= (int)$sp['id'] ?>">
+                  <?= htmlspecialchars($sp['title']) ?>
+                  (<?= moneyfmt($sp['amount'], $sp['currency']) ?><?= $sp['next_due'] ? ', next '.$sp['next_due'] : '' ?>)
+                </option>
+              <?php endforeach; ?>
+            </select>
+            <div class="flex justify-end"><button class="btn">Apply</button></div>
+          </form>
+
+          <div class="my-2 flex items-center gap-3 text-xs text-gray-400">
+            <div class="h-px flex-1 bg-gray-200"></div><span>or</span><div class="h-px flex-1 bg-gray-200"></div>
+          </div>
+
+          <form method="post" action="/loans/edit" class="grid sm:grid-cols-12 gap-3">
+            <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+            <input type="hidden" name="id" value="<?= (int)$l['id'] ?>" />
+            <input type="hidden" name="create_schedule" value="1" />
+            <div class="sm:col-span-6">
               <label class="label">First due</label>
               <input name="first_due" type="date" class="input" value="<?= htmlspecialchars($l['start_date']) ?>" />
             </div>
-            <div class="field sm:col-span-6">
+            <div class="sm:col-span-6">
               <label class="label">Due day</label>
               <input name="due_day" type="number" min="1" max="31" class="input" value="<?= htmlspecialchars($l['payment_day'] ?? '') ?>" />
             </div>
-            <div class="field sm:col-span-6">
+            <div class="sm:col-span-6">
               <label class="label">Monthly amount</label>
               <input name="monthly_amount" type="number" step="0.01" class="input" placeholder="Auto-calc if empty" />
             </div>
-            <div class="field sm:col-span-6">
-              <label class="label">Schedule currency</label>
+            <div class="sm:col-span-6">
+              <label class="label">Currency</label>
               <select name="currency" class="select">
-                <?php foreach ($curList as $uc): $code=$uc['code']; ?>
+                <?php foreach (($userCurrencies ?? [['code'=>'HUF','is_main'=>true]]) as $uc): $code=$uc['code']; ?>
                   <option value="<?= htmlspecialchars($code) ?>" <?= strtoupper($l['currency'])===strtoupper($code)?'selected':'' ?>>
                     <?= htmlspecialchars($code) ?>
                   </option>
                 <?php endforeach; ?>
               </select>
-              <p class="help">Defaults to the loan currency if unchanged.</p>
+              <p class="help">Defaults to the loan currency.</p>
             </div>
-          </div>
-        </div>
+            <div class="sm:col-span-12 flex justify-end">
+              <button class="btn btn-primary">Create schedule</button>
+            </div>
+          </form>
+        <?php endif; ?>
+
       </div>
+
     </form>
 
     <!-- Sticky footer -->
@@ -495,33 +583,33 @@ function rrSummary(rrule){
   if (p.FREQ==='WEEKLY')  return `${every(p.INTERVAL,'week')}${p.BYDAY.length? ' on '+p.BYDAY.join(', '):''}${end}`;
   if (p.FREQ==='MONTHLY') return `${every(p.INTERVAL,'month')}${p.BYMONTHDAY? ' on day '+p.BYMONTHDAY:''}${end}`;
   if (p.FREQ==='YEARLY')  return `${every(p.INTERVAL,'year')}${(p.BYMONTH? ' on '+String(p.BYMONTH).padStart(2,'0')+'-'+(p.BYMONTHDAY??''): '')}${end}`;
-  return 'Repeats';
-}
+    return 'Repeats';
+  }
 
-// Render summaries in the table (replace raw text)
-document.addEventListener('DOMContentLoaded', ()=>{
-  document.querySelectorAll('.rrule-summary[data-rrule]').forEach(el=>{
-    const r = el.getAttribute('data-rrule') || '';
-    el.textContent = rrSummary(r);
+  // Render summaries in the table (replace raw text)
+  document.addEventListener('DOMContentLoaded', ()=>{
+    document.querySelectorAll('.rrule-summary[data-rrule]').forEach(el=>{
+      const r = el.getAttribute('data-rrule') || '';
+      el.textContent = rrSummary(r);
+    });
   });
-});
-</script>
+  </script>
 
-<script>
-document.addEventListener('click', (e)=>{
-  const openSel = e.target.closest('[data-open]');
-  if (openSel) {
-    const id = openSel.getAttribute('data-open');
-    const m = document.querySelector(id);
-    if (m) m.classList.remove('hidden');
-    return;
-  }
-  const closeBtn = e.target.closest('[data-close]');
-  if (closeBtn) {
-    closeBtn.closest('.modal')?.classList.add('hidden');
-  }
-});
-document.addEventListener('keydown', (e)=>{
-  if (e.key === 'Escape') document.querySelectorAll('.modal')?.forEach(m=>m.classList.add('hidden'));
-});
+  <script>
+  document.addEventListener('click', (e)=>{
+    const openSel = e.target.closest('[data-open]');
+    if (openSel) {
+      const id = openSel.getAttribute('data-open');
+      const m = document.querySelector(id);
+      if (m) m.classList.remove('hidden');
+      return;
+    }
+    const closeBtn = e.target.closest('[data-close]');
+    if (closeBtn) {
+      closeBtn.closest('.modal')?.classList.add('hidden');
+    }
+  });
+  document.addEventListener('keydown', (e)=>{
+    if (e.key === 'Escape') document.querySelectorAll('.modal')?.forEach(m=>m.classList.add('hidden'));
+  });
 </script>

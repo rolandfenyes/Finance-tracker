@@ -209,7 +209,6 @@
         </form>
   
         <!-- Right column: Scheduled OR Manual (like Loans right column) -->
-        <!-- Right column -->
         <div class="md:col-span-6 grid gap-4">
 
           <h4 class="font-semibold">Add money</h4>

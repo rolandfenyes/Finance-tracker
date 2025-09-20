@@ -29,15 +29,16 @@ function goals_index(PDO $pdo){
   $q->execute([$u]);
   $rows = $q->fetchAll();
 
-  // For the select dropdown: all schedules of the user
+  // Only schedules that are free (not linked to any loan or goal) OR already linked to this record
   $sp = $pdo->prepare("
-    SELECT id, title, amount, currency, next_due, rrule
+    SELECT id, title, amount, currency, next_due, rrule, loan_id, goal_id
     FROM scheduled_payments
     WHERE user_id = ?
+      AND (loan_id IS NULL AND goal_id IS NULL) -- free ones
     ORDER BY lower(title)
   ");
   $sp->execute([$u]);
-  $scheduledList = $sp->fetchAll();
+  $scheduledList = $sp->fetchAll(PDO::FETCH_ASSOC);
 
   // currencies (if you show currency selectors on the page)
   $uc = $pdo->prepare("SELECT code,is_main FROM user_currencies WHERE user_id=? ORDER BY is_main DESC, code");
