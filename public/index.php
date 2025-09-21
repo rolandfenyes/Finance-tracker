@@ -31,10 +31,102 @@ switch ($path) {
         if (!is_logged_in()) { view('auth/login'); break; }
         view('dashboard');
         break;
+
+    // Registration
     case '/register':
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') { handle_register($pdo); }
-        view('auth/register');
+        require __DIR__ . '/../src/controllers/auth.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { register_step1_submit($pdo); }
+        register_step1_form(); // GET
         break;
+
+    // Onboarding
+    case '/onboard/next':
+        require_login();
+        require __DIR__ . '/../src/controllers/onboard.php';
+        onboard_next($pdo);
+        break;
+
+    case '/onboard/rules':
+        require_login();
+        require __DIR__ . '/../src/controllers/onboard.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { onboard_rules_submit($pdo); }
+        onboard_rules_form($pdo);
+        break;
+    case '/onboard/currencies':
+        require_login();
+        require __DIR__ . '/../src/controllers/onboard.php';
+        onboard_currencies_index($pdo);
+        break;
+
+    case '/onboard/currencies/add':
+        require_login();
+        require __DIR__ . '/../src/controllers/onboard.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { onboard_currencies_add($pdo); }
+        redirect('/onboard/currencies');
+        break;
+
+    case '/onboard/currencies/delete':
+        require_login();
+        require __DIR__ . '/../src/controllers/onboard.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { onboard_currencies_delete($pdo); }
+        redirect('/onboard/currencies');
+        break;
+    case '/onboard/income':
+        require_login();
+        require __DIR__ . '/../src/controllers/onboard.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            onboard_income_add($pdo);
+        } else {
+            onboard_income($pdo);
+        }
+        break;
+
+    case '/onboard/income/delete':
+        require_login();
+        require __DIR__ . '/../src/controllers/onboard.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { onboard_income_delete($pdo); }
+        redirect('/onboard/income');
+        break;
+
+    case '/onboard/categories':
+        require_login();
+        require __DIR__ . '/../src/controllers/onboard.php';
+        onboard_categories_index($pdo);
+        break;
+
+    case '/onboard/categories/add':
+        require_login();
+        require __DIR__ . '/../src/controllers/onboard.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { onboard_categories_add($pdo); }
+        redirect('/onboard/categories');
+        break;
+
+
+    case '/onboard/categories/delete':
+        require_login();
+        require __DIR__ . '/../src/controllers/onboard.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { onboard_categories_delete($pdo); }
+        redirect('/onboard/categories');
+        break;
+    case '/onboard/done':
+        require_login();
+        require __DIR__ . '/../src/controllers/onboard.php';
+        onboard_done($pdo);
+        break;
+    case '/tutorial':
+        require_login();
+        require __DIR__ . '/../src/controllers/tutorial.php';
+        tutorial_index($pdo);
+        break;
+    case '/tutorial/dismiss':
+        require_login();
+        require __DIR__ . '/../src/controllers/tutorial.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { tutorial_dismiss($pdo); }
+        redirect('/');
+        break;
+
+
+    // Auth
     case '/login':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') { handle_login($pdo); }
         view('auth/login');

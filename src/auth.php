@@ -38,7 +38,13 @@ function handle_login(PDO $pdo) {
     $row = $stmt->fetch();
     if ($row && password_verify($pass, $row['password_hash'])) {
         $_SESSION['uid'] = (int)$row['id'];
-        redirect('/');
+        $needs = $pdo->prepare('SELECT needs_tutorial FROM users WHERE id=?');
+        $needs->execute([$uid]);
+        if ((bool)$needs->fetchColumn()) {
+        redirect('/tutorial');
+        } else {
+        redirect('/'); // dashboard
+        }
     }
     $_SESSION['flash'] = 'Invalid credentials';
     redirect('/login');

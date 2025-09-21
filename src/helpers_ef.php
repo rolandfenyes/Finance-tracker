@@ -1,4 +1,3 @@
-// /src/controllers/helpers_ef.php
 <?php
 require_once __DIR__ . '/helpers.php';
 
