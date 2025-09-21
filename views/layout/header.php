@@ -159,6 +159,7 @@
       ['href'=>'/scheduled',     'label'=>'Scheduled',      'match'=>'#^/scheduled(?:/.*)?$#'],
       // ['href'=>'/stocks',        'label'=>'Stocks',         'match'=>'#^/stocks(?:/.*)?$#'],
       ['href'=>'/years',         'label'=>'Years',          'match'=>'#^/years(?:/.*)?$#'],
+      ['href'=>'/feedback', 'label'=>'Feedback', 'match'=>'#^/feedback$#'],
       ['href'=>'/settings',      'label'=>'Settings',       'match'=>'#^/settings$#'],
     ];
     function nav_link(array $item, string $currentPath, string $extra=''): string {

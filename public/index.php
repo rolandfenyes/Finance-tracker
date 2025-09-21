@@ -502,7 +502,33 @@ switch ($path) {
         month_tx_list($pdo); // returns HTML fragment & exits
         break;
 
-    
+    case '/feedback':
+        require_login();
+        require __DIR__ . '/../src/controllers/feedback.php';
+        feedback_index($pdo);
+        break;
+
+    case '/feedback/add':
+        require_login();
+        require __DIR__ . '/../src/controllers/feedback.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { feedback_add($pdo); }
+        redirect('/feedback');
+        break;
+
+    case '/feedback/status':
+        require_login();
+        require __DIR__ . '/../src/controllers/feedback.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { feedback_update_status($pdo); }
+        redirect('/feedback');
+        break;
+
+    case '/feedback/delete':
+        require_login();
+        require __DIR__ . '/../src/controllers/feedback.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { feedback_delete($pdo); }
+        redirect('/feedback');
+        break;
+
 
     default:
         http_response_code(404);
