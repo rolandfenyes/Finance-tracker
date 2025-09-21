@@ -7,6 +7,9 @@
       <li class="list-row"><span>Email</span><span class="text-gray-700"><?= htmlspecialchars($user['email']) ?></span></li>
       <li class="list-row"><span>Name</span><span class="text-gray-700"><?= htmlspecialchars($user['full_name'] ?? '') ?></span></li>
     </ul>
+    <p class="card-subtle mt-3">
+      <a class="text-accent" href="/settings/profile">Manage profile →</a>
+    </p>
   </div>
 
   <!-- Currencies -->
@@ -65,4 +68,13 @@
     </p>
   </div>
 
+  <!-- Tutorial -->
+  <div class="card">
+    <div class="card-kicker">Help</div>
+    <h2 class="card-title mt-1">Tutorial</h2>
+    <p class="card-subtle mt-2">New here? Learn how to use budgets, goals, loans, and more.</p>
+    <p class="card-subtle mt-3">
+      <a class="text-accent" href="/tutorial">Read tutorial →</a>
+    </p>
+  </div>
 </section>

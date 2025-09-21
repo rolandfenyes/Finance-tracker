@@ -173,6 +173,17 @@ switch ($path) {
         require __DIR__ . '/../src/controllers/settings.php';
         settings_controller($pdo);
         break;
+        
+    // Profile
+    case '/settings/profile':
+        require_login();
+        require __DIR__ . '/../src/controllers/settings_profile.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            settings_profile_update($pdo);
+        } else {
+            settings_profile_show($pdo);
+        }
+        break;
 
     // Currencies
     case '/settings/currencies':

@@ -8,7 +8,7 @@ return [
         'pass' => 'asd',
     ],
     'app' => [
-        'name' => 'MoneyMap',
+        'name' => 'MyMoneyMap',
         'base_url' => '/', // if hosted in subfolder, e.g. '/moneymap/'
         'session_name' => 'moneymap_sess',
     ],

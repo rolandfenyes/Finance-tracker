@@ -1,5 +1,5 @@
 ````md
-# MoneyMap (PHP + PostgreSQL)
+# MyMoneyMap (PHP + PostgreSQL)
 
 Modern, mobile‑first personal finance tracker using Tailwind CSS and Chart.js. Supports Dave Ramsey’s Baby Steps via dedicated tables and UI hooks. Includes:
 
