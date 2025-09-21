@@ -42,7 +42,7 @@
       <h2 class="font-medium mb-2">Add currency</h2>
       <form method="post" action="/settings/currencies/add" class="flex gap-2">
         <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-        <select name="code" class="flex-1 max-w-64 rounded-xl border-gray-300" required>
+        <select name="code" class="select flex-1 max-w-64 rounded-xl border-gray-300" required>
           <option value="">— Select currency —</option>
           <?php foreach($available as $a): ?>
             <option value="<?= htmlspecialchars($a['code']) ?>"><?= htmlspecialchars($a['code']) ?> — <?= htmlspecialchars($a['name']) ?></option>
