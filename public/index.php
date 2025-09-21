@@ -116,13 +116,14 @@ switch ($path) {
     case '/tutorial':
         require_login();
         require __DIR__ . '/../src/controllers/tutorial.php';
-        tutorial_index($pdo);
+        tutorial_show($pdo);
         break;
-    case '/tutorial/dismiss':
+
+    case '/tutorial/done':
         require_login();
         require __DIR__ . '/../src/controllers/tutorial.php';
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') { tutorial_dismiss($pdo); }
-        redirect('/');
+        if ($_SERVER['REQUEST_METHOD']==='POST') { tutorial_done($pdo); }
+        redirect('/dashboard');
         break;
 
 

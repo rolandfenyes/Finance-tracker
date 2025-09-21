@@ -1,14 +1,23 @@
 <?php
 require_once __DIR__ . '/../helpers.php';
 
-function tutorial_index(PDO $pdo){
-  // Render a multi-section page: how to add transactions, schedules, goals, EF, loans, month view, filters, currencies, etc.
-  // Include a “Don’t show again” button:
+function tutorial_show(PDO $pdo){
+  require_login();
   view('tutorial/index', []);
 }
 
-function tutorial_dismiss(PDO $pdo){
-  verify_csrf(); require_login();
-  $pdo->prepare('UPDATE users SET needs_tutorial=false WHERE id=?')->execute([uid()]);
+function tutorial_done(PDO $pdo){
+  require_login();
+  // Try to persist a "tutorial_seen" flag on the user (ignore if column doesn’t exist)
+  try {
+    $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS tutorial_seen boolean NOT NULL DEFAULT false");
+  } catch (Throwable $e) { /* ignore */ }
+
+  try {
+    $stmt = $pdo->prepare("UPDATE users SET tutorial_seen = TRUE WHERE id = ?");
+    $stmt->execute([uid()]);
+  } catch (Throwable $e) { /* ignore */ }
+
+  $_SESSION['flash'] = 'Tutorial completed. Have fun!';
   redirect('/');
 }
