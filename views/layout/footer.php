@@ -1,5 +1,4 @@
 </main>
-  <footer class="border-t border-gray-200 py-8 text-center text-sm text-gray-500">© <?= date('Y') ?> MoneyMap</footer>
   <script>
     // Simple helper for charts (called by pages)
     window.renderLineChart = (id, labels, data) => {
