@@ -112,103 +112,23 @@
 </section>
 
 <section class="mt-6 grid md:grid-cols-2 gap-6">
-  <!-- Spending by category -->
-  <div class="bg-white rounded-2xl p-5 shadow-glass h-80 overflow-hidden">
-    <h3 class="font-semibold mb-3">Spending by Category (<?= htmlspecialchars($main) ?>)</h3>
+  <!-- A) Cumulative Net Cashflow (area line) -->
+  <div class="bg-white rounded-2xl p-5 shadow-glass h-80">
+    <h3 class="font-semibold mb-3">Cumulative Net (<?= htmlspecialchars($main) ?>)</h3>
     <?php
-      // Build grouped sums from $allTx in MAIN currency
-      $grp = []; $cols = [];
-      foreach (($allTx ?? []) as $r) {
-        if (($r['kind'] ?? '') !== 'spending') continue;
-        // amount in main currency
-        if (isset($r['amount_main']) && $r['amount_main'] !== null && !empty($r['main_currency'])) {
-          $amtMain = (float)$r['amount_main'];
-        } else {
-          $nativeCur = $r['currency'] ?: $main;
-          $amtMain = fx_convert($pdo, (float)$r['amount'], $nativeCur, $main, $r['occurred_on']);
-        }
-        $label = $r['cat_label'] ?? 'Uncategorized';
-        $color = $r['cat_color'] ?? '#6B7280';
-        // squash tiny negatives/rounding noise
-        if ($amtMain <= 0) continue;
-        $grp[$label] = ($grp[$label] ?? 0) + $amtMain;
-        if (!isset($cols[$label])) $cols[$label] = $color;
-      }
-      // sort desc
-      arsort($grp);
-      $labels = array_keys($grp);
-      $data   = array_values($grp);
-      $colors = array_map(fn($k)=>$cols[$k] ?? '#6B7280', $labels);
-    ?>
-      <div class="relative h-60 w-full">
-        <canvas id="spendcat-month" class="absolute inset-0"></canvas>
-      </div>
-    <script>
-      (function(){
-        const el = document.getElementById('spendcat-month');
-        if (!el) return;
-        const labels = <?= json_encode($labels) ?>;
-        const data   = <?= json_encode($data) ?>;
-        const colors = <?= json_encode($colors) ?>;
-
-        // guard: nothing to show
-        if (!labels.length) {
-          el.outerHTML = '<div class="text-sm text-gray-500">No spending this month.</div>';
-          return;
-        }
-
-        // ensure Chart.js present
-        if (typeof Chart === 'undefined') {
-          const s = document.createElement('script');
-          s.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-          s.onload = draw;
-          document.head.appendChild(s);
-        } else {
-          draw();
-        }
-
-        function draw(){
-          new Chart(el.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-              labels,
-              datasets: [{ data, backgroundColor: colors }]
-            },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                legend: { position: 'right' },
-                tooltip: { callbacks: {
-                  label: (ctx) => `${ctx.label}: ${Number(ctx.parsed).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})} <?= $main ?>`
-                }}
-              },
-              cutout: '55%'
-            }
-          });
-        }
-      })();
-    </script>
-  </div>
-
-  <!-- Daily Spending (bars) + 7-day MA (line) -->
-  <div class="bg-white rounded-2xl p-5 shadow-glass  h-80">
-    <h3 class="font-semibold mb-3">Daily Spending (<?= htmlspecialchars($main) ?>)</h3>
-    <?php
-      $rows = $allTx ?? $tx ?? [];
-
-      // prepare day list for the month
+      // Prepare day list for the month
       $cursor = new DateTime($first);
       $end    = new DateTime($last);
       $days   = [];
       while ($cursor <= $end) { $days[] = $cursor->format('Y-m-d'); $cursor->modify('+1 day'); }
 
-      // spending per day (MAIN currency, positive)
-      $spend = array_fill_keys($days, 0.0);
-      foreach ($rows as $r) {
-        if (($r['kind'] ?? '') !== 'spending') continue;
+      // Per-day income & spending in MAIN
+      $income = array_fill_keys($days, 0.0);
+      $spend  = array_fill_keys($days, 0.0);
+
+      foreach (($allTx ?? []) as $r) {
         $d = substr($r['occurred_on'], 0, 10);
-        if (!isset($spend[$d])) continue;
+        if (!isset($income[$d])) continue;
 
         // amount -> main
         if (isset($r['amount_main']) && $r['amount_main'] !== null && !empty($r['main_currency'])) {
@@ -217,46 +137,58 @@
           $from = $r['currency'] ?: $main;
           $amtMain = fx_convert($pdo, (float)$r['amount'], $from, $main, $r['occurred_on']);
         }
-        $spend[$d] += max(0, $amtMain);
+        if (($r['kind'] ?? '') === 'income') $income[$d] += max(0, $amtMain);
+        if (($r['kind'] ?? '') === 'spending') $spend[$d]  += max(0, $amtMain);
       }
 
-      // 7-day rolling average
-      $labels = array_keys($spend);
-      $vals   = array_values($spend);
-      $ma7    = [];
-      $win = 7;
-      for ($i=0; $i<count($vals); $i++) {
-        $start = max(0, $i-$win+1);
-        $slice = array_slice($vals, $start, $i-$start+1);
-        $ma7[] = round(array_sum($slice)/max(1,count($slice)), 2);
+      // Build cumulative net
+      $labels = array_keys($income);
+      $cum = []; $running = 0.0;
+      foreach ($labels as $d) {
+        $running += ($income[$d] - $spend[$d]);
+        $cum[] = round($running, 2);
       }
+
+      // Also show same-day bars for income/spend (nice context)
+      $inVals  = array_values(array_map(fn($v)=>round($v,2), $income));
+      $spVals  = array_values(array_map(fn($v)=>round($v,2), $spend));
+      $cumVals = $cum;
     ?>
     <div class="relative h-56 md:h-64">
-      <canvas id="daily-spend" class="absolute inset-0 w-full h-full"></canvas>
+      <canvas id="cum-net" class="absolute inset-0 w-full h-full"></canvas>
     </div>
-
     <script>
     (function(){
-      const el = document.getElementById('daily-spend');
+      const el = document.getElementById('cum-net');
       if (!el) return;
 
-      const labels = <?= json_encode($labels) ?>;
-      const bars   = <?= json_encode(array_map(fn($v)=>round($v,2), $vals)) ?>;
-      const avg7   = <?= json_encode($ma7) ?>;
+      const labels = <?= json_encode(array_map(fn($d)=>substr($d,5), $labels)) ?>; // show as MM-DD
+      const income = <?= json_encode($inVals) ?>;
+      const spend  = <?= json_encode($spVals) ?>;
+      const cum    = <?= json_encode($cumVals) ?>;
 
-      const allZero = (arr)=>arr.every(v => Math.abs(v) < 1e-9);
-      if (!labels.length || (allZero(bars))) {
-        el.parentElement.innerHTML = '<div class="text-sm text-gray-500">No spending this month.</div>';
+      const allZero = arr => arr.every(v => Math.abs(v) < 1e-9);
+      if (!labels.length || (allZero(income) && allZero(spend))) {
+        el.parentElement.innerHTML = '<div class="text-sm text-gray-500">No activity this month.</div>';
         return;
       }
 
       function draw(){
-        new Chart(el.getContext('2d'), {
+        const ctx = el.getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 0, el.height);
+        gradient.addColorStop(0, 'rgba(16,185,129,0.25)'); // emerald-ish
+        gradient.addColorStop(1, 'rgba(16,185,129,0.02)');
+
+        new Chart(ctx, {
           data: {
             labels,
             datasets: [
-              { type:'bar',  label:'Spending', data:bars, borderWidth:0 },
-              { type:'line', label:'7-day Avg', data:avg7, borderWidth:2, tension:0.25, pointRadius:0, fill:false }
+              { type:'bar', label:'Income',  data:income, borderWidth:0 },
+              { type:'bar', label:'Spending', data:spend,  borderWidth:0 },
+              {
+                type:'line', label:'Cumulative Net', data:cum,
+                borderWidth:2, tension:0.25, pointRadius:0, fill:true, backgroundColor:gradient
+              }
             ]
           },
           options: {
@@ -270,7 +202,7 @@
               }}}
             },
             scales:{
-              x:{ grid:{ display:false }, ticks:{ maxTicksLimit:10 } },
+              x:{ grid:{ display:false }, ticks:{ maxTicksLimit:10 }},
               y:{ grid:{ color:'rgba(0,0,0,0.05)' } }
             }
           }
@@ -286,9 +218,101 @@
     </script>
   </div>
 
+  <!-- B) Top Spending Categories (horizontal bars) -->
+  <div class="bg-white rounded-2xl p-5 shadow-glass h-80 overflow-hidden">
+    <h3 class="font-semibold mb-3">Top Spending Categories (<?= htmlspecialchars($main) ?>)</h3>
+    <?php
+      // Build grouped sums from $allTx in MAIN (spending only)
+      $grp = []; $cols = [];
+      foreach (($allTx ?? []) as $r) {
+        if (($r['kind'] ?? '') !== 'spending') continue;
 
+        if (isset($r['amount_main']) && $r['amount_main'] !== null && !empty($r['main_currency'])) {
+          $amtMain = (float)$r['amount_main'];
+        } else {
+          $amtMain = fx_convert($pdo, (float)$r['amount'], ($r['currency'] ?: $main), $main, $r['occurred_on']);
+        }
+        if ($amtMain <= 0) continue;
 
+        $label = $r['cat_label'] ?? 'Uncategorized';
+        $color = $r['cat_color'] ?? '#6B7280';
+        $grp[$label] = ($grp[$label] ?? 0) + $amtMain;
+        if (!isset($cols[$label])) $cols[$label] = $color;
+      }
+      arsort($grp);
+      // Limit to top 10 for clarity; sum the rest as "Other"
+      $labelsAll = array_keys($grp);
+      $dataAll   = array_values($grp);
+      $colorsAll = array_map(fn($k)=>$cols[$k] ?? '#6B7280', $labelsAll);
+
+      $topN = 10;
+      if (count($labelsAll) > $topN) {
+        $labels = array_slice($labelsAll, 0, $topN);
+        $data   = array_slice($dataAll,   0, $topN);
+        $colors = array_slice($colorsAll, 0, $topN);
+
+        $other = array_sum(array_slice($dataAll, $topN));
+        if ($other > 0) {
+          $labels[] = 'Other';
+          $data[]   = $other;
+          $colors[] = '#D1D5DB';
+        }
+      } else {
+        $labels = $labelsAll; $data = $dataAll; $colors = $colorsAll;
+      }
+    ?>
+    <div class="relative h-60 w-full">
+      <canvas id="spendcat-top" class="absolute inset-0"></canvas>
+    </div>
+    <script>
+      (function(){
+        const el = document.getElementById('spendcat-top');
+        if (!el) return;
+
+        const labels = <?= json_encode($labels) ?>;
+        const data   = <?= json_encode(array_map(fn($v)=>round($v,2), $data)) ?>;
+        const colors = <?= json_encode($colors) ?>;
+
+        if (!labels.length) {
+          el.outerHTML = '<div class="text-sm text-gray-500">No spending this month.</div>';
+          return;
+        }
+
+        function draw(){
+          new Chart(el.getContext('2d'), {
+            type: 'bar',
+            data: {
+              labels,
+              datasets: [{ data, backgroundColor: colors, borderWidth:0 }]
+            },
+            options: {
+              indexAxis: 'y',
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display:false },
+                tooltip: { callbacks: {
+                  label: (ctx) => `${Number(ctx.parsed.x).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})} <?= $main ?>`
+                }}
+              },
+              scales: {
+                x: { grid:{ color:'rgba(0,0,0,0.05)' } },
+                y: { grid:{ display:false } }
+              }
+            }
+          });
+        }
+
+        if (typeof Chart === 'undefined') {
+          const s = document.createElement('script');
+          s.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+          s.onload = draw; document.head.appendChild(s);
+        } else { draw(); }
+      })();
+    </script>
+  </div>
 </section>
+
 
 <section class="mt-6 bg-white rounded-2xl p-5 shadow-glass">
   <h3 class="font-semibold mb-3">Transactions</h3>
