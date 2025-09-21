@@ -121,9 +121,13 @@ switch ($path) {
 
     case '/tutorial/done':
         require_login();
-        require __DIR__ . '/../src/controllers/tutorial.php';
-        if ($_SERVER['REQUEST_METHOD']==='POST') { tutorial_done($pdo); }
-        redirect('/dashboard');
+        require __DIR__ . '/../src/controllers/onboard.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            onboard_done_finish($pdo); // mark onboarding_complete (and optionally tutorial skip)
+            redirect('/');
+        } else {
+            onboard_done_show($pdo);
+        }
         break;
 
 

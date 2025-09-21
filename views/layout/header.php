@@ -144,72 +144,72 @@
   <style>[x-cloak]{display:none!important}</style>
 </head>
 <body class="bg-gray-50 text-gray-900">
+  <?php
+    $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/';
+    $onboarding  = str_starts_with($currentPath, '/onboard');
+    $hideMenus   = ($onboarding && $currentPath !== '/onboard/done');
+
+    // nav items
+    $items = [
+      ['href'=>'/',              'label'=>'Dashboard',      'match'=>'#^/$#'],
+      ['href'=>'/current-month', 'label'=>'Current Month',  'match'=>'#^/current-month$#'],
+      ['href'=>'/goals',         'label'=>'Goals',          'match'=>'#^/goals(?:/.*)?$#'],
+      ['href'=>'/loans',         'label'=>'Loans',          'match'=>'#^/loans(?:/.*)?$#'],
+      ['href'=>'/emergency',     'label'=>'Emergency',      'match'=>'#^/emergency(?:/.*)?$#'],
+      ['href'=>'/scheduled',     'label'=>'Scheduled',      'match'=>'#^/scheduled(?:/.*)?$#'],
+      // ['href'=>'/stocks',        'label'=>'Stocks',         'match'=>'#^/stocks(?:/.*)?$#'],
+      ['href'=>'/years',         'label'=>'Years',          'match'=>'#^/years(?:/.*)?$#'],
+      ['href'=>'/settings',      'label'=>'Settings',       'match'=>'#^/settings$#'],
+    ];
+    function nav_link(array $item, string $currentPath, string $extra=''): string {
+      $active = preg_match($item['match'], $currentPath) === 1;
+      $base = 'px-3 py-1.5 rounded-lg transition';
+      $cls  = $active ? 'bg-gray-900 text-white' : 'hover:bg-gray-100 text-gray-800';
+      return '<a class="'.$base.' '.$cls.' '.$extra.'" href="'.$item['href'].'">'.htmlspecialchars($item['label']).'</a>';
+    }
+  ?>
+
   <header class="backdrop-blur bg-white/70 sticky top-0 z-40 border-b border-gray-200">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       <a href="/" class="font-semibold tracking-tight text-lg">💎 <?= htmlspecialchars($app['app']['name']) ?></a>
-      <?php
-        // current path for active-state matching
-        $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/';
 
-        // define nav items with regex matchers for subpages
-        $items = [
-          ['href'=>'/',            'label'=>'Dashboard',      'match'=>'#^/$#'],
-          ['href'=>'/current-month','label'=>'Current Month', 'match'=>'#^/current-month$#'],
-          ['href'=>'/goals',       'label'=>'Goals',          'match'=>'#^/goals(?:/.*)?$#'],
-          ['href'=>'/loans',       'label'=>'Loans',          'match'=>'#^/loans(?:/.*)?$#'],
-          ['href'=>'/emergency',   'label'=>'Emergency',      'match'=>'#^/emergency(?:/.*)?$#'],
-          ['href'=>'/scheduled',   'label'=>'Scheduled',      'match'=>'#^/scheduled(?:/.*)?$#'],
-          ['href'=>'/stocks',      'label'=>'Stocks',         'match'=>'#^/stocks(?:/.*)?$#'],
-          ['href'=>'/years',       'label'=>'Years',          'match'=>'#^/years(?:/.*)?$#'],
-          ['href'=>'/settings',    'label'=>'Settings',       'match'=>'#^/settings$#'],
-        ];
-
-        function nav_link(array $item, string $currentPath, string $extra=''): string {
-          $active = preg_match($item['match'], $currentPath) === 1;
-          $base = 'px-3 py-1.5 rounded-lg transition';
-          $cls  = $active ? 'bg-gray-900 text-white' : 'hover:bg-gray-100 text-gray-800';
-          return '<a class="'.$base.' '.$cls.' '.$extra.'" href="'.$item['href'].'">'.htmlspecialchars($item['label']).'</a>';
-        }
-      ?>
-
-      <!-- Desktop nav -->
-      <nav class="hidden sm:flex items-center gap-2 text-sm">
-        <?php if (is_logged_in()): ?>
-          <?php foreach ($items as $it): echo nav_link($it, $currentPath); endforeach; ?>
-          <form action="/logout" method="post" class="inline">
-            <button class="ml-2 px-3 py-1.5 rounded-lg bg-gray-900 text-white">Logout</button>
-          </form>
-        <?php else: ?>
-          <a class="px-3 py-1.5 rounded-lg hover:bg-gray-100" href="/login">Login</a>
-          <a class="px-3 py-1.5 rounded-lg hover:bg-gray-100" href="/register">Register</a>
-        <?php endif; ?>
-      </nav>
-
-      <!-- Mobile: compact dropdown panel -->
-      <div x-data="{open:false}" class="sm:hidden relative">
-        <button @click="open = !open" class="px-3 py-1.5 rounded-lg border bg-white">Menu</button>
-
-        <div x-cloak
-            x-show="open"
-            @click.outside="open=false"
-            x-transition
-            class="absolute right-0 mt-2 w-56 bg-white border rounded-2xl shadow-glass p-2 z-50">
+      <!-- Desktop nav (hidden during onboarding, except /onboard/done) -->
+      <?php if (!$hideMenus): ?>
+        <nav class="hidden sm:flex items-center gap-2 text-sm">
           <?php if (is_logged_in()): ?>
-            <div class="grid gap-1">
-              <?php foreach ($items as $it): ?>
-                <?= nav_link($it, $currentPath, 'block text-left') ?>
-              <?php endforeach; ?>
-              <form action="/logout" method="post" class="pt-1">
-                <button class="w-full px-3 py-2 rounded-lg bg-gray-900 text-white">Logout</button>
-              </form>
-            </div>
-          <?php else: ?>
-            <a class="block px-3 py-2 rounded-lg hover:bg-gray-100" href="/login">Login</a>
-            <a class="block px-3 py-2 rounded-lg hover:bg-gray-100" href="/register">Register</a>
+            <?php foreach ($items as $it): echo nav_link($it, $currentPath); endforeach; ?>
+            <form action="/logout" method="post" class="inline">
+              <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+              <button class="ml-2 px-3 py-1.5 rounded-lg bg-gray-900 text-white">Logout</button>
+            </form>
           <?php endif; ?>
-        </div>
-      </div>
+        </nav>
+      <?php endif; ?>
 
+      <!-- Mobile menu (also hidden during onboarding, except /onboard/done) -->
+      <?php if (!$hideMenus): ?>
+        <div x-data="{open:false}" class="sm:hidden relative">
+          <button @click="open = !open" class="px-3 py-1.5 rounded-lg border bg-white">Menu</button>
+          <div x-cloak x-show="open" @click.outside="open=false" x-transition
+               class="absolute right-0 mt-2 w-56 bg-white border rounded-2xl shadow-glass p-2 z-50">
+            <?php if (is_logged_in()): ?>
+              <div class="grid gap-1">
+                <?php foreach ($items as $it): ?>
+                  <?= nav_link($it, $currentPath, 'block text-left') ?>
+                <?php endforeach; ?>
+                <form action="/logout" method="post" class="pt-1">
+                  <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+                  <button class="w-full px-3 py-2 rounded-lg bg-gray-900 text-white">Logout</button>
+                </form>
+              </div>
+            <?php else: ?>
+              <a class="block px-3 py-2 rounded-lg hover:bg-gray-100" href="/login">Login</a>
+              <a class="block px-3 py-2 rounded-lg hover:bg-gray-100" href="/register">Register</a>
+            <?php endif; ?>
+          </div>
+        </div>
+      <?php endif; ?>
     </div>
   </header>
+
   <main class="max-w-6xl mx-auto px-4 py-6">

@@ -444,3 +444,37 @@ if (!function_exists('normalize_hex')) {
     return preg_match('/^#([0-9A-F]{3}|[0-9A-F]{6})$/', $v) ? $v : '#6B7280';
   }
 }
+
+function onboard_done_show(PDO $pdo){
+  require_login();
+
+  // Try to add a durable “onboard_done” flag so menus stay visible after Done
+  try {
+    $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS onboard_done boolean NOT NULL DEFAULT false");
+  } catch (Throwable $e) { /* ignore */ }
+
+  // Mark onboarding done when the page is reached (so menus appear here and onward)
+  try {
+    $stmt = $pdo->prepare("UPDATE users SET onboard_done = TRUE WHERE id = ?");
+    $stmt->execute([uid()]);
+  } catch (Throwable $e) { /* ignore */ }
+
+  view('onboard/done', []);
+}
+
+/**
+ * POST handler when user clicks "Skip tutorial" (or you can call from a “Finish” btn).
+ * This will also mark tutorial as seen so you don’t redirect them to tutorial later.
+ */
+function onboard_done_finish(PDO $pdo){
+  require_login();
+
+  try { $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS tutorial_seen boolean NOT NULL DEFAULT false"); } catch (Throwable $e) {}
+
+  try {
+    $stmt = $pdo->prepare("UPDATE users SET tutorial_seen = TRUE, onboard_done = TRUE WHERE id = ?");
+    $stmt->execute([uid()]);
+  } catch (Throwable $e) { /* ignore */ }
+
+  $_SESSION['flash'] = 'Registration complete. You’re all set!';
+}
