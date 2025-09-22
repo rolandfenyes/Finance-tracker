@@ -1,5 +1,6 @@
 <?php
 return [
+    'Personal finance, made simple' => 'Finanzas personales, hechas simples',
     'Language' => 'Idioma',
     'Menu' => 'Menú',
     'Logout' => 'Cerrar sesión',

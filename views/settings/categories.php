@@ -136,9 +136,8 @@
                               class="mt-2 flex justify-end">
                           <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                           <input type="hidden" name="id" value="<?= (int)$c['id'] ?>" />
-                          <button class="icon-action icon-action--danger" type="submit" title="<?= __('Remove') ?>">
-                            <i data-lucide="trash-2" class="h-4 w-4"></i>
-                            <span class="sr-only"><?= __('Remove') ?></span>
+                          <button class="btn btn-danger" type="submit" title="<?= __('Remove') ?>">
+                            <?= __('Remove') ?>
                           </button>
                         </form>
                       <?php endif; ?>

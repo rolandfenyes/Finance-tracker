@@ -859,13 +859,12 @@
       return '<a class="'.$base.' '.$cls.' '.$extra.'" href="'.$item['href'].'"'.($active?' aria-current="page"':'').'>'.htmlspecialchars($label).'</a>';
     }
   ?>
-
+<?php if (is_logged_in()): ?>
   <header class="sticky top-0 z-40 border-b border-white/40 bg-white/60 backdrop-blur-xl transition dark:border-slate-800/60 dark:bg-slate-900/50">
     <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
       <a href="/" class="flex items-center gap-3 text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
-        <span class="grid h-12 w-12 place-items-center rounded-2xl bg-brand-600/90 text-white shadow-brand-glow">
-          <img src="/logo_simple_light.png" alt="App logo" class="h-10 w-10 object-contain" />
-        </span>
+        <img src="/logo.png" alt="App logo" class="h-12 w-12 object-contain" />
+        
         <span><?= htmlspecialchars($app['app']['name']) ?></span>
       </a>
 
@@ -931,5 +930,5 @@
       <?php endif; ?>
     </div>
   </header>
-
+<?php endif; ?>
   <main class="relative z-10 mx-auto w-full max-w-6xl px-4 py-8">

@@ -1,5 +1,6 @@
 <?php
 return [
+    'Personal finance, made simple' => 'Személyes pénzügyek, egyszerűen',
     'Language' => 'Nyelv',
     'Menu' => 'Menü',
     'Logout' => 'Kijelentkezés',
