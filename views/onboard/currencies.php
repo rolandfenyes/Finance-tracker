@@ -32,11 +32,12 @@ $hasMain = (bool)array_filter($currencies, fn($c)=>!empty($c['is_main']));
 ?>
 <section class="max-w-2xl mx-auto bg-white rounded-2xl shadow-glass p-6">
   <div class="flex items-center justify-between mb-2">
-    <h1 class="text-xl font-semibold">🌍 Set up your currencies</h1>
-    <a href="/logout" class="text-sm text-gray-400 hover:text-gray-500">Exit</a>
+    <h1 class="text-xl font-semibold"><?= __('🌍 Set up your currencies') ?></h1>
+    <a href="/logout" class="text-sm text-gray-400 hover:text-gray-500"><?= __('Exit') ?></a>
   </div>
   <p class="text-sm text-gray-600 mb-4">
-    Add the currencies you use. Choose <strong>one main currency</strong> — reports and budgets are shown in that currency.
+    <?= __('Add the currencies you use.') ?>
+    <?= __('Choose <strong>one main currency</strong> — reports and budgets are shown in that currency.') ?>
   </p>
 
   <?php if (!empty($_SESSION['flash'])): ?>
@@ -49,13 +50,13 @@ $hasMain = (bool)array_filter($currencies, fn($c)=>!empty($c['is_main']));
     <input type="hidden" name="code" id="cur-code" />
 
     <div class="sm:col-span-8">
-      <label class="label">Currency</label>
+      <label class="label"><?= __('Currency') ?></label>
       <!-- Searchable selector -->
       <div class="relative">
-        <input id="cur-search" class="input pr-10" placeholder="Type to search (e.g. USD, Euro)" autocomplete="off" />
+        <input id="cur-search" class="input pr-10" placeholder="<?= __('Type to search (e.g. USD, Euro)') ?>" autocomplete="off" />
         <button type="button" id="cur-clear"
                 class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                aria-label="Clear" title="Clear">✕</button>
+                aria-label="<?= __('Clear') ?>" title="<?= __('Clear') ?>">✕</button>
 
         <!-- Results dropdown -->
         <div id="cur-results"
@@ -63,28 +64,28 @@ $hasMain = (bool)array_filter($currencies, fn($c)=>!empty($c['is_main']));
           <!-- items injected by JS -->
         </div>
       </div>
-      <p class="help mt-1">Search by code or name, then click to select.</p>
+      <p class="help mt-1"><?= __('Search by code or name, then click to select.') ?></p>
     </div>
 
     <div class="sm:col-span-4">
-      <label class="label">Main currency</label>
+      <label class="label"><?= __('Main currency') ?></label>
       <label class="inline-flex items-center gap-2 h-[42px]">
         <input type="checkbox" name="is_main" value="1" <?= $hasMain ? '' : 'checked' ?> />
-        <span class="text-sm text-gray-700">Set as main</span>
+        <span class="text-sm text-gray-700"><?= __('Set as main') ?></span>
       </label>
       <?php if ($hasMain): ?>
-        <p class="help">You already have a main; checking this will switch it.</p>
+        <p class="help"><?= __('You already have a main; checking this will switch it.') ?></p>
       <?php endif; ?>
     </div>
 
     <div class="sm:col-span-12 flex justify-end">
-      <button class="btn btn-primary">Add currency</button>
+      <button class="btn btn-primary"><?= __('Add currency') ?></button>
     </div>
   </form>
 
   <!-- Quick picks -->
   <div class="mb-6">
-    <div class="text-sm font-medium mb-2">Quick picks</div>
+    <div class="text-sm font-medium mb-2"><?= __('Quick picks') ?></div>
     <div class="flex flex-wrap gap-2">
       <?php foreach (['USD','EUR','HUF','GBP','CHF'] as $quick): 
         $exists = array_filter($currencies, fn($c)=>strtoupper($c['code'])=== $quick);
@@ -98,16 +99,16 @@ $hasMain = (bool)array_filter($currencies, fn($c)=>!empty($c['is_main']));
 
   <!-- List user currencies -->
   <div>
-    <h2 class="font-medium mb-2">Your currencies</h2>
+    <h2 class="font-medium mb-2"><?= __('Your currencies') ?></h2>
     <ul class="divide-y rounded-xl border">
       <?php if (!count($currencies)): ?>
-        <li class="p-3 text-sm text-gray-500">No currencies yet. Add at least one main currency to continue.</li>
+        <li class="p-3 text-sm text-gray-500"><?= __('No currencies yet. Add at least one main currency to continue.') ?></li>
       <?php else: foreach ($currencies as $c): ?>
         <li class="p-3 flex items-center justify-between gap-3">
           <div class="flex items-center gap-2">
             <span class="chip"><?= htmlspecialchars(strtoupper($c['code'])) ?></span>
             <?php if (!empty($c['is_main'])): ?>
-              <span class="ml-1 text-xs text-emerald-600">Main</span>
+              <span class="ml-1 text-xs text-emerald-600"><?= __('Main') ?></span>
             <?php endif; ?>
           </div>
           <form method="post" action="/onboard/currencies/delete" class="inline">
@@ -115,7 +116,7 @@ $hasMain = (bool)array_filter($currencies, fn($c)=>!empty($c['is_main']));
             <input type="hidden" name="code" value="<?= htmlspecialchars($c['code']) ?>" />
             <button class="btn btn-danger btn-xs"
                     <?= !empty($c['is_main']) && count($currencies) <= 1 ? 'disabled' : '' ?>>
-                Remove
+                <?= __('Remove') ?>
             </button>
         </form>
 
@@ -127,7 +128,7 @@ $hasMain = (bool)array_filter($currencies, fn($c)=>!empty($c['is_main']));
   <!-- Continue -->
   <form method="post" action="/onboard/next" class="mt-6 flex justify-end">
     <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-    <button class="btn btn-primary px-6">Continue →</button>
+    <button class="btn btn-primary px-6"><?= __('Continue →') ?></button>
   </form>
 </section>
 
@@ -135,6 +136,7 @@ $hasMain = (bool)array_filter($currencies, fn($c)=>!empty($c['is_main']));
 (function(){
   // Data from PHP
   const ALL = <?php echo json_encode($allCurrencies, JSON_UNESCAPED_UNICODE); ?>;
+  const TEXT_NO_RESULTS = <?php echo json_encode(__('No results'), JSON_UNESCAPED_UNICODE); ?>;
   const bySearch = (q) => {
     q = q.trim().toLowerCase();
     if (!q) return ALL.slice(0, 50);
@@ -155,7 +157,7 @@ $hasMain = (bool)array_filter($currencies, fn($c)=>!empty($c['is_main']));
     if (!list.length) {
       const empty = document.createElement('div');
       empty.className = 'px-3 py-2 text-sm text-gray-500';
-      empty.textContent = 'No results';
+      empty.textContent = TEXT_NO_RESULTS;
       results.appendChild(empty);
       return;
     }
