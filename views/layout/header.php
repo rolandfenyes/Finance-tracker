@@ -1,4 +1,4 @@
-<?php $app = app_config(); ?>
+<?php $app = require __DIR__ . '/../../config/config.php'; ?>
 <!doctype html>
 <html lang="<?= htmlspecialchars(app_locale(), ENT_QUOTES) ?>">
 <head>
@@ -146,12 +146,8 @@
 <body class="bg-gray-50 text-gray-900">
   <?php
     $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/';
-    $currentUrl  = $_SERVER['REQUEST_URI'] ?? '/';
     $onboarding  = str_starts_with($currentPath, '/onboard');
     $hideMenus   = ($onboarding && $currentPath !== '/onboard/done');
-    $locales     = available_locales();
-    $currentLocale = app_locale();
-    $showLanguage = count($locales) > 1;
 
     // nav items
     $items = [
@@ -163,92 +159,58 @@
       ['href'=>'/scheduled',     'label'=>'Scheduled',      'match'=>'#^/scheduled(?:/.*)?$#'],
       // ['href'=>'/stocks',        'label'=>'Stocks',         'match'=>'#^/stocks(?:/.*)?$#'],
       // ['href'=>'/years',         'label'=>'Years',          'match'=>'#^/years(?:/.*)?$#'],
-      ['href'=>'/feedback',      'label'=>'Feedback',       'match'=>'#^/feedback$#'],
+      ['href'=>'/feedback', 'label'=>'Feedback', 'match'=>'#^/feedback$#'],
       ['href'=>'/settings',      'label'=>'Settings',       'match'=>'#^/settings$#'],
     ];
     function nav_link(array $item, string $currentPath, string $extra=''): string {
       $active = preg_match($item['match'], $currentPath) === 1;
       $base = 'px-3 py-1.5 rounded-lg transition';
       $cls  = $active ? 'bg-gray-900 text-white' : 'hover:bg-gray-100 text-gray-800';
-      return '<a class="'.$base.' '.$cls.' '.$extra.'" href="'.$item['href'].'">'.htmlspecialchars(__($item['label']), ENT_QUOTES).'</a>';
+      $label = __($item['label']);
+      return '<a class="'.$base.' '.$cls.' '.$extra.'" href="'.$item['href'].'">'.htmlspecialchars($label).'</a>';
     }
   ?>
 
   <header class="backdrop-blur bg-white/70 sticky top-0 z-40 border-b border-gray-200">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       <a href="/" class="font-semibold tracking-tight text-lg">💎 <?= htmlspecialchars($app['app']['name']) ?></a>
 
-      <div class="flex items-center gap-3">
-        <?php if (!$hideMenus): ?>
-          <nav class="hidden sm:flex items-center gap-2 text-sm">
+      <!-- Desktop nav (hidden during onboarding, except /onboard/done) -->
+      <?php if (!$hideMenus): ?>
+        <nav class="hidden sm:flex items-center gap-2 text-sm">
+          <?php if (is_logged_in()): ?>
+            <?php foreach ($items as $it): echo nav_link($it, $currentPath); endforeach; ?>
+            <form action="/logout" method="post" class="inline">
+              <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+              <button class="ml-2 px-3 py-1.5 rounded-lg bg-gray-900 text-white"><?= __('Logout') ?></button>
+            </form>
+          <?php endif; ?>
+        </nav>
+      <?php endif; ?>
+
+      <!-- Mobile menu (also hidden during onboarding, except /onboard/done) -->
+      <?php if (!$hideMenus): ?>
+        <div x-data="{open:false}" class="sm:hidden relative">
+          <button @click="open = !open" class="px-3 py-1.5 rounded-lg border bg-white"><?= __('Menu') ?></button>
+          <div x-cloak x-show="open" @click.outside="open=false" x-transition
+               class="absolute right-0 mt-2 w-56 bg-white border rounded-2xl shadow-glass p-2 z-50">
             <?php if (is_logged_in()): ?>
-              <?php foreach ($items as $it): echo nav_link($it, $currentPath); endforeach; ?>
-              <form action="/logout" method="post" class="inline">
-                <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-                <button class="ml-2 px-3 py-1.5 rounded-lg bg-gray-900 text-white"><?= __('Logout') ?></button>
-              </form>
+              <div class="grid gap-1">
+                <?php foreach ($items as $it): ?>
+                  <?= nav_link($it, $currentPath, 'block text-left') ?>
+                <?php endforeach; ?>
+                <form action="/logout" method="post" class="pt-1">
+                  <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+                  <button class="w-full px-3 py-2 rounded-lg bg-gray-900 text-white"><?= __('Logout') ?></button>
+                </form>
+              </div>
             <?php else: ?>
-              <a class="px-3 py-1.5 rounded-lg hover:bg-gray-100 text-gray-800" href="/login"><?= __('Login') ?></a>
-              <a class="px-3 py-1.5 rounded-lg bg-gray-900 text-white" href="/register"><?= __('Register') ?></a>
+              <a class="block px-3 py-2 rounded-lg hover:bg-gray-100" href="/login"><?= __('Login') ?></a>
+              <a class="block px-3 py-2 rounded-lg hover:bg-gray-100" href="/register"><?= __('Register') ?></a>
             <?php endif; ?>
-          </nav>
-        <?php endif; ?>
-
-        <?php if ($showLanguage): ?>
-          <form method="post" action="/language" class="hidden sm:block">
-            <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-            <input type="hidden" name="redirect" value="<?= htmlspecialchars($currentUrl, ENT_QUOTES) ?>" />
-            <label class="sr-only" for="desktop-language-select"><?= __('Language') ?></label>
-            <select id="desktop-language-select" name="locale" class="px-2 py-1.5 rounded-lg border text-sm"
-                    onchange="this.form.submit()">
-              <?php foreach ($locales as $code => $label): ?>
-                <option value="<?= htmlspecialchars($code, ENT_QUOTES) ?>" <?= $code === $currentLocale ? 'selected' : '' ?>>
-                  <?= htmlspecialchars($label) ?>
-                </option>
-              <?php endforeach; ?>
-            </select>
-          </form>
-        <?php endif; ?>
-
-        <?php if ($showLanguage): ?>
-          <form method="post" action="/language" class="sm:hidden">
-            <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-            <input type="hidden" name="redirect" value="<?= htmlspecialchars($currentUrl, ENT_QUOTES) ?>" />
-            <label class="sr-only" for="mobile-language-select"><?= __('Language') ?></label>
-            <select id="mobile-language-select" name="locale" class="px-2 py-1 rounded-lg border text-sm"
-                    onchange="this.form.submit()">
-              <?php foreach ($locales as $code => $label): ?>
-                <option value="<?= htmlspecialchars($code, ENT_QUOTES) ?>" <?= $code === $currentLocale ? 'selected' : '' ?>>
-                  <?= htmlspecialchars($label) ?>
-                </option>
-              <?php endforeach; ?>
-            </select>
-          </form>
-        <?php endif; ?>
-
-        <?php if (!$hideMenus): ?>
-          <div x-data="{open:false}" class="sm:hidden relative">
-            <button @click="open = !open" class="px-3 py-1.5 rounded-lg border bg-white"><?= __('Menu') ?></button>
-            <div x-cloak x-show="open" @click.outside="open=false" x-transition
-                 class="absolute right-0 mt-2 w-56 bg-white border rounded-2xl shadow-glass p-2 z-50">
-              <?php if (is_logged_in()): ?>
-                <div class="grid gap-1">
-                  <?php foreach ($items as $it): ?>
-                    <?= nav_link($it, $currentPath, 'block text-left') ?>
-                  <?php endforeach; ?>
-                  <form action="/logout" method="post" class="pt-1">
-                    <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-                    <button class="w-full px-3 py-2 rounded-lg bg-gray-900 text-white"><?= __('Logout') ?></button>
-                  </form>
-                </div>
-              <?php else: ?>
-                <a class="block px-3 py-2 rounded-lg hover:bg-gray-100" href="/login"><?= __('Login') ?></a>
-                <a class="block px-3 py-2 rounded-lg hover:bg-gray-100" href="/register"><?= __('Register') ?></a>
-              <?php endif; ?>
-            </div>
           </div>
-        <?php endif; ?>
-      </div>
+        </div>
+      <?php endif; ?>
     </div>
   </header>
 

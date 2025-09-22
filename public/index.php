@@ -1,9 +1,6 @@
 <?php
-$config = require __DIR__ . '/../config/config.php';
-if (!headers_sent() && !empty($config['app']['session_name'])) {
-    session_name($config['app']['session_name']);
-}
 session_start();
+$config = require __DIR__ . '/../config/config.php';
 require __DIR__ . '/../config/db.php';
 require __DIR__ . '/../src/helpers.php';
 require __DIR__ . '/../src/auth.php';
@@ -141,20 +138,6 @@ switch ($path) {
         break;
     case '/logout':
         handle_logout();
-        break;
-
-    case '/language':
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            verify_csrf();
-            $locale = $_POST['locale'] ?? '';
-            set_locale((string)$locale);
-            $redirectTo = $_POST['redirect'] ?? ($_SERVER['HTTP_REFERER'] ?? '/');
-            if (!is_string($redirectTo) || $redirectTo === '') {
-                $redirectTo = '/';
-            }
-            redirect($redirectTo);
-        }
-        redirect('/');
         break;
 
     // Current Month
