@@ -8,9 +8,9 @@
     <div class="grid gap-6 md:grid-cols-2">
       <div>
         <h2 class="font-medium mb-2"><?= __('Your currencies') ?></h2>
-        <ul class="divide-y divide-white/60 rounded-2xl border border-white/50 dark:divide-slate-800/70 dark:border-slate-800/70">
+        <ul class="glass-stack">
           <?php foreach($userCurrencies as $c): ?>
-            <li class="flex items-center justify-between gap-3 p-3">
+            <li class="glass-stack__item flex items-center justify-between gap-3">
               <div>
                 <div class="font-medium text-slate-900 dark:text-white">
                   <?= htmlspecialchars($c['code']) ?>
@@ -30,13 +30,16 @@
                   <form method="post" action="/settings/currencies/remove" onsubmit="return confirm('<?= addslashes(__('Remove currency :code?', ['code' => $c['code']])) ?>')">
                     <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                     <input type="hidden" name="code" value="<?= htmlspecialchars($c['code']) ?>" />
-                    <button class="btn btn-danger !py-1.5 !px-3"><?= __('Remove') ?></button>
+                    <button class="icon-action icon-action--danger" title="<?= __('Remove') ?>">
+                      <i data-lucide="trash-2" class="h-4 w-4"></i>
+                      <span class="sr-only"><?= __('Remove') ?></span>
+                    </button>
                   </form>
                 <?php endif; ?>
               </div>
             </li>
           <?php endforeach; if (!count($userCurrencies)): ?>
-            <li class="p-3 text-sm text-gray-500"><?= __('No currencies yet.') ?></li>
+            <li class="glass-stack__item text-sm text-gray-500"><?= __('No currencies yet.') ?></li>
           <?php endif; ?>
         </ul>
       </div>

@@ -267,7 +267,10 @@
             <div class="font-medium"><?= htmlspecialchars($l['name']) ?></div>
             <div class="text-xs text-gray-500"><?= __('APR :rate%', ['rate' => (float)$l['interest_rate']]) ?></div>
           </div>
-          <button type="button" class="btn btn-primary !px-3" data-open="#loan-edit-<?= (int)$l['id'] ?>"><?= __('Edit') ?></button>
+          <button type="button" class="icon-action icon-action--primary" data-open="#loan-edit-<?= (int)$l['id'] ?>" title="<?= __('Edit') ?>">
+            <i data-lucide="pencil" class="h-4 w-4"></i>
+            <span class="sr-only"><?= __('Edit') ?></span>
+          </button>
         </div>
 
         <div class="mt-2 text-xs text-gray-500">
@@ -658,15 +661,27 @@ function rrSummary(rrule){
     if (openSel) {
       const id = openSel.getAttribute('data-open');
       const m = document.querySelector(id);
-      if (m) m.classList.remove('hidden');
+      if (m && m.classList.contains('hidden')) {
+        m.classList.remove('hidden');
+        window.MyMoneyMapOverlay && window.MyMoneyMapOverlay.open();
+      }
       return;
     }
     const closeBtn = e.target.closest('[data-close]');
     if (closeBtn) {
-      closeBtn.closest('.modal')?.classList.add('hidden');
+      const modal = closeBtn.closest('.modal');
+      if (modal && !modal.classList.contains('hidden')) {
+        modal.classList.add('hidden');
+        window.MyMoneyMapOverlay && window.MyMoneyMapOverlay.close();
+      }
     }
   });
   document.addEventListener('keydown', (e)=>{
-    if (e.key === 'Escape') document.querySelectorAll('.modal')?.forEach(m=>m.classList.add('hidden'));
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal:not(.hidden)')?.forEach(m=>{
+        m.classList.add('hidden');
+        window.MyMoneyMapOverlay && window.MyMoneyMapOverlay.close();
+      });
+    }
   });
 </script>

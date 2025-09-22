@@ -176,7 +176,7 @@
                 <div class="flex flex-row gap-2">
                   <button
                     type="button"
-                    class="btn btn-primary !py-1 !px-3"
+                    class="icon-action icon-action--primary"
                     data-edit-scheduled
                     data-id="<?= (int)$r['id'] ?>"
                     data-title="<?= htmlspecialchars($r['title']) ?>"
@@ -185,13 +185,20 @@
                     data-next_due="<?= htmlspecialchars($r['next_due']) ?>"
                     data-category_id="<?= (int)($r['category_id'] ?? 0) ?>"
                     data-rrule="<?= htmlspecialchars($r['rrule'] ?? '') ?>"
-                  ><?= __('Edit') ?></button>
+                    title="<?= __('Edit') ?>"
+                  >
+                    <i data-lucide="pencil" class="h-4 w-4"></i>
+                    <span class="sr-only"><?= __('Edit') ?></span>
+                  </button>
 
                   <form method="post" action="/scheduled/delete" class="inline"
                         onsubmit="return confirm('<?= __('Delete this scheduled item?') ?>');">
                     <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                     <input type="hidden" name="id" value="<?= (int)$r['id'] ?>" />
-                    <button class="btn btn-danger !py-1 !px-3"><?= __('Remove') ?></button>
+                    <button class="icon-action icon-action--danger" title="<?= __('Remove') ?>">
+                      <i data-lucide="trash-2" class="h-4 w-4"></i>
+                      <span class="sr-only"><?= __('Remove') ?></span>
+                    </button>
                   </form>
                 </div>
               </div>
@@ -239,7 +246,7 @@
         <div class="mt-3 flex items-center justify-end gap-2">
           <button
             type="button"
-            class="btn btn-primary !py-1.5 !px-3"
+            class="icon-action icon-action--primary"
             data-edit-scheduled
             data-id="<?= (int)$r['id'] ?>"
             data-title="<?= htmlspecialchars($r['title']) ?>"
@@ -248,13 +255,20 @@
             data-next_due="<?= htmlspecialchars($r['next_due']) ?>"
             data-category_id="<?= (int)($r['category_id'] ?? 0) ?>"
             data-rrule="<?= htmlspecialchars($r['rrule'] ?? '') ?>"
-          ><?= __('Edit') ?></button>
+            title="<?= __('Edit') ?>"
+          >
+            <i data-lucide="pencil" class="h-4 w-4"></i>
+            <span class="sr-only"><?= __('Edit') ?></span>
+          </button>
 
           <form method="post" action="/scheduled/delete" class="inline"
                 onsubmit="return confirm('<?= __('Delete this scheduled item?') ?>');">
             <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
             <input type="hidden" name="id" value="<?= (int)$r['id'] ?>" />
-            <button class="btn btn-danger !py-1.5 !px-3"><?= __('Remove') ?></button>
+            <button class="icon-action icon-action--danger" title="<?= __('Remove') ?>">
+              <i data-lucide="trash-2" class="h-4 w-4"></i>
+              <span class="sr-only"><?= __('Remove') ?></span>
+            </button>
           </form>
         </div>
       </div>
@@ -583,8 +597,18 @@ document.querySelectorAll('input[id^="rrule-"]').forEach(h => {
 <script>
   // --- open/close helpers ---
   const modal = document.getElementById('sched-modal');
-  function openSched(){ modal.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); }
-  function closeSched(){ modal.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }
+  function openSched(){
+    if (modal.classList.contains('hidden')) {
+      modal.classList.remove('hidden');
+      window.MyMoneyMapOverlay && window.MyMoneyMapOverlay.open();
+    }
+  }
+  function closeSched(){
+    if (!modal.classList.contains('hidden')) {
+      modal.classList.add('hidden');
+      window.MyMoneyMapOverlay && window.MyMoneyMapOverlay.close();
+    }
+  }
 
   // Close handlers
   modal.querySelectorAll('[data-close-sched]').forEach(el=>el.addEventListener('click', closeSched));

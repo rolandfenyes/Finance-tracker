@@ -420,7 +420,15 @@
 
         applyTheme(chart);
         chart.update('none');
-        window.registerChartTheme && window.registerChartTheme(chart, applyTheme);
+        const themeKey = 'chart:cum-net';
+        if (window.registerChartTheme) {
+          window.registerChartTheme(themeKey, () => {
+            if (!chart) return false;
+            applyTheme(chart);
+            chart.update('none');
+            return chart;
+          });
+        }
       }
 
       if (typeof Chart === 'undefined') {
@@ -541,7 +549,15 @@
 
           applyTheme(chart);
           chart.update('none');
-          window.registerChartTheme && window.registerChartTheme(chart, applyTheme);
+          const themeKey = 'chart:spendcat-top';
+          if (window.registerChartTheme) {
+            window.registerChartTheme(themeKey, () => {
+              if (!chart) return false;
+              applyTheme(chart);
+              chart.update('none');
+              return chart;
+            });
+          }
         }
 
         if (typeof Chart === 'undefined') {
@@ -699,8 +715,11 @@
         <div class="mt-3">
           <?php if (!$isVirtual): ?>
             <details class="group">
-              <summary class="btn btn-ghost cursor-pointer">
-                <i data-lucide="edit-3" class="w-4 h-4"></i> <?= __('Edit') ?>
+              <summary class="inline-flex cursor-pointer items-center">
+                <span class="icon-action icon-action--primary" aria-hidden="true">
+                  <i data-lucide="pencil" class="h-4 w-4"></i>
+                </span>
+                <span class="sr-only"><?= __('Edit') ?></span>
               </summary>
               <div class="mt-2 bg-gray-50 rounded-xl p-3 border">
                 <form class="grid gap-2 sm:grid-cols-6 items-end" method="post" action="/months/tx/edit">
@@ -735,8 +754,9 @@
                   <input type="hidden" name="y" value="<?= $y ?>" />
                   <input type="hidden" name="m" value="<?= $m ?>" />
                   <input type="hidden" name="id" value="<?= $row['id'] ?>" />
-                  <button class="btn btn-danger">
-                    <i data-lucide="trash-2" class="w-4 h-4"></i> <?= __('Remove') ?>
+                  <button class="icon-action icon-action--danger" title="<?= __('Remove') ?>">
+                    <i data-lucide="trash-2" class="h-4 w-4"></i>
+                    <span class="sr-only"><?= __('Remove') ?></span>
                   </button>
                 </form>
               </div>
@@ -866,8 +886,9 @@
 
             <td class="py-2 pr-3">
               <?php if (!$isVirtual && !$isLocked): ?>
-                <button type="button" class="btn btn-ghost p-2" onclick="openTxModal('tx<?= (int)$row['id'] ?>')" title="<?= __('Edit') ?>">
-                  <i data-lucide="edit-3" class="w-4 h-4"></i>
+                <button type="button" class="icon-action icon-action--primary" onclick="openTxModal('tx<?= (int)$row['id'] ?>')" title="<?= __('Edit') ?>">
+                  <i data-lucide="pencil" class="h-4 w-4"></i>
+                  <span class="sr-only"><?= __('Edit') ?></span>
                 </button>
 
                 <form class="inline" method="post" action="/months/tx/delete"
@@ -876,8 +897,9 @@
                   <input type="hidden" name="y" value="<?= (int)$y ?>" />
                   <input type="hidden" name="m" value="<?= (int)$m ?>" />
                   <input type="hidden" name="id" value="<?= (int)$row['id'] ?>" />
-                  <button class="btn btn-ghost text-red-600 p-2" title="<?= __('Remove') ?>">
-                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                  <button class="icon-action icon-action--danger" title="<?= __('Remove') ?>">
+                    <i data-lucide="trash-2" class="h-4 w-4"></i>
+                    <span class="sr-only"><?= __('Remove') ?></span>
                   </button>
                 </form>
 
@@ -983,8 +1005,16 @@
 <script>
   function openTxModal(id){
     const dlg = document.getElementById(id);
-    if (dlg && typeof dlg.showModal === 'function') dlg.showModal();
-    else if (dlg) dlg.setAttribute('open','');
+    if (!dlg) return;
+    if (typeof dlg.showModal === 'function') {
+      dlg.showModal();
+    } else {
+      if (!dlg.__mmOverlayActive) {
+        window.MyMoneyMapOverlay && window.MyMoneyMapOverlay.open();
+        dlg.__mmOverlayActive = true;
+      }
+      dlg.setAttribute('open','');
+    }
   }
   // Close on backdrop click
   document.addEventListener('click', (e)=>{

@@ -92,7 +92,10 @@
                     onsubmit="return confirm('<?= addslashes(__('Remove this income?')) ?>')">
                 <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                 <input type="hidden" name="id" value="<?= (int)$r['id'] ?>" />
-                <button class="btn btn-danger !py-1.5 !px-3"><?= __('Remove') ?></button>
+                <button class="icon-action icon-action--danger" title="<?= __('Remove') ?>">
+                  <i data-lucide="trash-2" class="h-4 w-4"></i>
+                  <span class="sr-only"><?= __('Remove') ?></span>
+                </button>
               </form>
             </li>
           <?php endforeach; endif; ?>

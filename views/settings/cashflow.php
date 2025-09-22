@@ -43,11 +43,11 @@
 
     <div>
       <h2 class="font-medium mb-2"><?= __('Your rules') ?></h2>
-      <ul class="divide-y divide-white/60 rounded-2xl border border-white/50 dark:divide-slate-800/70 dark:border-slate-800/70">
+      <ul class="glass-stack">
         <?php if (!count($rules)): ?>
-          <li class="p-3 text-sm text-gray-500"><?= __('No rules yet.') ?></li>
+          <li class="glass-stack__item text-sm text-gray-500"><?= __('No rules yet.') ?></li>
         <?php else: foreach($rules as $r): ?>
-          <li class="p-3">
+          <li class="glass-stack__item">
             <details class="group">
               <summary class="flex cursor-pointer items-center justify-between">
                 <span class="font-medium"><?= htmlspecialchars($r['label']) ?></span>
@@ -71,7 +71,10 @@
                       onsubmit="return confirm('<?= addslashes(__('Delete this rule?')) ?>');">
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                   <input type="hidden" name="id" value="<?= $r['id'] ?>" />
-                  <button class="btn btn-danger"><?= __('Remove') ?></button>
+                  <button class="icon-action icon-action--danger" type="submit" title="<?= __('Remove') ?>">
+                    <i data-lucide="trash-2" class="h-4 w-4"></i>
+                    <span class="sr-only"><?= __('Remove') ?></span>
+                  </button>
                 </form>
               </div>
             </details>

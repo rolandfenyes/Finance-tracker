@@ -64,7 +64,10 @@
               <form method="post" action="/stocks/trade/delete" onsubmit="return confirm('Delete trade?')">
                 <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                 <input type="hidden" name="id" value="<?= $t['id'] ?>" />
-                <button class="btn btn-danger !px-3 !py-1.5"><?= __('Remove') ?></button>
+                <button class="icon-action icon-action--danger" title="<?= __('Remove') ?>">
+                  <i data-lucide="trash-2" class="h-4 w-4"></i>
+                  <span class="sr-only"><?= __('Remove') ?></span>
+                </button>
               </form>
             </td>
           </tr>

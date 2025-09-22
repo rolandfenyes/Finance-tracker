@@ -114,9 +114,9 @@ $hasMain = (bool)array_filter($currencies, fn($c)=>!empty($c['is_main']));
           <form method="post" action="/onboard/currencies/delete" class="inline">
             <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
             <input type="hidden" name="code" value="<?= htmlspecialchars($c['code']) ?>" />
-            <button class="btn btn-danger btn-xs"
-                    <?= !empty($c['is_main']) && count($currencies) <= 1 ? 'disabled' : '' ?>>
-                <?= __('Remove') ?>
+            <button class="icon-action icon-action--danger" <?= !empty($c['is_main']) && count($currencies) <= 1 ? 'disabled' : '' ?> title="<?= __('Remove') ?>">
+              <i data-lucide="trash-2" class="h-4 w-4"></i>
+              <span class="sr-only"><?= __('Remove') ?></span>
             </button>
         </form>
 

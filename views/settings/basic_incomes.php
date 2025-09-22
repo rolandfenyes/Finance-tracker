@@ -137,7 +137,12 @@
             <td class="py-2 pr-3"><?= htmlspecialchars($r['valid_to'] ?? '—') ?></td>
             <td class="py-2 pr-3">
               <details>
-                <summary class="cursor-pointer text-accent"><?= __('Edit') ?></summary>
+                <summary class="cursor-pointer text-accent flex items-center gap-2">
+                  <span class="icon-action icon-action--primary" aria-hidden="true">
+                    <i data-lucide="pencil" class="h-4 w-4"></i>
+                  </span>
+                  <span class="sr-only"><?= __('Edit') ?></span>
+                </summary>
                 <form class="mt-2 grid sm:grid-cols-12 gap-2" method="post" action="/settings/basic-incomes/edit">
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                   <input type="hidden" name="id" value="<?= $r['id'] ?>" />
@@ -162,7 +167,10 @@
                       onsubmit="return confirm('<?= addslashes(__('Delete this record?')) ?>')">
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                   <input type="hidden" name="id" value="<?= $r['id'] ?>" />
-                  <button class="btn btn-danger"><?= __('Remove') ?></button>
+                  <button class="icon-action icon-action--danger" title="<?= __('Remove') ?>">
+                    <i data-lucide="trash-2" class="h-4 w-4"></i>
+                    <span class="sr-only"><?= __('Remove') ?></span>
+                  </button>
                 </form>
               </details>
             </td>

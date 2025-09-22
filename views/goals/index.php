@@ -139,7 +139,10 @@
             <div class="font-medium"><?= htmlspecialchars($g['title']) ?></div>
             <div class="text-xs text-gray-500"><?= $statusLabel ?> · <?= htmlspecialchars($cur) ?></div>
           </div>
-          <button class="btn btn-primary !px-3" data-open="#goal-edit-<?= (int)$g['id'] ?>"><?= __('Edit') ?></button>
+          <button class="icon-action icon-action--primary" data-open="#goal-edit-<?= (int)$g['id'] ?>" title="<?= __('Edit') ?>">
+            <i data-lucide="pencil" class="h-4 w-4"></i>
+            <span class="sr-only"><?= __('Edit') ?></span>
+          </button>
         </div>
         <div class="mt-3">
           <div class="h-2 bg-brand-100/60 rounded-full">
@@ -425,11 +428,31 @@
   // modal open/close
   document.addEventListener('click', (e)=>{
     const open = e.target.closest('[data-open]');
-    if (open){ document.querySelector(open.dataset.open)?.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); return; }
+    if (open){
+      const modal = document.querySelector(open.dataset.open);
+      if (modal){
+        modal.classList.remove('hidden');
+        window.MyMoneyMapOverlay && window.MyMoneyMapOverlay.open();
+      }
+      return;
+    }
     const close = e.target.closest('[data-close]');
-    if (close){ close.closest('.modal')?.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }
+    if (close){
+      const modal = close.closest('.modal');
+      if (modal && !modal.classList.contains('hidden')){
+        modal.classList.add('hidden');
+        window.MyMoneyMapOverlay && window.MyMoneyMapOverlay.close();
+      }
+    }
   });
-  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') document.querySelectorAll('.modal').forEach(m=>m.classList.add('hidden')); });
+  document.addEventListener('keydown', (e)=>{
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal:not(.hidden)').forEach((modal)=>{
+        modal.classList.add('hidden');
+        window.MyMoneyMapOverlay && window.MyMoneyMapOverlay.close();
+      });
+    }
+  });
 
   // when opening goals edit modal
   const sel = modal.querySelector('select[name="scheduled_payment_id"]');

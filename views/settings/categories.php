@@ -51,9 +51,9 @@
         ?>
           <div class="mb-6">
             <div class="mb-2 text-sm font-semibold text-gray-600"><?= htmlspecialchars($title) ?></div>
-            <ul class="divide-y divide-white/60 rounded-2xl border border-white/50 dark:divide-slate-800/70 dark:border-slate-800/70">
+            <ul class="glass-stack">
               <?php if (!count($list)): ?>
-                <li class="p-3 text-sm text-gray-500"><?= __('No categories yet.') ?></li>
+                <li class="glass-stack__item text-sm text-gray-500"><?= __('No categories yet.') ?></li>
               <?php else: foreach($list as $c):
                 $used   = (int)($usage[$c['id']] ?? 0);
                 $isEF   = in_array($c['system_key'] ?? '', ['ef_add','ef_withdraw'], true);
@@ -65,7 +65,7 @@
                 }
                 $showWarn = $isSpending && empty($c['cashflow_rule_id']);
               ?>
-                <li class="p-3">
+                <li class="glass-stack__item">
                   <details class="group">
                     <summary class="flex cursor-pointer items-center justify-between gap-3">
                       <div class="flex items-center gap-2">
@@ -80,7 +80,12 @@
                           <span class="chip" title="<?= __('No cashflow rule set') ?>">⚠️ <?= __('No rule') ?></span>
                         <?php endif; ?>
                       </div>
-                      <span class="row-btn"><?= __('Edit') ?></span>
+                      <span class="flex items-center gap-2 text-sm text-gray-500">
+                        <span class="icon-action icon-action--primary" aria-hidden="true">
+                          <i data-lucide="pencil" class="h-4 w-4"></i>
+                        </span>
+                        <span class="sr-only"><?= __('Edit') ?></span>
+                      </span>
                     </summary>
 
                     <div class="edit-panel">
@@ -131,7 +136,10 @@
                               class="mt-2 flex justify-end">
                           <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                           <input type="hidden" name="id" value="<?= (int)$c['id'] ?>" />
-                          <button class="btn btn-danger"><?= __('Remove') ?></button>
+                          <button class="icon-action icon-action--danger" type="submit" title="<?= __('Remove') ?>">
+                            <i data-lucide="trash-2" class="h-4 w-4"></i>
+                            <span class="sr-only"><?= __('Remove') ?></span>
+                          </button>
                         </form>
                       <?php endif; ?>
                     </div>

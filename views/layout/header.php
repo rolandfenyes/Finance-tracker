@@ -12,51 +12,51 @@
 
   <!-- Tailwind CDN (JIT) -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/theme.js"></script>
   <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              50: '#f1f7f4',
-              100: '#dcece2',
-              200: '#c0ddcc',
-              300: '#94c3aa',
-              400: '#69a986',
-              500: '#4b966e',
-              600: '#3c7b5b',
-              700: '#32644b',
-              800: '#2b513f',
-              900: '#234234',
-              950: '#11241d'
+    (function(){
+      const tokens = window.MyMoneyMapTheme || {};
+      const brand = tokens.brand || {};
+      const palette = brand.palette || {};
+      const typography = tokens.typography || {};
+      const shadows = tokens.shadows || {};
+      const radii = tokens.radii || {};
+      const blur = tokens.blur || {};
+      const gradients = (tokens.gradients && tokens.gradients.mesh) || {};
+
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              brand: palette,
+              jade: brand.primary || '#4b966e',
+              'brand-muted': brand.muted || '#e6f1eb',
+              'brand-deep': brand.deep || '#163428',
+              accent: brand.accent || '#3c7b5b'
             },
-            jade: '#4b966e',
-            "brand-muted": '#e6f1eb',
-            "brand-deep": '#163428',
-            accent: '#3c7b5b'
-          },
-          fontFamily: {
-            brand: ['"IBM Plex Sans"', 'Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif']
-          },
-          boxShadow: {
-            glass: '0 30px 60px -25px rgba(17, 36, 29, 0.45)',
-            "brand-glow": '0 20px 45px -20px rgba(75, 150, 110, 0.65)'
-          },
-          borderRadius: {
-            '3xl': '1.75rem',
-            '4xl': '2.5rem'
-          },
-          backdropBlur: {
-            xs: '4px'
-          },
-          backgroundImage: {
-            'mesh-light': 'radial-gradient(120% 120% at 10% 20%, rgba(75,150,110,0.18) 0%, transparent 55%), radial-gradient(90% 90% at 90% 0%, rgba(42,94,70,0.12) 0%, transparent 65%), linear-gradient(135deg, #f8fbf9 0%, #eef5f1 50%, #f6faf6 100%)',
-            'mesh-dark': 'radial-gradient(120% 120% at 0% 0%, rgba(75,150,110,0.35) 0%, transparent 60%), radial-gradient(90% 90% at 100% 20%, rgba(28,66,50,0.5) 0%, transparent 70%), linear-gradient(160deg, #060d0b 0%, #0f1e18 55%, #0a1612 100%)'
+            fontFamily: {
+              brand: typography.fontStack || ['"IBM Plex Sans"', 'sans-serif']
+            },
+            boxShadow: {
+              glass: shadows.glass || '0 30px 60px -25px rgba(17, 36, 29, 0.45)',
+              'brand-glow': shadows.brandGlow || '0 20px 45px -20px rgba(75, 150, 110, 0.65)'
+            },
+            borderRadius: {
+              '3xl': radii['3xl'] || '1.75rem',
+              '4xl': radii['4xl'] || '2.5rem'
+            },
+            backdropBlur: {
+              xs: blur.xs || '4px'
+            },
+            backgroundImage: {
+              'mesh-light': gradients.light || 'radial-gradient(120% 120% at 10% 20%, rgba(75,150,110,0.18) 0%, transparent 55%), radial-gradient(90% 90% at 90% 0%, rgba(42,94,70,0.12) 0%, transparent 65%), linear-gradient(135deg, #f8fbf9 0%, #eef5f1 50%, #f6faf6 100%)',
+              'mesh-dark': gradients.dark || 'radial-gradient(120% 120% at 0% 0%, rgba(75,150,110,0.35) 0%, transparent 60%), radial-gradient(90% 90% at 100% 20%, rgba(28,66,50,0.5) 0%, transparent 70%), linear-gradient(160deg, #060d0b 0%, #0f1e18 55%, #0a1612 100%)'
+            }
           }
         }
-      }
-    }
+      };
+    })();
   </script>
   <script>
     (function() {
@@ -82,21 +82,38 @@
         color-scheme: dark;
       }
       body {
-        @apply font-brand antialiased min-h-screen bg-mesh-light text-slate-900 transition-colors duration-300 ease-out dark:bg-mesh-dark dark:text-slate-100;
+        @apply font-brand antialiased min-h-screen transition-colors duration-300 ease-out;
+        color: var(--mm-text-color);
+        background-image: var(--mm-mesh-background);
+        background-attachment: fixed;
+        background-size: cover;
+      }
+      :root[data-theme='dark'] body {
+        color: var(--mm-text-color);
+        background-image: var(--mm-mesh-background-dark);
       }
       body::before {
         content: '';
         position: fixed;
         inset: 0;
         z-index: -2;
-        background: radial-gradient(30% 30% at 20% 20%, rgba(75, 150, 110, 0.35), transparent 65%), radial-gradient(45% 45% at 80% 0%, rgba(48, 104, 75, 0.25), transparent 70%);
+        background: var(--mm-body-glow);
         opacity: 0.85;
         pointer-events: none;
         transition: opacity 0.4s ease;
       }
-      .dark body::before {
+      :root[data-theme='dark'] body::before {
         opacity: 0.55;
-        background: radial-gradient(40% 40% at 12% 18%, rgba(75, 150, 110, 0.45), transparent 70%), radial-gradient(40% 40% at 85% 10%, rgba(18, 36, 29, 0.55), transparent 75%);
+      }
+      body.overlay-open {
+        overflow: hidden;
+      }
+      @media (max-width: 640px) {
+        body.overlay-open header {
+          opacity: 0;
+          pointer-events: none;
+          transform: translateY(-0.75rem);
+        }
       }
       main {
         @apply flex-1;
@@ -105,25 +122,55 @@
 
     @layer components {
       .chip {
-        @apply inline-flex items-center gap-1.5 rounded-full border border-brand-100/70 bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-brand-700 shadow-sm backdrop-blur-xs dark:border-slate-700 dark:bg-slate-900/60 dark:text-brand-100;
-      }
-      .row-btn {
-        @apply border border-brand-100/70 bg-white/70 text-sm font-medium text-brand-700 px-3 py-1.5 rounded-xl shadow-sm transition hover:bg-brand-50/60 hover:text-brand-800 dark:border-slate-700 dark:bg-slate-900/50 dark:text-brand-100 dark:hover:bg-slate-800;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.3rem 0.75rem;
+        border-radius: 9999px;
+        border: 1px solid var(--mm-icon-border);
+        background: var(--mm-icon-bg);
+        color: var(--mm-icon-color);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        backdrop-filter: blur(var(--mm-blur-xs));
+        box-shadow: 0 10px 20px -18px rgba(17, 36, 29, 0.45);
       }
       .edit-panel {
-        @apply mt-3 rounded-2xl border border-brand-100/70 bg-white/70 p-4 shadow-sm backdrop-blur-xs dark:border-slate-800 dark:bg-slate-900/50;
+        margin-top: 0.75rem;
+        border-radius: 1.25rem;
+        border: 1px solid var(--mm-list-border);
+        background: var(--mm-list-item);
+        padding: 1rem;
+        backdrop-filter: blur(var(--mm-blur-md));
+        box-shadow: 0 20px 35px -28px rgba(17, 36, 29, 0.45);
       }
       .color-input {
-        @apply h-11 w-16 rounded-xl border border-brand-100/70 bg-white/80 shadow-sm dark:border-slate-700 dark:bg-slate-900/60;
+        height: 2.75rem;
+        width: 4rem;
+        border-radius: 0.85rem;
+        border: 1px solid var(--mm-list-border);
+        background: var(--mm-list-item);
+        box-shadow: inset 0 1px 2px rgba(17, 36, 29, 0.12);
       }
       .tab-btn.active {
         font-weight: 600;
         border-bottom-width: 2px;
-        @apply border-brand-500 text-brand-600 dark:text-brand-200;
+        border-color: var(--mm-brand-primary, #4b966e);
+        color: var(--mm-brand-primary, #4b966e);
       }
 
       .card {
-        @apply relative overflow-hidden rounded-3xl border border-white/40 bg-white/70 p-6 shadow-glass backdrop-blur-xl transition dark:border-slate-800/60 dark:bg-slate-900/50 dark:shadow-none;
+        position: relative;
+        overflow: hidden;
+        border-radius: var(--mm-radius-3xl, 1.75rem);
+        padding: 1.5rem;
+        border: 1px solid var(--mm-card-border);
+        background: var(--mm-card-surface);
+        box-shadow: var(--mm-shadow-glass);
+        backdrop-filter: blur(var(--mm-blur-xl));
+        transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
       }
       .card::after {
         content: '';
@@ -135,7 +182,15 @@
         pointer-events: none;
       }
       .tile {
-        @apply relative overflow-hidden rounded-2xl border border-white/50 bg-white/60 p-4 shadow-sm backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/40;
+        position: relative;
+        overflow: hidden;
+        border-radius: 1.25rem;
+        padding: 1rem;
+        border: 1px solid var(--mm-tile-border);
+        background: var(--mm-tile-surface);
+        backdrop-filter: blur(var(--mm-blur-md));
+        box-shadow: 0 18px 32px -26px rgba(17, 36, 29, 0.42);
+        transition: background 0.3s ease, border-color 0.3s ease;
       }
       .tile::before {
         content: '';
@@ -146,56 +201,167 @@
         pointer-events: none;
       }
       .panel {
-        @apply rounded-2xl border border-white/50 bg-white/70 shadow-sm backdrop-blur dark:border-slate-800/70 dark:bg-slate-900/50;
+        border-radius: 1.25rem;
+        border: 1px solid var(--mm-panel-border);
+        background: var(--mm-panel-surface);
+        padding: 1.25rem;
+        box-shadow: 0 14px 28px -24px rgba(17, 36, 29, 0.42);
+        backdrop-filter: blur(var(--mm-blur-md));
       }
       .panel-ghost {
-        @apply rounded-2xl border border-brand-100/70 bg-brand-50/40 shadow-sm backdrop-blur-xs dark:border-slate-800 dark:bg-slate-900/40;
+        border-radius: 1.25rem;
+        border: 1px solid var(--mm-panel-ghost-border);
+        background: var(--mm-panel-ghost-surface);
+        padding: 1.25rem;
+        box-shadow: 0 12px 24px -20px rgba(17, 36, 29, 0.35);
+        backdrop-filter: blur(var(--mm-blur-xs));
+      }
+
+      .glass-stack {
+        border-radius: 1.25rem;
+        border: 1px solid var(--mm-list-border);
+        background: var(--mm-list-surface);
+        overflow: hidden;
+        backdrop-filter: blur(var(--mm-blur-md));
+        box-shadow: 0 18px 36px -28px rgba(17, 36, 29, 0.4);
+      }
+      .glass-stack__item {
+        position: relative;
+        padding: 0.85rem 1.1rem;
+        background: var(--mm-list-item);
+        transition: background 0.3s ease;
+      }
+      .glass-stack__item:nth-child(even) {
+        background: var(--mm-list-item-alt);
+      }
+      .glass-stack__item + .glass-stack__item {
+        border-top: 1px solid var(--mm-list-divider);
+      }
+
+      .card-list {
+        border-radius: 1.25rem;
+        border: 1px solid var(--mm-list-border);
+        background: var(--mm-list-surface);
+        overflow: hidden;
+        backdrop-filter: blur(var(--mm-blur-md));
+      }
+      .card-list .list-row + .list-row {
+        border-top: 1px solid var(--mm-list-divider);
+      }
+      .list-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.85rem 1.1rem;
+        font-size: 0.95rem;
+        color: var(--mm-text-color);
+        background: var(--mm-list-item);
+      }
+      .card-list .list-row:nth-child(even) {
+        background: var(--mm-list-item-alt);
       }
 
       .card-kicker {
-        @apply text-[11px] font-semibold uppercase tracking-[0.3em] text-brand-600 dark:text-brand-200;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3em;
+        color: var(--mm-brand-primary, #4b966e);
       }
       .card-title {
-        @apply text-xl font-semibold text-slate-900 dark:text-white;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--mm-text-color);
       }
       .card-subtle {
-        @apply text-sm text-slate-600 dark:text-slate-300;
-      }
-      .card-list {
-        @apply divide-y divide-white/50 overflow-hidden rounded-2xl border border-white/50 bg-white/60 backdrop-blur dark:divide-slate-800/70 dark:border-slate-800/70 dark:bg-slate-900/40;
-      }
-      .list-row {
-        @apply flex items-center justify-between px-4 py-3 text-sm text-slate-700 dark:text-slate-200;
+        font-size: 0.95rem;
+        color: var(--mm-subtle-text);
       }
 
-      .field { @apply grid gap-1.5; }
+      .field {
+        display: grid;
+        gap: 0.375rem;
+      }
       .label {
-        @apply text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--mm-subtle-text);
       }
       .help {
-        @apply text-xs text-slate-400 dark:text-slate-500;
+        font-size: 0.75rem;
+        color: var(--mm-subtle-text);
+        opacity: 0.85;
       }
 
       .input,
       .select,
       .input-select,
       .textarea {
-        @apply w-full rounded-2xl border border-brand-200/80 bg-white/95 px-4 py-2.5 text-sm text-slate-900 shadow-inner backdrop-blur transition placeholder:text-slate-500 focus:border-brand-400 focus:ring-2 focus:ring-brand-200 focus:outline-none dark:border-slate-600 dark:bg-slate-900/70 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-brand-400 dark:focus:ring-brand-500/40;
+        width: 100%;
+        border-radius: 1.1rem;
+        border: 1px solid var(--mm-list-border);
+        background: var(--mm-list-item);
+        padding: 0.65rem 1rem;
+        font-size: 0.95rem;
+        color: var(--mm-text-color);
+        box-shadow: inset 0 1px 2px rgba(17, 36, 29, 0.08);
+        backdrop-filter: blur(var(--mm-blur-xs));
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
       }
-      .textarea { @apply min-h-[104px]; }
+      .input::placeholder,
+      .select::placeholder,
+      .textarea::placeholder {
+        color: var(--mm-subtle-text);
+        opacity: 0.7;
+      }
+      .input:focus,
+      .select:focus,
+      .input-select:focus,
+      .textarea:focus {
+        border-color: var(--mm-brand-primary, #4b966e);
+        box-shadow: 0 0 0 3px rgba(75, 150, 110, 0.18);
+        outline: none;
+      }
+      .textarea {
+        min-height: 104px;
+      }
 
       .input-group {
-        @apply relative flex items-stretch overflow-hidden rounded-2xl border border-brand-200/80 bg-white/95 shadow-sm backdrop-blur dark:border-slate-600 dark:bg-slate-900/60;
+        position: relative;
+        display: flex;
+        align-items: stretch;
+        overflow: hidden;
+        border-radius: 1.1rem;
+        border: 1px solid var(--mm-list-border);
+        background: var(--mm-list-item);
+        backdrop-filter: blur(var(--mm-blur-xs));
+        box-shadow: inset 0 1px 2px rgba(17,36,29,0.08);
       }
       .input-group > .input {
-        @apply flex-1 rounded-none border-0 bg-transparent px-3.5 py-2.5 text-sm shadow-none focus:ring-0;
+        flex: 1;
+        border: none;
+        background: transparent;
+        padding: 0.65rem 0.9rem;
+        box-shadow: none;
       }
       .input-select {
-        @apply rounded-none border-0 bg-brand-50/80 px-3.5 py-2 text-sm font-medium text-brand-700 dark:bg-slate-800/60 dark:text-brand-100;
+        border: none;
+        border-left: 1px solid var(--mm-list-border);
+        background: rgba(75,150,110,0.12);
+        font-weight: 600;
+        color: var(--mm-brand-primary, #4b966e);
       }
       .input-group .ig-input,
       .input-group .ig-select {
-        @apply h-11 bg-transparent px-3 text-sm text-slate-900 outline-none dark:text-slate-100;
+        height: 2.75rem;
+        background: transparent;
+        padding: 0 0.75rem;
+        font-size: 0.95rem;
+        color: var(--mm-text-color);
+        outline: none;
       }
       .input-group .ig-select {
         appearance: none;
@@ -207,7 +373,9 @@
         -webkit-appearance: none;
         margin: 0;
       }
-      .ig-input[type=number] { -moz-appearance: textfield; }
+      .ig-input[type=number] {
+        -moz-appearance: textfield;
+      }
 
       .btn {
         @apply inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 ease-out;
@@ -241,8 +409,8 @@
       .modal-backdrop {
         position: absolute;
         inset: 0;
-        background: rgba(6, 13, 11, 0.6);
-        backdrop-filter: blur(12px);
+        background: var(--mm-modal-backdrop);
+        backdrop-filter: blur(var(--mm-blur-md));
       }
       .modal-panel {
         position: relative;
@@ -251,25 +419,35 @@
         width: calc(100% - 2rem);
         border-radius: 1.5rem;
         overflow: hidden;
-        border: 1px solid rgba(255,255,255,0.25);
-        background: rgba(255,255,255,0.85);
+        border: 1px solid var(--mm-modal-border);
+        background: var(--mm-modal-surface);
         box-shadow: 0 40px 80px -40px rgba(11,31,26,0.6);
-        backdrop-filter: blur(22px);
+        backdrop-filter: blur(var(--mm-blur-xl));
         display: flex;
         flex-direction: column;
-      }
-      .dark .modal-panel {
-        border-color: rgba(30,64,54,0.45);
-        background: rgba(15,30,26,0.92);
+        color: var(--mm-text-color);
       }
       .modal-header {
-        @apply flex items-center justify-between border-b border-white/40 bg-white/50 px-6 py-4 text-slate-800 dark:border-slate-800/60 dark:bg-slate-900/40 dark:text-slate-100;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--mm-list-border);
+        background: var(--mm-list-item);
+        padding: 1rem 1.5rem;
+        color: var(--mm-text-color);
       }
       .modal-body {
-        @apply max-h-[calc(80vh-7rem)] overflow-y-auto px-6 py-5 text-slate-700 dark:text-slate-200;
+        max-height: calc(80vh - 7rem);
+        overflow-y: auto;
+        padding: 1.25rem 1.5rem;
+        color: var(--mm-text-color);
       }
       .modal-footer {
-        @apply sticky bottom-0 border-t border-white/40 bg-white/60 px-6 py-4 dark:border-slate-800/60 dark:bg-slate-900/40;
+        position: sticky;
+        bottom: 0;
+        border-top: 1px solid var(--mm-list-border);
+        background: var(--mm-list-item);
+        padding: 1rem 1.5rem;
       }
       @media (max-width: 640px) {
         .modal {
@@ -294,25 +472,22 @@
         padding: 0;
       }
       dialog::backdrop {
-        background: rgba(6, 13, 11, 0.55);
-        backdrop-filter: blur(14px);
+        background: var(--mm-modal-backdrop);
+        backdrop-filter: blur(var(--mm-blur-xl));
       }
       dialog[open] {
         position: fixed;
         inset: 0;
         margin: auto;
-        border: 1px solid rgba(255,255,255,0.25);
+        border: 1px solid var(--mm-modal-border);
         padding: 0;
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        background: rgba(255,255,255,0.92);
+        background: var(--mm-modal-surface);
+        color: var(--mm-text-color);
         z-index: 60;
-      }
-      .dark dialog[open] {
-        border-color: rgba(30,64,54,0.55);
-        background: rgba(15,30,26,0.95);
-        color: #e4f0ea;
+        backdrop-filter: blur(var(--mm-blur-xl));
       }
       dialog[open] > :last-child {
         flex: 1;
@@ -328,21 +503,81 @@
           border: none;
         }
       }
+
       .icon-btn {
-        @apply inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/50 bg-white/60 text-brand-600 shadow-sm transition hover:-translate-y-[1px] hover:shadow-brand-glow focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-200 dark:border-slate-700 dark:bg-slate-900/50 dark:text-brand-100;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 1rem;
+        border: 1px solid var(--mm-icon-border);
+        background: var(--mm-icon-bg);
+        color: var(--mm-icon-color);
+        transition: transform 0.2s ease, box-shadow 0.3s ease, background 0.3s ease, border-color 0.3s ease;
+        box-shadow: 0 14px 28px -22px rgba(17, 36, 29, 0.45);
       }
       .icon-btn:hover {
-        @apply bg-brand-50/70 dark:bg-slate-800/70;
+        background: var(--mm-icon-hover);
+        transform: translateY(-1px);
+        box-shadow: var(--mm-shadow-brand-glow);
+      }
+      .icon-btn:focus-visible {
+        outline: 2px solid rgba(75,150,110,0.35);
+        outline-offset: 2px;
+      }
+
+      .icon-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 0.9rem;
+        border: 1px solid var(--mm-icon-border);
+        background: var(--mm-icon-bg);
+        color: var(--mm-icon-color);
+        transition: transform 0.2s ease, box-shadow 0.3s ease, background 0.3s ease, border-color 0.3s ease;
+        box-shadow: 0 12px 24px -20px rgba(17, 36, 29, 0.4);
+      }
+      .icon-action:hover {
+        background: var(--mm-icon-hover);
+        transform: translateY(-1px);
+        box-shadow: var(--mm-shadow-brand-glow);
+      }
+      .icon-action:focus-visible {
+        outline: 2px solid rgba(75,150,110,0.35);
+        outline-offset: 2px;
+      }
+      .icon-action--primary {
+        border-color: var(--mm-icon-primary-border);
+        background: var(--mm-icon-primary-bg);
+        color: var(--mm-icon-primary-color);
+      }
+      .icon-action--primary:hover {
+        background: var(--mm-icon-primary-hover);
+      }
+      .icon-action--danger {
+        border-color: var(--mm-icon-danger-border);
+        background: var(--mm-icon-danger-bg);
+        color: var(--mm-icon-danger-color);
+      }
+      .icon-action--danger:hover {
+        background: var(--mm-icon-danger-hover);
       }
 
       table.table-glass thead tr {
-        @apply text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        color: var(--mm-subtle-text);
       }
       table.table-glass tbody tr {
-        @apply border-b border-white/40 dark:border-slate-800/60;
+        border-bottom: 1px solid var(--mm-list-divider);
       }
       table.table-glass tbody tr:last-child {
-        @apply border-b-0;
+        border-bottom: 0;
       }
     }
   </style>
@@ -404,65 +639,193 @@
   </script>
   <script>
     (function(){
-      const registry = [];
-      function cleanupAndRun() {
-        for (let i = registry.length - 1; i >= 0; i--) {
-          const keep = registry[i]();
-          if (keep === false) registry.splice(i, 1);
+      const registry = new Map();
+
+      const getTokens = () => window.MyMoneyMapTheme || {};
+      const getPaletteScale = () => (getTokens().brand && getTokens().brand.palette) || {};
+      const clampAlpha = (value) => Math.max(0, Math.min(1, value));
+      const withAlpha = (hex, alpha) => {
+        const fallback = '#4b966e';
+        if (!hex) {
+          return clampAlpha(alpha) >= 1 ? fallback : `rgba(75,150,110,${clampAlpha(alpha)})`;
         }
-      }
+        let value = String(hex).trim();
+        if (!value) return fallback;
+        if (value.startsWith('#')) value = value.slice(1);
+        if (value.length === 3) {
+          value = value.split('').map((c) => c + c).join('');
+        }
+        const alphaHex = Math.round(clampAlpha(alpha) * 255).toString(16).padStart(2, '0');
+        return `#${value}${alphaHex}`;
+      };
 
       window.getChartPalette = function() {
+        const tokens = getTokens();
+        const scale = getPaletteScale();
         const isDark = document.documentElement.classList.contains('dark');
+        const axisLight = (tokens.neutrals && tokens.neutrals.text && tokens.neutrals.text.light) || 'rgba(35, 66, 52, 0.82)';
+        const axisDark = (tokens.neutrals && tokens.neutrals.text && tokens.neutrals.text.dark) || 'rgba(226, 244, 236, 0.95)';
+        const brandPrimary = (tokens.brand && tokens.brand.primary) || '#4b966e';
+        const brandSoft = scale[200] || '#c0ddcc';
+        const brandAccent = scale[400] || '#69a986';
+        const brandDeep = scale[700] || '#32644b';
+        const doughnutLights = [scale[500] || brandPrimary, scale[400] || '#69a986', scale[300] || '#94c3aa', scale[200] || '#c0ddcc', scale[600] || '#3c7b5b'];
+        const doughnutDarks = [brandSoft, scale[300] || '#94c3aa', scale[400] || '#69a986', scale[500] || brandPrimary, scale[600] || '#3c7b5b'];
+        const lightAlphas = [0.88, 0.82, 0.78, 0.74, 0.85];
+        const darkAlphas = [0.92, 0.9, 0.86, 0.82, 0.88];
+
         return {
           isDark,
-          axis: isDark ? 'rgba(226, 244, 236, 0.9)' : 'rgba(35, 66, 52, 0.82)',
+          axis: isDark ? axisDark : axisLight,
           grid: isDark ? 'rgba(226, 244, 236, 0.15)' : 'rgba(17, 36, 29, 0.08)',
-          incomeBar: isDark ? 'rgba(167, 242, 204, 0.92)' : 'rgba(74, 171, 125, 0.82)',
+          incomeBar: isDark ? withAlpha(brandSoft, 0.9) : withAlpha(brandAccent, 0.82),
           spendBar: isDark ? 'rgba(255, 169, 190, 0.85)' : 'rgba(236, 104, 134, 0.7)',
-          netLine: isDark ? '#8ff0c4' : '#2f6e54',
-          netFillTop: isDark ? 'rgba(143, 240, 196, 0.24)' : 'rgba(75,150,110,0.28)',
-          netFillBottom: isDark ? 'rgba(143, 240, 196, 0.08)' : 'rgba(75,150,110,0.04)',
+          netLine: isDark ? withAlpha(brandSoft, 1) : brandDeep,
+          netFillTop: isDark ? withAlpha(brandSoft, 0.24) : withAlpha(brandPrimary, 0.28),
+          netFillBottom: isDark ? withAlpha(brandSoft, 0.08) : withAlpha(brandPrimary, 0.04),
           tooltipBg: isDark ? 'rgba(12, 24, 20, 0.94)' : 'rgba(255, 255, 255, 0.96)',
-          tooltipText: isDark ? 'rgba(224, 240, 233, 0.95)' : 'rgba(23, 45, 35, 0.88)',
-          tooltipBorder: isDark ? 'rgba(134, 214, 176, 0.45)' : 'rgba(75, 150, 110, 0.35)',
-          doughnutBorder: isDark ? 'rgba(143, 240, 196, 0.35)' : 'rgba(50, 112, 86, 0.22)',
-          doughnutSegments: isDark
-            ? ['rgba(159, 235, 194, 0.92)', 'rgba(123, 209, 166, 0.9)', 'rgba(92, 182, 140, 0.86)', 'rgba(191, 241, 215, 0.9)', 'rgba(75, 150, 110, 0.92)']
-            : ['rgba(75, 150, 110, 0.9)', 'rgba(112, 181, 144, 0.85)', 'rgba(153, 206, 178, 0.82)', 'rgba(189, 223, 204, 0.8)', 'rgba(58, 125, 92, 0.88)']
+          tooltipText: isDark ? axisDark : axisLight,
+          tooltipBorder: isDark ? withAlpha(brandSoft, 0.45) : withAlpha(brandPrimary, 0.35),
+          doughnutBorder: isDark ? withAlpha(brandSoft, 0.35) : withAlpha(brandAccent, 0.22),
+          doughnutSegments: (isDark ? doughnutDarks : doughnutLights).map((hex, idx) => withAlpha(hex, (isDark ? darkAlphas : lightAlphas)[idx] || 0.85))
         };
       };
 
-      window.registerChartTheme = function(chart, apply) {
-        if (!chart || typeof apply !== 'function') return;
-        registry.push(() => {
-          if (!chart || chart._destroyed || !chart.canvas || !chart.canvas.isConnected) {
-            return false;
-          }
-          apply(chart);
-          chart.update('none');
-          return true;
-        });
+      window.registerChartTheme = function(key, reinitializer) {
+        if (!key || typeof reinitializer !== 'function') return;
+        registry.set(key, reinitializer);
       };
+
+      function reinitializeCharts() {
+        for (const [key, fn] of registry.entries()) {
+          try {
+            const result = fn();
+            if (result === false || result == null) {
+              registry.delete(key);
+            }
+          } catch (error) {
+            console.error(error);
+            registry.delete(key);
+          }
+        }
+      }
 
       window.updateChartGlobals = function() {
         if (!window.Chart) return;
         const palette = window.getChartPalette();
+        const tokens = getTokens();
+        const typography = tokens.typography || {};
+        const fontStack = Array.isArray(typography.fontStack) ? typography.fontStack.join(', ') : (typography.fontFamily || 'IBM Plex Sans, sans-serif');
         Chart.defaults.color = palette.axis;
         Chart.defaults.borderColor = palette.grid;
-        Chart.defaults.font.family = getComputedStyle(document.body || document.documentElement).fontFamily || 'IBM Plex Sans, sans-serif';
+        Chart.defaults.font.family = fontStack;
         Chart.defaults.font.weight = '500';
       };
 
       document.addEventListener('themechange', () => {
         window.updateChartGlobals();
-        cleanupAndRun();
+        reinitializeCharts();
       });
 
       document.addEventListener('DOMContentLoaded', () => {
         window.updateChartGlobals();
-        cleanupAndRun();
+        reinitializeCharts();
       });
+    })();
+  </script>
+  <script>
+    (function(){
+      const state = { count: 0 };
+
+      const updateBody = () => {
+        const body = document.body;
+        if (!body) return;
+        if (state.count > 0) {
+          body.classList.add('overlay-open');
+        } else {
+          body.classList.remove('overlay-open');
+        }
+      };
+
+      const openOverlay = (dialog) => {
+        if (dialog) {
+          if (dialog.__mmOverlayActive) return;
+          dialog.__mmOverlayActive = true;
+        }
+        state.count += 1;
+        updateBody();
+      };
+
+      const closeOverlay = (dialog) => {
+        if (dialog) {
+          if (!dialog.__mmOverlayActive) return;
+          dialog.__mmOverlayActive = false;
+        }
+        state.count = Math.max(0, state.count - 1);
+        updateBody();
+      };
+
+      window.MyMoneyMapOverlay = {
+        open: () => openOverlay(),
+        close: () => closeOverlay()
+      };
+
+      const trackDialog = (dialog) => {
+        if (!(dialog instanceof HTMLDialogElement) || dialog.__mmOverlayTracked) return;
+        dialog.__mmOverlayTracked = true;
+        dialog.addEventListener('close', () => closeOverlay(dialog));
+        dialog.addEventListener('cancel', () => closeOverlay(dialog));
+        const observer = new MutationObserver((mutations) => {
+          mutations.forEach((mutation) => {
+            if (mutation.attributeName === 'open') {
+              if (dialog.hasAttribute('open')) {
+                openOverlay(dialog);
+              } else {
+                closeOverlay(dialog);
+              }
+            }
+          });
+        });
+        observer.observe(dialog, { attributes: true, attributeFilter: ['open'] });
+        if (dialog.hasAttribute('open')) {
+          openOverlay(dialog);
+        }
+      };
+
+      document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('dialog').forEach(trackDialog);
+        if (document.body) {
+          const watcher = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+              mutation.addedNodes && mutation.addedNodes.forEach((node) => {
+                if (node instanceof HTMLDialogElement) {
+                  trackDialog(node);
+                }
+              });
+            });
+          });
+          watcher.observe(document.body, { childList: true, subtree: true });
+        }
+      });
+
+      if (typeof HTMLDialogElement !== 'undefined') {
+        ['show', 'showModal'].forEach((method) => {
+          const original = HTMLDialogElement.prototype[method];
+          if (typeof original !== 'function') return;
+          HTMLDialogElement.prototype[method] = function() {
+            openOverlay(this);
+            return original.apply(this, arguments);
+          };
+        });
+        const originalClose = HTMLDialogElement.prototype.close;
+        if (typeof originalClose === 'function') {
+          HTMLDialogElement.prototype.close = function() {
+            const result = originalClose.apply(this, arguments);
+            closeOverlay(this);
+            return result;
+          };
+        }
+      }
     })();
   </script>
   <style>[x-cloak]{display:none!important}</style>

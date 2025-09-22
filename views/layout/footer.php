@@ -1,20 +1,29 @@
 </main>
   <script>
-    // Simple helper for charts (called by pages)
-    window.renderLineChart = (id, labels, data) => {
-      const ctx = document.getElementById(id);
-      if (!ctx || typeof Chart === 'undefined') return;
+    const mmChartStore = window.__mmChartStore = window.__mmChartStore || new Map();
+
+    function mmBuildLineChart(id, labels, dataset) {
+      const canvas = document.getElementById(id);
+      if (!canvas || typeof Chart === 'undefined') {
+        mmChartStore.delete(id);
+        return false;
+      }
+
+      const existing = mmChartStore.get(id);
+      if (existing && existing.chart) {
+        existing.chart.destroy();
+      }
 
       window.updateChartGlobals && window.updateChartGlobals();
       const palette = window.getChartPalette ? window.getChartPalette() : {};
 
-      const chart = new Chart(ctx, {
+      const chart = new Chart(canvas, {
         type: 'line',
         data: {
           labels,
           datasets: [{
             label: '<?= addslashes(__('Amount')) ?>',
-            data,
+            data: dataset,
             tension: 0.35,
             fill: true,
             borderWidth: 2,
@@ -31,9 +40,7 @@
           maintainAspectRatio: false,
           plugins: {
             legend: {
-              labels: {
-                color: palette.axis || '#2f443a'
-              }
+              labels: { color: palette.axis || '#2f443a' }
             },
             tooltip: {
               backgroundColor: palette.tooltipBg || 'rgba(255,255,255,0.96)',
@@ -56,48 +63,50 @@
         }
       });
 
-      const applyTheme = (instance) => {
-        if (!window.getChartPalette) return;
-        const pal = window.getChartPalette();
-        const ds = instance.data.datasets[0];
-        ds.borderColor = pal.netLine;
-        ds.backgroundColor = pal.netFillTop;
-        ds.pointBackgroundColor = pal.netLine;
-        ds.pointBorderColor = pal.netLine;
-        instance.options.plugins.legend.labels.color = pal.axis;
-        instance.options.plugins.tooltip.backgroundColor = pal.tooltipBg;
-        instance.options.plugins.tooltip.borderColor = pal.tooltipBorder;
-        instance.options.plugins.tooltip.titleColor = pal.tooltipText;
-        instance.options.plugins.tooltip.bodyColor = pal.tooltipText;
-        instance.options.scales.x.ticks.color = pal.axis;
-        instance.options.scales.y.ticks.color = pal.axis;
-        instance.options.scales.x.grid.color = pal.grid;
-        instance.options.scales.y.grid.color = pal.grid;
-      };
+      mmChartStore.set(id, { chart, type: 'line', labels, dataset });
+      return chart;
+    }
 
-      applyTheme(chart);
-      chart.update('none');
-      window.registerChartTheme && window.registerChartTheme(chart, applyTheme);
+    window.renderLineChart = (id, labels, data) => {
+      const chart = mmBuildLineChart(id, labels, data);
+      const key = `chart:${id}`;
+      if (window.registerChartTheme) {
+        window.registerChartTheme(key, () => {
+          const entry = mmChartStore.get(id);
+          if (!entry) return false;
+          return mmBuildLineChart(id, entry.labels, entry.dataset);
+        });
+      }
+      return chart;
     };
-    window.renderDoughnut = (id, labels, data) => {
-      const ctx = document.getElementById(id);
-      if (!ctx || typeof Chart === 'undefined') return;
+
+    function mmBuildDoughnutChart(id, labels, values) {
+      const canvas = document.getElementById(id);
+      if (!canvas || typeof Chart === 'undefined') {
+        mmChartStore.delete(id);
+        return false;
+      }
+
+      const existing = mmChartStore.get(id);
+      if (existing && existing.chart) {
+        existing.chart.destroy();
+      }
 
       window.updateChartGlobals && window.updateChartGlobals();
       const palette = window.getChartPalette ? window.getChartPalette() : {};
-      const makeSegments = (pal) => {
+      const segments = (pal) => {
         const base = (pal && pal.doughnutSegments) || [];
-        return data.map((_, idx) => base[idx % base.length] || 'rgba(75,150,110,0.8)');
+        return values.map((_, idx) => base[idx % base.length] || '#4b966e');
       };
 
-      const chart = new Chart(ctx, {
+      const chart = new Chart(canvas, {
         type: 'doughnut',
         data: {
           labels,
           datasets: [{
-            data,
-            backgroundColor: makeSegments(palette),
-            borderColor: palette.doughnutBorder || 'rgba(75,150,110,0.28)',
+            data: values,
+            backgroundColor: segments(palette),
+            borderColor: palette.doughnutBorder || '#4b966e33',
             borderWidth: 2
           }]
         },
@@ -108,9 +117,7 @@
           plugins: {
             legend: {
               position: 'bottom',
-              labels: {
-                color: palette.axis || '#2f443a'
-              }
+              labels: { color: palette.axis || '#2f443a' }
             },
             tooltip: {
               backgroundColor: palette.tooltipBg || 'rgba(255,255,255,0.96)',
@@ -123,21 +130,21 @@
         }
       });
 
-      const applyTheme = (instance) => {
-        if (!window.getChartPalette) return;
-        const pal = window.getChartPalette();
-        instance.data.datasets[0].backgroundColor = makeSegments(pal);
-        instance.data.datasets[0].borderColor = pal.doughnutBorder;
-        instance.options.plugins.legend.labels.color = pal.axis;
-        instance.options.plugins.tooltip.backgroundColor = pal.tooltipBg;
-        instance.options.plugins.tooltip.borderColor = pal.tooltipBorder;
-        instance.options.plugins.tooltip.titleColor = pal.tooltipText;
-        instance.options.plugins.tooltip.bodyColor = pal.tooltipText;
-      };
+      mmChartStore.set(id, { chart, type: 'doughnut', labels, dataset: values });
+      return chart;
+    }
 
-      applyTheme(chart);
-      chart.update('none');
-      window.registerChartTheme && window.registerChartTheme(chart, applyTheme);
+    window.renderDoughnut = (id, labels, data) => {
+      const chart = mmBuildDoughnutChart(id, labels, data);
+      const key = `chart:${id}`;
+      if (window.registerChartTheme) {
+        window.registerChartTheme(key, () => {
+          const entry = mmChartStore.get(id);
+          if (!entry) return false;
+          return mmBuildDoughnutChart(id, entry.labels, entry.dataset);
+        });
+      }
+      return chart;
     };
   </script>
 
