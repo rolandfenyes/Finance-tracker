@@ -10,7 +10,7 @@
     return $str ? ('?'.$str) : '';
   };
   // $ymPrev, $ymNext, $ymThis, $y, $m already computed in controller
-  $ymLabel = date('F Y', strtotime(sprintf('%04d-%02d-01', $y, $m)));
+  $ymLabel = format_month_year(sprintf('%04d-%02d-01', $y, $m));
 ?>
 <section class="mb-4">
   <div class="rounded-3xl bg-white/80 backdrop-blur border border-gray-200 shadow-sm p-3">
@@ -19,7 +19,7 @@
       <!-- Prev -->
       <a href="<?= htmlspecialchars($currentPath . $qs_clean(['ym' => $ymPrev])) ?>"
          class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-gray-200 hover:bg-gray-50 transition"
-         aria-label="Previous month">
+         aria-label="<?= __('Previous month') ?>">
         <i data-lucide="chevron-left" class="w-5 h-5"></i>
       </a>
 
@@ -50,7 +50,7 @@
       <!-- Next -->
       <a href="<?= htmlspecialchars($currentPath . $qs_clean(['ym' => $ymNext])) ?>"
          class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-gray-200 hover:bg-gray-50 transition"
-         aria-label="Next month">
+         aria-label="<?= __('Next month') ?>">
         <i data-lucide="chevron-right" class="w-5 h-5"></i>
       </a>
 
@@ -59,7 +59,7 @@
         <!-- mobile: icon -->
         <a href="<?= htmlspecialchars($currentPath . $qs_clean(['ym' => $ymThis])) ?>"
            class="sm:hidden inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-gray-200 hover:bg-gray-50 transition"
-           aria-label="This month">
+           aria-label="<?= __('This month') ?>">
           <i data-lucide="calendar-clock" class="w-5 h-5"></i>
         </a>
 
@@ -67,13 +67,13 @@
         <a href="<?= htmlspecialchars($currentPath . $qs_clean(['ym' => $ymThis])) ?>"
            class="hidden sm:inline-flex items-center gap-2 rounded-2xl bg-gray-900 text-white px-4 py-2.5 shadow-sm hover:opacity-90 transition">
           <i data-lucide="calendar-clock" class="w-4 h-4"></i>
-          This month
+          <?= __('This month') ?>
         </a>
       </div>
     </div>
 
     <div class="px-1 pt-3 text-sm text-gray-500">
-      Viewing <span class="font-medium text-gray-700"><?= htmlspecialchars($ymLabel) ?></span>
+      <?= __('Viewing') ?> <span class="font-medium text-gray-700"><?= htmlspecialchars($ymLabel) ?></span>
     </div>
   </div>
 </section>
@@ -122,12 +122,12 @@
 <section class="grid md:grid-cols-3 gap-4">
   <!-- Summary -->
   <div class="bg-white rounded-2xl p-6 shadow-glass">
-    <h2 class="text-lg font-semibold mb-4">Monthly Summary</h2>
+    <h2 class="text-lg font-semibold mb-4"><?= __('Monthly Summary') ?></h2>
 
     <!-- Net focus -->
     <?php $net = $sumIn_main - $sumOut_main; ?>
     <div class="text-center mb-6">
-      <div class="text-sm text-gray-500">Net (<?= htmlspecialchars($main) ?>)</div>
+      <div class="text-sm text-gray-500"><?= __('Net') ?> (<?= htmlspecialchars($main) ?>)</div>
       <div class="text-3xl font-bold <?= $net>=0 ? 'text-green-600' : 'text-red-600' ?>">
         <?= moneyfmt($net, $main) ?>
       </div>
@@ -136,11 +136,11 @@
     <!-- Income vs Spending -->
     <div class="grid grid-cols-2 gap-4 text-sm">
       <div class="p-3 rounded-xl bg-green-50 text-green-700 text-center">
-        <div class="font-medium">Income</div>
+        <div class="font-medium"><?= __('Income') ?></div>
         <div class="text-md font-semibold"><?= moneyfmt($sumIn_main, $main) ?></div>
       </div>
       <div class="p-3 rounded-xl bg-red-50 text-red-700 text-center">
-        <div class="font-medium">Spending</div>
+        <div class="font-medium"><?= __('Spending') ?></div>
         <div class="text-md font-semibold"><?= moneyfmt($sumOut_main, $main) ?></div>
       </div>
     </div>
@@ -148,7 +148,7 @@
     <!-- Native breakdown -->
     <div class="mt-6 text-xs text-gray-500 space-y-1">
       <div>
-        <span class="font-medium text-gray-600">Native income:</span>
+        <span class="font-medium text-gray-600"><?= __('Native income:') ?></span>
         <?php if (!empty($sumIn_native_by_cur)): ?>
           <?php foreach ($sumIn_native_by_cur as $c=>$a): ?>
             <span class="inline-block mr-2"><?= moneyfmt($a, $c) ?></span>
@@ -156,7 +156,7 @@
         <?php else: ?>0.00<?php endif; ?>
       </div>
       <div>
-        <span class="font-medium text-gray-600">Native spending:</span>
+        <span class="font-medium text-gray-600"><?= __('Native spending:') ?></span>
         <?php if (!empty($sumOut_native_by_cur)): ?>
           <?php foreach ($sumOut_native_by_cur as $c=>$a): ?>
             <span class="inline-block mr-2"><?= moneyfmt($a, $c) ?></span>
@@ -169,14 +169,13 @@
   <!-- Cashflow Guidance -->
   <section class="bg-white rounded-2xl p-5 shadow-glass md:col-span-2">
     <div class="flex items-center justify-between">
-      <h3 class="font-semibold">Cashflow Guidance</h3>
-      <div class="text-xs text-gray-500">Budgets are based on your cashflow rules & this month’s income.</div>
+      <h3 class="font-semibold"><?= __('Cashflow Guidance') ?></h3>
+      <div class="text-xs text-gray-500"><?= __('Budgets are based on your cashflow rules & this month’s income.') ?></div>
     </div>
 
     <?php if (empty($ruleGuides)): ?>
       <p class="text-sm text-gray-500 mt-2">
-        No cashflow rules yet. Set them up in <a class="text-accent" href="/settings/cashflow">Settings → Cashflow</a>
-        to get category-by-category guidance.
+        <?= __('No cashflow rules yet. Set them up in <a class="text-accent" href="/settings/cashflow">Settings → Cashflow</a> to get category-by-category guidance.') ?>
       </p>
     <?php else: ?>
       <div class="mt-4 grid md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -189,8 +188,8 @@
               <span class="chip"><?= (float)$rg['percent'] ?>%</span>
             </div>
             <div class="mt-2 text-xs text-gray-600">
-              Budget: <span class="font-medium"><?= moneyfmt($rg['budget'], $main) ?></span>
-              · Spent: <span class="font-medium"><?= moneyfmt($rg['spent'], $main) ?></span>
+              <?= __('Budget:') ?> <span class="font-medium"><?= moneyfmt($rg['budget'], $main) ?></span>
+              · <?= __('Spent:') ?> <span class="font-medium"><?= moneyfmt($rg['spent'], $main) ?></span>
             </div>
 
             <div class="mt-2 h-2 rounded-full bg-gray-100">
@@ -199,11 +198,11 @@
 
             <div class="mt-2 text-sm">
               <?php if ($rg['spent'] <= $rg['budget']): ?>
-                <span class="text-emerald-700">Remaining:</span>
+                <span class="text-emerald-700"><?= __('Remaining:') ?></span>
                 <span class="font-medium"><?= moneyfmt($rg['remaining'], $main) ?></span>
               <?php else: ?>
                 <?php $over = $rg['spent'] - $rg['budget']; ?>
-                <span class="text-red-700">Over by:</span>
+                <span class="text-red-700"><?= __('Over by:') ?></span>
                 <span class="font-medium"><?= moneyfmt($over, $main) ?></span>
               <?php endif; ?>
             </div>
@@ -226,9 +225,9 @@
                       <span class="truncate"><?= htmlspecialchars($c['label']) ?></span>
                     </div>
                     <?php if ($over <= 0): ?>
-                      <span class="text-emerald-700">left <?= moneyfmt($rem, $main) ?></span>
+                      <span class="text-emerald-700"><?= __('left') ?> <?= moneyfmt($rem, $main) ?></span>
                     <?php else: ?>
-                      <span class="text-red-700">over <?= moneyfmt($over, $main) ?></span>
+                      <span class="text-red-700"><?= __('over') ?> <?= moneyfmt($over, $main) ?></span>
                     <?php endif; ?>
                   </div>
                 <?php endforeach; ?>
@@ -245,7 +244,7 @@
 <section class="mt-6 grid md:grid-cols-2 gap-6">
   <!-- A) Cumulative Net Cashflow (area line) -->
   <div class="bg-white rounded-2xl p-5 shadow-glass h-80">
-    <h3 class="font-semibold mb-3">Cumulative Net (<?= htmlspecialchars($main) ?>)</h3>
+    <h3 class="font-semibold mb-3"><?= __('Cumulative Net (:currency)', ['currency' => htmlspecialchars($main)]) ?></h3>
     <?php
       // Prepare day list for the month
       $cursor = new DateTime($first);
@@ -300,7 +299,8 @@
 
       const allZero = arr => arr.every(v => Math.abs(v) < 1e-9);
       if (!labels.length || (allZero(income) && allZero(spend))) {
-        el.parentElement.innerHTML = '<div class="text-sm text-gray-500">No activity this month.</div>';
+        const emptyHtml = <?= json_encode('<div class="text-sm text-gray-500">'.__('No activity this month.').'</div>') ?>;
+        el.parentElement.innerHTML = emptyHtml;
         return;
       }
 
@@ -314,10 +314,10 @@
           data: {
             labels,
             datasets: [
-              { type:'bar', label:'Income',  data:income, borderWidth:0 },
-              { type:'bar', label:'Spending', data:spend,  borderWidth:0 },
+              { type:'bar', label:<?= json_encode(__('Income')) ?>,  data:income, borderWidth:0 },
+              { type:'bar', label:<?= json_encode(__('Spending')) ?>, data:spend,  borderWidth:0 },
               {
-                type:'line', label:'Cumulative Net', data:cum,
+                type:'line', label:<?= json_encode(__('Cumulative Net')) ?>, data:cum,
                 borderWidth:2, tension:0.25, pointRadius:0, fill:true, backgroundColor:gradient
               }
             ]
@@ -351,7 +351,7 @@
 
   <!-- B) Top Spending Categories (horizontal bars) -->
   <div class="bg-white rounded-2xl p-5 shadow-glass h-80 overflow-hidden">
-    <h3 class="font-semibold mb-3">Top Spending Categories (<?= htmlspecialchars($main) ?>)</h3>
+    <h3 class="font-semibold mb-3"><?= __('Top Spending Categories (:currency)', ['currency' => htmlspecialchars($main)]) ?></h3>
     <?php
       // Build grouped sums from $allTx in MAIN (spending only)
       $grp = []; $cols = [];
@@ -365,7 +365,7 @@
         }
         if ($amtMain <= 0) continue;
 
-        $label = $r['cat_label'] ?? 'Uncategorized';
+        $label = $r['cat_label'] ?? __('Uncategorized');
         $color = $r['cat_color'] ?? '#6B7280';
         $grp[$label] = ($grp[$label] ?? 0) + $amtMain;
         if (!isset($cols[$label])) $cols[$label] = $color;
@@ -384,7 +384,7 @@
 
         $other = array_sum(array_slice($dataAll, $topN));
         if ($other > 0) {
-          $labels[] = 'Other';
+          $labels[] = __('Other');
           $data[]   = $other;
           $colors[] = '#D1D5DB';
         }
@@ -405,7 +405,8 @@
         const colors = <?= json_encode($colors) ?>;
 
         if (!labels.length) {
-          el.outerHTML = '<div class="text-sm text-gray-500">No spending this month.</div>';
+          const emptyHtml = <?= json_encode('<div class="text-sm text-gray-500">'.__('No spending this month.').'</div>') ?>;
+          el.outerHTML = emptyHtml;
           return;
         }
 
@@ -447,7 +448,7 @@
 <!-- Add transaction -->
 <section class="mt-6 grid md:grid-cols-2 gap-6">
   <div class="bg-white rounded-2xl p-5 shadow-glass md:col-span-2">
-    <h3 class="text-base font-semibold mb-3">Quick Add</h3>
+    <h3 class="text-base font-semibold mb-3"><?= __('Quick Add') ?></h3>
 
     <form class="grid gap-4 md:grid-cols-12 md:items-end" method="post" action="/months/tx/add">
       <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
@@ -456,7 +457,7 @@
 
       <!-- Type -->
       <div class="field md:col-span-2">
-        <label class="label">Type</label>
+        <label class="label"><?= __('Type') ?></label>
         <select name="kind" class="select">
           <option value="income">Income</option>
           <option value="spending">Spending</option>
@@ -465,7 +466,7 @@
 
       <!-- Category -->
       <div class="field md:col-span-3">
-        <label class="label">Category</label>
+        <label class="label"><?= __('Category') ?></label>
         <select name="category_id" class="select">
           <option value="">— Category —</option>
           <?php foreach($cats as $c): ?>
@@ -476,7 +477,7 @@
 
       <!-- Amount + Currency -->
       <div class="field md:col-span-4">
-        <label class="label">Amount</label>
+        <label class="label"><?= __('Amount') ?></label>
         <div class="grid grid-cols-5 gap-2">
           <input name="amount" type="number" step="0.01" class="input col-span-3" placeholder="0.00" required />
           <select name="currency" class="select col-span-2">
@@ -494,7 +495,7 @@
 
       <!-- Date -->
       <div class="field md:col-span-2">
-        <label class="label">Date</label>
+        <label class="label"><?= __('Date') ?></label>
         <!-- <input name="occurred_on" type="date" value="<?= $ym ?>-01" class="input" /> -->
          <input name="occurred_on" type="date" value="<?= date('Y-m-d') ?>" class="input" />
 
@@ -502,13 +503,13 @@
 
       <!-- Note -->
       <div class="field md:col-span-8">
-        <label class="label">Note <span class="help">(optional)</span></label>
-        <input name="note" class="input" placeholder="Add a short note…" />
+        <label class="label"><?= __('Note') ?> <span class="help">(optional)</span></label>
+        <input name="note" class="input" placeholder="<?= __('Add a short note…') ?>" />
       </div>
 
       <!-- Submit -->
       <div class="md:col-span-4 flex md:justify-end">
-        <button class="btn btn-primary w-full md:w-auto">Add</button>
+        <button class="btn btn-primary w-full md:w-auto"><?= __('Add') ?></button>
       </div>
     </form>
   </div>
@@ -516,7 +517,7 @@
 
 <!-- Transactions -->
 <section class="mt-6 bg-white rounded-2xl p-5 shadow-glass">
-  <h3 class="font-semibold mb-3">Transactions</h3>
+  <h3 class="font-semibold mb-3"><?= __('Transactions') ?></h3>
 
   <!-- Mobile: stacked cards -->
   <div class="md:hidden space-y-3">
@@ -538,6 +539,14 @@
           }
         }
         $dot = $row['cat_color'] ?? '#6B7280';
+        $kindLabel = $row['kind'];
+        if ($row['kind'] === 'income') {
+          $kindLabel = __('Income');
+        } elseif ($row['kind'] === 'spending') {
+          $kindLabel = __('Spending');
+        } else {
+          $kindLabel = __($row['kind']);
+        }
       ?>
       <div class="rounded-xl border p-3 <?= $isVirtual ? 'opacity-95' : '' ?>">
         <div class="flex items-start justify-between gap-3">
@@ -545,12 +554,12 @@
             <div class="flex items-center gap-2 text-sm">
               <span class="font-medium"><?= htmlspecialchars($row['occurred_on']) ?></span>
               <?php if ($isVirtual): ?>
-                <span class="text-[11px] text-gray-500">🔒 auto</span>
+                <span class="text-[11px] text-gray-500">🔒 <?= __('Auto-generated') ?></span>
               <?php endif; ?>
             </div>
             <div class="mt-1 flex items-center gap-2">
               <span class="capitalize text-xs px-2 py-0.5 rounded-full border">
-                <?= htmlspecialchars($row['kind']) ?>
+                <?= htmlspecialchars($kindLabel) ?>
               </span>
               <span class="inline-flex items-center gap-2 text-sm">
                 <span class="inline-block h-2.5 w-2.5 rounded-full" style="background-color: <?= htmlspecialchars($dot) ?>;"></span>
@@ -563,7 +572,7 @@
             $sameCur = strtoupper($nativeCur) === strtoupper($mainCur);
           ?>
           <div class="text-right shrink-0">
-            <div class="text-[13px] text-gray-500">Native</div>
+            <div class="text-[13px] text-gray-500"><?= __('Native') ?></div>
             <div class="font-medium"><?= moneyfmt($row['amount'], $nativeCur) ?></div>
 
             <?php if (!$sameCur): ?>
@@ -582,7 +591,7 @@
           <?php if (!$isVirtual): ?>
             <details class="group">
               <summary class="btn btn-ghost cursor-pointer">
-                <i data-lucide="edit-3" class="w-4 h-4"></i> Edit
+                <i data-lucide="edit-3" class="w-4 h-4"></i> <?= __('Edit') ?>
               </summary>
               <div class="mt-2 bg-gray-50 rounded-xl p-3 border">
                 <form class="grid gap-2 sm:grid-cols-6 items-end" method="post" action="/months/tx/edit">
@@ -592,8 +601,8 @@
                   <input type="hidden" name="id" value="<?= $row['id'] ?>" />
 
                   <select name="kind" class="select">
-                    <option <?= $row['kind']==='income'?'selected':'' ?> value="income">Income</option>
-                    <option <?= $row['kind']==='spending'?'selected':'' ?> value="spending">Spending</option>
+                    <option <?= $row['kind']==='income'?'selected':'' ?> value="income"><?= __('Income') ?></option>
+                    <option <?= $row['kind']==='spending'?'selected':'' ?> value="spending"><?= __('Spending') ?></option>
                   </select>
 
                   <input name="amount" type="number" step="0.01" value="<?= $row['amount'] ?>" class="input" required />
@@ -609,22 +618,22 @@
 
                   <input name="occurred_on" type="date" value="<?= $row['occurred_on'] ?>" class="input" />
                   <input name="note" value="<?= htmlspecialchars($row['note'] ?? '') ?>" class="input" />
-                  <button class="btn btn-primary">Save</button>
+                  <button class="btn btn-primary"><?= __('Save') ?></button>
                 </form>
 
-                <form class="mt-2" method="post" action="/months/tx/delete" onsubmit="return confirm('Delete transaction?')">
+                <form class="mt-2" method="post" action="/months/tx/delete" onsubmit="return confirm('<?= addslashes(__('Delete transaction?')) ?>')">
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                   <input type="hidden" name="y" value="<?= $y ?>" />
                   <input type="hidden" name="m" value="<?= $m ?>" />
                   <input type="hidden" name="id" value="<?= $row['id'] ?>" />
                   <button class="btn btn-danger">
-                    <i data-lucide="trash-2" class="w-4 h-4"></i> Remove
+                    <i data-lucide="trash-2" class="w-4 h-4"></i> <?= __('Remove') ?>
                   </button>
                 </form>
               </div>
             </details>
           <?php else: ?>
-            <span class="text-xs text-gray-400">Auto-generated</span>
+            <span class="text-xs text-gray-400"><?= __('Auto-generated') ?></span>
           <?php endif; ?>
         </div>
       </div>
@@ -640,7 +649,7 @@
             data-next="<?= (int)$page + 1 ?>"
             data-last="<?= (int)$totalPages ?>"
             data-url="<?= htmlspecialchars($listUrl) ?>">
-      Load more
+      <?= __('Load more') ?>
     </button>
   </div>
 
@@ -656,7 +665,9 @@
     if (next>last) btn.style.display='none';
 
     btn.addEventListener('click', async ()=>{
-      btn.disabled = true; btn.textContent = 'Loading…';
+      const loadingLabel = '<?= addslashes(__('Loading…')) ?>';
+      const moreLabel = '<?= addslashes(__('Load more')) ?>';
+      btn.disabled = true; btn.textContent = loadingLabel;
       const url = baseUrl.replace(/([?&])page=\d+/,'$1page='+next) + (baseUrl.includes('page=') ? '' : '&page='+next);
       const res = await fetch(url, {headers:{'X-Requested-With':'fetch'}});
       const html = await res.text();
@@ -664,7 +675,7 @@
       list.insertAdjacentHTML('beforeend', html);
       next++;
       if (next>last){ btn.style.display='none'; }
-      else { btn.disabled=false; btn.textContent='Load more'; btn.dataset.next = String(next); }
+      else { btn.disabled=false; btn.textContent=moreLabel; btn.dataset.next = String(next); }
     });
   })();
   </script>
@@ -675,13 +686,13 @@
     <table class="min-w-full text-sm">
       <thead>
         <tr class="text-left border-b">
-          <th class="py-2 pr-3">Date</th>
-          <th class="py-2 pr-3">Kind</th>
-          <th class="py-2 pr-3">Category</th>
-          <th class="py-2 pr-3 text-right">Amount (native)</th>
-          <th class="py-2 pr-3 text-right">Amount (<?= htmlspecialchars($main) ?>)</th>
-          <th class="py-2 pr-3">Note</th>
-          <th class="py-2 pr-3">Actions</th>
+          <th class="py-2 pr-3"><?= __('Date') ?></th>
+          <th class="py-2 pr-3"><?= __('Kind') ?></th>
+          <th class="py-2 pr-3"><?= __('Category') ?></th>
+          <th class="py-2 pr-3 text-right"><?= __('Amount (native)') ?></th>
+          <th class="py-2 pr-3 text-right"><?= __('Amount (:currency)', ['currency' => htmlspecialchars($main)]) ?></th>
+          <th class="py-2 pr-3"><?= __('Note') ?></th>
+          <th class="py-2 pr-3"><?= __('Actions') ?></th>
         </tr>
       </thead>
       <tbody>
@@ -714,7 +725,17 @@
               <?php endif; ?>
             </td>
 
-            <td class="py-2 pr-3 capitalize"><?= htmlspecialchars($row['kind']) ?></td>
+            <?php
+              $kindLabel = $row['kind'];
+              if ($row['kind'] === 'income') {
+                $kindLabel = __('Income');
+              } elseif ($row['kind'] === 'spending') {
+                $kindLabel = __('Spending');
+              } else {
+                $kindLabel = __($row['kind']);
+              }
+            ?>
+            <td class="py-2 pr-3 capitalize"><?= htmlspecialchars($kindLabel) ?></td>
 
             <td class="py-2 pr-3">
               <span class="inline-flex items-center gap-2">
@@ -723,10 +744,10 @@
                 <?= htmlspecialchars($row['cat_label'] ?? '—') ?>
               </span>
               <?php if ($isVirtual): ?>
-                <span class="text-xs text-gray-500 ml-1">(auto)</span>
+                <span class="text-xs text-gray-500 ml-1"><?= __('(auto)') ?></span>
               <?php endif; ?>
               <?php if (!$isVirtual && $isEF): ?>
-                <span class="text-xs text-emerald-600 ml-1">(Emergency Fund)</span>
+                <span class="text-xs text-emerald-600 ml-1"><?= __('(Emergency Fund)') ?></span>
               <?php endif; ?>
             </td>
 
@@ -736,17 +757,17 @@
 
             <td class="py-2 pr-3">
               <?php if (!$isVirtual && !$isLocked): ?>
-                <button type="button" class="btn btn-ghost p-2" onclick="openTxModal('tx<?= (int)$row['id'] ?>')" title="Edit">
+                <button type="button" class="btn btn-ghost p-2" onclick="openTxModal('tx<?= (int)$row['id'] ?>')" title="<?= __('Edit') ?>">
                   <i data-lucide="edit-3" class="w-4 h-4"></i>
                 </button>
 
                 <form class="inline" method="post" action="/months/tx/delete"
-                      onsubmit="return confirm('Delete transaction?')">
+                      onsubmit="return confirm('<?= addslashes(__('Delete transaction?')) ?>')">
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                   <input type="hidden" name="y" value="<?= (int)$y ?>" />
                   <input type="hidden" name="m" value="<?= (int)$m ?>" />
                   <input type="hidden" name="id" value="<?= (int)$row['id'] ?>" />
-                  <button class="btn btn-ghost text-red-600 p-2" title="Remove">
+                  <button class="btn btn-ghost text-red-600 p-2" title="<?= __('Remove') ?>">
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                   </button>
                 </form>
@@ -755,8 +776,8 @@
                 <dialog id="tx<?= $row['id'] ?>" class="rounded-2xl p-0 w-[720px] max-w-[95vw] shadow-2xl">
                   <form method="dialog" class="m-0">
                     <div class="flex items-center justify-between px-5 py-3 border-b">
-                      <div class="font-semibold">Edit Transaction — <?= htmlspecialchars($row['occurred_on']) ?></div>
-                      <button class="btn btn-ghost" value="close">Close</button>
+                      <div class="font-semibold"><?= __('Edit Transaction — :date', ['date' => htmlspecialchars($row['occurred_on'])]) ?></div>
+                      <button class="btn btn-ghost" value="close"><?= __('Close') ?></button>
                     </div>
                   </form>
 
@@ -768,20 +789,20 @@
                       <input type="hidden" name="id" value="<?= $row['id'] ?>" />
 
                       <div class="field md:col-span-3">
-                        <label class="label">Type</label>
+                        <label class="label"><?= __('Type') ?></label>
                         <select name="kind" class="select">
-                          <option <?= $row['kind']==='income'?'selected':'' ?> value="income">Income</option>
-                          <option <?= $row['kind']==='spending'?'selected':'' ?> value="spending">Spending</option>
+                          <option <?= $row['kind']==='income'?'selected':'' ?> value="income"><?= __('Income') ?></option>
+                          <option <?= $row['kind']==='spending'?'selected':'' ?> value="spending"><?= __('Spending') ?></option>
                         </select>
                       </div>
 
                       <div class="field md:col-span-3">
-                        <label class="label">Amount</label>
+                        <label class="label"><?= __('Amount') ?></label>
                         <input name="amount" type="number" step="0.01" value="<?= $row['amount'] ?>" class="input" required />
                       </div>
 
                       <div class="field md:col-span-2">
-                        <label class="label">Currency</label>
+                        <label class="label"><?= __('Currency') ?></label>
                         <select name="currency" class="select">
                           <?php foreach ($userCurrencies as $c): ?>
                             <option value="<?= htmlspecialchars($c['code']) ?>"
@@ -794,24 +815,24 @@
                       </div>
 
                       <div class="field md:col-span-4">
-                        <label class="label">Date</label>
+                        <label class="label"><?= __('Date') ?></label>
                         <input name="occurred_on" type="date" value="<?= $row['occurred_on'] ?>" class="input" />
                       </div>
 
                       <div class="field md:col-span-12">
-                        <label class="label">Note</label>
+                        <label class="label"><?= __('Note') ?></label>
                         <input name="note" value="<?= htmlspecialchars($row['note'] ?? '') ?>" class="input" />
                       </div>
 
                       <div class="md:col-span-12 flex justify-end gap-2">
-                        <button class="btn btn-primary">Save</button>
+                        <button class="btn btn-primary"><?= __('Save') ?></button>
                       </div>
                     </form>
                   </div>
                 </dialog>
               <?php else: ?>
                 <span class="text-xs text-gray-400">
-                  <?= $isVirtual ? 'Auto-generated' : ($isEF ? 'Locked (Emergency Fund)' : 'Locked') ?>
+                  <?= $isVirtual ? __('Auto-generated') : ($isEF ? __('Locked (Emergency Fund)') : __('Locked')) ?>
                 </span>
               <?php endif; ?>
             </td>
@@ -836,12 +857,12 @@
         };
     ?>
       <div class="hidden md:flex items-center justify-between mt-3 text-sm">
-        <div class="text-gray-500">Page <?= $page ?> / <?= $totalPages ?></div>
+        <div class="text-gray-500"><?= __('Page :current / :total', ['current' => $page, 'total' => $totalPages]) ?></div>
         <div class="flex gap-2">
           <a class="btn btn-ghost <?= $page<=1?'pointer-events-none opacity-40':'' ?>"
-            href="<?= $page>1 ? htmlspecialchars($mk($page-1)) : '#' ?>">Prev</a>
+            href="<?= $page>1 ? htmlspecialchars($mk($page-1)) : '#' ?>"><?= __('Prev') ?></a>
           <a class="btn btn-ghost <?= $page>=$totalPages?'pointer-events-none opacity-40':'' ?>"
-            href="<?= $page<$totalPages ? htmlspecialchars($mk($page+1)) : '#' ?>">Next</a>
+            href="<?= $page<$totalPages ? htmlspecialchars($mk($page+1)) : '#' ?>"><?= __('Next') ?></a>
         </div>
       </div>
     <?php endif; ?>

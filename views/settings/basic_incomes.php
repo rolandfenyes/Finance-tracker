@@ -1,7 +1,7 @@
 <section class="max-w-5xl mx-auto bg-white rounded-2xl p-6 shadow-glass">
   <div class="flex items-center justify-between">
-    <h1 class="text-xl font-semibold">Manage Basic Incomes</h1>
-    <a href="/settings" class="text-sm text-accent">← Back to Settings</a>
+    <h1 class="text-xl font-semibold"><?= __('Manage Basic Incomes') ?></h1>
+    <a href="/settings" class="text-sm text-accent"><?= __('← Back to Settings') ?></a>
   </div>
 
   <?php if (!empty($_SESSION['flash'])): ?>
@@ -11,24 +11,24 @@
   <div class="mt-6 grid md:grid-cols-12 gap-6">
     <!-- Left: Add / Raise -->
     <div class="md:col-span-7">
-      <h2 class="font-medium mb-3">Add income / Record a raise</h2>
+      <h2 class="font-medium mb-3"><?= __('Add income / Record a raise') ?></h2>
 
       <form method="post" action="/settings/basic-incomes/add"
             class="grid gap-3 md:grid-cols-12 items-end">
         <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
 
         <div class="md:col-span-4">
-          <label class="label">Label</label>
-          <input name="label" class="input" placeholder="e.g., Salary" required />
+          <label class="label"><?= __('Label') ?></label>
+          <input name="label" class="input" placeholder="<?= __('e.g., Salary') ?>" required />
         </div>
 
         <div class="md:col-span-2">
-          <label class="label">Amount</label>
+          <label class="label"><?= __('Amount') ?></label>
           <input name="amount" type="number" step="0.01" class="input" placeholder="0.00" required />
         </div>
 
         <div class="md:col-span-2">
-          <label class="label">Currency</label>
+          <label class="label"><?= __('Currency') ?></label>
           <select name="currency" class="select">
             <?php foreach ($currencies as $uc): ?>
               <option value="<?= htmlspecialchars($uc['code']) ?>" <?= $uc['is_main'] ? 'selected' : '' ?>>
@@ -39,14 +39,14 @@
         </div>
 
         <div class="md:col-span-2">
-          <label class="label">Valid from</label>
+          <label class="label"><?= __('Valid from') ?></label>
           <input name="valid_from" type="date" class="input" required />
         </div>
 
         <div class="md:col-span-2">
-          <label class="label">Category</label>
+          <label class="label"><?= __('Category') ?></label>
           <select name="category_id" class="select">
-            <option value="">No category</option>
+            <option value=""><?= __('No category') ?></option>
             <?php foreach ($categories as $c): ?>
               <option value="<?= (int)$c['id'] ?>"><?= htmlspecialchars($c['label']) ?></option>
             <?php endforeach; ?>
@@ -54,18 +54,18 @@
         </div>
 
         <div class="md:col-span-12 flex justify-end">
-          <button class="btn btn-primary">Add</button>
+          <button class="btn btn-primary"><?= __('Add') ?></button>
         </div>
       </form>
 
       <p class="text-xs text-gray-500 mt-2">
-        If an income with the same label exists, its previous period is automatically closed the day before the new start date.
+        <?= __('If an income with the same label exists, its previous period is automatically closed the day before the new start date.') ?>
       </p>
     </div>
 
     <!-- Right: Snapshot -->
     <aside class="md:col-span-5">
-      <h2 class="font-medium mb-3">Current snapshot</h2>
+      <h2 class="font-medium mb-3"><?= __('Current snapshot') ?></h2>
       <?php
         $latest = [];
         foreach ($rows as $r) { $lab = $r['label']; if (!isset($latest[$lab])) $latest[$lab] = $r; }
@@ -76,7 +76,7 @@
             <div class="min-w-0">
               <div class="font-medium truncate"><?= htmlspecialchars($lab) ?></div>
               <div class="text-xs text-gray-500 mt-0.5">
-                Since <?= htmlspecialchars($r['valid_from']) ?> — <?= moneyfmt($r['amount'], $r['currency']) ?>
+                <?= __('Since :date — :amount', ['date' => htmlspecialchars($r['valid_from']), 'amount' => moneyfmt($r['amount'], $r['currency'])]) ?>
               </div>
             </div>
             <?php if (!empty($r['category_id'])):
@@ -91,7 +91,7 @@
             <?php endif; endif; ?>
           </div>
         <?php endforeach; else: ?>
-          <div class="rounded-xl border p-4 text-sm text-gray-500">No basic incomes yet.</div>
+          <div class="rounded-xl border p-4 text-sm text-gray-500"><?= __('No basic incomes yet.') ?></div>
         <?php endif; ?>
       </div>
     </aside>
@@ -99,17 +99,17 @@
 
   <!-- History -->
   <div class="mt-8 overflow-x-auto">
-    <h2 class="font-medium mb-2">History</h2>
+    <h2 class="font-medium mb-2"><?= __('History') ?></h2>
     <table class="min-w-full text-sm">
       <thead>
         <tr class="text-left border-b">
-          <th class="py-2 pr-3">Label</th>
-          <th class="py-2 pr-3">Category</th>
-          <th class="py-2 pr-3">Amount</th>
-          <th class="py-2 pr-3">Currency</th>
-          <th class="py-2 pr-3">Valid From</th>
-          <th class="py-2 pr-3">Valid To</th>
-          <th class="py-2 pr-3">Actions</th>
+          <th class="py-2 pr-3"><?= __('Label') ?></th>
+          <th class="py-2 pr-3"><?= __('Category') ?></th>
+          <th class="py-2 pr-3"><?= __('Amount') ?></th>
+          <th class="py-2 pr-3"><?= __('Currency') ?></th>
+          <th class="py-2 pr-3"><?= __('Valid From') ?></th>
+          <th class="py-2 pr-3"><?= __('Valid To') ?></th>
+          <th class="py-2 pr-3"><?= __('Actions') ?></th>
         </tr>
       </thead>
       <tbody>
@@ -136,7 +136,7 @@
             <td class="py-2 pr-3"><?= htmlspecialchars($r['valid_to'] ?? '—') ?></td>
             <td class="py-2 pr-3">
               <details>
-                <summary class="cursor-pointer text-accent">Edit</summary>
+                <summary class="cursor-pointer text-accent"><?= __('Edit') ?></summary>
                 <form class="mt-2 grid sm:grid-cols-12 gap-2" method="post" action="/settings/basic-incomes/edit">
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                   <input type="hidden" name="id" value="<?= $r['id'] ?>" />
@@ -146,7 +146,7 @@
                   <input name="valid_from" type="date"  value="<?= htmlspecialchars($r['valid_from']) ?>" class="input sm:col-span-2" />
                   <input name="valid_to"   type="date"  value="<?= htmlspecialchars($r['valid_to'] ?? '') ?>" class="input sm:col-span-2" />
                   <select name="category_id" class="select sm:col-span-4">
-                    <option value="">No category</option>
+                    <option value=""><?= __('No category') ?></option>
                     <?php foreach ($categories as $c): ?>
                       <option value="<?= (int)$c['id'] ?>" <?= ((int)($r['category_id'] ?? 0)===(int)$c['id']) ? 'selected' : '' ?>>
                         <?= htmlspecialchars($c['label']) ?>
@@ -154,14 +154,14 @@
                     <?php endforeach; ?>
                   </select>
                   <div class="sm:col-span-8 flex justify-end">
-                    <button class="btn btn-primary">Save</button>
+                    <button class="btn btn-primary"><?= __('Save') ?></button>
                   </div>
                 </form>
                 <form class="mt-2" method="post" action="/settings/basic-incomes/delete"
-                      onsubmit="return confirm('Delete this record?')">
+                      onsubmit="return confirm('<?= addslashes(__('Delete this record?')) ?>')">
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                   <input type="hidden" name="id" value="<?= $r['id'] ?>" />
-                  <button class="btn btn-danger">Remove</button>
+                  <button class="btn btn-danger"><?= __('Remove') ?></button>
                 </form>
               </details>
             </td>

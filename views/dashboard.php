@@ -289,37 +289,37 @@ $totalNetLiquid = $efTotalMain + $goalsCurrentMain + $netThisMonth + $leftoverPr
 <section class="grid lg:grid-cols-4 gap-4">
   <!-- Total net liquid -->
   <div class="card lg:col-span-2">
-    <div class="card-kicker">Overview</div>
-    <h2 class="card-title mt-1">Total Net Liquid Worth</h2>
+    <div class="card-kicker"><?= __('Overview') ?></div>
+    <h2 class="card-title mt-1"><?= __('Total Net Liquid Worth') ?></h2>
     <p class="text-3xl mt-2 font-semibold"><?= moneyfmt($totalNetLiquid, $main) ?></p>
     <div class="mt-3 grid sm:grid-cols-2 gap-2 text-xs text-gray-600">
-      <div class="chip">EF: <?= moneyfmt($efTotalMain, $main) ?></div>
-      <div class="chip">Goals (now): <?= moneyfmt($goalsCurrentMain, $main) ?></div>
-      <div class="chip">This month: <?= moneyfmt($netThisMonth, $main) ?></div>
-      <div class="chip">Leftover prev.: <?= moneyfmt($leftoverPrev, $main) ?></div>
+      <div class="chip"><?= __('EF: :amount', ['amount' => moneyfmt($efTotalMain, $main)]) ?></div>
+      <div class="chip"><?= __('Goals (now): :amount', ['amount' => moneyfmt($goalsCurrentMain, $main)]) ?></div>
+      <div class="chip"><?= __('This month: :amount', ['amount' => moneyfmt($netThisMonth, $main)]) ?></div>
+      <div class="chip"><?= __('Leftover prev.: :amount', ['amount' => moneyfmt($leftoverPrev, $main)]) ?></div>
     </div>
   </div>
 
   <!-- Goals summary -->
   <div class="card">
-    <div class="card-kicker">Goals</div>
-    <h3 class="card-title mt-1">Progress</h3>
+    <div class="card-kicker"><?= __('Goals') ?></div>
+    <h3 class="card-title mt-1"><?= __('Progress') ?></h3>
     <div class="mt-3 w-full bg-gray-100 h-2 rounded">
       <div class="h-2 rounded bg-accent" style="width: <?= $goalsPct ?>%"></div>
     </div>
-    <p class="card-subtle mt-2"><?= $goalsPct ?>% across active goals</p>
-    <p class="card-subtle mt-1"><?= (int)$goalsActiveCount ?> active · <?= (int)$goalsDoneCount ?> done</p>
+    <p class="card-subtle mt-2"><?= __(':percent% across active goals', ['percent' => $goalsPct]) ?></p>
+    <p class="card-subtle mt-1"><?= __(':active active · :done done', ['active' => (int)$goalsActiveCount, 'done' => (int)$goalsDoneCount]) ?></p>
   </div>
 
   <!-- EF summary -->
   <div class="card">
-    <div class="card-kicker">Safety</div>
-    <h3 class="card-title mt-1">Emergency Fund</h3>
+    <div class="card-kicker"><?= __('Safety') ?></div>
+    <h3 class="card-title mt-1"><?= __('Emergency Fund') ?></h3>
     <div class="mt-3 w-full bg-gray-100 h-2 rounded">
       <div class="h-2 rounded bg-emerald-600" style="width: <?= $efPct ?>%"></div>
     </div>
-    <p class="card-subtle mt-2"><?= $efPct ?>% of target<?= $efTarget>0 ? ' ('.moneyfmt($efTarget, $efCur).')':'' ?></p>
-    <p class="card-subtle mt-1">Current: <?= moneyfmt($efTotal, $efCur) ?><?= strtoupper($efCur)!==strtoupper($main)?' · ≈ '.moneyfmt($efTotalMain,$main):'' ?></p>
+    <p class="card-subtle mt-2"><?= __(':percent% of target', ['percent' => $efPct]) ?><?= $efTarget>0 ? ' ('.moneyfmt($efTarget, $efCur).')':'' ?></p>
+    <p class="card-subtle mt-1"><?= __('Current: :amount', ['amount' => moneyfmt($efTotal, $efCur)]) ?><?= strtoupper($efCur)!==strtoupper($main)?' · ≈ '.moneyfmt($efTotalMain,$main):'' ?></p>
   </div>
 </section>
 
@@ -327,26 +327,26 @@ $totalNetLiquid = $efTotalMain + $goalsCurrentMain + $netThisMonth + $leftoverPr
   <!-- Current month stats -->
   <div class="card lg:col-span-2">
     <div class="flex items-center justify-between">
-      <h3 class="font-semibold">Current Month</h3>
-      <span class="chip"><?= date('F Y') ?></span>
+      <h3 class="font-semibold"><?= __('Current Month') ?></h3>
+      <span class="chip"><?= format_month_year() ?></span>
     </div>
     <div class="mt-3 grid sm:grid-cols-3 gap-3">
       <div class="tile">
-        <div class="text-xs text-gray-500">Income</div>
+        <div class="text-xs text-gray-500"><?= __('Income') ?></div>
         <div class="text-xl font-semibold mt-1"><?= moneyfmt($sumIn, $main) ?></div>
       </div>
       <div class="tile">
-        <div class="text-xs text-gray-500">Spending</div>
+        <div class="text-xs text-gray-500"><?= __('Spending') ?></div>
         <div class="text-xl font-semibold mt-1"><?= moneyfmt($sumOut, $main) ?></div>
       </div>
       <div class="tile">
-        <div class="text-xs text-gray-500">Net</div>
+        <div class="text-xs text-gray-500"><?= __('Net') ?></div>
         <div class="text-xl font-semibold mt-1"><?= moneyfmt($netThisMonth, $main) ?></div>
       </div>
     </div>
     <?php if ($topCats): ?>
       <div class="mt-4">
-        <div class="text-xs text-gray-500 mb-2">Top spending categories</div>
+        <div class="text-xs text-gray-500 mb-2"><?= __('Top spending categories') ?></div>
         <ul class="grid sm:grid-cols-2 gap-2 text-sm">
           <?php foreach($topCats as $lbl=>$amt): ?>
             <li class="flex items-center justify-between p-2 rounded-lg border">
@@ -361,13 +361,17 @@ $totalNetLiquid = $efTotalMain + $goalsCurrentMain + $netThisMonth + $leftoverPr
 
   <!-- Loans summary -->
   <div class="card">
-    <div class="card-kicker">Loans</div>
-    <h3 class="card-title mt-1">Progress</h3>
+    <div class="card-kicker"><?= __('Loans') ?></div>
+    <h3 class="card-title mt-1"><?= __('Progress') ?></h3>
     <div class="mt-3 w-full bg-gray-100 h-2 rounded">
       <div class="h-2 rounded bg-indigo-600" style="width: <?= $loansPct ?>%"></div>
     </div>
-    <p class="card-subtle mt-2"><?= $loansPct ?>% paid</p>
-    <p class="card-subtle mt-1">Paid: <?= moneyfmt($loanPaidMain, $main) ?> · Balance: <?= moneyfmt($loanBalMain, $main) ?></p>
+    <p class="card-subtle mt-2"><?= __(':percent% paid', ['percent' => $loansPct]) ?></p>
+    <p class="card-subtle mt-1">
+      <?= __('Paid: :amount', ['amount' => moneyfmt($loanPaidMain, $main)]) ?>
+      ·
+      <?= __('Balance: :amount', ['amount' => moneyfmt($loanBalMain, $main)]) ?>
+    </p>
   </div>
 
 </section>

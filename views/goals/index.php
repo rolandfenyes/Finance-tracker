@@ -1,23 +1,23 @@
 <section class="bg-white rounded-2xl p-5 shadow-glass">
-  <h1 class="text-xl font-semibold">Goals</h1>
+  <h1 class="text-xl font-semibold"><?= __('Goals') ?></h1>
   <?php if (!empty($_SESSION['flash'])): ?>
     <p class="mt-2 text-sm text-emerald-700"><?= $_SESSION['flash']; unset($_SESSION['flash']); ?></p>
   <?php endif; ?>
 
   <details class="mt-4">
-    <summary class="cursor-pointer text-accent">Add goal</summary>
+    <summary class="cursor-pointer text-accent"><?= __('Add goal') ?></summary>
     <form class="mt-3 grid sm:grid-cols-12 gap-3" method="post" action="/goals/add">
       <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
       <div class="sm:col-span-5">
-        <label class="label">Title</label>
-        <input name="title" class="input" placeholder="e.g., New laptop" required />
+        <label class="label"><?= __('Title') ?></label>
+        <input name="title" class="input" placeholder="<?= __('e.g., New laptop') ?>" required />
       </div>
       <div class="sm:col-span-3">
-        <label class="label">Target</label>
+        <label class="label"><?= __('Target') ?></label>
         <input name="target_amount" type="number" step="0.01" class="input" placeholder="0.00" required />
       </div>
       <div class="sm:col-span-2">
-        <label class="label">Currency</label>
+        <label class="label"><?= __('Currency') ?></label>
         <select name="currency" class="select">
           <?php foreach ($userCurrencies as $uc): ?>
             <option value="<?= htmlspecialchars($uc['code']) ?>" <?= !empty($uc['is_main'])?'selected':'' ?>>
@@ -27,19 +27,19 @@
         </select>
       </div>
       <div class="sm:col-span-2">
-        <label class="label">Current (optional)</label>
+        <label class="label"><?= __('Current (optional)') ?></label>
         <input name="current_amount" type="number" step="0.01" class="input" placeholder="0.00" />
       </div>
       <div class="sm:col-span-12">
-        <label class="label">Status</label>
+        <label class="label"><?= __('Status') ?></label>
         <select name="status" class="select w-full max-w-xs">
-          <option value="active">Active</option>
-          <option value="paused">Paused</option>
-          <option value="done">Done</option>
+          <option value="active"><?= __('Active') ?></option>
+          <option value="paused"><?= __('Paused') ?></option>
+          <option value="done"><?= __('Done') ?></option>
         </select>
       </div>
       <div class="sm:col-span-12 flex justify-end">
-        <button class="btn btn-primary">Save</button>
+        <button class="btn btn-primary"><?= __('Save') ?></button>
       </div>
     </form>
   </details>
@@ -47,7 +47,7 @@
 
 <section class="mt-6 bg-white rounded-2xl p-5 shadow-glass">
   <div class="flex items-center justify-between mb-3">
-    <h2 class="font-semibold">Your goals</h2>
+    <h2 class="font-semibold"><?= __('Your goals') ?></h2>
   </div>
 
   <!-- Desktop table -->
@@ -55,10 +55,10 @@
     <table class="min-w-full text-sm">
       <thead>
       <tr class="text-left border-b">
-        <th class="py-2 pr-3 w-[38%]">Goal</th>
-        <th class="py-2 pr-3 w-[20%]">Schedule</th>
-        <th class="py-2 pr-3 w-[22%]">Progress</th>
-        <th class="py-2 pr-3 w-[20%]" style="text-align:right;">Actions</th>
+        <th class="py-2 pr-3 w-[38%]"><?= __('Goal') ?></th>
+        <th class="py-2 pr-3 w-[20%]"><?= __('Schedule') ?></th>
+        <th class="py-2 pr-3 w-[22%]"><?= __('Progress') ?></th>
+        <th class="py-2 pr-3 w-[20%]" style="text-align:right;"><?= __('Actions') ?></th>
       </tr>
       </thead>
       <tbody>
@@ -67,12 +67,18 @@
         $target = (float)($g['target_amount'] ?? 0);
         $current= (float)($g['current_amount'] ?? 0);
         $pct = $target>0 ? min(100, max(0, $current/$target*100)) : 0;
+        $statusKey = $g['status'] ?? 'active';
+        $statusLabel = match ($statusKey) {
+          'paused' => __('Paused'),
+          'done'   => __('Done'),
+          default  => __('Active'),
+        };
       ?>
         <tr class="border-b align-top">
           <td class="py-3 pr-3">
             <div class="font-medium"><?= htmlspecialchars($g['title']) ?></div>
             <div class="text-xs text-gray-500">
-              <?= htmlspecialchars(ucfirst($g['status'] ?? 'active')) ?> · <?= htmlspecialchars($cur) ?>
+              <?= $statusLabel ?> · <?= htmlspecialchars($cur) ?>
             </div>
             <div class="mt-2">
               <div class="h-2 bg-gray-100 rounded-full">
@@ -93,21 +99,21 @@
                      data-rrule="<?= htmlspecialchars($g['sched_rrule']) ?>"></div>
               <?php endif; ?>
             <?php else: ?>
-              <div class="text-xs text-gray-500">No schedule</div>
+              <div class="text-xs text-gray-500"><?= __('No schedule') ?></div>
             <?php endif; ?>
           </td>
 
           <td class="py-3 pr-3 align-middle">
-            <div class="text-sm"><?= moneyfmt($target - $current, $cur) ?> to go</div>
+            <div class="text-sm"><?= __(':amount to go', ['amount' => moneyfmt($target - $current, $cur)]) ?></div>
           </td>
 
           <td class="py-3 pr-0 align-middle" style="text-align:right;">
             <button class="btn btn-primary !px-3"
-                    data-open="#goal-edit-<?= (int)$g['id'] ?>">Edit / Add money</button>
+                    data-open="#goal-edit-<?= (int)$g['id'] ?>"><?= __('Edit / Add money') ?></button>
           </td>
         </tr>
       <?php endforeach; if(!count($rows)): ?>
-        <tr><td colspan="4" class="py-6 text-center text-sm text-gray-500">No goals yet.</td></tr>
+        <tr><td colspan="4" class="py-6 text-center text-sm text-gray-500"><?= __('No goals yet.') ?></td></tr>
       <?php endif; ?>
       </tbody>
     </table>
@@ -120,14 +126,20 @@
       $target = (float)($g['target_amount'] ?? 0);
       $current= (float)($g['current_amount'] ?? 0);
       $pct = $target>0 ? min(100, max(0, $current/$target*100)) : 0;
+      $statusKey = $g['status'] ?? 'active';
+      $statusLabel = match ($statusKey) {
+        'paused' => __('Paused'),
+        'done'   => __('Done'),
+        default  => __('Active'),
+      };
     ?>
       <div class="rounded-xl border p-4">
         <div class="flex items-center justify-between gap-3">
           <div>
             <div class="font-medium"><?= htmlspecialchars($g['title']) ?></div>
-            <div class="text-xs text-gray-500"><?= ucfirst($g['status']) ?> · <?= htmlspecialchars($cur) ?></div>
+            <div class="text-xs text-gray-500"><?= $statusLabel ?> · <?= htmlspecialchars($cur) ?></div>
           </div>
-          <button class="btn btn-primary !px-3" data-open="#goal-edit-<?= (int)$g['id'] ?>">Edit</button>
+          <button class="btn btn-primary !px-3" data-open="#goal-edit-<?= (int)$g['id'] ?>"><?= __('Edit') ?></button>
         </div>
         <div class="mt-3">
           <div class="h-2 bg-gray-100 rounded-full">
@@ -159,8 +171,8 @@
   <div class="modal-panel">
     <!-- Header -->
     <div class="modal-header">
-      <h3 id="goal-edit-title-<?= $goalId ?>" class="font-semibold">Edit goal</h3>
-      <button class="icon-btn" aria-label="Close" data-close>✕</button>
+      <h3 id="goal-edit-title-<?= $goalId ?>" class="font-semibold"><?= __('Edit goal') ?></h3>
+      <button class="icon-btn" aria-label="<?= __('Close') ?>" data-close>✕</button>
     </div>
 
     <!-- Body -->
@@ -174,34 +186,34 @@
           <div class="md:col-span-7">
             <div class="grid sm:grid-cols-12 gap-3">
               <div class="sm:col-span-7">
-                <label class="label">Name</label>
+                <label class="label"><?= __('Name') ?></label>
                 <input name="title" class="input" value="<?= htmlspecialchars($g['title']) ?>" required />
               </div>
               <div class="sm:col-span-5">
-                <label class="label">Target</label>
+                <label class="label"><?= __('Target') ?></label>
                 <input name="target_amount" type="number" step="0.01" class="input" value="<?= htmlspecialchars($g['target_amount']) ?>" required />
               </div>
-  
+
               <div class="sm:col-span-6">
-                <label class="label">Currency</label>
+                <label class="label"><?= __('Currency') ?></label>
                 <select name="currency" class="select">
                   <?php foreach ($userCurrencies as $uc): $code=$uc['code']; ?>
                     <option value="<?= htmlspecialchars($code) ?>" <?= strtoupper($code)===strtoupper($cur)?'selected':'' ?>><?= htmlspecialchars($code) ?></option>
                   <?php endforeach; ?>
                 </select>
               </div>
-  
+
               <div class="sm:col-span-6">
-                <label class="label">Status</label>
+                <label class="label"><?= __('Status') ?></label>
                 <select name="status" class="select">
-                  <option value="active" <?= $g['status']==='active'?'selected':'' ?>>Active</option>
-                  <option value="paused" <?= $g['status']==='paused'?'selected':'' ?>>Paused</option>
-                  <option value="done"   <?= $g['status']==='done'  ?'selected':'' ?>>Done</option>
+                  <option value="active" <?= $g['status']==='active'?'selected':'' ?>><?= __('Active') ?></option>
+                  <option value="paused" <?= $g['status']==='paused'?'selected':'' ?>><?= __('Paused') ?></option>
+                  <option value="done"   <?= $g['status']==='done'  ?'selected':'' ?>><?= __('Done') ?></option>
                 </select>
               </div>
-  
+
               <div class="sm:col-span-12">
-                <label class="label">Note (optional)</label>
+                <label class="label"><?= __('Note (optional)') ?></label>
                 <input name="note" class="input" value="<?= htmlspecialchars($g['note'] ?? '') ?>" />
               </div>
             </div>
@@ -225,7 +237,7 @@
                       · <span class="rrule-summary" data-rrule="<?= htmlspecialchars($g['sched_rrule']) ?>"></span>
                     <?php endif; ?>
                     <?php if (!empty($g['sched_next_due'])): ?>
-                      · next <?= htmlspecialchars($g['sched_next_due']) ?>
+                      · <?= __('next :date', ['date' => htmlspecialchars($g['sched_next_due'])]) ?>
                     <?php endif; ?>
                   </div>
                 </div>
@@ -233,7 +245,7 @@
                 <form method="post" action="/goals/unlink-schedule" class="shrink-0" id="unlink-form-<?= $goalId ?>">
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                   <input type="hidden" name="goal_id" value="<?= $goalId ?>" />
-                  <button class="btn btn-danger !py-1 !px-3" data-unlink>Unlink</button>
+                  <button class="btn btn-danger !py-1 !px-3" data-unlink><?= __('Unlink') ?></button>
                 </form>
               </div>
             </div>
@@ -244,9 +256,9 @@
               <form method="post" action="/goals/link-schedule" class="grid gap-2">
                 <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                 <input type="hidden" name="goal_id" value="<?= $goalId ?>" />
-                <label class="label">Link existing schedule</label>
+                <label class="label"><?= __('Link existing schedule') ?></label>
                 <select name="scheduled_payment_id" class="select">
-                  <option value="">— None —</option>
+                  <option value=""><?= __('— None —') ?></option>
                   <?php foreach ($scheduledList as $sp): ?>
                     <option value="<?= (int)$sp['id'] ?>">
                       <?= htmlspecialchars($sp['title']) ?>
@@ -254,11 +266,11 @@
                     </option>
                   <?php endforeach; ?>
                 </select>
-                <div class="flex justify-end"><button class="btn">Apply</button></div>
+                <div class="flex justify-end"><button class="btn"><?= __('Apply') ?></button></div>
               </form>
 
               <div class="my-2 flex items-center gap-3 text-xs text-gray-400">
-                <div class="h-px flex-1 bg-gray-200"></div><span>or</span><div class="h-px flex-1 bg-gray-200"></div>
+                <div class="h-px flex-1 bg-gray-200"></div><span><?= __('or') ?></span><div class="h-px flex-1 bg-gray-200"></div>
               </div>
 
               <!-- Create schedule -->
@@ -266,32 +278,32 @@
                 <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                 <input type="hidden" name="goal_id" value="<?= $goalId ?>" />
                 <div class="sm:col-span-12">
-                  <label class="label">Schedule title</label>
-                  <input name="title" class="input" placeholder="Goal: <?= htmlspecialchars($g['title']) ?>">
+                <label class="label"><?= __('Schedule title') ?></label>
+                <input name="title" class="input" placeholder="<?= __('Goal: :title', ['title' => htmlspecialchars($g['title'])]) ?>">
                 </div>
                 <div class="sm:col-span-6">
-                  <label class="label">Category</label>
-                  <select name="category_id" class="select">
-                    <option value="">No category</option>
+                <label class="label"><?= __('Category') ?></label>
+                <select name="category_id" class="select">
+                    <option value=""><?= __('No category') ?></option>
                     <?php foreach ($categories as $c): ?>
                       <option value="<?= (int)$c['id'] ?>"><?= htmlspecialchars($c['label']) ?></option>
                     <?php endforeach; ?>
                   </select>
                 </div>
                 <div class="sm:col-span-6">
-                  <label class="label">First due</label>
+                <label class="label"><?= __('First due') ?></label>
                   <input name="next_due" type="date" class="input" />
                 </div>
                 <div class="sm:col-span-6">
-                  <label class="label">Due day</label>
-                  <input name="due_day" type="number" min="1" max="31" class="input" placeholder="e.g., 10" />
+                <label class="label"><?= __('Due day') ?></label>
+                  <input name="due_day" type="number" min="1" max="31" class="input" placeholder="<?= __('e.g., 10') ?>" />
                 </div>
                 <div class="sm:col-span-6">
-                  <label class="label">Monthly amount</label>
+                <label class="label"><?= __('Monthly amount') ?></label>
                   <input name="amount" type="number" step="0.01" class="input" placeholder="0.00" />
                 </div>
                 <div class="sm:col-span-6">
-                  <label class="label">Currency</label>
+                <label class="label"><?= __('Currency') ?></label>
                   <select name="currency" class="select">
                     <?php foreach ($userCurrencies as $uc): ?>
                       <option value="<?= htmlspecialchars($uc['code']) ?>" <?= strtoupper($uc['code'])===strtoupper($cur)?'selected':'' ?>>
@@ -301,7 +313,7 @@
                   </select>
                 </div>
                 <div class="sm:col-span-12 flex justify-end">
-                  <button class="btn btn-primary">Create schedule</button>
+                  <button class="btn btn-primary"><?= __('Create schedule') ?></button>
                 </div>
               </form>
             </div>
@@ -311,9 +323,9 @@
             <form method="post" action="/goals/link-schedule" class="grid gap-2">
               <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
               <input type="hidden" name="goal_id" value="<?= $goalId ?>" />
-              <label class="label">Link existing schedule</label>
+                <label class="label"><?= __('Link existing schedule') ?></label>
               <select name="scheduled_payment_id" class="select">
-                <option value="">— None —</option>
+                <option value=""><?= __('— None —') ?></option>
                 <?php foreach ($scheduledList as $sp): ?>
                   <option value="<?= (int)$sp['id'] ?>">
                     <?= htmlspecialchars($sp['title']) ?>
@@ -321,43 +333,43 @@
                   </option>
                 <?php endforeach; ?>
               </select>
-              <div class="flex justify-end"><button class="btn">Apply</button></div>
+              <div class="flex justify-end"><button class="btn"><?= __('Apply') ?></button></div>
             </form>
 
             <div class="my-2 flex items-center gap-3 text-xs text-gray-400">
-              <div class="h-px flex-1 bg-gray-200"></div><span>or</span><div class="h-px flex-1 bg-gray-200"></div>
+              <div class="h-px flex-1 bg-gray-200"></div><span><?= __('or') ?></span><div class="h-px flex-1 bg-gray-200"></div>
             </div>
 
             <form method="post" action="/goals/create-schedule" class="grid sm:grid-cols-12 gap-3">
               <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
               <input type="hidden" name="goal_id" value="<?= $goalId ?>" />
               <div class="sm:col-span-12">
-                <label class="label">Schedule title</label>
-                <input name="title" class="input" placeholder="Goal: <?= htmlspecialchars($g['title']) ?>">
+                <label class="label"><?= __('Schedule title') ?></label>
+                <input name="title" class="input" placeholder="<?= __('Goal: :title', ['title' => htmlspecialchars($g['title'])]) ?>">
               </div>
               <div class="sm:col-span-6">
-                <label class="label">Category</label>
+                <label class="label"><?= __('Category') ?></label>
                 <select name="category_id" class="select">
-                  <option value="">No category</option>
+                  <option value=""><?= __('No category') ?></option>
                   <?php foreach ($categories as $c): ?>
                     <option value="<?= (int)$c['id'] ?>"><?= htmlspecialchars($c['label']) ?></option>
                   <?php endforeach; ?>
                 </select>
               </div>
               <div class="sm:col-span-6">
-                <label class="label">First due</label>
+                <label class="label"><?= __('First due') ?></label>
                 <input name="next_due" type="date" class="input" />
               </div>
               <div class="sm:col-span-6">
-                <label class="label">Due day</label>
-                <input name="due_day" type="number" min="1" max="31" class="input" placeholder="e.g., 10" />
+                <label class="label"><?= __('Due day') ?></label>
+                <input name="due_day" type="number" min="1" max="31" class="input" placeholder="<?= __('e.g., 10') ?>" />
               </div>
               <div class="sm:col-span-6">
-                <label class="label">Monthly amount</label>
+                <label class="label"><?= __('Monthly amount') ?></label>
                 <input name="amount" type="number" step="0.01" class="input" placeholder="0.00" />
               </div>
               <div class="sm:col-span-6">
-                <label class="label">Currency</label>
+                <label class="label"><?= __('Currency') ?></label>
                 <select name="currency" class="select">
                   <?php foreach ($userCurrencies as $uc): ?>
                     <option value="<?= htmlspecialchars($uc['code']) ?>" <?= strtoupper($uc['code'])===strtoupper($cur)?'selected':'' ?>>
@@ -367,7 +379,7 @@
                 </select>
               </div>
               <div class="sm:col-span-12 flex justify-end">
-                <button class="btn btn-primary">Create schedule</button>
+                <button class="btn btn-primary"><?= __('Create schedule') ?></button>
               </div>
             </form>
           <?php endif; ?>
@@ -386,21 +398,21 @@
             <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
             <input type="hidden" name="goal_id" value="<?= $goalId ?>" />
             <input name="occurred_on" type="date" value="<?= date('Y-m-d') ?>" class="input">
-            <input name="amount" type="number" step="0.01" placeholder="Amount" class="input" required>
-            <button class="w-80 btn btn-emerald">Add money</button>
+            <input name="amount" type="number" step="0.01" placeholder="<?= __('Amount') ?>" class="input" required>
+            <button class="w-80 btn btn-emerald"><?= __('Add money') ?></button>
           </form>
 
           
         </div>
         <!-- Danger: Delete goal (right aligned on larger screens) -->
-        <form method="post" action="/goals/delete" onsubmit="return confirm('Delete this goal?')" class="mx-auto w-full">
+        <form method="post" action="/goals/delete" onsubmit="return confirm('<?= __('Delete this goal?') ?>')" class="mx-auto w-full">
           <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
           <input type="hidden" name="id" value="<?= $goalId ?>" />
-          <button class="btn btn-danger w-full">Delete</button>
+          <button class="btn btn-danger w-full"><?= __('Delete') ?></button>
         </form>
 
-        <button class="btn" data-close>Cancel</button>
-        <button class="btn btn-primary" onclick="document.getElementById('goal-form-<?= $goalId ?>').submit()">Save</button>
+        <button class="btn" data-close><?= __('Cancel') ?></button>
+        <button class="btn btn-primary" onclick="document.getElementById('goal-form-<?= $goalId ?>').submit()"><?= __('Save') ?></button>
       </div>
     </div>
   </div>
@@ -435,6 +447,37 @@
       target && target.classList.remove('hidden');
     });
   });
+
+  const goalRruleText = {
+    everyWeeks: <?= json_encode(__('Every :count week(s)')) ?>,
+    everyMonths: <?= json_encode(__('Every :count month(s)')) ?>,
+    everyDays: <?= json_encode(__('Every :count day(s)')) ?>,
+    everyYears: <?= json_encode(__('Every :count year(s)')) ?>,
+    onDay: <?= json_encode(__(' on day :day')) ?>,
+    onDays: <?= json_encode(__(' on :days')) ?>,
+    onDate: <?= json_encode(__(' on :date')) ?>,
+    times: <?= json_encode(__(', :count times')) ?>,
+    until: <?= json_encode(__(', until :date')) ?>,
+    oneTime: <?= json_encode(__('One-time')) ?>,
+    repeats: <?= json_encode(__('Repeats')) ?>,
+  };
+  const goalDayNames = <?= json_encode([
+    'MO' => __('Mon'),
+    'TU' => __('Tue'),
+    'WE' => __('Wed'),
+    'TH' => __('Thu'),
+    'FR' => __('Fri'),
+    'SA' => __('Sat'),
+    'SU' => __('Sun'),
+  ]) ?>;
+  const goalReplace = (tpl, replacements) => {
+    if (!tpl) return '';
+    let out = tpl;
+    for (const [key, value] of Object.entries(replacements || {})) {
+      out = out.replace(new RegExp(':'+key, 'g'), String(value ?? ''));
+    }
+    return out;
+  };
 
   // simple goal RRULE builder (monthly/weekly)
   <?php foreach($rows as $g): $id=(int)$g['id']; ?>
@@ -471,10 +514,22 @@
       }
       out.value = r.join(';');
       // tiny summary
-      let s = (freq.value==='WEEKLY'?'Every '+iv+' week(s)':
-              'Every '+iv+' month(s)'+(bymd.value?(' on day '+bymd.value):''));
-      if (endtype.value==='count' && countI.value) s += ', '+countI.value+' times';
-      if (endtype.value==='until' && untilI.value) s += ', until '+untilI.value;
+      const ivStr = String(iv);
+      let s = '';
+      if (freq.value==='WEEKLY') {
+        s = goalReplace(goalRruleText.everyWeeks, {count: ivStr});
+      } else {
+        s = goalReplace(goalRruleText.everyMonths, {count: ivStr});
+        if (bymd.value) {
+          s += goalReplace(goalRruleText.onDay, {day: bymd.value});
+        }
+      }
+      if (endtype.value==='count' && countI.value) {
+        s += goalReplace(goalRruleText.times, {count: countI.value});
+      }
+      if (endtype.value==='until' && untilI.value) {
+        s += goalReplace(goalRruleText.until, {date: untilI.value});
+      }
       summary.textContent = s;
     }
     [freq, interval, bymd, endtype, countI, untilI].forEach(el=>el && el.addEventListener('input', ()=>{ vis(); build(); }));
