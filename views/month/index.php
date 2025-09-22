@@ -121,21 +121,21 @@
 <?php $ym = sprintf('%04d-%02d', $y, $m); ?>
 <section class="grid md:grid-cols-3 gap-4">
   <!-- Summary -->
-  <div class="bg-white rounded-2xl p-6 shadow-glass">
+  <div class="card">
     <h2 class="text-lg font-semibold mb-4"><?= __('Monthly Summary') ?></h2>
 
     <!-- Net focus -->
     <?php $net = $sumIn_main - $sumOut_main; ?>
     <div class="text-center mb-6">
       <div class="text-sm text-gray-500"><?= __('Net') ?> (<?= htmlspecialchars($main) ?>)</div>
-      <div class="text-3xl font-bold <?= $net>=0 ? 'text-green-600' : 'text-red-600' ?>">
+      <div class="text-3xl font-bold <?= $net>=0 ? 'text-brand-600' : 'text-red-600' ?>">
         <?= moneyfmt($net, $main) ?>
       </div>
     </div>
 
     <!-- Income vs Spending -->
     <div class="grid grid-cols-2 gap-4 text-sm">
-      <div class="p-3 rounded-xl bg-green-50 text-green-700 text-center">
+      <div class="p-3 rounded-xl bg-brand-50/80 text-brand-600 text-center">
         <div class="font-medium"><?= __('Income') ?></div>
         <div class="text-md font-semibold"><?= moneyfmt($sumIn_main, $main) ?></div>
       </div>
@@ -167,7 +167,7 @@
   </div>
 
   <!-- Cashflow Guidance -->
-  <section class="bg-white rounded-2xl p-5 shadow-glass md:col-span-2">
+  <section class="card md:col-span-2">
     <div class="flex items-center justify-between">
       <h3 class="font-semibold"><?= __('Cashflow Guidance') ?></h3>
       <div class="text-xs text-gray-500"><?= __('Budgets are based on your cashflow rules & this month’s income.') ?></div>
@@ -192,13 +192,13 @@
               · <?= __('Spent:') ?> <span class="font-medium"><?= moneyfmt($rg['spent'], $main) ?></span>
             </div>
 
-            <div class="mt-2 h-2 rounded-full bg-gray-100">
+            <div class="mt-2 h-2 rounded-full bg-brand-100/60">
               <div class="h-2 rounded-full" style="width: <?= $pctSpent ?>%; background:#111827"></div>
             </div>
 
             <div class="mt-2 text-sm">
               <?php if ($rg['spent'] <= $rg['budget']): ?>
-                <span class="text-emerald-700"><?= __('Remaining:') ?></span>
+                <span class="text-brand-600"><?= __('Remaining:') ?></span>
                 <span class="font-medium"><?= moneyfmt($rg['remaining'], $main) ?></span>
               <?php else: ?>
                 <?php $over = $rg['spent'] - $rg['budget']; ?>
@@ -225,7 +225,7 @@
                       <span class="truncate"><?= htmlspecialchars($c['label']) ?></span>
                     </div>
                     <?php if ($over <= 0): ?>
-                      <span class="text-emerald-700"><?= __('left') ?> <?= moneyfmt($rem, $main) ?></span>
+                      <span class="text-brand-600"><?= __('left') ?> <?= moneyfmt($rem, $main) ?></span>
                     <?php else: ?>
                       <span class="text-red-700"><?= __('over') ?> <?= moneyfmt($over, $main) ?></span>
                     <?php endif; ?>
@@ -243,7 +243,7 @@
 <!-- Charts -->
 <section class="mt-6 grid md:grid-cols-2 gap-6">
   <!-- A) Cumulative Net Cashflow (area line) -->
-  <div class="bg-white rounded-2xl p-5 shadow-glass h-80">
+  <div class="card h-80">
     <h3 class="font-semibold mb-3"><?= __('Cumulative Net (:currency)', ['currency' => htmlspecialchars($main)]) ?></h3>
     <?php
       // Prepare day list for the month
@@ -307,8 +307,8 @@
       function draw(){
         const ctx = el.getContext('2d');
         const gradient = ctx.createLinearGradient(0, 0, 0, el.height);
-        gradient.addColorStop(0, 'rgba(16,185,129,0.25)'); // emerald-ish
-        gradient.addColorStop(1, 'rgba(16,185,129,0.02)');
+        gradient.addColorStop(0, 'rgba(75,150,110,0.28)'); // brand jade
+        gradient.addColorStop(1, 'rgba(75,150,110,0.04)');
 
         new Chart(ctx, {
           data: {
@@ -350,7 +350,7 @@
   </div>
 
   <!-- B) Top Spending Categories (horizontal bars) -->
-  <div class="bg-white rounded-2xl p-5 shadow-glass h-80 overflow-hidden">
+  <div class="card h-80 overflow-hidden">
     <h3 class="font-semibold mb-3"><?= __('Top Spending Categories (:currency)', ['currency' => htmlspecialchars($main)]) ?></h3>
     <?php
       // Build grouped sums from $allTx in MAIN (spending only)
@@ -447,7 +447,7 @@
 
 <!-- Add transaction -->
 <section class="mt-6 grid md:grid-cols-2 gap-6">
-  <div class="bg-white rounded-2xl p-5 shadow-glass md:col-span-2">
+  <div class="card md:col-span-2">
     <h3 class="text-base font-semibold mb-3"><?= __('Quick Add') ?></h3>
 
     <form class="grid gap-4 md:grid-cols-12 md:items-end" method="post" action="/months/tx/add">
@@ -516,7 +516,7 @@
 </section>
 
 <!-- Transactions -->
-<section class="mt-6 bg-white rounded-2xl p-5 shadow-glass">
+<section class="mt-6 card">
   <h3 class="font-semibold mb-3"><?= __('Transactions') ?></h3>
 
   <!-- Mobile: stacked cards -->
@@ -683,7 +683,7 @@
 
   <!-- Desktop: classic table -->
   <div class="hidden md:block overflow-x-auto">
-    <table class="min-w-full text-sm">
+    <table class="table-glass min-w-full text-sm">
       <thead>
         <tr class="text-left border-b">
           <th class="py-2 pr-3"><?= __('Date') ?></th>
@@ -747,7 +747,7 @@
                 <span class="text-xs text-gray-500 ml-1"><?= __('(auto)') ?></span>
               <?php endif; ?>
               <?php if (!$isVirtual && $isEF): ?>
-                <span class="text-xs text-emerald-600 ml-1"><?= __('(Emergency Fund)') ?></span>
+                <span class="text-xs text-brand-600 ml-1"><?= __('(Emergency Fund)') ?></span>
               <?php endif; ?>
             </td>
 

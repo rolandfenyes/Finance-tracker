@@ -1,5 +1,5 @@
 <section class="max-w-2xl mx-auto">
-  <div class="bg-white rounded-2xl shadow-glass p-6 text-center">
+  <div class="card text-center">
     <h1 class="text-2xl font-semibold"><?= __('You\'re all set 🎉') ?></h1>
     <p class="text-gray-600 mt-2">
       <?= __('Your account has been set up.') ?>

@@ -30,7 +30,7 @@ if (!isset($allCurrencies) || !is_array($allCurrencies) || !count($allCurrencies
 $currencies = $currencies ?? [];
 $hasMain = (bool)array_filter($currencies, fn($c)=>!empty($c['is_main']));
 ?>
-<section class="max-w-2xl mx-auto bg-white rounded-2xl shadow-glass p-6">
+<section class="max-w-2xl mx-auto card">
   <div class="flex items-center justify-between mb-2">
     <h1 class="text-xl font-semibold"><?= __('🌍 Set up your currencies') ?></h1>
     <a href="/logout" class="text-sm text-gray-400 hover:text-gray-500"><?= __('Exit') ?></a>
@@ -108,7 +108,7 @@ $hasMain = (bool)array_filter($currencies, fn($c)=>!empty($c['is_main']));
           <div class="flex items-center gap-2">
             <span class="chip"><?= htmlspecialchars(strtoupper($c['code'])) ?></span>
             <?php if (!empty($c['is_main'])): ?>
-              <span class="ml-1 text-xs text-emerald-600"><?= __('Main') ?></span>
+              <span class="ml-1 text-xs text-brand-600"><?= __('Main') ?></span>
             <?php endif; ?>
           </div>
           <form method="post" action="/onboard/currencies/delete" class="inline">

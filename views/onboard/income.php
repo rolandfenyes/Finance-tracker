@@ -1,5 +1,5 @@
 <section class="max-w-3xl mx-auto">
-  <div class="bg-white rounded-2xl shadow-glass p-6">
+  <div class="card">
     <div class="flex items-start justify-between gap-3">
       <div>
         <h1 class="text-xl font-semibold"><?= __('Step :step · Basic income', ['step' => 4]) ?></h1>

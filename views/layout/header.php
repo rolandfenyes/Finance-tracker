@@ -1,166 +1,352 @@
 <?php $app = require __DIR__ . '/../../config/config.php'; ?>
 <!doctype html>
-<html lang="<?= htmlspecialchars(app_locale(), ENT_QUOTES) ?>">
+<html lang="<?= htmlspecialchars(app_locale(), ENT_QUOTES) ?>" class="scroll-smooth">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title><?= htmlspecialchars($app['app']['name']) ?></title>
   <!-- Favicons -->
-
-  <!-- Classic ICO -->
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
-
-  <!-- PNG -->
   <link rel="icon" type="image/png" href="/favicon.png">
-
-  <!-- Apple Touch Icon (for iOS) -->
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
   <!-- Tailwind CDN (JIT) -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           colors: {
-            brand: { DEFAULT: '#111827' },
-            accent: '#B81730'
+            brand: {
+              50: '#f1f7f4',
+              100: '#dcece2',
+              200: '#c0ddcc',
+              300: '#94c3aa',
+              400: '#69a986',
+              500: '#4b966e',
+              600: '#3c7b5b',
+              700: '#32644b',
+              800: '#2b513f',
+              900: '#234234',
+              950: '#11241d'
+            },
+            jade: '#4b966e',
+            "brand-muted": '#e6f1eb',
+            "brand-deep": '#163428',
+            accent: '#3c7b5b'
           },
-          boxShadow: { glass: '0 10px 30px rgba(0,0,0,0.08)'}
+          fontFamily: {
+            brand: ['"IBM Plex Sans"', 'Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif']
+          },
+          boxShadow: {
+            glass: '0 30px 60px -25px rgba(17, 36, 29, 0.45)',
+            "brand-glow": '0 20px 45px -20px rgba(75, 150, 110, 0.65)'
+          },
+          borderRadius: {
+            '3xl': '1.75rem',
+            '4xl': '2.5rem'
+          },
+          backdropBlur: {
+            xs: '4px'
+          },
+          backgroundImage: {
+            'mesh-light': 'radial-gradient(120% 120% at 10% 20%, rgba(75,150,110,0.18) 0%, transparent 55%), radial-gradient(90% 90% at 90% 0%, rgba(42,94,70,0.12) 0%, transparent 65%), linear-gradient(135deg, #f8fbf9 0%, #eef5f1 50%, #f6faf6 100%)',
+            'mesh-dark': 'radial-gradient(120% 120% at 0% 0%, rgba(75,150,110,0.35) 0%, transparent 60%), radial-gradient(90% 90% at 100% 20%, rgba(28,66,50,0.5) 0%, transparent 70%), linear-gradient(160deg, #060d0b 0%, #0f1e18 55%, #0a1612 100%)'
+          }
         }
       }
     }
   </script>
+  <script>
+    (function() {
+      const storageKey = 'mymoneymap-theme';
+      const root = document.documentElement;
+      const getStored = () => {
+        try { return localStorage.getItem(storageKey); } catch (e) { return null; }
+      };
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const stored = getStored();
+      const initial = stored || (prefersDark ? 'dark' : 'light');
+      root.classList.toggle('dark', initial === 'dark');
+      root.dataset.theme = initial;
+      window.__mymoneymapTheme = { storageKey, initial };
+    })();
+  </script>
   <style type="text/tailwindcss">
+    @layer base {
+      :root {
+        color-scheme: light;
+      }
+      :root[data-theme='dark'] {
+        color-scheme: dark;
+      }
+      body {
+        @apply font-brand antialiased min-h-screen bg-mesh-light text-slate-900 transition-colors duration-300 ease-out dark:bg-mesh-dark dark:text-slate-100;
+      }
+      body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        z-index: -2;
+        background: radial-gradient(30% 30% at 20% 20%, rgba(75, 150, 110, 0.35), transparent 65%), radial-gradient(45% 45% at 80% 0%, rgba(48, 104, 75, 0.25), transparent 70%);
+        opacity: 0.85;
+        pointer-events: none;
+        transition: opacity 0.4s ease;
+      }
+      .dark body::before {
+        opacity: 0.55;
+        background: radial-gradient(40% 40% at 12% 18%, rgba(75, 150, 110, 0.45), transparent 70%), radial-gradient(40% 40% at 85% 10%, rgba(18, 36, 29, 0.55), transparent 75%);
+      }
+      main {
+        @apply flex-1;
+      }
+    }
+
     @layer components {
-      .chip{ @apply inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700 border; }
-      .row-btn{ @apply border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-xl px-3 py-1.5 text-sm; }
-      .edit-panel{ @apply mt-3 bg-gray-50 rounded-xl p-4 border; }
-      .color-input{ @apply h-10 w-14 rounded-lg border border-gray-300; }
-      .tab-btn.active { background:#0f172a0d; font-weight:600; border-bottom:2px solid #111827; }
-
-      details[open] ~ .header-line,
-      details[open] .header-line {
-        @apply hidden;
+      .chip {
+        @apply inline-flex items-center gap-1.5 rounded-full border border-brand-100/70 bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-brand-700 shadow-sm backdrop-blur-xs dark:border-slate-700 dark:bg-slate-900/60 dark:text-brand-100;
+      }
+      .row-btn {
+        @apply border border-brand-100/70 bg-white/70 text-sm font-medium text-brand-700 px-3 py-1.5 rounded-xl shadow-sm transition hover:bg-brand-50/60 hover:text-brand-800 dark:border-slate-700 dark:bg-slate-900/50 dark:text-brand-100 dark:hover:bg-slate-800;
+      }
+      .edit-panel {
+        @apply mt-3 rounded-2xl border border-brand-100/70 bg-white/70 p-4 shadow-sm backdrop-blur-xs dark:border-slate-800 dark:bg-slate-900/50;
+      }
+      .color-input {
+        @apply h-11 w-16 rounded-xl border border-brand-100/70 bg-white/80 shadow-sm dark:border-slate-700 dark:bg-slate-900/60;
+      }
+      .tab-btn.active {
+        font-weight: 600;
+        border-bottom-width: 2px;
+        @apply border-brand-500 text-brand-600 dark:text-brand-200;
       }
 
-      .card { @apply bg-white rounded-2xl p-5 shadow-glass; }
-      .field { @apply grid gap-1; }
-      .label { @apply text-sm font-medium text-gray-700; }
-      .help  { @apply text-xs text-gray-400; }
-
-      .input, .select, .input-select, .textarea {
-        @apply w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm
-              focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900;
+      .card {
+        @apply relative overflow-hidden rounded-3xl border border-white/40 bg-white/70 p-6 shadow-glass backdrop-blur-xl transition dark:border-slate-800/60 dark:bg-slate-900/50 dark:shadow-none;
       }
-      .textarea { @apply min-h-[92px]; }
+      .card::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: linear-gradient(135deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 45%);
+        opacity: 0.35;
+        pointer-events: none;
+      }
+      .tile {
+        @apply relative overflow-hidden rounded-2xl border border-white/50 bg-white/60 p-4 shadow-sm backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/40;
+      }
+      .tile::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: linear-gradient(150deg, rgba(75,150,110,0.12), transparent 65%);
+        pointer-events: none;
+      }
+      .panel {
+        @apply rounded-2xl border border-white/50 bg-white/70 shadow-sm backdrop-blur dark:border-slate-800/70 dark:bg-slate-900/50;
+      }
+      .panel-ghost {
+        @apply rounded-2xl border border-brand-100/70 bg-brand-50/40 shadow-sm backdrop-blur-xs dark:border-slate-800 dark:bg-slate-900/40;
+      }
 
-      .input-group { @apply flex rounded-xl border border-gray-300 bg-white shadow-sm overflow-hidden; }
-      .input-group > .input { @apply border-0 rounded-none flex-1 shadow-none; }
-      .input-select { @apply border-0 rounded-none bg-gray-50 px-2; }
+      .card-kicker {
+        @apply text-[11px] font-semibold uppercase tracking-[0.3em] text-brand-600 dark:text-brand-200;
+      }
+      .card-title {
+        @apply text-xl font-semibold text-slate-900 dark:text-white;
+      }
+      .card-subtle {
+        @apply text-sm text-slate-600 dark:text-slate-300;
+      }
+      .card-list {
+        @apply divide-y divide-white/50 overflow-hidden rounded-2xl border border-white/50 bg-white/60 backdrop-blur dark:divide-slate-800/70 dark:border-slate-800/70 dark:bg-slate-900/40;
+      }
+      .list-row {
+        @apply flex items-center justify-between px-4 py-3 text-sm text-slate-700 dark:text-slate-200;
+      }
 
-      .input-group { @apply relative flex items-stretch rounded-xl border border-gray-300 bg-white shadow-sm overflow-hidden; }
-      .input-group .ig-input  { @apply flex-1 px-3 py-2 text-sm bg-white outline-none; }
-      .input-group .ig-select { @apply px-3 pr-8 text-sm bg-white outline-none; }
+      .field { @apply grid gap-1.5; }
+      .label {
+        @apply text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300;
+      }
+      .help {
+        @apply text-xs text-slate-400 dark:text-slate-500;
+      }
 
-      /* unify heights & remove browser styles */
+      .input,
+      .select,
+      .input-select,
+      .textarea {
+        @apply w-full rounded-2xl border border-white/60 bg-white/70 px-3.5 py-2.5 text-sm text-slate-900 shadow-inner shadow-white/30 backdrop-blur transition placeholder:text-slate-400 focus:border-brand-300 focus:ring-2 focus:ring-brand-200 focus:outline-none dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-100 dark:shadow-none dark:focus:border-brand-500 dark:focus:ring-brand-500/40;
+      }
+      .textarea { @apply min-h-[104px]; }
+
+      .input-group {
+        @apply relative flex items-stretch overflow-hidden rounded-2xl border border-white/50 bg-white/70 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/50;
+      }
+      .input-group > .input {
+        @apply flex-1 rounded-none border-0 bg-transparent px-3.5 py-2.5 text-sm shadow-none focus:ring-0;
+      }
+      .input-select {
+        @apply rounded-none border-0 bg-brand-50/60 px-3 py-2 text-sm font-medium text-brand-700 dark:bg-slate-800/60 dark:text-brand-100;
+      }
       .input-group .ig-input,
-      .input-group .ig-select { @apply h-10; }
-      .input-group .ig-select { appearance:none; -webkit-appearance:none; -moz-appearance:none; }
-
-      /* hide number spinners */
+      .input-group .ig-select {
+        @apply h-11 bg-transparent px-3 text-sm text-slate-900 outline-none dark:text-slate-100;
+      }
+      .input-group .ig-select {
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+      }
       .ig-input[type=number]::-webkit-outer-spin-button,
-      .ig-input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+      .ig-input[type=number]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
       .ig-input[type=number] { -moz-appearance: textfield; }
 
-      .btn { @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition; }
-      .btn-primary { @apply bg-gray-900 text-white hover:opacity-90 active:opacity-80; }
-      .btn-ghost   { @apply border border-gray-300 text-gray-700 hover:bg-gray-50; }
-      .btn-danger  { @apply border border-red-300 text-red-600 hover:bg-red-50; }
-      .btn-emerald { background:#059669; color:#fff; border-radius:.75rem; padding:.5rem .9rem; }
-
-      /* Base containers */
-      .card { @apply bg-white rounded-2xl p-5 shadow-glass; }
-      .tile { @apply card transition hover:shadow-md; } /* clickable card */
-
-      /* Headers & text */
-      .card-kicker { @apply text-xs uppercase tracking-wide text-gray-500; }
-      .card-title  { @apply text-lg font-semibold; }
-      .card-subtle { @apply text-sm text-gray-500; }
-
-      /* Lists inside cards */
-      .card-list  { @apply divide-y rounded-xl border; }
-      .list-row   { @apply flex items-center justify-between p-3; }
-
-      /* Modal base */
-      .modal { position: fixed; inset: 0; z-index: 50; }
-      .modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.45); }
-      .modal-header { padding: 1rem 1.25rem; border-bottom: 1px solid #e5e7eb; display:flex; align-items:center; justify-content:space-between; }
-      .modal-body   { padding: 1.25rem; max-height: calc(80vh - 7rem); overflow:auto; }
-      .modal-footer { padding: .75rem 1.25rem; border-top: 1px solid #e5e7eb; position: sticky; bottom: 0; }
-      .icon-btn { padding: .25rem .5rem; border-radius: .5rem; }
-      .icon-btn:hover { background: #f3f4f6; }
-
-      /* Make the panel rounded and clip children so header/footer match */
-      .modal-panel {
-        border-radius: 1rem;          /* rounded-xl */
-        overflow: hidden;             /* ensures header/footer corners are rounded too */
+      .btn {
+        @apply inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 ease-out;
+      }
+      .btn-primary {
+        @apply bg-brand-600 text-white shadow-brand-glow hover:bg-brand-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300 dark:bg-brand-500 dark:hover:bg-brand-400;
+      }
+      .btn-ghost {
+        @apply border border-white/60 bg-white/60 text-brand-700 hover:bg-brand-50/60 hover:text-brand-800 dark:border-slate-700 dark:bg-slate-900/50 dark:text-brand-100 dark:hover:bg-slate-800;
+      }
+      .btn-danger {
+        @apply border border-rose-200/80 bg-rose-500/90 text-white shadow-sm hover:bg-rose-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-200 dark:border-rose-500/70 dark:bg-rose-500;
+      }
+      .btn-emerald {
+        @apply bg-brand-500 text-white shadow-brand-glow hover:bg-brand-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-200;
+      }
+      .btn-muted {
+        @apply border border-brand-100/70 bg-brand-50/60 text-brand-700 hover:bg-brand-100/70 dark:border-slate-700 dark:bg-slate-900/50 dark:text-brand-100 dark:hover:bg-slate-800;
       }
 
-      /* Default (desktop/tablet) */
+      .modal {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+      }
+      .modal-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(6, 13, 11, 0.6);
+        backdrop-filter: blur(12px);
+      }
       .modal-panel {
         position: relative;
         margin: 2.5rem auto;
-        max-width: 52rem;       /* ~832px */
+        max-width: 52rem;
         width: calc(100% - 2rem);
-        background: #fff;
+        border-radius: 1.5rem;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.25);
+        background: rgba(255,255,255,0.85);
+        box-shadow: 0 40px 80px -40px rgba(11,31,26,0.6);
+        backdrop-filter: blur(22px);
         display: flex;
         flex-direction: column;
-        box-shadow: 0 25px 50px -12px rgba(0,0,0,.25);
-        border-radius: 1rem;
-        overflow: hidden;
+      }
+      .dark .modal-panel {
+        border-color: rgba(30,64,54,0.45);
+        background: rgba(15,30,26,0.92);
+      }
+      .modal-header {
+        @apply flex items-center justify-between border-b border-white/40 bg-white/50 px-6 py-4 text-slate-800 dark:border-slate-800/60 dark:bg-slate-900/40 dark:text-slate-100;
+      }
+      .modal-body {
+        @apply max-h-[calc(80vh-7rem)] overflow-y-auto px-6 py-5 text-slate-700 dark:text-slate-200;
+      }
+      .modal-footer {
+        @apply sticky bottom-0 border-t border-white/40 bg-white/60 px-6 py-4 dark:border-slate-800/60 dark:bg-slate-900/40;
+      }
+      .icon-btn {
+        @apply inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/50 bg-white/60 text-brand-600 shadow-sm transition hover:-translate-y-[1px] hover:shadow-brand-glow focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-200 dark:border-slate-700 dark:bg-slate-900/50 dark:text-brand-100;
+      }
+      .icon-btn:hover {
+        @apply bg-brand-50/70 dark:bg-slate-800/70;
       }
 
-      /* Mobile fullscreen modal */
-      @media (max-width: 767px) {
-        .modal-panel {
-          margin: 0;             /* remove outer margin */
-          width: 100%;
-          max-width: 100%;
-          height: 100%;          /* take up entire height */
-          max-height: 100%;
-          border-radius: 0;      /* no rounded corners in fullscreen */
-        }
-
-        .modal-body {
-          max-height: calc(100vh - 6rem); /* leave room for header + footer */
-          overflow-y: auto;
-        }
-
-        .modal-header,
-        .modal-footer {
-          border-radius: 0;
-        }
+      table.table-glass thead tr {
+        @apply text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300;
       }
+      table.table-glass tbody tr {
+        @apply border-b border-white/40 dark:border-slate-800/60;
+      }
+      table.table-glass tbody tr:last-child {
+        @apply border-b-0;
+      }
+    }
+  </style>
 
-
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .text-gray-500 { color: #5a7466; }
+      .dark .text-gray-500 { color: #9fb6a9; }
+      .text-gray-600 { color: #465f55; }
+      .dark .text-gray-600 { color: #b4c5bc; }
+      .text-gray-700 { color: #2f443a; }
+      .dark .text-gray-700 { color: #d1e0d6; }
+      .text-gray-400 { color: #7f978c; }
+      .dark .text-gray-400 { color: #879c92; }
+      .border-gray-200 { border-color: rgba(206, 229, 219, 0.7); }
+      .dark .border-gray-200 { border-color: rgba(56, 84, 73, 0.6); }
+      .border-gray-300 { border-color: rgba(178, 209, 195, 0.7); }
+      .dark .border-gray-300 { border-color: rgba(64, 96, 83, 0.65); }
+      .border-gray-100 { border-color: rgba(230, 241, 235, 0.7); }
+      .dark .border-gray-100 { border-color: rgba(46, 72, 62, 0.55); }
+      .bg-gray-50 { background-color: rgba(241, 247, 244, 0.7); backdrop-filter: blur(14px); }
+      .dark .bg-gray-50 { background-color: rgba(20, 33, 28, 0.55); }
+      .bg-gray-200 { background-color: rgba(221, 236, 229, 0.65); }
+      .dark .bg-gray-200 { background-color: rgba(37, 55, 48, 0.7); }
+      .bg-white { background-color: rgba(255, 255, 255, 0.82); backdrop-filter: blur(18px); }
+      .dark .bg-white { background-color: rgba(14, 27, 23, 0.72); }
+      .bg-gray-900 { background-color: #163428; }
+      .dark .bg-gray-900 { background-color: #11241d; }
     }
   </style>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}</style>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    function themeState() {
+      return {
+        theme: document.documentElement.dataset.theme || (document.documentElement.classList.contains('dark') ? 'dark' : 'light'),
+        init() {
+          this.applyTheme(this.theme);
+        },
+        applyTheme(value) {
+          this.theme = value;
+          document.documentElement.dataset.theme = value;
+          document.documentElement.classList.toggle('dark', value === 'dark');
+          try { localStorage.setItem('mymoneymap-theme', value); } catch (e) {}
+        },
+        toggleTheme() {
+          this.applyTheme(this.theme === 'dark' ? 'light' : 'dark');
+        }
+      }
+    }
+  </script>
   <style>[x-cloak]{display:none!important}</style>
 </head>
-<body class="bg-gray-50 text-gray-900">
+<body x-data="themeState()" x-init="init()" class="relative">
+  <div class="pointer-events-none fixed inset-0 -z-10 opacity-60 mix-blend-normal">
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(75,150,110,0.18),transparent_55%),radial-gradient(circle_at_80%_0%,rgba(50,100,75,0.22),transparent_65%)] dark:bg-[radial-gradient(circle_at_15%_15%,rgba(75,150,110,0.35),transparent_60%),radial-gradient(circle_at_85%_5%,rgba(18,36,29,0.55),transparent_70%)]"></div>
+  </div>
   <?php
     $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/';
     $onboarding  = str_starts_with($currentPath, '/onboard');
     $hideMenus   = ($onboarding && $currentPath !== '/onboard/done');
 
-    // nav items
     $items = [
       ['href'=>'/',              'label'=>'Dashboard',      'match'=>'#^/$#'],
       ['href'=>'/current-month', 'label'=>'Current Month',  'match'=>'#^/current-month$#'],
@@ -168,60 +354,91 @@
       ['href'=>'/loans',         'label'=>'Loans',          'match'=>'#^/loans(?:/.*)?$#'],
       ['href'=>'/emergency',     'label'=>'Emergency',      'match'=>'#^/emergency(?:/.*)?$#'],
       ['href'=>'/scheduled',     'label'=>'Scheduled',      'match'=>'#^/scheduled(?:/.*)?$#'],
-      // ['href'=>'/stocks',        'label'=>'Stocks',         'match'=>'#^/stocks(?:/.*)?$#'],
-      // ['href'=>'/years',         'label'=>'Years',          'match'=>'#^/years(?:/.*)?$#'],
-      ['href'=>'/feedback', 'label'=>'Feedback', 'match'=>'#^/feedback$#'],
+      ['href'=>'/feedback',      'label'=>'Feedback',       'match'=>'#^/feedback$#'],
       ['href'=>'/settings',      'label'=>'Settings',       'match'=>'#^/settings$#'],
     ];
     function nav_link(array $item, string $currentPath, string $extra=''): string {
       $active = preg_match($item['match'], $currentPath) === 1;
-      $base = 'px-3 py-1.5 rounded-lg transition';
-      $cls  = $active ? 'bg-gray-900 text-white' : 'hover:bg-gray-100 text-gray-800';
+      $base = 'px-3 py-2 rounded-2xl transition-colors text-sm font-medium flex items-center gap-2';
+      $cls  = $active
+        ? 'bg-brand-600 text-white shadow-brand-glow'
+        : 'text-slate-600 hover:text-brand-700 hover:bg-brand-50/70 dark:text-slate-300 dark:hover:text-brand-100 dark:hover:bg-slate-800/70';
       $label = __($item['label']);
-      return '<a class="'.$base.' '.$cls.' '.$extra.'" href="'.$item['href'].'">'.htmlspecialchars($label).'</a>';
+      return '<a class="'.$base.' '.$cls.' '.$extra.'" href="'.$item['href'].'"'.($active?' aria-current="page"':'').'>'.htmlspecialchars($label).'</a>';
     }
   ?>
 
-  <header class="backdrop-blur bg-white/70 sticky top-0 z-40 border-b border-gray-200">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-      <a href="/" class="font-semibold tracking-tight text-lg flex items-center gap-2">
-        <img src="/logo_simple_light.png" alt="App logo" class="h-14 w-14">
-        <?= htmlspecialchars($app['app']['name']) ?>
+  <header class="sticky top-0 z-40 border-b border-white/40 bg-white/60 backdrop-blur-xl transition dark:border-slate-800/60 dark:bg-slate-900/50">
+    <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
+      <a href="/" class="flex items-center gap-3 text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
+        <span class="grid h-12 w-12 place-items-center rounded-2xl bg-brand-600/90 text-white shadow-brand-glow">
+          <img src="/logo_simple_light.png" alt="App logo" class="h-10 w-10 object-contain" />
+        </span>
+        <span><?= htmlspecialchars($app['app']['name']) ?></span>
       </a>
 
-
-      <!-- Desktop nav (hidden during onboarding, except /onboard/done) -->
       <?php if (!$hideMenus): ?>
-        <nav class="hidden sm:flex items-center gap-2 text-sm">
+        <nav class="hidden items-center gap-3 text-sm sm:flex">
           <?php if (is_logged_in()): ?>
             <?php foreach ($items as $it): echo nav_link($it, $currentPath); endforeach; ?>
+            <button type="button" class="icon-btn" @click="toggleTheme()" x-data="{}">
+              <span class="sr-only">Toggle theme</span>
+              <svg x-cloak x-show="theme === 'light'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5">
+                <path d="M12 3v2.25"/>
+                <path d="M12 18.75V21"/>
+                <path d="M21 12h-2.25"/>
+                <path d="M5.25 12H3"/>
+                <path d="M18.364 5.636l-1.59 1.59"/>
+                <path d="M7.227 16.773l-1.59 1.59"/>
+                <path d="M18.364 18.364l-1.59-1.59"/>
+                <path d="M7.227 7.227l-1.59-1.59"/>
+                <circle cx="12" cy="12" r="3.75"/>
+              </svg>
+              <svg x-cloak x-show="theme === 'dark'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5">
+                <path d="M21 15.75A9 9 0 0 1 8.25 3 7.5 7.5 0 1 0 21 15.75Z" />
+              </svg>
+            </button>
             <form action="/logout" method="post" class="inline">
               <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-              <button class="ml-2 px-3 py-1.5 rounded-lg bg-gray-900 text-white"><?= __('Logout') ?></button>
+              <button class="btn btn-primary ml-1">
+                <?= __('Logout') ?>
+              </button>
             </form>
           <?php endif; ?>
         </nav>
       <?php endif; ?>
 
-      <!-- Mobile menu (also hidden during onboarding, except /onboard/done) -->
       <?php if (!$hideMenus): ?>
-        <div x-data="{open:false}" class="sm:hidden relative">
-          <button @click="open = !open" class="px-3 py-1.5 rounded-lg border bg-white"><?= __('Menu') ?></button>
-          <div x-cloak x-show="open" @click.outside="open=false" x-transition
-               class="absolute right-0 mt-2 w-56 bg-white border rounded-2xl shadow-glass p-2 z-50">
+        <div x-data="{open:false}" class="relative sm:hidden">
+          <button @click="open = !open" class="icon-btn">
+            <span class="sr-only">Open menu</span>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5">
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <div x-cloak x-show="open" @click.outside="open=false" x-transition class="absolute right-0 mt-3 w-64 space-y-2 rounded-3xl border border-white/50 bg-white/80 p-3 shadow-glass backdrop-blur-xl dark:border-slate-800/70 dark:bg-slate-900/70">
             <?php if (is_logged_in()): ?>
-              <div class="grid gap-1">
+              <div class="grid gap-2 text-sm">
                 <?php foreach ($items as $it): ?>
-                  <?= nav_link($it, $currentPath, 'block text-left') ?>
+                  <?= nav_link($it, $currentPath, 'w-full') ?>
                 <?php endforeach; ?>
+                <button type="button" class="icon-btn w-full justify-center" @click="toggleTheme(); open=false">
+                  <span class="sr-only">Toggle theme</span>
+                  <span x-show="theme === 'light'" class="flex items-center gap-2" x-cloak>
+                    🌞 <span><?= __('Light mode') ?></span>
+                  </span>
+                  <span x-show="theme === 'dark'" class="flex items-center gap-2" x-cloak>
+                    🌙 <span><?= __('Dark mode') ?></span>
+                  </span>
+                </button>
                 <form action="/logout" method="post" class="pt-1">
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-                  <button class="w-full px-3 py-2 rounded-lg bg-gray-900 text-white"><?= __('Logout') ?></button>
+                  <button class="btn btn-primary w-full"><?= __('Logout') ?></button>
                 </form>
               </div>
             <?php else: ?>
-              <a class="block px-3 py-2 rounded-lg hover:bg-gray-100" href="/login"><?= __('Login') ?></a>
-              <a class="block px-3 py-2 rounded-lg hover:bg-gray-100" href="/register"><?= __('Register') ?></a>
+              <a class="btn btn-muted w-full" href="/login"><?= __('Login') ?></a>
+              <a class="btn btn-primary w-full" href="/register"><?= __('Register') ?></a>
             <?php endif; ?>
           </div>
         </div>
@@ -229,4 +446,4 @@
     </div>
   </header>
 
-  <main class="max-w-6xl mx-auto px-4 py-6">
+  <main class="relative z-10 mx-auto w-full max-w-6xl px-4 py-8">
