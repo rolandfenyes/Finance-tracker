@@ -10,7 +10,7 @@
     return $str ? ('?'.$str) : '';
   };
   // $ymPrev, $ymNext, $ymThis, $y, $m already computed in controller
-  $ymLabel = date('F Y', strtotime(sprintf('%04d-%02d-01', $y, $m)));
+  $ymLabel = format_month_year(sprintf('%04d-%02d-01', $y, $m));
 ?>
 <section class="mb-4">
   <div class="rounded-3xl bg-white/80 backdrop-blur border border-gray-200 shadow-sm p-3">
@@ -67,13 +67,13 @@
         <a href="<?= htmlspecialchars($currentPath . $qs_clean(['ym' => $ymThis])) ?>"
            class="hidden sm:inline-flex items-center gap-2 rounded-2xl bg-gray-900 text-white px-4 py-2.5 shadow-sm hover:opacity-90 transition">
           <i data-lucide="calendar-clock" class="w-4 h-4"></i>
-          This month
+          <?= __('This month') ?>
         </a>
       </div>
     </div>
 
     <div class="px-1 pt-3 text-sm text-gray-500">
-      Viewing <span class="font-medium text-gray-700"><?= htmlspecialchars($ymLabel) ?></span>
+      <?= __('Viewing') ?> <span class="font-medium text-gray-700"><?= htmlspecialchars($ymLabel) ?></span>
     </div>
   </div>
 </section>
@@ -122,12 +122,12 @@
 <section class="grid md:grid-cols-3 gap-4">
   <!-- Summary -->
   <div class="bg-white rounded-2xl p-6 shadow-glass">
-    <h2 class="text-lg font-semibold mb-4">Monthly Summary</h2>
+    <h2 class="text-lg font-semibold mb-4"><?= __('Monthly Summary') ?></h2>
 
     <!-- Net focus -->
     <?php $net = $sumIn_main - $sumOut_main; ?>
     <div class="text-center mb-6">
-      <div class="text-sm text-gray-500">Net (<?= htmlspecialchars($main) ?>)</div>
+      <div class="text-sm text-gray-500"><?= __('Net') ?> (<?= htmlspecialchars($main) ?>)</div>
       <div class="text-3xl font-bold <?= $net>=0 ? 'text-green-600' : 'text-red-600' ?>">
         <?= moneyfmt($net, $main) ?>
       </div>
@@ -136,11 +136,11 @@
     <!-- Income vs Spending -->
     <div class="grid grid-cols-2 gap-4 text-sm">
       <div class="p-3 rounded-xl bg-green-50 text-green-700 text-center">
-        <div class="font-medium">Income</div>
+        <div class="font-medium"><?= __('Income') ?></div>
         <div class="text-md font-semibold"><?= moneyfmt($sumIn_main, $main) ?></div>
       </div>
       <div class="p-3 rounded-xl bg-red-50 text-red-700 text-center">
-        <div class="font-medium">Spending</div>
+        <div class="font-medium"><?= __('Spending') ?></div>
         <div class="text-md font-semibold"><?= moneyfmt($sumOut_main, $main) ?></div>
       </div>
     </div>
@@ -148,7 +148,7 @@
     <!-- Native breakdown -->
     <div class="mt-6 text-xs text-gray-500 space-y-1">
       <div>
-        <span class="font-medium text-gray-600">Native income:</span>
+        <span class="font-medium text-gray-600"><?= __('Native income:') ?></span>
         <?php if (!empty($sumIn_native_by_cur)): ?>
           <?php foreach ($sumIn_native_by_cur as $c=>$a): ?>
             <span class="inline-block mr-2"><?= moneyfmt($a, $c) ?></span>
@@ -156,7 +156,7 @@
         <?php else: ?>0.00<?php endif; ?>
       </div>
       <div>
-        <span class="font-medium text-gray-600">Native spending:</span>
+        <span class="font-medium text-gray-600"><?= __('Native spending:') ?></span>
         <?php if (!empty($sumOut_native_by_cur)): ?>
           <?php foreach ($sumOut_native_by_cur as $c=>$a): ?>
             <span class="inline-block mr-2"><?= moneyfmt($a, $c) ?></span>
@@ -447,7 +447,7 @@
 <!-- Add transaction -->
 <section class="mt-6 grid md:grid-cols-2 gap-6">
   <div class="bg-white rounded-2xl p-5 shadow-glass md:col-span-2">
-    <h3 class="text-base font-semibold mb-3">Quick Add</h3>
+    <h3 class="text-base font-semibold mb-3"><?= __('Quick Add') ?></h3>
 
     <form class="grid gap-4 md:grid-cols-12 md:items-end" method="post" action="/months/tx/add">
       <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
@@ -456,7 +456,7 @@
 
       <!-- Type -->
       <div class="field md:col-span-2">
-        <label class="label">Type</label>
+        <label class="label"><?= __('Type') ?></label>
         <select name="kind" class="select">
           <option value="income">Income</option>
           <option value="spending">Spending</option>
@@ -465,7 +465,7 @@
 
       <!-- Category -->
       <div class="field md:col-span-3">
-        <label class="label">Category</label>
+        <label class="label"><?= __('Category') ?></label>
         <select name="category_id" class="select">
           <option value="">— Category —</option>
           <?php foreach($cats as $c): ?>
@@ -476,7 +476,7 @@
 
       <!-- Amount + Currency -->
       <div class="field md:col-span-4">
-        <label class="label">Amount</label>
+        <label class="label"><?= __('Amount') ?></label>
         <div class="grid grid-cols-5 gap-2">
           <input name="amount" type="number" step="0.01" class="input col-span-3" placeholder="0.00" required />
           <select name="currency" class="select col-span-2">
@@ -494,7 +494,7 @@
 
       <!-- Date -->
       <div class="field md:col-span-2">
-        <label class="label">Date</label>
+        <label class="label"><?= __('Date') ?></label>
         <!-- <input name="occurred_on" type="date" value="<?= $ym ?>-01" class="input" /> -->
          <input name="occurred_on" type="date" value="<?= date('Y-m-d') ?>" class="input" />
 
@@ -502,13 +502,13 @@
 
       <!-- Note -->
       <div class="field md:col-span-8">
-        <label class="label">Note <span class="help">(optional)</span></label>
-        <input name="note" class="input" placeholder="Add a short note…" />
+        <label class="label"><?= __('Note') ?> <span class="help">(optional)</span></label>
+        <input name="note" class="input" placeholder="<?= __('Add a short note…') ?>" />
       </div>
 
       <!-- Submit -->
       <div class="md:col-span-4 flex md:justify-end">
-        <button class="btn btn-primary w-full md:w-auto">Add</button>
+        <button class="btn btn-primary w-full md:w-auto"><?= __('Add') ?></button>
       </div>
     </form>
   </div>
@@ -516,7 +516,7 @@
 
 <!-- Transactions -->
 <section class="mt-6 bg-white rounded-2xl p-5 shadow-glass">
-  <h3 class="font-semibold mb-3">Transactions</h3>
+  <h3 class="font-semibold mb-3"><?= __('Transactions') ?></h3>
 
   <!-- Mobile: stacked cards -->
   <div class="md:hidden space-y-3">
@@ -640,7 +640,7 @@
             data-next="<?= (int)$page + 1 ?>"
             data-last="<?= (int)$totalPages ?>"
             data-url="<?= htmlspecialchars($listUrl) ?>">
-      Load more
+      <?= __('Load more') ?>
     </button>
   </div>
 
@@ -656,7 +656,9 @@
     if (next>last) btn.style.display='none';
 
     btn.addEventListener('click', async ()=>{
-      btn.disabled = true; btn.textContent = 'Loading…';
+      const loadingLabel = '<?= addslashes(__('Loading…')) ?>';
+      const moreLabel = '<?= addslashes(__('Load more')) ?>';
+      btn.disabled = true; btn.textContent = loadingLabel;
       const url = baseUrl.replace(/([?&])page=\d+/,'$1page='+next) + (baseUrl.includes('page=') ? '' : '&page='+next);
       const res = await fetch(url, {headers:{'X-Requested-With':'fetch'}});
       const html = await res.text();
@@ -664,7 +666,7 @@
       list.insertAdjacentHTML('beforeend', html);
       next++;
       if (next>last){ btn.style.display='none'; }
-      else { btn.disabled=false; btn.textContent='Load more'; btn.dataset.next = String(next); }
+      else { btn.disabled=false; btn.textContent=moreLabel; btn.dataset.next = String(next); }
     });
   })();
   </script>

@@ -7,8 +7,8 @@
         <div class="flex items-center gap-3">
           <div class="h-10 w-10 rounded-xl grid place-items-center bg-gray-900 text-white">🔒</div>
           <div>
-            <h1 class="text-lg font-semibold leading-tight">Welcome back</h1>
-            <p class="text-xs text-gray-500">Sign in to continue</p>
+            <h1 class="text-lg font-semibold leading-tight"><?= __('Welcome back') ?></h1>
+            <p class="text-xs text-gray-500"><?= __('Sign in to continue') ?></p>
           </div>
         </div>
         <?php if (!empty($_SESSION['flash'])): ?>
@@ -24,13 +24,13 @@
 
         <!-- Email -->
         <div>
-          <label class="label mb-1">Email</label>
+          <label class="label mb-1"><?= __('Email') ?></label>
           <div class="relative">
             <input
               name="email"
               type="email"
               class="input pl-10 w-full"
-              placeholder="you@example.com"
+              placeholder="<?= __('you@example.com') ?>"
               autocomplete="email"
               inputmode="email"
               required
@@ -43,8 +43,8 @@
         <!-- Password -->
         <div>
           <div class="flex items-center justify-between mb-1">
-            <label class="label">Password</label>
-            <a href="/forgot" class="text-xs text-accent hover:underline">Forgot?</a>
+            <label class="label"><?= __('Password') ?></label>
+            <a href="/forgot" class="text-xs text-accent hover:underline"><?= __('Forgot?') ?></a>
           </div>
           <div class="relative">
             <input
@@ -58,8 +58,9 @@
             />
             <span class="absolute inset-y-0 left-3 grid place-items-center text-gray-400 pointer-events-none">🔑</span>
             <button type="button" class="absolute inset-y-0 right-2 my-auto h-9 px-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100"
-                    onclick="const p=document.getElementById('login-password'); p.type=(p.type==='password'?'text':'password'); this.textContent=(p.type==='password'?'Show':'Hide');">
-              Show
+                    data-show="<?= __('Show') ?>" data-hide="<?= __('Hide') ?>"
+                    onclick="const p=document.getElementById('login-password'); const isPassword=p.type==='password'; p.type=isPassword?'text':'password'; this.textContent=isPassword?this.dataset.hide:this.dataset.show;">
+              <?= __('Show') ?>
             </button>
           </div>
         </div>
@@ -68,23 +69,23 @@
         <div class="flex items-center justify-between">
           <label class="inline-flex items-center gap-2 text-sm">
             <input type="checkbox" name="remember" value="1" class="rounded border-gray-300">
-            <span>Remember me</span>
+            <span><?= __('Remember me') ?></span>
           </label>
-          <span class="text-xs text-gray-400">Secure by design</span>
+          <span class="text-xs text-gray-400"><?= __('Secure by design') ?></span>
         </div>
 
-        <button class="btn btn-primary w-full">Sign in</button>
+        <button class="btn btn-primary w-full"><?= __('Sign in') ?></button>
 
         <p class="text-sm text-gray-500 text-center">
-          No account?
-          <a class="text-accent hover:underline" href="/register">Create one</a>
+          <?= __('No account?') ?>
+          <a class="text-accent hover:underline" href="/register"><?= __('Create one') ?></a>
         </p>
       </form>
     </div>
 
     <!-- Footer note -->
     <p class="mt-4 text-[11px] text-center text-gray-400">
-      By continuing you agree to the Terms & Privacy Policy.
+      <?= __('By continuing you agree to the Terms & Privacy Policy.') ?>
     </p>
   </div>
 </section>
