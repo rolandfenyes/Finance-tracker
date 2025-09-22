@@ -1,7 +1,128 @@
+<?php
+  // current request path and helpers from your page…
+  $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+  $qs_clean = function(array $overrides = []) {
+    $q = $_GET ?? [];
+    foreach ($q as $k=>$v){ if ($v==='' || $v===null) unset($q[$k]); }
+    unset($q['page']);
+    foreach ($overrides as $k=>$v){ if ($v===null) unset($q[$k]); else $q[$k]=$v; }
+    $str = http_build_query($q);
+    return $str ? ('?'.$str) : '';
+  };
+  // $ymPrev, $ymNext, $ymThis, $y, $m already computed in controller
+  $ymLabel = date('F Y', strtotime(sprintf('%04d-%02d-01', $y, $m)));
+?>
+<section class="mb-4">
+  <div class="rounded-3xl bg-white/80 backdrop-blur border border-gray-200 shadow-sm p-3">
+    <div class="flex items-center justify-between sm:justify-start gap-3">
+
+      <!-- Prev -->
+      <a href="<?= htmlspecialchars($currentPath . $qs_clean(['ym' => $ymPrev])) ?>"
+         class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-gray-200 hover:bg-gray-50 transition"
+         aria-label="Previous month">
+        <i data-lucide="chevron-left" class="w-5 h-5"></i>
+      </a>
+
+      <!-- Month pill (click anywhere to open) -->
+      <div class="relative">
+        <!-- Visible pill -->
+        <button id="month-pill"
+                type="button"
+                class="group inline-flex items-center gap-3 rounded-2xl border border-gray-200 px-5 py-3 shadow-sm hover:bg-gray-50 transition"
+                aria-haspopup="dialog"
+                aria-expanded="false">
+          <i data-lucide="calendar" class="w-5 h-5 text-gray-700"></i>
+          <span class="font-semibold text-gray-900 leading-tight">
+            <?= htmlspecialchars($ymLabel) ?>
+          </span>
+          <i data-lucide="chevron-down" class="w-4 h-4 text-gray-500 group-hover:translate-y-[1px] transition"></i>
+        </button>
+
+        <!-- Real input (visually hidden but clickable via JS) -->
+        <input id="month-input"
+               type="month"
+               name="ym"
+               value="<?= htmlspecialchars(sprintf('%04d-%02d', $y, $m)) ?>"
+               class="sr-only"
+               aria-hidden="true" />
+      </div>
+
+      <!-- Next -->
+      <a href="<?= htmlspecialchars($currentPath . $qs_clean(['ym' => $ymNext])) ?>"
+         class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-gray-200 hover:bg-gray-50 transition"
+         aria-label="Next month">
+        <i data-lucide="chevron-right" class="w-5 h-5"></i>
+      </a>
+
+      <!-- “This month” — icon on mobile, pill on ≥sm -->
+      <div class="flex items-center gap-2">
+        <!-- mobile: icon -->
+        <a href="<?= htmlspecialchars($currentPath . $qs_clean(['ym' => $ymThis])) ?>"
+           class="sm:hidden inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-gray-200 hover:bg-gray-50 transition"
+           aria-label="This month">
+          <i data-lucide="calendar-clock" class="w-5 h-5"></i>
+        </a>
+
+        <!-- desktop: pill -->
+        <a href="<?= htmlspecialchars($currentPath . $qs_clean(['ym' => $ymThis])) ?>"
+           class="hidden sm:inline-flex items-center gap-2 rounded-2xl bg-gray-900 text-white px-4 py-2.5 shadow-sm hover:opacity-90 transition">
+          <i data-lucide="calendar-clock" class="w-4 h-4"></i>
+          This month
+        </a>
+      </div>
+    </div>
+
+    <div class="px-1 pt-3 text-sm text-gray-500">
+      Viewing <span class="font-medium text-gray-700"><?= htmlspecialchars($ymLabel) ?></span>
+    </div>
+  </div>
+</section>
+
+<script>
+  // Make the whole pill open the native month picker
+  (function(){
+    const pill  = document.getElementById('month-pill');
+    const input = document.getElementById('month-input');
+
+    if (!pill || !input) return;
+
+    // When the pill is clicked, forward focus/click to the hidden input
+    pill.addEventListener('click', () => {
+      // On iOS Safari the .showPicker() is not universal; fallback to focus+click
+      if (input.showPicker) {
+        input.showPicker();
+      } else {
+        input.focus();
+        input.click();
+      }
+    });
+
+    // When month changes, reload with ?ym=YYYY-MM while preserving other filters
+    input.addEventListener('change', () => {
+      const ym = input.value; // 'YYYY-MM'
+      const url = new URL(window.location.href);
+      url.searchParams.set('ym', ym);
+      url.searchParams.delete('page'); // reset pagination
+      window.location.href = url.pathname + '?' + url.searchParams.toString();
+    });
+
+    // (Re)render Lucide icons (after server render / HTMX / fetch etc.)
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+      window.lucide.createIcons();
+    } else {
+      document.addEventListener('DOMContentLoaded', () => {
+        window.lucide && window.lucide.createIcons && window.lucide.createIcons();
+      });
+    }
+  })();
+</script>
+
+
 <?php $ym = sprintf('%04d-%02d', $y, $m); ?>
 <section class="grid md:grid-cols-3 gap-4">
+  <!-- Summary -->
   <div class="bg-white rounded-2xl p-6 shadow-glass">
-    <h2 class="text-lg font-semibold mb-4"><?= $ym ?></h2>
+    <h2 class="text-lg font-semibold mb-4">Monthly Summary</h2>
 
     <!-- Net focus -->
     <?php $net = $sumIn_main - $sumOut_main; ?>
@@ -45,72 +166,82 @@
     </div>
   </div>
 
-  <div class="bg-white rounded-2xl p-5 shadow-glass md:col-span-2">
-    <h3 class="text-base font-semibold mb-3">Quick Add</h3>
+  <!-- Cashflow Guidance -->
+  <section class="bg-white rounded-2xl p-5 shadow-glass md:col-span-2">
+    <div class="flex items-center justify-between">
+      <h3 class="font-semibold">Cashflow Guidance</h3>
+      <div class="text-xs text-gray-500">Budgets are based on your cashflow rules & this month’s income.</div>
+    </div>
 
-    <form class="grid gap-4 md:grid-cols-12 md:items-end" method="post" action="/months/tx/add">
-      <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-      <input type="hidden" name="y" value="<?= $y ?>" />
-      <input type="hidden" name="m" value="<?= $m ?>" />
+    <?php if (empty($ruleGuides)): ?>
+      <p class="text-sm text-gray-500 mt-2">
+        No cashflow rules yet. Set them up in <a class="text-accent" href="/settings/cashflow">Settings → Cashflow</a>
+        to get category-by-category guidance.
+      </p>
+    <?php else: ?>
+      <div class="mt-4 grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <?php foreach ($ruleGuides as $rid => $rg): 
+          $pctSpent = ($rg['budget'] > 0) ? min(100, round($rg['spent'] / $rg['budget'] * 100)) : 0;
+        ?>
+          <div class="rounded-xl border p-3">
+            <div class="flex items-center justify-between">
+              <div class="font-medium"><?= htmlspecialchars($rg['label']) ?></div>
+              <span class="chip"><?= (float)$rg['percent'] ?>%</span>
+            </div>
+            <div class="mt-2 text-xs text-gray-600">
+              Budget: <span class="font-medium"><?= moneyfmt($rg['budget'], $main) ?></span>
+              · Spent: <span class="font-medium"><?= moneyfmt($rg['spent'], $main) ?></span>
+            </div>
 
-      <!-- Type -->
-      <div class="field md:col-span-2">
-        <label class="label">Type</label>
-        <select name="kind" class="select">
-          <option value="income">Income</option>
-          <option value="spending">Spending</option>
-        </select>
+            <div class="mt-2 h-2 rounded-full bg-gray-100">
+              <div class="h-2 rounded-full" style="width: <?= $pctSpent ?>%; background:#111827"></div>
+            </div>
+
+            <div class="mt-2 text-sm">
+              <?php if ($rg['spent'] <= $rg['budget']): ?>
+                <span class="text-emerald-700">Remaining:</span>
+                <span class="font-medium"><?= moneyfmt($rg['remaining'], $main) ?></span>
+              <?php else: ?>
+                <?php $over = $rg['spent'] - $rg['budget']; ?>
+                <span class="text-red-700">Over by:</span>
+                <span class="font-medium"><?= moneyfmt($over, $main) ?></span>
+              <?php endif; ?>
+            </div>
+
+            <?php
+              // show quick per-category breakdown (equal caps) under each rule
+              $catsInRule = array_filter($cats, fn($c) => (int)($c['cashflow_rule_id'] ?? 0) === (int)$rid);
+            ?>
+            <?php if (!empty($catsInRule)): ?>
+              <div class="mt-3 space-y-2">
+                <?php foreach ($catsInRule as $c): 
+                  $cg = $catGuides[(int)$c['id']] ?? null;
+                  if (!$cg) continue;
+                  $rem = $cg['remaining'];
+                  $over = max(0, $cg['spent'] - $cg['cap']);
+                ?>
+                  <div class="flex items-center justify-between text-xs">
+                    <div class="flex items-center gap-2 min-w-0">
+                      <span class="inline-block h-2.5 w-2.5 rounded-full" style="background: <?= htmlspecialchars($c['color']) ?>"></span>
+                      <span class="truncate"><?= htmlspecialchars($c['label']) ?></span>
+                    </div>
+                    <?php if ($over <= 0): ?>
+                      <span class="text-emerald-700">left <?= moneyfmt($rem, $main) ?></span>
+                    <?php else: ?>
+                      <span class="text-red-700">over <?= moneyfmt($over, $main) ?></span>
+                    <?php endif; ?>
+                  </div>
+                <?php endforeach; ?>
+              </div>
+            <?php endif; ?>
+          </div>
+        <?php endforeach; ?>
       </div>
-
-      <!-- Category -->
-      <div class="field md:col-span-3">
-        <label class="label">Category</label>
-        <select name="category_id" class="select">
-          <option value="">— Category —</option>
-          <?php foreach($cats as $c): ?>
-            <option value="<?= $c['id'] ?>"><?= ucfirst($c['kind']) ?> · <?= htmlspecialchars($c['label']) ?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-
-      <!-- Amount + Currency -->
-      <div class="field md:col-span-4">
-        <label class="label">Amount</label>
-        <div class="grid grid-cols-5 gap-2">
-          <input name="amount" type="number" step="0.01" class="input col-span-3" placeholder="0.00" required />
-          <select name="currency" class="select col-span-2">
-            <?php foreach ($userCurrencies as $c): ?>
-              <option value="<?= htmlspecialchars($c['code']) ?>" <?= $c['is_main'] ? 'selected' : '' ?>>
-                <?= htmlspecialchars($c['code']) ?>
-              </option>
-            <?php endforeach; ?>
-            <?php if (!count($userCurrencies)): ?><option value="HUF">HUF</option><?php endif; ?>
-          </select>
-        </div>
-      </div>
-
-
-
-      <!-- Date -->
-      <div class="field md:col-span-2">
-        <label class="label">Date</label>
-        <input name="occurred_on" type="date" value="<?= $ym ?>-01" class="input" />
-      </div>
-
-      <!-- Note -->
-      <div class="field md:col-span-8">
-        <label class="label">Note <span class="help">(optional)</span></label>
-        <input name="note" class="input" placeholder="Add a short note…" />
-      </div>
-
-      <!-- Submit -->
-      <div class="md:col-span-4 flex md:justify-end">
-        <button class="btn btn-primary w-full md:w-auto">Add</button>
-      </div>
-    </form>
-  </div>
+    <?php endif; ?>
+  </section>
 </section>
 
+<!-- Charts -->
 <section class="mt-6 grid md:grid-cols-2 gap-6">
   <!-- A) Cumulative Net Cashflow (area line) -->
   <div class="bg-white rounded-2xl p-5 shadow-glass h-80">
@@ -313,7 +444,77 @@
   </div>
 </section>
 
+<!-- Add transaction -->
+<section class="mt-6 grid md:grid-cols-2 gap-6">
+  <div class="bg-white rounded-2xl p-5 shadow-glass md:col-span-2">
+    <h3 class="text-base font-semibold mb-3">Quick Add</h3>
 
+    <form class="grid gap-4 md:grid-cols-12 md:items-end" method="post" action="/months/tx/add">
+      <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+      <input type="hidden" name="y" value="<?= $y ?>" />
+      <input type="hidden" name="m" value="<?= $m ?>" />
+
+      <!-- Type -->
+      <div class="field md:col-span-2">
+        <label class="label">Type</label>
+        <select name="kind" class="select">
+          <option value="income">Income</option>
+          <option value="spending">Spending</option>
+        </select>
+      </div>
+
+      <!-- Category -->
+      <div class="field md:col-span-3">
+        <label class="label">Category</label>
+        <select name="category_id" class="select">
+          <option value="">— Category —</option>
+          <?php foreach($cats as $c): ?>
+            <option value="<?= $c['id'] ?>"><?= ucfirst($c['kind']) ?> · <?= htmlspecialchars($c['label']) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+
+      <!-- Amount + Currency -->
+      <div class="field md:col-span-4">
+        <label class="label">Amount</label>
+        <div class="grid grid-cols-5 gap-2">
+          <input name="amount" type="number" step="0.01" class="input col-span-3" placeholder="0.00" required />
+          <select name="currency" class="select col-span-2">
+            <?php foreach ($userCurrencies as $c): ?>
+              <option value="<?= htmlspecialchars($c['code']) ?>" <?= $c['is_main'] ? 'selected' : '' ?>>
+                <?= htmlspecialchars($c['code']) ?>
+              </option>
+            <?php endforeach; ?>
+            <?php if (!count($userCurrencies)): ?><option value="HUF">HUF</option><?php endif; ?>
+          </select>
+        </div>
+      </div>
+
+
+
+      <!-- Date -->
+      <div class="field md:col-span-2">
+        <label class="label">Date</label>
+        <!-- <input name="occurred_on" type="date" value="<?= $ym ?>-01" class="input" /> -->
+         <input name="occurred_on" type="date" value="<?= date('Y-m-d') ?>" class="input" />
+
+      </div>
+
+      <!-- Note -->
+      <div class="field md:col-span-8">
+        <label class="label">Note <span class="help">(optional)</span></label>
+        <input name="note" class="input" placeholder="Add a short note…" />
+      </div>
+
+      <!-- Submit -->
+      <div class="md:col-span-4 flex md:justify-end">
+        <button class="btn btn-primary w-full md:w-auto">Add</button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<!-- Transactions -->
 <section class="mt-6 bg-white rounded-2xl p-5 shadow-glass">
   <h3 class="font-semibold mb-3">Transactions</h3>
 
@@ -380,7 +581,9 @@
         <div class="mt-3">
           <?php if (!$isVirtual): ?>
             <details class="group">
-              <summary class="btn btn-ghost cursor-pointer">Edit</summary>
+              <summary class="btn btn-ghost cursor-pointer">
+                <i data-lucide="edit-3" class="w-4 h-4"></i> Edit
+              </summary>
               <div class="mt-2 bg-gray-50 rounded-xl p-3 border">
                 <form class="grid gap-2 sm:grid-cols-6 items-end" method="post" action="/months/tx/edit">
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
@@ -414,7 +617,9 @@
                   <input type="hidden" name="y" value="<?= $y ?>" />
                   <input type="hidden" name="m" value="<?= $m ?>" />
                   <input type="hidden" name="id" value="<?= $row['id'] ?>" />
-                  <button class="btn btn-danger">Remove</button>
+                  <button class="btn btn-danger">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i> Remove
+                  </button>
                 </form>
               </div>
             </details>
@@ -426,17 +631,19 @@
     <?php endforeach; ?>
   </div>
   <?php
-    // compute if there are more pages for mobile (reuse desktop count)
-    $hasMoreMobile = ($totalPages > 1 && $page < $totalPages);
+    $loadQs = array_merge($_GET ?? [], ['ym' => sprintf('%04d-%02d', $y, $m)]);
+    // your list endpoint path stays the same if that’s your route:
+    $listUrl = '/months/tx/list?' . http_build_query($loadQs);
   ?>
   <div class="md:hidden mt-3 flex justify-center">
-    <button id="tx-loadmore" class="btn btn-ghost" 
-            data-next="<?= $page+1 ?>" 
-            data-last="<?= $totalPages ?>"
-            data-url="/months/tx/list?<?= http_build_query(array_merge($_GET,['y'=>$y,'m'=>$m])) ?>">
+    <button id="tx-loadmore" class="btn btn-ghost"
+            data-next="<?= (int)$page + 1 ?>"
+            data-last="<?= (int)$totalPages ?>"
+            data-url="<?= htmlspecialchars($listUrl) ?>">
       Load more
     </button>
   </div>
+
 
   <script>
   (function(){
@@ -529,13 +736,19 @@
 
             <td class="py-2 pr-3">
               <?php if (!$isVirtual && !$isLocked): ?>
-                <button type="button" class="btn btn-ghost" onclick="openTxModal('tx<?= (int)$row['id'] ?>')">Edit</button>
-                <form class="inline" method="post" action="/months/tx/delete" onsubmit="return confirm('Delete transaction?')">
+                <button type="button" class="btn btn-ghost p-2" onclick="openTxModal('tx<?= (int)$row['id'] ?>')" title="Edit">
+                  <i data-lucide="edit-3" class="w-4 h-4"></i>
+                </button>
+
+                <form class="inline" method="post" action="/months/tx/delete"
+                      onsubmit="return confirm('Delete transaction?')">
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                   <input type="hidden" name="y" value="<?= (int)$y ?>" />
                   <input type="hidden" name="m" value="<?= (int)$m ?>" />
                   <input type="hidden" name="id" value="<?= (int)$row['id'] ?>" />
-                  <button class="btn btn-danger">Remove</button>
+                  <button class="btn btn-ghost text-red-600 p-2" title="Remove">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                  </button>
                 </form>
 
                 <!-- Modal -->
@@ -607,18 +820,32 @@
         <?php endforeach; ?>
       </tbody>
     </table>
-    <?php if ($totalPages > 1): 
-      $qs = $_GET; unset($qs['page']); $base = '/years/'.$y.'/'.$m;
-      $mk = function($p) use ($base,$qs){ $qs['page']=$p; return $base.'?'.http_build_query($qs); };
+    <?php
+      // use the same $currentPath you already compute above
+      $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+
+      if ($totalPages > 1):
+        $qs = $_GET ?? [];
+        // Always carry the selected month
+        $qs['ym'] = sprintf('%04d-%02d', $y, $m);
+        unset($qs['page']); // reset page when building links
+
+        $mk = function($p) use ($currentPath, $qs){
+          $qs['page'] = $p;
+          return $currentPath . '?' . http_build_query($qs);
+        };
     ?>
       <div class="hidden md:flex items-center justify-between mt-3 text-sm">
         <div class="text-gray-500">Page <?= $page ?> / <?= $totalPages ?></div>
         <div class="flex gap-2">
-          <a class="btn btn-ghost <?= $page<=1?'pointer-events-none opacity-40':'' ?>" href="<?= $page>1?$mk($page-1):'#' ?>">Prev</a>
-          <a class="btn btn-ghost <?= $page>=$totalPages?'pointer-events-none opacity-40':'' ?>" href="<?= $page<$totalPages?$mk($page+1):'#' ?>">Next</a>
+          <a class="btn btn-ghost <?= $page<=1?'pointer-events-none opacity-40':'' ?>"
+            href="<?= $page>1 ? htmlspecialchars($mk($page-1)) : '#' ?>">Prev</a>
+          <a class="btn btn-ghost <?= $page>=$totalPages?'pointer-events-none opacity-40':'' ?>"
+            href="<?= $page<$totalPages ? htmlspecialchars($mk($page+1)) : '#' ?>">Next</a>
         </div>
       </div>
     <?php endif; ?>
+
   </div>
 </section>
 <script>
@@ -634,5 +861,18 @@
   });
 </script>
 
-
-
+<script>
+  function openMonthPicker(wrapper){
+    const input = wrapper.querySelector('input[type="month"]');
+    if (!input) return;
+    // Best: Chrome/Edge support
+    if (typeof input.showPicker === 'function') {
+      input.showPicker();
+      return;
+    }
+    // Fallbacks for Safari/Firefox
+    input.focus({preventScroll:true});
+    // Some browsers only open on .click()
+    try { input.click(); } catch(e) {}
+  }
+</script>

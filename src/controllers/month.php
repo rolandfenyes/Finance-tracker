@@ -5,14 +5,38 @@ require_once __DIR__ . '/../recurrence.php';
 
 function month_show(PDO $pdo, ?int $year = null, ?int $month = null) {
   require_login();
+
+  // Parse selected month from query (?ym=YYYY-MM) or fall back to current
+  $ymParam = trim($_GET['ym'] ?? '');
+  if (preg_match('/^\d{4}-\d{2}$/', $ymParam)) {
+    [$y, $m] = array_map('intval', explode('-', $ymParam));
+  } else {
+    $y = $year  ?? (int)date('Y');
+    $m = $month ?? (int)date('n');
+  }
+
+  // Clamp month/year just in case
+  $m = max(1, min(12, $m));
+  $y = max(1970, min(9999, $y));
+
+  // Helpers for first/last day, prev/next month (as YYYY-MM)
+  $first = sprintf('%04d-%02d-01', $y, $m);
+  $last  = date('Y-m-t', strtotime($first));
+
+  $prevFirst = date('Y-m-01', strtotime('-1 month', strtotime($first)));
+  $nextFirst = date('Y-m-01', strtotime('+1 month', strtotime($first)));
+  $ymPrev = date('Y-m', strtotime($prevFirst));
+  $ymNext = date('Y-m', strtotime($nextFirst));
+  $ymThis = date('Y-m'); // “This month” button
+
   $u = uid();
 
   // default = current month
-  $y = $year  ?? (int)date('Y');
-  $m = $month ?? (int)date('n');
+  // $y = $year  ?? (int)date('Y');
+  // $m = $month ?? (int)date('n');
 
-  $first = sprintf('%04d-%02d-01', $y, $m);
-  $last  = date('Y-m-t', strtotime($first));
+  // $first = sprintf('%04d-%02d-01', $y, $m);
+  // $last  = date('Y-m-t', strtotime($first));
   $main  = fx_user_main($pdo, $u);
 
   // Totals (initialize before using in any loop)
@@ -296,11 +320,105 @@ function month_show(PDO $pdo, ?int $year = null, ?int $month = null) {
   $uc = $pdo->prepare('SELECT code, is_main FROM user_currencies WHERE user_id=? ORDER BY is_main DESC, code');
   $uc->execute([$u]); $userCurrencies = $uc->fetchAll();
 
+
+  // ---- Cashflow Guidance (rules & per-category remaining) ----
+
+  // 1) Load rules
+  $rulesStmt = $pdo->prepare("
+    SELECT id, label, percent
+    FROM cashflow_rules
+    WHERE user_id = ?
+    ORDER BY id
+  ");
+  $rulesStmt->execute([$u]);
+  $rules = $rulesStmt->fetchAll(PDO::FETCH_ASSOC);
+
+  // 2) Load spending categories + rule links
+  $catsCFStmt = $pdo->prepare("
+    SELECT id, label, kind, COALESCE(NULLIF(color,''),'#6B7280') AS color, cashflow_rule_id
+    FROM categories
+    WHERE user_id = ? AND kind='spending'
+  ");
+  $catsCFStmt->execute([$u]);
+  $catsCF = $catsCFStmt->fetchAll(PDO::FETCH_ASSOC);
+
+  // Map categories by id and by rule
+  $catById = [];
+  $catsByRule = [];
+  foreach ($catsCF as $c) {
+    $catById[(int)$c['id']] = $c;
+    $rid = (int)($c['cashflow_rule_id'] ?? 0);
+    if ($rid) $catsByRule[$rid][] = (int)$c['id'];
+  }
+
+  // 3) Compute spent per category (ALL tx: real + virtual)
+  $spentByCatMain = [];
+  foreach ($allTx as $r) {
+    if (($r['kind'] ?? '') !== 'spending') continue;
+    $cid = (int)($r['category_id'] ?? 0);
+    if (!$cid) continue;
+
+    if (isset($r['amount_main']) && $r['amount_main'] !== null && !empty($r['main_currency'])) {
+      $amtMain = (float)$r['amount_main'];
+    } else {
+      $from = $r['currency'] ?: $main;
+      $amtMain = fx_convert($pdo, (float)$r['amount'], $from, $main, $r['occurred_on']);
+    }
+
+    $spentByCatMain[$cid] = ($spentByCatMain[$cid] ?? 0) + max(0, $amtMain);
+  }
+
+
+  // 4) Build rule guides (budget = percent% of this month’s income)
+  $ruleGuides = [];          // rule_id => ['label','percent','budget','spent','remaining','color']
+  $catGuides  = [];          // category_id => ['cap','spent','remaining','rule_id','rule_label']
+
+  foreach ($rules as $rul) {
+    $rid      = (int)$rul['id'];
+    $label    = (string)$rul['label'];
+    $percent  = (float)($rul['percent'] ?? 0.0);
+    $budget   = max(0.0, round(($percent / 100.0) * (float)$sumIn_main, 2));
+
+    $catIds = $catsByRule[$rid] ?? [];
+    $spentRule = 0.0;
+    foreach ($catIds as $cid) {
+      $spentRule += (float)($spentByCatMain[$cid] ?? 0.0);
+    }
+    $remainingRule = max(0.0, $budget - $spentRule);
+
+    $ruleGuides[$rid] = [
+      'label'     => $label,
+      'percent'   => $percent,
+      'budget'    => $budget,
+      'spent'     => $spentRule,
+      'remaining' => $remainingRule,
+      'color'     => '#111827', // progress color; tweak if you want per-rule colors
+    ];
+
+    // 5) Equal-split rule budget into category-level “caps” (fallback approach)
+    $nCats = max(1, count($catIds));
+    $capPerCat = $budget / $nCats;
+
+    foreach ($catIds as $cid) {
+      $spentCat = (float)($spentByCatMain[$cid] ?? 0.0);
+      $catGuides[$cid] = [
+        'cap'        => $capPerCat,
+        'spent'      => $spentCat,
+        'remaining'  => max(0.0, $capPerCat - $spentCat),
+        'rule_id'    => $rid,
+        'rule_label' => $label,
+      ];
+    }
+  }
+
+
   // -------------------- VIEW --------------------
   view('month/index', compact(
     'allTx','y','m','first','last','main',
     'sumIn_main','sumOut_main','sumIn_native_by_cur','sumOut_native_by_cur',
     'cats','g','e','userCurrencies',
-    'page','totalPages','flt' // ← for filters + pagination UI
+    'page','totalPages','flt', // ← for filters + pagination UI
+    'ruleGuides','catGuides',
+    'ymPrev','ymNext','ymThis'
   ));
 }

@@ -59,50 +59,56 @@ function categories_index(PDO $pdo){
     view('settings/categories', compact('rows','usage','rules'));
 }
 
-
 function categories_add(PDO $pdo){
-    verify_csrf(); require_login(); $u=uid();
-    $kind  = ($_POST['kind'] ?? '') === 'spending' ? 'spending' : 'income';
-    $label = trim($_POST['label'] ?? '');
-    $color = normalize_hex($_POST['color'] ?? '');
-    $rid   = ($_POST['cashflow_rule_id'] ?? '') !== '' ? (int)$_POST['cashflow_rule_id'] : null;
+  verify_csrf(); require_login(); $u=uid();
+  $kind  = ($_POST['kind'] ?? '') === 'spending' ? 'spending' : 'income';
+  $label = trim($_POST['label'] ?? '');
+  $color = normalize_hex($_POST['color'] ?? '');
+  $rid   = ($_POST['cashflow_rule_id'] ?? '') !== '' ? (int)$_POST['cashflow_rule_id'] : null;
 
-    if ($label==='') return;
+  if ($label==='') return;
 
-    // verify rule belongs to user
-    if ($rid !== null){
-        $chk = $pdo->prepare("SELECT 1 FROM cashflow_rules WHERE id=? AND user_id=?");
-        $chk->execute([$rid,$u]);
-        if (!$chk->fetch()) $rid = null;
-    }
+  // Income categories cannot have a rule
+  if ($kind === 'income') { $rid = null; }
 
-    $stmt = $pdo->prepare("
-      INSERT INTO categories(user_id,label,kind,color,cashflow_rule_id)
-      VALUES (?,?,?,?,?)
-    ");
-    $stmt->execute([$u,$label,$kind,$color,$rid]);
+  // verify rule belongs to user (only if spending)
+  if ($rid !== null){
+    $chk = $pdo->prepare("SELECT 1 FROM cashflow_rules WHERE id=? AND user_id=?");
+    $chk->execute([$rid,$u]);
+    if (!$chk->fetch()) $rid = null;
+  }
+
+  $stmt = $pdo->prepare("
+    INSERT INTO categories(user_id,label,kind,color,cashflow_rule_id)
+    VALUES (?,?,?,?,?)
+  ");
+  $stmt->execute([$u,$label,$kind,$color,$rid]);
 }
 
 function categories_edit(PDO $pdo){
-    verify_csrf(); require_login(); $u=uid();
-    $id    = (int)($_POST['id'] ?? 0); if (!$id) return;
-    $kind  = ($_POST['kind'] ?? '') === 'spending' ? 'spending' : 'income';
-    $label = trim($_POST['label'] ?? '');
-    $color = normalize_hex($_POST['color'] ?? '');
-    $rid   = ($_POST['cashflow_rule_id'] ?? '') !== '' ? (int)$_POST['cashflow_rule_id'] : null;
+  verify_csrf(); require_login(); $u=uid();
+  $id    = (int)($_POST['id'] ?? 0); if (!$id) return;
+  $kind  = ($_POST['kind'] ?? '') === 'spending' ? 'spending' : 'income';
+  $label = trim($_POST['label'] ?? '');
+  $color = normalize_hex($_POST['color'] ?? '');
+  $rid   = ($_POST['cashflow_rule_id'] ?? '') !== '' ? (int)$_POST['cashflow_rule_id'] : null;
 
-    if ($label==='') return;
+  if ($label==='') return;
 
-    if ($rid !== null){
-        $chk = $pdo->prepare("SELECT 1 FROM cashflow_rules WHERE id=? AND user_id=?");
-        $chk->execute([$rid,$u]);
-        if (!$chk->fetch()) $rid = null;
-    }
+  // Income categories cannot have a rule
+  if ($kind === 'income') { $rid = null; }
 
-    $stmt = $pdo->prepare("
-      UPDATE categories
-         SET label=?, kind=?, color=?, cashflow_rule_id=?
-       WHERE id=? AND user_id=?
-    ");
-    $stmt->execute([$label,$kind,$color,$rid,$id,$u]);
+  // verify rule belongs to user (only if spending)
+  if ($rid !== null){
+    $chk = $pdo->prepare("SELECT 1 FROM cashflow_rules WHERE id=? AND user_id=?");
+    $chk->execute([$rid,$u]);
+    if (!$chk->fetch()) $rid = null;
+  }
+
+  $stmt = $pdo->prepare("
+    UPDATE categories
+       SET label=?, kind=?, color=?, cashflow_rule_id=?
+     WHERE id=? AND user_id=?
+  ");
+  $stmt->execute([$label,$kind,$color,$rid,$id,$u]);
 }

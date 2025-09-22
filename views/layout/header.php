@@ -158,7 +158,7 @@
       ['href'=>'/emergency',     'label'=>'Emergency',      'match'=>'#^/emergency(?:/.*)?$#'],
       ['href'=>'/scheduled',     'label'=>'Scheduled',      'match'=>'#^/scheduled(?:/.*)?$#'],
       // ['href'=>'/stocks',        'label'=>'Stocks',         'match'=>'#^/stocks(?:/.*)?$#'],
-      ['href'=>'/years',         'label'=>'Years',          'match'=>'#^/years(?:/.*)?$#'],
+      // ['href'=>'/years',         'label'=>'Years',          'match'=>'#^/years(?:/.*)?$#'],
       ['href'=>'/feedback', 'label'=>'Feedback', 'match'=>'#^/feedback$#'],
       ['href'=>'/settings',      'label'=>'Settings',       'match'=>'#^/settings$#'],
     ];
