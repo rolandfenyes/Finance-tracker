@@ -305,39 +305,122 @@
       }
 
       function draw(){
-        const ctx = el.getContext('2d');
-        const gradient = ctx.createLinearGradient(0, 0, 0, el.height);
-        gradient.addColorStop(0, 'rgba(75,150,110,0.28)'); // brand jade
-        gradient.addColorStop(1, 'rgba(75,150,110,0.04)');
+        window.updateChartGlobals && window.updateChartGlobals();
 
-        new Chart(ctx, {
+        const ctx = el.getContext('2d');
+        const palette = window.getChartPalette ? window.getChartPalette() : {};
+
+        const makeGradient = (chart) => {
+          const area = chart && chart.chartArea;
+          const top = area ? area.top : 0;
+          const bottom = area ? area.bottom : (chart ? chart.canvas.height : el.height);
+          const gctx = (chart ? chart.ctx : ctx);
+          const gradient = gctx.createLinearGradient(0, top, 0, bottom);
+          gradient.addColorStop(0, palette.netFillTop || 'rgba(75,150,110,0.28)');
+          gradient.addColorStop(1, palette.netFillBottom || 'rgba(75,150,110,0.04)');
+          return gradient;
+        };
+
+        const chart = new Chart(ctx, {
           data: {
             labels,
             datasets: [
-              { type:'bar', label:<?= json_encode(__('Income')) ?>,  data:income, borderWidth:0 },
-              { type:'bar', label:<?= json_encode(__('Spending')) ?>, data:spend,  borderWidth:0 },
               {
-                type:'line', label:<?= json_encode(__('Cumulative Net')) ?>, data:cum,
-                borderWidth:2, tension:0.25, pointRadius:0, fill:true, backgroundColor:gradient
+                type:'bar',
+                label:<?= json_encode(__('Income')) ?>,
+                data:income,
+                borderWidth:0,
+                borderRadius:8,
+                borderSkipped:false,
+                backgroundColor: palette.incomeBar || 'rgba(74,171,125,0.8)'
+              },
+              {
+                type:'bar',
+                label:<?= json_encode(__('Spending')) ?>,
+                data:spend,
+                borderWidth:0,
+                borderRadius:8,
+                borderSkipped:false,
+                backgroundColor: palette.spendBar || 'rgba(236,104,134,0.7)'
+              },
+              {
+                type:'line',
+                label:<?= json_encode(__('Cumulative Net')) ?>,
+                data:cum,
+                borderWidth:2,
+                tension:0.25,
+                pointRadius:0,
+                fill:true,
+                backgroundColor: makeGradient()
               }
             ]
           },
           options: {
-            responsive:true, maintainAspectRatio:false,
+            responsive:true,
+            maintainAspectRatio:false,
             interaction:{ mode:'index', intersect:false },
             plugins:{
-              legend:{ position:'bottom' },
-              tooltip:{ callbacks:{ label:(ctx)=>{
-                const v = Number(ctx.parsed.y).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-                return `${ctx.dataset.label}: ${v} <?= $main ?>`;
-              }}}
+              legend:{
+                position:'bottom'
+              },
+              tooltip:{
+                backgroundColor: palette.tooltipBg || 'rgba(255,255,255,0.96)',
+                borderColor: palette.tooltipBorder || 'rgba(75,150,110,0.35)',
+                borderWidth:1,
+                titleColor: palette.tooltipText || '#233d30',
+                bodyColor: palette.tooltipText || '#233d30',
+                callbacks:{
+                  label:(ctx)=>{
+                    const v = Number(ctx.parsed.y).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+                    return `${ctx.dataset.label}: ${v} <?= $main ?>`;
+                  }
+                }
+              }
             },
             scales:{
-              x:{ grid:{ display:false }, ticks:{ maxTicksLimit:10 }},
-              y:{ grid:{ color:'rgba(0,0,0,0.05)' } }
+              x:{
+                grid:{ display:false },
+                ticks:{ maxTicksLimit:10, color: palette.axis || '#2f443a' }
+              },
+              y:{
+                grid:{ color: palette.grid || 'rgba(17,36,29,0.08)' },
+                ticks:{ color: palette.axis || '#2f443a' }
+              }
             }
           }
         });
+
+        const applyTheme = (instance) => {
+          if (!window.getChartPalette) return;
+          const pal = window.getChartPalette();
+          const grad = (() => {
+            const area = instance.chartArea;
+            const top = area ? area.top : 0;
+            const bottom = area ? area.bottom : instance.canvas.height;
+            const gradient = instance.ctx.createLinearGradient(0, top, 0, bottom);
+            gradient.addColorStop(0, pal.netFillTop);
+            gradient.addColorStop(1, pal.netFillBottom);
+            return gradient;
+          })();
+          const [incomeDs, spendDs, netDs] = instance.data.datasets;
+          incomeDs.backgroundColor = pal.incomeBar;
+          spendDs.backgroundColor = pal.spendBar;
+          netDs.borderColor = pal.netLine;
+          netDs.backgroundColor = grad;
+          instance.options.plugins.legend.labels = instance.options.plugins.legend.labels || {};
+          instance.options.plugins.legend.labels.color = pal.axis;
+          instance.options.plugins.tooltip.backgroundColor = pal.tooltipBg;
+          instance.options.plugins.tooltip.borderColor = pal.tooltipBorder;
+          instance.options.plugins.tooltip.titleColor = pal.tooltipText;
+          instance.options.plugins.tooltip.bodyColor = pal.tooltipText;
+          instance.options.scales.x.ticks.color = pal.axis;
+          instance.options.scales.y.ticks.color = pal.axis;
+          instance.options.scales.y.grid.color = pal.grid;
+        };
+
+        applyTheme(chart);
+        chart.update('none');
+        window.registerChartTheme && window.registerChartTheme(chart, applyTheme);
       }
 
       if (typeof Chart === 'undefined') {
@@ -411,11 +494,14 @@
         }
 
         function draw(){
-          new Chart(el.getContext('2d'), {
+          window.updateChartGlobals && window.updateChartGlobals();
+
+          const palette = window.getChartPalette ? window.getChartPalette() : {};
+          const chart = new Chart(el.getContext('2d'), {
             type: 'bar',
             data: {
               labels,
-              datasets: [{ data, backgroundColor: colors, borderWidth:0 }]
+              datasets: [{ data, backgroundColor: colors, borderWidth:0, borderRadius:8, borderSkipped:false }]
             },
             options: {
               indexAxis: 'y',
@@ -423,16 +509,39 @@
               maintainAspectRatio: false,
               plugins: {
                 legend: { display:false },
-                tooltip: { callbacks: {
-                  label: (ctx) => `${Number(ctx.parsed.x).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})} <?= $main ?>`
-                }}
+                tooltip: {
+                  backgroundColor: palette.tooltipBg || 'rgba(255,255,255,0.96)',
+                  borderColor: palette.tooltipBorder || 'rgba(75,150,110,0.35)',
+                  borderWidth:1,
+                  titleColor: palette.tooltipText || '#233d30',
+                  bodyColor: palette.tooltipText || '#233d30',
+                  callbacks: {
+                    label: (ctx) => `${Number(ctx.parsed.x).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})} <?= $main ?>`
+                  }
+                }
               },
               scales: {
-                x: { grid:{ color:'rgba(0,0,0,0.05)' } },
-                y: { grid:{ display:false } }
+                x: { grid:{ color: palette.grid || 'rgba(17,36,29,0.08)' }, ticks:{ color: palette.axis || '#2f443a' } },
+                y: { grid:{ display:false }, ticks:{ color: palette.axis || '#2f443a' } }
               }
             }
           });
+
+          const applyTheme = (instance) => {
+            if (!window.getChartPalette) return;
+            const pal = window.getChartPalette();
+            instance.options.plugins.tooltip.backgroundColor = pal.tooltipBg;
+            instance.options.plugins.tooltip.borderColor = pal.tooltipBorder;
+            instance.options.plugins.tooltip.titleColor = pal.tooltipText;
+            instance.options.plugins.tooltip.bodyColor = pal.tooltipText;
+            instance.options.scales.x.grid.color = pal.grid;
+            instance.options.scales.x.ticks.color = pal.axis;
+            instance.options.scales.y.ticks.color = pal.axis;
+          };
+
+          applyTheme(chart);
+          chart.update('none');
+          window.registerChartTheme && window.registerChartTheme(chart, applyTheme);
         }
 
         if (typeof Chart === 'undefined') {
@@ -775,9 +884,11 @@
                 <!-- Modal -->
                 <dialog id="tx<?= $row['id'] ?>" class="rounded-2xl p-0 w-[720px] max-w-[95vw] shadow-2xl">
                   <form method="dialog" class="m-0">
-                    <div class="flex items-center justify-between px-5 py-3 border-b">
+                    <div class="modal-header px-5 py-4">
                       <div class="font-semibold"><?= __('Edit Transaction — :date', ['date' => htmlspecialchars($row['occurred_on'])]) ?></div>
-                      <button class="btn btn-ghost" value="close"><?= __('Close') ?></button>
+                      <button type="submit" class="icon-btn" value="close" aria-label="<?= __('Close') ?>">
+                        <i data-lucide="x" class="h-5 w-5"></i>
+                      </button>
                     </div>
                   </form>
 

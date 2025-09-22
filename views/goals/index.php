@@ -172,7 +172,9 @@
     <!-- Header -->
     <div class="modal-header">
       <h3 id="goal-edit-title-<?= $goalId ?>" class="font-semibold"><?= __('Edit goal') ?></h3>
-      <button class="icon-btn" aria-label="<?= __('Close') ?>" data-close>✕</button>
+      <button type="button" class="icon-btn" aria-label="<?= __('Close') ?>" data-close>
+        <i data-lucide="x" class="h-5 w-5"></i>
+      </button>
     </div>
 
     <!-- Body -->

@@ -446,7 +446,9 @@ document.querySelectorAll('input[id^="rrule-"]').forEach(h => {
     <!-- Header -->
     <div class="modal-header">
       <h3 id="sched-title" class="font-semibold"><?= __('Edit Scheduled Payment') ?></h3>
-      <button class="icon-btn" aria-label="<?= __('Close') ?>" data-close-sched>✕</button>
+      <button type="button" class="icon-btn" aria-label="<?= __('Close') ?>" data-close-sched>
+        <i data-lucide="x" class="h-5 w-5"></i>
+      </button>
     </div>
 
     <!-- Scrollable body -->

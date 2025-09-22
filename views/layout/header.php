@@ -298,6 +298,8 @@
         backdrop-filter: blur(14px);
       }
       dialog[open] {
+        position: fixed;
+        inset: 0;
         margin: auto;
         border: 1px solid rgba(255,255,255,0.25);
         padding: 0;
@@ -305,6 +307,7 @@
         flex-direction: column;
         overflow: hidden;
         background: rgba(255,255,255,0.92);
+        z-index: 60;
       }
       .dark dialog[open] {
         border-color: rgba(30,64,54,0.55);
@@ -381,19 +384,86 @@
       return {
         theme: document.documentElement.dataset.theme || (document.documentElement.classList.contains('dark') ? 'dark' : 'light'),
         init() {
-          this.applyTheme(this.theme);
+          this.applyTheme(this.theme, true);
         },
-        applyTheme(value) {
+        applyTheme(value, isInit = false) {
+          const previous = document.documentElement.dataset.theme;
           this.theme = value;
           document.documentElement.dataset.theme = value;
           document.documentElement.classList.toggle('dark', value === 'dark');
           try { localStorage.setItem('mymoneymap-theme', value); } catch (e) {}
+          if (isInit || previous !== value) {
+            document.dispatchEvent(new CustomEvent('themechange', { detail: { theme: value } }));
+          }
         },
         toggleTheme() {
           this.applyTheme(this.theme === 'dark' ? 'light' : 'dark');
         }
       }
     }
+  </script>
+  <script>
+    (function(){
+      const registry = [];
+      function cleanupAndRun() {
+        for (let i = registry.length - 1; i >= 0; i--) {
+          const keep = registry[i]();
+          if (keep === false) registry.splice(i, 1);
+        }
+      }
+
+      window.getChartPalette = function() {
+        const isDark = document.documentElement.classList.contains('dark');
+        return {
+          isDark,
+          axis: isDark ? 'rgba(226, 244, 236, 0.9)' : 'rgba(35, 66, 52, 0.82)',
+          grid: isDark ? 'rgba(226, 244, 236, 0.15)' : 'rgba(17, 36, 29, 0.08)',
+          incomeBar: isDark ? 'rgba(167, 242, 204, 0.92)' : 'rgba(74, 171, 125, 0.82)',
+          spendBar: isDark ? 'rgba(255, 169, 190, 0.85)' : 'rgba(236, 104, 134, 0.7)',
+          netLine: isDark ? '#8ff0c4' : '#2f6e54',
+          netFillTop: isDark ? 'rgba(143, 240, 196, 0.24)' : 'rgba(75,150,110,0.28)',
+          netFillBottom: isDark ? 'rgba(143, 240, 196, 0.08)' : 'rgba(75,150,110,0.04)',
+          tooltipBg: isDark ? 'rgba(12, 24, 20, 0.94)' : 'rgba(255, 255, 255, 0.96)',
+          tooltipText: isDark ? 'rgba(224, 240, 233, 0.95)' : 'rgba(23, 45, 35, 0.88)',
+          tooltipBorder: isDark ? 'rgba(134, 214, 176, 0.45)' : 'rgba(75, 150, 110, 0.35)',
+          doughnutBorder: isDark ? 'rgba(143, 240, 196, 0.35)' : 'rgba(50, 112, 86, 0.22)',
+          doughnutSegments: isDark
+            ? ['rgba(159, 235, 194, 0.92)', 'rgba(123, 209, 166, 0.9)', 'rgba(92, 182, 140, 0.86)', 'rgba(191, 241, 215, 0.9)', 'rgba(75, 150, 110, 0.92)']
+            : ['rgba(75, 150, 110, 0.9)', 'rgba(112, 181, 144, 0.85)', 'rgba(153, 206, 178, 0.82)', 'rgba(189, 223, 204, 0.8)', 'rgba(58, 125, 92, 0.88)']
+        };
+      };
+
+      window.registerChartTheme = function(chart, apply) {
+        if (!chart || typeof apply !== 'function') return;
+        registry.push(() => {
+          if (!chart || chart._destroyed || !chart.canvas || !chart.canvas.isConnected) {
+            return false;
+          }
+          apply(chart);
+          chart.update('none');
+          return true;
+        });
+      };
+
+      window.updateChartGlobals = function() {
+        if (!window.Chart) return;
+        const palette = window.getChartPalette();
+        Chart.defaults.color = palette.axis;
+        Chart.defaults.borderColor = palette.grid;
+        Chart.defaults.font.family = getComputedStyle(document.body || document.documentElement).fontFamily || 'IBM Plex Sans, sans-serif';
+        Chart.defaults.font.weight = '500';
+      };
+
+      document.addEventListener('themechange', () => {
+        window.updateChartGlobals();
+        cleanupAndRun();
+      });
+
+      document.addEventListener('DOMContentLoaded', () => {
+        window.updateChartGlobals();
+        cleanupAndRun();
+      });
+    })();
   </script>
   <style>[x-cloak]{display:none!important}</style>
 </head>
@@ -467,7 +537,7 @@
               <path d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <div x-cloak x-show="open" @click.outside="open=false" x-transition class="absolute right-0 mt-3 w-64 space-y-2 rounded-3xl border border-white/50 bg-white/80 p-3 shadow-glass backdrop-blur-xl dark:border-slate-800/70 dark:bg-slate-900/70">
+          <div x-cloak x-show="open" @click.outside="open=false" x-transition class="absolute right-0 mt-3 w-64 space-y-2 rounded-3xl border border-white/70 bg-white/95 p-3 shadow-glass backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-900/90">
             <?php if (is_logged_in()): ?>
               <div class="grid gap-2 text-sm">
                 <?php foreach ($items as $it): ?>

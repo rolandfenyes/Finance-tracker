@@ -319,7 +319,9 @@
     <!-- Header -->
     <div class="modal-header">
       <h3 id="loan-edit-title-<?= (int)$l['id'] ?>" class="font-semibold"><?= __('Edit loan') ?></h3>
-      <button class="icon-btn" aria-label="<?= __('Close') ?>" data-close>✕</button>
+      <button type="button" class="icon-btn" aria-label="<?= __('Close') ?>" data-close>
+        <i data-lucide="x" class="h-5 w-5"></i>
+      </button>
     </div>
 
     <!-- Body -->
