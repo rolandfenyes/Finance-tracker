@@ -38,6 +38,11 @@
     return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
   }
 
+  function getBrightness(color) {
+    const { r, g, b } = hexToRgb(color);
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  }
+
   function mix(colorA, colorB, amount) {
     const ratio = clamp01(amount);
     const rgbA = hexToRgb(colorA);
@@ -200,10 +205,25 @@
     const surfaceGhost = lighten(base, 0.82);
     const borderLight = lighten(base, 0.72);
     const borderDark = darken(base, 0.6);
-    const textDeep = toRgba(darken(base, 0.58), 0.82);
-    const textBright = toRgba(lighten(base, 0.74), 0.94);
-    const subtleLight = lighten(base, 0.4);
-    const subtleDark = lighten(base, 0.64);
+    const baseBrightness = getBrightness(base);
+    const textLightOverride = meta.text_light ? normalizeHex(meta.text_light) : null;
+    const textDarkOverride = meta.text_dark ? normalizeHex(meta.text_dark) : null;
+    const subtleLightOverride = meta.subtle_light ? normalizeHex(meta.subtle_light) : null;
+    const subtleDarkOverride = meta.subtle_dark ? normalizeHex(meta.subtle_dark) : null;
+    const isHighKeyBase = baseBrightness >= 0.8;
+    const fallbackLightText = isHighKeyBase
+      ? normalizeHex(meta.deep || '#1f2937')
+      : darken(base, 0.58);
+    const lightTextBase = textLightOverride || fallbackLightText;
+    const lightTextAlpha = (textLightOverride || isHighKeyBase) ? 0.98 : 0.82;
+    const darkTextBase = textDarkOverride || lighten(base, 0.74);
+    const darkTextAlpha = textDarkOverride ? 0.98 : 0.94;
+    const subtleLight =
+      subtleLightOverride ||
+      (isHighKeyBase ? lighten(lightTextBase, 0.55) : lighten(base, 0.4));
+    const subtleDark = subtleDarkOverride || lighten(base, 0.64);
+    const textDeep = toRgba(lightTextBase, lightTextAlpha);
+    const textBright = toRgba(darkTextBase, darkTextAlpha);
 
     return {
       slug,
