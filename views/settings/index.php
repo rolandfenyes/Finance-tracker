@@ -1,3 +1,12 @@
+<?php
+$localeOptions = available_locales();
+$currentLocale = app_locale();
+$localeFlags = [
+  'en' => '🇺🇸',
+  'hu' => '🇭🇺',
+  'es' => '🇪🇸',
+];
+?>
 <section class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
   <!-- User -->
   <div class="card">
@@ -28,6 +37,34 @@
       <a class="text-accent" href="/settings/currencies">Manage currencies →</a>
     </p>
   </div>
+
+  <?php if ($localeOptions): ?>
+  <!-- Language -->
+  <div class="card">
+    <div class="card-kicker"><?= __('Preferences') ?></div>
+    <h2 class="card-title mt-1"><?= __('Language') ?></h2>
+    <p class="card-subtle mt-2"><?= __('Choose your preferred interface language.') ?></p>
+    <div class="mt-4 rounded-2xl border border-gray-100 bg-gradient-to-br from-white to-gray-50 p-3">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <?php foreach ($localeOptions as $code => $label): ?>
+          <?php
+          $isActive = $code === $currentLocale;
+          $flag = $localeFlags[$code] ?? '🏳️';
+          ?>
+          <a
+            href="<?= htmlspecialchars(url_with_lang($code), ENT_QUOTES) ?>"
+            class="flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-all duration-200 <?= $isActive ? 'bg-gray-900 text-white border-gray-900 shadow-lg shadow-gray-900/15' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50 hover:shadow-md' ?>"
+            title="<?= htmlspecialchars($label) ?>"
+            aria-current="<?= $isActive ? 'true' : 'false' ?>"
+          >
+            <span class="text-lg leading-none"><?= $flag ?></span>
+            <span><?= htmlspecialchars($label) ?></span>
+          </a>
+        <?php endforeach; ?>
+      </div>
+    </div>
+  </div>
+  <?php endif; ?>
 
   <!-- Cashflow -->
   <div class="card">

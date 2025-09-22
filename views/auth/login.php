@@ -1,5 +1,41 @@
+<?php
+$localeOptions = available_locales();
+$currentLocale = app_locale();
+$localeFlags = [
+  'en' => '🇺🇸',
+  'hu' => '🇭🇺',
+  'es' => '🇪🇸',
+];
+?>
 <section class="grid place-items-center px-4">
   <div class="w-full max-w-md">
+    <?php if ($localeOptions): ?>
+      <div class="mb-6">
+        <div class="bg-white/80 border border-white/40 backdrop-blur-sm rounded-3xl shadow-glass p-4">
+          <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-400 flex items-center gap-2">
+            <span>🌐</span>
+            <span><?= __('Choose your language') ?></span>
+          </p>
+          <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <?php foreach ($localeOptions as $code => $label): ?>
+              <?php
+              $isActive = $code === $currentLocale;
+              $flag = $localeFlags[$code] ?? '🏳️';
+              ?>
+              <a
+                href="<?= htmlspecialchars(url_with_lang($code), ENT_QUOTES) ?>"
+                class="flex items-center justify-between gap-2 rounded-2xl border px-3 py-2 text-sm font-medium transition-all duration-200 <?= $isActive ? 'bg-gray-900 text-white border-gray-900 shadow-lg shadow-gray-900/20' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50 hover:shadow-md' ?>"
+                title="<?= htmlspecialchars($label) ?>"
+                aria-current="<?= $isActive ? 'true' : 'false' ?>"
+              >
+                <span class="text-xl leading-none"><?= $flag ?></span>
+                <span class="flex-1 text-right"><?= htmlspecialchars($label) ?></span>
+              </a>
+            <?php endforeach; ?>
+          </div>
+        </div>
+      </div>
+    <?php endif; ?>
     <!-- Card -->
     <div class="bg-white rounded-2xl shadow-glass overflow-hidden">
       <!-- Header / brand -->

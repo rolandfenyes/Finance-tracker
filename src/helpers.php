@@ -127,6 +127,28 @@ function set_locale(string $locale): void
     }
 }
 
+function url_with_lang(string $locale): string
+{
+    $available = available_locales();
+    if (!isset($available[$locale])) {
+        $locale = default_locale();
+    }
+
+    $uri = $_SERVER['REQUEST_URI'] ?? '/';
+    $parts = parse_url($uri);
+    $path = $parts['path'] ?? '/';
+
+    $query = [];
+    if (!empty($parts['query'])) {
+        parse_str($parts['query'], $query);
+    }
+
+    $query['lang'] = $locale;
+    $queryString = http_build_query($query);
+
+    return $path . ($queryString ? '?' . $queryString : '');
+}
+
 function app_locale(): string
 {
     static $locale;
