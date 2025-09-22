@@ -12,6 +12,14 @@
 
   <!-- Tailwind CDN (JIT) -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <?php
+    $themeDefinitions = available_themes();
+    $selectedTheme = current_theme_slug();
+  ?>
+  <script>
+    window.__MYMONEYMAP_THEME_BASES = <?= json_encode($themeDefinitions, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES) ?>;
+    window.__MYMONEYMAP_SELECTED_THEME = <?= json_encode($selectedTheme, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES) ?>;
+  </script>
   <script src="/theme.js"></script>
   <script>
     (function(){
@@ -722,14 +730,16 @@
         Chart.defaults.font.weight = '500';
       };
 
-      document.addEventListener('themechange', () => {
+      const refreshCharts = () => {
         window.updateChartGlobals();
         reinitializeCharts();
-      });
+      };
+
+      document.addEventListener('themechange', refreshCharts);
+      document.addEventListener('brandthemechange', refreshCharts);
 
       document.addEventListener('DOMContentLoaded', () => {
-        window.updateChartGlobals();
-        reinitializeCharts();
+        refreshCharts();
       });
     })();
   </script>

@@ -21,6 +21,40 @@ $localeFlags = [
     </p>
   </div>
 
+  <!-- Theme -->
+  <?php
+    $themeCatalog = available_themes();
+    $themeSlug = $user['theme'] ?? default_theme_slug();
+    $themeInfo = $themeCatalog[$themeSlug] ?? [];
+    $themeName = $themeInfo['name'] ?? theme_display_name($themeSlug);
+    $previewLight = $themeInfo['preview']['light'] ?? ($themeInfo['muted'] ?? '#f8fafc');
+    $previewPrimary = $themeInfo['base'] ?? '#4b966e';
+    $previewAccent = $themeInfo['accent'] ?? $previewPrimary;
+    $previewDark = $themeInfo['preview']['dark'] ?? ($themeInfo['deep'] ?? '#111827');
+  ?>
+  <div class="card">
+    <div class="card-kicker"><?= __('Appearance') ?></div>
+    <h2 class="card-title mt-1"><?= __('Theme') ?></h2>
+    <div class="mt-4 flex items-center gap-4">
+      <div class="flex items-center gap-2">
+        <span class="h-10 w-10 rounded-2xl border border-white/50 shadow-sm" style="background: <?= htmlspecialchars($previewLight) ?>"></span>
+        <span class="h-10 w-10 rounded-2xl border border-white/40 shadow-sm" style="background: linear-gradient(135deg, <?= htmlspecialchars($previewPrimary) ?>, <?= htmlspecialchars($previewAccent) ?>);"></span>
+        <span class="h-10 w-10 rounded-2xl border border-white/30 shadow-sm" style="background: <?= htmlspecialchars($previewDark) ?>"></span>
+      </div>
+      <div>
+        <div class="text-base font-semibold text-gray-800 dark:text-gray-100"><?= htmlspecialchars($themeName) ?></div>
+        <?php if (!empty($themeInfo['description'])): ?>
+          <p class="card-subtle mt-1 max-w-sm"><?= htmlspecialchars($themeInfo['description']) ?></p>
+        <?php else: ?>
+          <p class="card-subtle mt-1"><?= __('Customize how MyMoneyMap feels with curated palettes.') ?></p>
+        <?php endif; ?>
+      </div>
+    </div>
+    <p class="card-subtle mt-4">
+      <a class="text-accent" href="/settings/theme"><?= __('Change theme →') ?></a>
+    </p>
+  </div>
+
   <!-- Currencies -->
   <div class="card">
     <div class="card-kicker"><?= __('Preferences') ?></div>

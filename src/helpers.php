@@ -80,6 +80,84 @@ function available_locales(): array
     return $locales;
 }
 
+function available_themes(): array
+{
+    static $themes;
+
+    if ($themes === null) {
+        $file = __DIR__ . '/../config/themes.php';
+        $themes = is_file($file) ? require $file : [];
+    }
+
+    return $themes;
+}
+
+function default_theme_slug(): string
+{
+    $themes = available_themes();
+
+    foreach ($themes as $slug => $meta) {
+        if (!empty($meta['default'])) {
+            return $slug;
+        }
+    }
+
+    return array_key_first($themes) ?: 'verdant-horizon';
+}
+
+function theme_meta(string $slug): ?array
+{
+    $themes = available_themes();
+
+    return $themes[$slug] ?? null;
+}
+
+function theme_display_name(?string $slug): string
+{
+    if (!$slug) {
+        return theme_display_name(default_theme_slug());
+    }
+
+    $meta = theme_meta($slug);
+
+    return $meta['name'] ?? $slug;
+}
+
+function current_theme_slug(): string
+{
+    static $slug;
+
+    if ($slug !== null) {
+        return $slug;
+    }
+
+    $default = default_theme_slug();
+
+    if (!is_logged_in()) {
+        return $slug = $_SESSION['guest_theme'] ?? $default;
+    }
+
+    global $pdo;
+
+    if (!$pdo) {
+        return $slug = $default;
+    }
+
+    try {
+        $stmt = $pdo->prepare('SELECT theme FROM users WHERE id = ? LIMIT 1');
+        $stmt->execute([uid()]);
+        $value = (string)$stmt->fetchColumn();
+
+        if ($value && isset(available_themes()[$value])) {
+            return $slug = $value;
+        }
+    } catch (Throwable $e) {
+        // fall back to default theme if lookup fails
+    }
+
+    return $slug = $default;
+}
+
 function default_locale(): string
 {
     $available = available_locales();

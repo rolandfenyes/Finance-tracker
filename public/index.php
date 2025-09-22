@@ -46,6 +46,13 @@ switch ($path) {
         onboard_next($pdo);
         break;
 
+    case '/onboard/theme':
+        require_login();
+        require __DIR__ . '/../src/controllers/onboard.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { onboard_theme_submit($pdo); }
+        onboard_theme_show($pdo);
+        break;
+
     case '/onboard/rules':
         require_login();
         require __DIR__ . '/../src/controllers/onboard.php';
@@ -182,6 +189,16 @@ switch ($path) {
             settings_profile_update($pdo);
         } else {
             settings_profile_show($pdo);
+        }
+        break;
+
+    case '/settings/theme':
+        require_login();
+        require __DIR__ . '/../src/controllers/settings_theme.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            settings_theme_update($pdo);
+        } else {
+            settings_theme_show($pdo);
         }
         break;
 
