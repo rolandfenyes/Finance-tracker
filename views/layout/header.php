@@ -5,6 +5,17 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title><?= htmlspecialchars($app['app']['name']) ?></title>
+  <!-- Favicons -->
+
+  <!-- Classic ICO -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
+  <!-- PNG -->
+  <link rel="icon" type="image/png" href="/favicon.png">
+
+  <!-- Apple Touch Icon (for iOS) -->
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
   <!-- Tailwind CDN (JIT) -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -172,7 +183,11 @@
 
   <header class="backdrop-blur bg-white/70 sticky top-0 z-40 border-b border-gray-200">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-      <a href="/" class="font-semibold tracking-tight text-lg">💎 <?= htmlspecialchars($app['app']['name']) ?></a>
+      <a href="/" class="font-semibold tracking-tight text-lg flex items-center gap-2">
+        <img src="/logo_simple_light.png" alt="App logo" class="h-14 w-14">
+        <?= htmlspecialchars($app['app']['name']) ?>
+      </a>
+
 
       <!-- Desktop nav (hidden during onboarding, except /onboard/done) -->
       <?php if (!$hideMenus): ?>
