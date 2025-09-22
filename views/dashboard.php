@@ -286,13 +286,13 @@ $babyPct   = round($doneCount / count($steps) * 100);
 $totalNetLiquid = $efTotalMain + $goalsCurrentMain + $netThisMonth + $leftoverPrev;
 ?>
 
-<section class="grid lg:grid-cols-4 gap-4">
+<section class="grid gap-6 lg:grid-cols-4">
   <!-- Total net liquid -->
   <div class="card lg:col-span-2">
     <div class="card-kicker"><?= __('Overview') ?></div>
     <h2 class="card-title mt-1"><?= __('Total Net Liquid Worth') ?></h2>
-    <p class="text-3xl mt-2 font-semibold"><?= moneyfmt($totalNetLiquid, $main) ?></p>
-    <div class="mt-3 grid sm:grid-cols-2 gap-2 text-xs text-gray-600">
+    <p class="mt-2 text-3xl font-semibold text-slate-900 dark:text-white"><?= moneyfmt($totalNetLiquid, $main) ?></p>
+    <div class="mt-3 grid gap-2 text-[11px] text-slate-600 sm:grid-cols-2 dark:text-slate-300">
       <div class="chip"><?= __('EF: :amount', ['amount' => moneyfmt($efTotalMain, $main)]) ?></div>
       <div class="chip"><?= __('Goals (now): :amount', ['amount' => moneyfmt($goalsCurrentMain, $main)]) ?></div>
       <div class="chip"><?= __('This month: :amount', ['amount' => moneyfmt($netThisMonth, $main)]) ?></div>
@@ -304,8 +304,8 @@ $totalNetLiquid = $efTotalMain + $goalsCurrentMain + $netThisMonth + $leftoverPr
   <div class="card">
     <div class="card-kicker"><?= __('Goals') ?></div>
     <h3 class="card-title mt-1"><?= __('Progress') ?></h3>
-    <div class="mt-3 w-full bg-gray-100 h-2 rounded">
-      <div class="h-2 rounded bg-accent" style="width: <?= $goalsPct ?>%"></div>
+    <div class="mt-3 h-2 w-full overflow-hidden rounded-full bg-brand-100/60 dark:bg-slate-800/60">
+      <div class="h-2 rounded-full bg-brand-500" style="width: <?= $goalsPct ?>%"></div>
     </div>
     <p class="card-subtle mt-2"><?= __(':percent% across active goals', ['percent' => $goalsPct]) ?></p>
     <p class="card-subtle mt-1"><?= __(':active active · :done done', ['active' => (int)$goalsActiveCount, 'done' => (int)$goalsDoneCount]) ?></p>
@@ -315,43 +315,43 @@ $totalNetLiquid = $efTotalMain + $goalsCurrentMain + $netThisMonth + $leftoverPr
   <div class="card">
     <div class="card-kicker"><?= __('Safety') ?></div>
     <h3 class="card-title mt-1"><?= __('Emergency Fund') ?></h3>
-    <div class="mt-3 w-full bg-gray-100 h-2 rounded">
-      <div class="h-2 rounded bg-emerald-600" style="width: <?= $efPct ?>%"></div>
+    <div class="mt-3 h-2 w-full overflow-hidden rounded-full bg-brand-100/60 dark:bg-slate-800/60">
+      <div class="h-2 rounded-full bg-brand-600" style="width: <?= $efPct ?>%"></div>
     </div>
     <p class="card-subtle mt-2"><?= __(':percent% of target', ['percent' => $efPct]) ?><?= $efTarget>0 ? ' ('.moneyfmt($efTarget, $efCur).')':'' ?></p>
     <p class="card-subtle mt-1"><?= __('Current: :amount', ['amount' => moneyfmt($efTotal, $efCur)]) ?><?= strtoupper($efCur)!==strtoupper($main)?' · ≈ '.moneyfmt($efTotalMain,$main):'' ?></p>
   </div>
 </section>
 
-<section class="mt-6 grid lg:grid-cols-3 gap-6">
+<section class="mt-8 grid gap-6 lg:grid-cols-3">
   <!-- Current month stats -->
   <div class="card lg:col-span-2">
-    <div class="flex items-center justify-between">
-      <h3 class="font-semibold"><?= __('Current Month') ?></h3>
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white"><?= __('Current Month') ?></h3>
       <span class="chip"><?= format_month_year() ?></span>
     </div>
-    <div class="mt-3 grid sm:grid-cols-3 gap-3">
+    <div class="mt-5 grid gap-3 sm:grid-cols-3">
       <div class="tile">
-        <div class="text-xs text-gray-500"><?= __('Income') ?></div>
-        <div class="text-xl font-semibold mt-1"><?= moneyfmt($sumIn, $main) ?></div>
+        <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300"><?= __('Income') ?></div>
+        <div class="mt-2 text-xl font-semibold text-slate-900 dark:text-white"><?= moneyfmt($sumIn, $main) ?></div>
       </div>
       <div class="tile">
-        <div class="text-xs text-gray-500"><?= __('Spending') ?></div>
-        <div class="text-xl font-semibold mt-1"><?= moneyfmt($sumOut, $main) ?></div>
+        <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300"><?= __('Spending') ?></div>
+        <div class="mt-2 text-xl font-semibold text-slate-900 dark:text-white"><?= moneyfmt($sumOut, $main) ?></div>
       </div>
       <div class="tile">
-        <div class="text-xs text-gray-500"><?= __('Net') ?></div>
-        <div class="text-xl font-semibold mt-1"><?= moneyfmt($netThisMonth, $main) ?></div>
+        <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300"><?= __('Net') ?></div>
+        <div class="mt-2 text-xl font-semibold text-slate-900 dark:text-white"><?= moneyfmt($netThisMonth, $main) ?></div>
       </div>
     </div>
     <?php if ($topCats): ?>
       <div class="mt-4">
-        <div class="text-xs text-gray-500 mb-2"><?= __('Top spending categories') ?></div>
-        <ul class="grid sm:grid-cols-2 gap-2 text-sm">
+        <div class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300"><?= __('Top spending categories') ?></div>
+        <ul class="grid gap-2 text-sm sm:grid-cols-2">
           <?php foreach($topCats as $lbl=>$amt): ?>
-            <li class="flex items-center justify-between p-2 rounded-lg border">
-              <span><?= htmlspecialchars($lbl) ?></span>
-              <span class="font-medium"><?= moneyfmt($amt, $main) ?></span>
+            <li class="flex items-center justify-between rounded-2xl border border-white/60 bg-white/70 px-3 py-2 text-slate-600 shadow-sm backdrop-blur dark:border-slate-800/70 dark:bg-slate-900/50 dark:text-slate-200">
+              <span class="font-medium text-slate-700 dark:text-slate-100"><?= htmlspecialchars($lbl) ?></span>
+              <span class="font-semibold text-brand-700 dark:text-brand-200"><?= moneyfmt($amt, $main) ?></span>
             </li>
           <?php endforeach; ?>
         </ul>
@@ -363,8 +363,8 @@ $totalNetLiquid = $efTotalMain + $goalsCurrentMain + $netThisMonth + $leftoverPr
   <div class="card">
     <div class="card-kicker"><?= __('Loans') ?></div>
     <h3 class="card-title mt-1"><?= __('Progress') ?></h3>
-    <div class="mt-3 w-full bg-gray-100 h-2 rounded">
-      <div class="h-2 rounded bg-indigo-600" style="width: <?= $loansPct ?>%"></div>
+    <div class="mt-3 h-2 w-full overflow-hidden rounded-full bg-brand-100/60 dark:bg-slate-800/60">
+      <div class="h-2 rounded-full bg-brand-500" style="width: <?= $loansPct ?>%"></div>
     </div>
     <p class="card-subtle mt-2"><?= __(':percent% paid', ['percent' => $loansPct]) ?></p>
     <p class="card-subtle mt-1">
@@ -378,15 +378,15 @@ $totalNetLiquid = $efTotalMain + $goalsCurrentMain + $netThisMonth + $leftoverPr
 
 <!-- <section class="mt-6 card">
   <h3 class="font-semibold mb-3">Dave Ramsey Baby Steps</h3>
-  <div class="mb-3 w-full bg-gray-100 h-2 rounded">
+  <div class="mb-3 w-full bg-brand-100/60 h-2 rounded">
     <div class="h-2 rounded bg-sky-600" style="width: <?= $babyPct ?>%"></div>
   </div>
   <ol class="space-y-2 text-sm">
     <?php foreach($steps as $i=>$label): $st=$statuses[$i] ?? 'in_progress'; ?>
-      <li class="flex items-center justify-between p-3 rounded-lg border <?= $st==='done'?'border-emerald-300 bg-emerald-50':'border-gray-200'; ?>">
+  <li class="flex items-center justify-between p-3 rounded-lg border <?= $st==='done'?'border-brand-300 bg-brand-50/80':'border-gray-200'; ?>">
         <span class="font-medium">Step <?= $i ?>:</span>
         <span class="flex-1 ml-2"><?= htmlspecialchars($label) ?></span>
-        <span class="text-xs px-2 py-1 rounded-full <?= $st==='done'?'bg-emerald-200':'bg-gray-200'; ?>">
+        <span class="text-xs px-2 py-1 rounded-full <?= $st==='done'?'bg-brand-500/20 text-brand-700':'bg-gray-200'; ?>">
           <?= htmlspecialchars($st) ?>
         </span>
       </li>

@@ -9,7 +9,7 @@
       <p class="mt-3 text-red-600 text-sm"><?= $_SESSION['flash']; unset($_SESSION['flash']); ?></p>
     <?php endif; ?>
     <?php if (!empty($_SESSION['flash_success'])): ?>
-      <p class="mt-3 text-emerald-600 text-sm"><?= $_SESSION['flash_success']; unset($_SESSION['flash_success']); ?></p>
+      <p class="mt-3 text-brand-600 text-sm"><?= $_SESSION['flash_success']; unset($_SESSION['flash_success']); ?></p>
     <?php endif; ?>
 
     <form method="post" action="/settings/profile" class="grid gap-4 mt-5">

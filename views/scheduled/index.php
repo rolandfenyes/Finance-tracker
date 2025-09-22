@@ -1,4 +1,4 @@
-<section class="bg-white rounded-2xl p-5 shadow-glass">
+<section class="card">
   <h1 class="text-xl font-semibold"><?= __('Scheduled Payments') ?></h1>
   <p class="text-sm text-gray-500"><?= __('Set up recurring payments.') ?></p>
 
@@ -136,14 +136,14 @@
   </details>
 </section>
 
-<section class="mt-6 bg-white rounded-2xl p-5 shadow-glass">
+<section class="mt-6 card">
   <div class="flex items-center justify-between mb-3">
     <h2 class="font-semibold"><?= __('Scheduled payments') ?></h2>
   </div>
 
   <!-- Desktop table -->
   <div class="hidden md:block overflow-x-auto">
-    <table class="min-w-full text-sm">
+    <table class="table-glass min-w-full text-sm">
       <thead>
         <tr class="text-left border-b">
           <th class="py-2 pr-3"><?= __('Title') ?></th>
@@ -205,7 +205,7 @@
   <!-- Mobile cards -->
   <div class="md:hidden space-y-3">
     <?php foreach($rows as $r): ?>
-      <div class="rounded-xl border p-4">
+      <div class="panel p-4">
         <div class="flex items-start justify-between gap-3">
           <div>
             <div class="font-medium"><?= htmlspecialchars($r['title']) ?></div>

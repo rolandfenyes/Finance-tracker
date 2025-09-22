@@ -1,4 +1,4 @@
-<section class="max-w-5xl mx-auto">
+<section class="mx-auto max-w-5xl space-y-6">
   <div class="card">
     <div class="flex items-start justify-between gap-3">
       <div>
@@ -6,14 +6,14 @@
         <h1 class="card-title mt-1"><?= __('Feedback & Bug Reports') ?></h1>
         <p class="card-subtle mt-1"><?= __('Share ideas or report issues. Everyone can see all entries.') ?></p>
       </div>
-      <a href="/feedback" class="text-sm text-accent"><?= __('Refresh ↻') ?></a>
+      <a href="/feedback" class="text-sm font-semibold text-brand-600 hover:underline dark:text-brand-200"><?= __('Refresh ↻') ?></a>
     </div>
 
     <?php if (!empty($_SESSION['flash'])): ?>
-      <p class="mt-3 text-red-600 text-sm"><?= $_SESSION['flash']; unset($_SESSION['flash']); ?></p>
+      <p class="mt-3 rounded-2xl border border-rose-200/70 bg-rose-500/10 px-3 py-2 text-sm font-medium text-rose-600 dark:border-rose-500/40 dark:bg-rose-500/20 dark:text-rose-200"><?= $_SESSION['flash']; unset($_SESSION['flash']); ?></p>
     <?php endif; ?>
     <?php if (!empty($_SESSION['flash_success'])): ?>
-      <p class="mt-3 text-emerald-600 text-sm"><?= $_SESSION['flash_success']; unset($_SESSION['flash_success']); ?></p>
+      <p class="mt-3 rounded-2xl border border-brand-300/60 bg-brand-500/10 px-3 py-2 text-sm font-medium text-brand-700 dark:border-brand-500/40 dark:bg-brand-600/20 dark:text-brand-100"><?= $_SESSION['flash_success']; unset($_SESSION['flash_success']); ?></p>
     <?php endif; ?>
 
     <!-- Add form -->
@@ -89,10 +89,10 @@
         'high'   => __('High'),
       ];
       $statusColors = [
-        'open'         => 'bg-gray-100 text-gray-700 border-gray-200',
-        'in_progress'  => 'bg-blue-100 text-blue-700 border-blue-200',
-        'resolved'     => 'bg-emerald-100 text-emerald-700 border-emerald-200',
-        'closed'       => 'bg-gray-200 text-gray-700 border-gray-300',
+        'open'         => 'border-brand-200 bg-brand-50/80 text-brand-700 dark:border-brand-400/60 dark:bg-brand-500/20 dark:text-brand-100',
+        'in_progress'  => 'border-sky-300/70 bg-sky-500/15 text-sky-700 dark:border-sky-500/40 dark:bg-sky-500/20 dark:text-sky-100',
+        'resolved'     => 'border-brand-400/60 bg-brand-500/15 text-brand-700 dark:border-brand-400/50 dark:bg-brand-600/20 dark:text-brand-100',
+        'closed'       => 'border-slate-300/60 bg-slate-200/60 text-slate-700 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-200',
       ];
       $statusLabels = [
         'open'        => __('Open'),
@@ -101,12 +101,14 @@
         'closed'      => __('Closed'),
       ];
       foreach ($rows as $f):
-      $badge = $f['kind']==='bug' ? 'bg-red-100 text-red-700 border-red-200' : 'bg-amber-100 text-amber-800 border-amber-200';
+      $badge = $f['kind']==='bug'
+        ? 'border-rose-300/70 bg-rose-500/10 text-rose-600 dark:border-rose-500/40 dark:bg-rose-500/20 dark:text-rose-200'
+        : 'border-amber-300/70 bg-amber-400/10 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/20 dark:text-amber-200';
       $sev   = $f['severity'] ? ($severityLabels[$f['severity']] ?? ucfirst($f['severity'])) : '—';
       $stCls = $statusColors[$f['status']] ?? $statusColors['open'];
       $statusText = $statusLabels[$f['status']] ?? str_replace('_',' ', $f['status']);
     ?>
-      <div class="rounded-2xl border p-4 bg-white">
+      <div class="panel space-y-3 p-5">
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-2">
@@ -114,9 +116,9 @@
               <span class="chip"><?= htmlspecialchars($sev) ?></span>
               <span class="chip <?= $stCls ?>"><?= htmlspecialchars($statusText) ?></span>
             </div>
-            <div class="mt-1 font-semibold"><?= htmlspecialchars($f['title']) ?></div>
-            <div class="mt-1 text-sm text-gray-700 whitespace-pre-wrap"><?= nl2br(htmlspecialchars($f['message'])) ?></div>
-            <div class="mt-2 text-xs text-gray-500">
+            <div class="mt-2 text-lg font-semibold text-slate-900 dark:text-white"><?= htmlspecialchars($f['title']) ?></div>
+            <div class="mt-2 text-sm text-slate-600 whitespace-pre-wrap dark:text-slate-300"><?= nl2br(htmlspecialchars($f['message'])) ?></div>
+            <div class="mt-2 text-xs text-slate-500 dark:text-slate-400">
               <?php
                 $author = htmlspecialchars($f['full_name'] ?: $f['email']);
                 $created = htmlspecialchars(date('Y-m-d H:i', strtotime($f['created_at'])));
@@ -137,7 +139,7 @@
 
         <!-- Status quick-update (author can close; you can extend for admin) -->
         <?php if ((int)$f['user_id'] === (int)uid()): ?>
-          <form method="post" action="/feedback/status" class="mt-3 flex items-center gap-2">
+          <form method="post" action="/feedback/status" class="mt-3 flex flex-wrap items-center gap-3">
             <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
             <input type="hidden" name="id" value="<?= (int)$f['id'] ?>" />
             <select name="status" class="select w-44">
@@ -146,7 +148,7 @@
               <option value="resolved"    <?= $f['status']==='resolved'?'selected':'' ?>><?= __('Resolved') ?></option>
               <option value="closed"      <?= $f['status']==='closed'?'selected':'' ?>><?= __('Closed') ?></option>
             </select>
-            <button class="btn btn-ghost"><?= __('Update') ?></button>
+            <button class="btn btn-muted"><?= __('Update') ?></button>
           </form>
         <?php endif; ?>
       </div>
@@ -158,7 +160,7 @@
     $mk = function($p) use ($flt){ $q = ['tab'=>$flt['tab'] ?? 'all','q'=>$flt['q'] ?? '','page'=>$p]; return '/feedback?'.http_build_query($q); };
   ?>
     <div class="flex items-center justify-between mt-4 text-sm">
-      <div class="text-gray-500"><?= __('Page :page / :pages', ['page' => (int)$page, 'pages' => (int)$pages]) ?></div>
+      <div class="text-slate-500 dark:text-slate-400"><?= __('Page :page / :pages', ['page' => (int)$page, 'pages' => (int)$pages]) ?></div>
       <div class="flex gap-2">
         <a class="btn btn-ghost <?= $page<=1?'pointer-events-none opacity-40':'' ?>" href="<?= $page>1?$mk($page-1):'#' ?>"><?= __('Prev') ?></a>
         <a class="btn btn-ghost <?= $page>=$pages?'pointer-events-none opacity-40':'' ?>" href="<?= $page<$pages?$mk($page+1):'#' ?>"><?= __('Next') ?></a>

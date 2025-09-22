@@ -1,7 +1,7 @@
-<section class="bg-white rounded-2xl p-5 shadow-glass">
+<section class="card">
   <h1 class="text-xl font-semibold"><?= __('Goals') ?></h1>
   <?php if (!empty($_SESSION['flash'])): ?>
-    <p class="mt-2 text-sm text-emerald-700"><?= $_SESSION['flash']; unset($_SESSION['flash']); ?></p>
+    <p class="mt-2 text-sm text-brand-600"><?= $_SESSION['flash']; unset($_SESSION['flash']); ?></p>
   <?php endif; ?>
 
   <details class="mt-4">
@@ -45,14 +45,14 @@
   </details>
 </section>
 
-<section class="mt-6 bg-white rounded-2xl p-5 shadow-glass">
+<section class="mt-6 card">
   <div class="flex items-center justify-between mb-3">
     <h2 class="font-semibold"><?= __('Your goals') ?></h2>
   </div>
 
   <!-- Desktop table -->
   <div class="hidden md:block overflow-x-auto">
-    <table class="min-w-full text-sm">
+    <table class="table-glass min-w-full text-sm">
       <thead>
       <tr class="text-left border-b">
         <th class="py-2 pr-3 w-[38%]"><?= __('Goal') ?></th>
@@ -81,8 +81,8 @@
               <?= $statusLabel ?> · <?= htmlspecialchars($cur) ?>
             </div>
             <div class="mt-2">
-              <div class="h-2 bg-gray-100 rounded-full">
-                <div class="h-2 bg-emerald-500 rounded-full" style="width: <?= number_format($pct,2,'.','') ?>%"></div>
+              <div class="h-2 bg-brand-100/60 rounded-full">
+                <div class="h-2 bg-brand-500 rounded-full" style="width: <?= number_format($pct,2,'.','') ?>%"></div>
               </div>
               <div class="mt-1 text-xs text-gray-600">
                 <?= moneyfmt($current,$cur) ?> / <?= moneyfmt($target,$cur) ?> (<?= number_format($pct,1) ?>%)
@@ -133,7 +133,7 @@
         default  => __('Active'),
       };
     ?>
-      <div class="rounded-xl border p-4">
+      <div class="panel p-4">
         <div class="flex items-center justify-between gap-3">
           <div>
             <div class="font-medium"><?= htmlspecialchars($g['title']) ?></div>
@@ -142,8 +142,8 @@
           <button class="btn btn-primary !px-3" data-open="#goal-edit-<?= (int)$g['id'] ?>"><?= __('Edit') ?></button>
         </div>
         <div class="mt-3">
-          <div class="h-2 bg-gray-100 rounded-full">
-            <div class="h-2 bg-emerald-500 rounded-full" style="width: <?= number_format($pct,2,'.','') ?>%"></div>
+          <div class="h-2 bg-brand-100/60 rounded-full">
+            <div class="h-2 bg-brand-500 rounded-full" style="width: <?= number_format($pct,2,'.','') ?>%"></div>
           </div>
           <div class="mt-1 text-xs text-gray-600">
             <?= moneyfmt($current,$cur) ?> / <?= moneyfmt($target,$cur) ?>

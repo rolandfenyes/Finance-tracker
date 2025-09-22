@@ -1,4 +1,4 @@
-<section class="bg-white rounded-2xl p-5 shadow-glass">
+<section class="card">
   <h1 class="text-xl font-semibold"><?= __('Loans') ?></h1>
   <details class="mt-4">
     <summary class="cursor-pointer text-accent"><?= __('Add loan') ?></summary>
@@ -7,7 +7,7 @@
       <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
 
       <!-- Loan details -->
-      <div class="bg-white rounded-2xl p-5 shadow-glass lg:col-span-7">
+      <div class="card lg:col-span-7">
         <h3 class="font-semibold mb-4"><?= __('Loan details') ?></h3>
         <div class="grid sm:grid-cols-12 gap-3">
           <div class="field sm:col-span-6">
@@ -73,7 +73,7 @@
       </div>
 
       <!-- Schedule -->
-      <div class="bg-white rounded-2xl p-5 shadow-glass lg:col-span-5">
+      <div class="card lg:col-span-5">
         <h3 class="font-semibold mb-4"><?= __('Repayment schedule') ?></h3>
 
         <div class="field">
@@ -150,14 +150,14 @@
 
 </section>
 
-<section class="mt-6 bg-white rounded-2xl p-5 shadow-glass">
+<section class="mt-6 card">
   <div class="flex items-center justify-between mb-3">
     <h2 class="font-semibold"><?= __('Loans') ?></h2>
   </div>
 
   <!-- Desktop table -->
   <div class="hidden md:block overflow-x-auto">
-    <table class="min-w-full text-sm">
+    <table class="table-glass min-w-full text-sm">
       <thead>
         <tr class="text-left border-b">
           <th class="py-2 pr-3 w-[38%]"><?= __('Loan') ?></th>
@@ -192,14 +192,14 @@
               ]) ?>
               <?php if ($months): ?> · <?= __(':months mo', ['months' => $months]) ?><?php endif; ?>
               <?php if (!empty($l['history_confirmed'])): ?>
-                <span class="ml-1 text-emerald-600">✔ <?= __('history confirmed') ?></span>
+                <span class="ml-1 text-brand-600">✔ <?= __('history confirmed') ?></span>
               <?php endif; ?>
             </div>
 
             <!-- progress -->
             <div class="mt-2">
-              <div class="h-2 bg-gray-100 rounded-full">
-                <div class="h-2 bg-emerald-500 rounded-full" style="width: <?= number_format(min(100,max(0,$pct)),2,'.','') ?>%"></div>
+              <div class="h-2 bg-brand-100/60 rounded-full">
+                <div class="h-2 bg-brand-500 rounded-full" style="width: <?= number_format(min(100,max(0,$pct)),2,'.','') ?>%"></div>
               </div>
               <div class="mt-1 text-xs text-gray-600">
                 <?= __(':paid paid of :total (:percent%)', [
@@ -261,7 +261,7 @@
       $paid  = (float)($l['_principal_paid'] ?? max(0, $prin - $bal));
       $pct   = (float)($l['_progress_pct'] ?? ($prin>0?($paid/$prin*100):0));
     ?>
-      <div class="rounded-xl border p-4">
+      <div class="panel p-4">
         <div class="flex items-center justify-between gap-3">
           <div>
             <div class="font-medium"><?= htmlspecialchars($l['name']) ?></div>
@@ -276,13 +276,13 @@
             'end' => htmlspecialchars($l['end_date'] ?? '—'),
           ]) ?>
           <?php if (!empty($l['history_confirmed'])): ?>
-            · <span class="text-emerald-600">✔ <?= __('history') ?></span>
+            · <span class="text-brand-600">✔ <?= __('history') ?></span>
           <?php endif; ?>
         </div>
 
         <div class="mt-3">
-          <div class="h-2 bg-gray-100 rounded-full">
-            <div class="h-2 bg-emerald-500 rounded-full" style="width: <?= number_format(min(100,max(0,$pct)),2,'.','') ?>%"></div>
+          <div class="h-2 bg-brand-100/60 rounded-full">
+            <div class="h-2 bg-brand-500 rounded-full" style="width: <?= number_format(min(100,max(0,$pct)),2,'.','') ?>%"></div>
           </div>
           <div class="mt-1 text-xs text-gray-600">
             <?= moneyfmt($paid,$cur) ?> / <?= moneyfmt($prin,$cur) ?>

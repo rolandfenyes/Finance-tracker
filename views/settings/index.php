@@ -44,7 +44,7 @@ $localeFlags = [
     <div class="card-kicker"><?= __('Preferences') ?></div>
     <h2 class="card-title mt-1"><?= __('Language') ?></h2>
     <p class="card-subtle mt-2"><?= __('Choose your preferred interface language.') ?></p>
-    <div class="mt-4 rounded-2xl border border-gray-100 bg-gradient-to-br from-white to-gray-50 p-3">
+    <div class="mt-4 rounded-3xl border border-white/50 bg-white/70 p-3 shadow-sm backdrop-blur dark:border-slate-800/70 dark:bg-slate-900/50">
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
         <?php foreach ($localeOptions as $code => $label): ?>
           <?php
@@ -53,7 +53,7 @@ $localeFlags = [
           ?>
           <a
             href="<?= htmlspecialchars(url_with_lang($code), ENT_QUOTES) ?>"
-            class="flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-all duration-200 <?= $isActive ? 'bg-gray-900 text-white border-gray-900 shadow-lg shadow-gray-900/15' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50 hover:shadow-md' ?>"
+            class="flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm font-medium transition-all duration-200 <?= $isActive ? 'border-brand-500 bg-brand-600 text-white shadow-brand-glow' : 'border-white/60 bg-white/60 text-slate-600 hover:border-brand-200 hover:bg-brand-50/70 hover:text-brand-700 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200 dark:hover:bg-slate-800/70' ?>"
             title="<?= htmlspecialchars($label) ?>"
             aria-current="<?= $isActive ? 'true' : 'false' ?>"
           >
