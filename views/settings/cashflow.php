@@ -1,7 +1,7 @@
 <section class="max-w-3xl mx-auto bg-white rounded-2xl p-6 shadow-glass">
   <div class="flex items-center justify-between">
-    <h1 class="text-xl font-semibold">Cashflow Rules</h1>
-    <a href="/settings" class="text-sm text-accent">← Back to Settings</a>
+    <h1 class="text-xl font-semibold"><?= __('Cashflow Rules') ?></h1>
+    <a href="/settings" class="text-sm text-accent"><?= __('← Back to Settings') ?></a>
   </div>
 
   <!-- Progress -->
@@ -11,43 +11,43 @@
   ?>
   <div class="mt-4">
     <div class="flex justify-between text-xs text-gray-600">
-      <span>Total allocation</span>
+      <span><?= __('Total allocation') ?></span>
       <span><?= number_format($pct,2) ?>%</span>
     </div>
     <div class="mt-1 h-3 w-full bg-gray-100 rounded-full overflow-hidden">
       <div class="h-3 <?= $barColor ?>" style="width: <?= $pct ?>%"></div>
     </div>
     <?php if ($total > 100): ?>
-      <p class="mt-2 text-xs text-red-600">You’re over 100%. Reduce some rules.</p>
+      <p class="mt-2 text-xs text-red-600"><?= __('You’re over 100%. Reduce some rules.') ?></p>
     <?php elseif ($total < 100): ?>
-      <p class="mt-2 text-xs text-gray-500"><?= number_format(100-$total,2) ?>% unallocated.</p>
+      <p class="mt-2 text-xs text-gray-500"><?= __(':percent% unallocated.', ['percent' => number_format(100-$total,2)]) ?></p>
     <?php else: ?>
-      <p class="mt-2 text-xs text-gray-500">Perfect! Fully allocated.</p>
+      <p class="mt-2 text-xs text-gray-500"><?= __('Perfect! Fully allocated.') ?></p>
     <?php endif; ?>
   </div>
 
   <!-- Add rule -->
   <div class="mt-6">
-    <h2 class="font-medium mb-2">Add rule</h2>
+    <h2 class="font-medium mb-2"><?= __('Add rule') ?></h2>
     <form method="post" action="/settings/cashflow/add" class="grid sm:grid-cols-6 gap-2">
       <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-      <input name="label" class="input sm:col-span-4" placeholder="e.g. Needs / Investments / Fun" required />
+      <input name="label" class="input sm:col-span-4" placeholder="<?= __('e.g. Needs / Investments / Fun') ?>" required />
       <div class="sm:col-span-1">
         <div class="flex items-center gap-2">
           <input name="percent" type="number" step="0.01" min="0" class="input" placeholder="%" required />
           <span class="text-sm text-gray-500">%</span>
         </div>
       </div>
-      <button class="btn btn-primary sm:col-span-1">Add</button>
+      <button class="btn btn-primary sm:col-span-1"><?= __('Add') ?></button>
     </form>
   </div>
 
   <!-- List -->
   <div class="mt-6">
-    <h2 class="font-medium mb-2">Your rules</h2>
+    <h2 class="font-medium mb-2"><?= __('Your rules') ?></h2>
     <ul class="divide-y rounded-xl border">
       <?php if (!count($rules)): ?>
-        <li class="p-3 text-sm text-gray-500">No rules yet.</li>
+        <li class="p-3 text-sm text-gray-500"><?= __('No rules yet.') ?></li>
       <?php else: foreach($rules as $r): ?>
         <li class="p-3">
           <details class="group">
@@ -71,13 +71,13 @@
                     <span class="text-sm text-gray-500">%</span>
                   </div>
                 </div>
-                <button class="btn btn-primary sm:col-span-1">Save</button>
+                <button class="btn btn-primary sm:col-span-1"><?= __('Save') ?></button>
               </form>
               <form class="mt-2 flex justify-end" method="post" action="/settings/cashflow/delete"
-                    onsubmit="return confirm('Delete this rule?');">
+                    onsubmit="return confirm('<?= addslashes(__('Delete this rule?')) ?>');">
                 <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                 <input type="hidden" name="id" value="<?= $r['id'] ?>" />
-                <button class="btn btn-danger">Remove</button>
+                <button class="btn btn-danger"><?= __('Remove') ?></button>
               </form>
             </div>
           </details>

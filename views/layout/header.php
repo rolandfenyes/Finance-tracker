@@ -1,6 +1,6 @@
 <?php $app = require __DIR__ . '/../../config/config.php'; ?>
 <!doctype html>
-<html lang="en">
+<html lang="<?= htmlspecialchars(app_locale(), ENT_QUOTES) ?>">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -177,7 +177,8 @@
       $active = preg_match($item['match'], $currentPath) === 1;
       $base = 'px-3 py-1.5 rounded-lg transition';
       $cls  = $active ? 'bg-gray-900 text-white' : 'hover:bg-gray-100 text-gray-800';
-      return '<a class="'.$base.' '.$cls.' '.$extra.'" href="'.$item['href'].'">'.htmlspecialchars($item['label']).'</a>';
+      $label = __($item['label']);
+      return '<a class="'.$base.' '.$cls.' '.$extra.'" href="'.$item['href'].'">'.htmlspecialchars($label).'</a>';
     }
   ?>
 
@@ -196,7 +197,7 @@
             <?php foreach ($items as $it): echo nav_link($it, $currentPath); endforeach; ?>
             <form action="/logout" method="post" class="inline">
               <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-              <button class="ml-2 px-3 py-1.5 rounded-lg bg-gray-900 text-white">Logout</button>
+              <button class="ml-2 px-3 py-1.5 rounded-lg bg-gray-900 text-white"><?= __('Logout') ?></button>
             </form>
           <?php endif; ?>
         </nav>
@@ -205,7 +206,7 @@
       <!-- Mobile menu (also hidden during onboarding, except /onboard/done) -->
       <?php if (!$hideMenus): ?>
         <div x-data="{open:false}" class="sm:hidden relative">
-          <button @click="open = !open" class="px-3 py-1.5 rounded-lg border bg-white">Menu</button>
+          <button @click="open = !open" class="px-3 py-1.5 rounded-lg border bg-white"><?= __('Menu') ?></button>
           <div x-cloak x-show="open" @click.outside="open=false" x-transition
                class="absolute right-0 mt-2 w-56 bg-white border rounded-2xl shadow-glass p-2 z-50">
             <?php if (is_logged_in()): ?>
@@ -215,12 +216,12 @@
                 <?php endforeach; ?>
                 <form action="/logout" method="post" class="pt-1">
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-                  <button class="w-full px-3 py-2 rounded-lg bg-gray-900 text-white">Logout</button>
+                  <button class="w-full px-3 py-2 rounded-lg bg-gray-900 text-white"><?= __('Logout') ?></button>
                 </form>
               </div>
             <?php else: ?>
-              <a class="block px-3 py-2 rounded-lg hover:bg-gray-100" href="/login">Login</a>
-              <a class="block px-3 py-2 rounded-lg hover:bg-gray-100" href="/register">Register</a>
+              <a class="block px-3 py-2 rounded-lg hover:bg-gray-100" href="/login"><?= __('Login') ?></a>
+              <a class="block px-3 py-2 rounded-lg hover:bg-gray-100" href="/register"><?= __('Register') ?></a>
             <?php endif; ?>
           </div>
         </div>

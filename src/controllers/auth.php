@@ -13,7 +13,7 @@ function register_step1_submit(PDO $pdo) {
   $pass  = $_POST['password'] ?? '';
 
   if ($name==='' || !$email || strlen($pass)<8) {
-    $_SESSION['flash'] = 'Please fill all fields (password ≥ 8 chars).';
+    $_SESSION['flash'] = __('Please fill all fields (password ≥ 8 chars).');
     redirect('/register');
   }
 
@@ -21,7 +21,7 @@ function register_step1_submit(PDO $pdo) {
   $chk = $pdo->prepare('SELECT 1 FROM users WHERE email=?');
   $chk->execute([$email]);
   if ($chk->fetch()) {
-    $_SESSION['flash'] = 'Email already registered.';
+    $_SESSION['flash'] = __('Email already registered.');
     redirect('/register');
   }
 

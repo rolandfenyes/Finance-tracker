@@ -11,5 +11,11 @@ return [
         'name' => 'MyMoneyMap',
         'base_url' => '/', // if hosted in subfolder, e.g. '/moneymap/'
         'session_name' => 'moneymap_sess',
+        'default_locale' => 'en',
+        'locales' => [
+            'en' => 'English',
+            'hu' => 'Magyar',
+            'es' => 'Español',
+        ],
     ],
 ];
