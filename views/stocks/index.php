@@ -1,38 +1,38 @@
 <section class="grid md:grid-cols-3 gap-4">
-  <div class="bg-white rounded-2xl p-5 shadow-glass">
+  <div class="card">
     <h2 class="font-medium">Portfolio (cost basis)</h2>
     <p class="text-2xl mt-2 font-semibold"><?= moneyfmt($portfolio_value) ?></p>
     <p class="text-xs text-gray-500">Sum of qty × avg buy price for open positions.</p>
   </div>
-  <div class="bg-white rounded-2xl p-5 shadow-glass md:col-span-2">
+  <div class="card md:col-span-2">
     <h3 class="font-semibold mb-3">Trade — Buy</h3>
     <form class="grid sm:grid-cols-6 gap-2" method="post" action="/stocks/buy">
       <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-      <input name="symbol" class="rounded-xl border-gray-300 sm:col-span-1" placeholder="AAPL" required>
-      <input name="quantity" type="number" step="0.000001" class="rounded-xl border-gray-300 sm:col-span-1" placeholder="Qty" required>
-      <input name="price" type="number" step="0.0001" class="rounded-xl border-gray-300 sm:col-span-1" placeholder="Price" required>
-      <input name="currency" class="rounded-xl border-gray-300 sm:col-span-1" value="USD">
-      <input name="trade_on" type="date" value="<?= date('Y-m-d') ?>" class="rounded-xl border-gray-300 sm:col-span-1">
-      <button class="bg-gray-900 text-white rounded-xl px-4">Buy</button>
+      <input name="symbol" class="input sm:col-span-1" placeholder="AAPL" required>
+      <input name="quantity" type="number" step="0.000001" class="input sm:col-span-1" placeholder="Qty" required>
+      <input name="price" type="number" step="0.0001" class="input sm:col-span-1" placeholder="Price" required>
+      <input name="currency" class="input sm:col-span-1" value="USD">
+      <input name="trade_on" type="date" value="<?= date('Y-m-d') ?>" class="input sm:col-span-1">
+      <button class="btn btn-primary sm:col-span-1"><?= __('Buy') ?></button>
     </form>
 
     <h3 class="font-semibold mt-6 mb-3">Trade — Sell</h3>
     <form class="grid sm:grid-cols-6 gap-2" method="post" action="/stocks/sell">
       <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-      <input name="symbol" class="rounded-xl border-gray-300 sm:col-span-1" placeholder="AAPL" required>
-      <input name="quantity" type="number" step="0.000001" class="rounded-xl border-gray-300 sm:col-span-1" placeholder="Qty" required>
-      <input name="price" type="number" step="0.0001" class="rounded-xl border-gray-300 sm:col-span-1" placeholder="Price" required>
-      <input name="currency" class="rounded-xl border-gray-300 sm:col-span-1" value="USD">
-      <input name="trade_on" type="date" value="<?= date('Y-m-d') ?>" class="rounded-xl border-gray-300 sm:col-span-1">
-      <button class="bg-accent text-white rounded-xl px-4">Sell</button>
+      <input name="symbol" class="input sm:col-span-1" placeholder="AAPL" required>
+      <input name="quantity" type="number" step="0.000001" class="input sm:col-span-1" placeholder="Qty" required>
+      <input name="price" type="number" step="0.0001" class="input sm:col-span-1" placeholder="Price" required>
+      <input name="currency" class="input sm:col-span-1" value="USD">
+      <input name="trade_on" type="date" value="<?= date('Y-m-d') ?>" class="input sm:col-span-1">
+      <button class="btn btn-danger sm:col-span-1"><?= __('Sell') ?></button>
     </form>
   </div>
 </section>
 
 <section class="mt-6 grid md:grid-cols-2 gap-6">
-  <div class="bg-white rounded-2xl p-5 shadow-glass overflow-x-auto">
+  <div class="card overflow-x-auto">
     <h3 class="font-semibold mb-3">Open Positions</h3>
-    <table class="min-w-full text-sm">
+    <table class="table-glass min-w-full text-sm">
       <thead><tr class="text-left border-b"><th class="py-2 pr-3">Symbol</th><th class="py-2 pr-3">Qty</th><th class="py-2 pr-3">Avg Buy</th><th class="py-2 pr-3">Cost</th></tr></thead>
       <tbody>
         <?php foreach($positions as $p): if((float)$p['qty']<=0) continue; $cost=(float)$p['qty']*(float)$p['avg_buy_price']; ?>
@@ -47,9 +47,9 @@
     </table>
   </div>
 
-  <div class="bg-white rounded-2xl p-5 shadow-glass overflow-x-auto">
+  <div class="card overflow-x-auto">
     <h3 class="font-semibold mb-3">Recent Trades</h3>
-    <table class="min-w-full text-sm">
+    <table class="table-glass min-w-full text-sm">
       <thead><tr class="text-left border-b"><th class="py-2 pr-3">Date</th><th class="py-2 pr-3">Side</th><th class="py-2 pr-3">Symbol</th><th class="py-2 pr-3">Qty</th><th class="py-2 pr-3">Price</th><th class="py-2 pr-3">Currency</th><th class="py-2 pr-3">Actions</th></tr></thead>
       <tbody>
         <?php foreach($trades as $t): ?>
@@ -64,7 +64,10 @@
               <form method="post" action="/stocks/trade/delete" onsubmit="return confirm('Delete trade?')">
                 <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                 <input type="hidden" name="id" value="<?= $t['id'] ?>" />
-                <button class="text-red-600">Remove</button>
+                <button class="icon-action icon-action--danger" title="<?= __('Remove') ?>">
+                  <i data-lucide="trash-2" class="h-4 w-4"></i>
+                  <span class="sr-only"><?= __('Remove') ?></span>
+                </button>
               </form>
             </td>
           </tr>

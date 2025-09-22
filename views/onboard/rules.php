@@ -1,4 +1,4 @@
-<section class="max-w-2xl mx-auto bg-white rounded-2xl shadow-glass p-6">
+<section class="max-w-2xl mx-auto card">
   <h1 class="text-lg font-semibold"><?= __('Cashflow rules') ?></h1>
   <p class="text-sm text-gray-600 mt-1">
     <?= __('Decide how your income is split automatically (e.g., 50/30/20).') ?>
