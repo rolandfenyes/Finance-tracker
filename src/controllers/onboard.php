@@ -2,12 +2,27 @@
 require_once __DIR__ . '/../helpers.php';
 require_once __DIR__ . '/../fx.php';
 
-function require_onboarding_gate(PDO $pdo, int $step){
-  // optional: prevent skipping steps
-  $q = $pdo->prepare('SELECT onboard_step FROM users WHERE id=?');
-  $q->execute([uid()]);
-  $s = (int)$q->fetchColumn();
-  if ($s < $step-1) redirect('/onboard/rules'); // go back to start
+function require_onboarding_gate(PDO $pdo, int $step): void {
+  $u = uid();
+  if (!$u) {
+    redirect('/login');
+  }
+
+  if ($step > 1 && !onboard_has_theme($pdo, $u)) {
+    redirect('/onboard/theme');
+  }
+  if ($step > 2 && !onboard_has_rules($pdo, $u)) {
+    redirect('/onboard/rules');
+  }
+  if ($step > 3 && !onboard_has_currencies($pdo, $u)) {
+    redirect('/onboard/currencies');
+  }
+  if ($step > 4 && !onboard_has_categories($pdo, $u)) {
+    redirect('/onboard/categories');
+  }
+  if ($step > 5 && !onboard_has_income($pdo, $u)) {
+    redirect('/onboard/income');
+  }
 }
 
 function set_step(PDO $pdo, int $step){
@@ -38,6 +53,7 @@ function onboard_theme_submit(PDO $pdo){
 
 /** STEP 2: Cashflow rules */
 function onboard_rules_form(PDO $pdo){
+  require_onboarding_gate($pdo, 2);
   set_step($pdo, 2);
   $currentStep = 2;
   view('onboard/rules', compact('currentStep'));
@@ -45,6 +61,7 @@ function onboard_rules_form(PDO $pdo){
 
 function onboard_rules_submit(PDO $pdo){
   verify_csrf(); require_login();
+  require_onboarding_gate($pdo, 2);
   $rows = $_POST['rules'] ?? [];
   $u = uid();
 
@@ -65,14 +82,18 @@ function onboard_rules_submit(PDO $pdo){
 }
 // STEP 3: Currencies
 function onboard_currencies_form(PDO $pdo){
-  require_login(); set_step($pdo, 3);
+  require_login();
+  require_onboarding_gate($pdo, 3);
+  set_step($pdo, 3);
   $uc = $pdo->prepare("SELECT code,is_main FROM user_currencies WHERE user_id=? ORDER BY is_main DESC, code");
   $uc->execute([uid()]); $list = $uc->fetchAll(PDO::FETCH_ASSOC);
   view('onboard/currencies', compact('list'));
 }
 
 function onboard_currencies_submit(PDO $pdo){
-  verify_csrf(); require_login(); $u=uid();
+  verify_csrf(); require_login();
+  require_onboarding_gate($pdo, 3);
+  $u=uid();
   $codes = array_filter(array_map('trim', $_POST['codes'] ?? []));
   $main  = strtoupper(trim($_POST['main'] ?? ''));
 
@@ -95,6 +116,7 @@ function onboard_currencies_submit(PDO $pdo){
 
 // STEP 4: Categories
 function onboard_categories_form(PDO $pdo){
+  require_onboarding_gate($pdo, 4);
   set_step($pdo, 4);
   $suggest = [
     'income'   => ['Salary','Bonus','Refunds'],
@@ -104,7 +126,9 @@ function onboard_categories_form(PDO $pdo){
 }
 
 function onboard_categories_submit(PDO $pdo){
-  verify_csrf(); require_login(); $u=uid();
+  verify_csrf(); require_login();
+  require_onboarding_gate($pdo, 4);
+  $u=uid();
   $selIn  = $_POST['income']   ?? [];
   $selOut = $_POST['spending'] ?? [];
   $color  = '#6B7280';
@@ -128,6 +152,7 @@ function onboard_categories_submit(PDO $pdo){
 
 // STEP 5: Incomes
 function onboard_incomes_form(PDO $pdo){
+  require_onboarding_gate($pdo, 5);
   set_step($pdo, 5);
   // show 1–2 rows to add (label, amount, currency, category optional)
   $uc = $pdo->prepare("SELECT code,is_main FROM user_currencies WHERE user_id=? ORDER BY is_main DESC, code");
@@ -136,7 +161,9 @@ function onboard_incomes_form(PDO $pdo){
 }
 
 function onboard_incomes_submit(PDO $pdo){
-  verify_csrf(); require_login(); $u=uid();
+  verify_csrf(); require_login();
+  require_onboarding_gate($pdo, 5);
+  $u=uid();
   $rows = $_POST['incomes'] ?? [];
   $pdo->beginTransaction();
   try {
@@ -156,6 +183,7 @@ function onboard_incomes_submit(PDO $pdo){
 }
 
 function onboard_done(PDO $pdo){
+  require_onboarding_gate($pdo, 6);
   set_step($pdo, 6);
   // Optionally: create EF system categories if not present yet
   require_once __DIR__ . '/../helpers_ef.php';
@@ -192,7 +220,10 @@ function onboard_all_currencies(): array {
 }
 
 function onboard_currencies_index(PDO $pdo) {
-  require_login(); $u = uid();
+  require_login();
+  require_onboarding_gate($pdo, 3);
+  $u = uid();
+  set_step($pdo, 3);
 
   // NOTE: only code + is_main; no id
   $q = $pdo->prepare("SELECT code, is_main FROM user_currencies WHERE user_id=? ORDER BY is_main DESC, code");
@@ -205,7 +236,9 @@ function onboard_currencies_index(PDO $pdo) {
 }
 
 function onboard_currencies_add(PDO $pdo) {
-  verify_csrf(); require_login(); $u = uid();
+  verify_csrf(); require_login();
+  require_onboarding_gate($pdo, 3);
+  $u = uid();
 
   $code  = strtoupper(trim($_POST['code'] ?? ''));
   $isMain = !empty($_POST['is_main']);
@@ -259,7 +292,9 @@ function onboard_currencies_add(PDO $pdo) {
 }
 
 function onboard_currencies_delete(PDO $pdo) {
-  verify_csrf(); require_login(); $u = uid();
+  verify_csrf(); require_login();
+  require_onboarding_gate($pdo, 3);
+  $u = uid();
   $code = strtoupper(trim($_POST['code'] ?? ''));
   if ($code === '') { redirect('/onboard/currencies'); }
 
@@ -362,7 +397,10 @@ function onboard_next(PDO $pdo) {
 
 
 function onboard_income(PDO $pdo){
-  require_login(); $u = uid();
+  require_login();
+  require_onboarding_gate($pdo, 5);
+  $u = uid();
+  set_step($pdo, 5);
 
   // user currencies for selector
   $uc = $pdo->prepare("SELECT code, is_main FROM user_currencies WHERE user_id=? ORDER BY is_main DESC, code");
@@ -398,7 +436,9 @@ function onboard_income(PDO $pdo){
 }
 
 function onboard_income_add(PDO $pdo){
-  verify_csrf(); require_login(); $u = uid();
+  verify_csrf(); require_login();
+  require_onboarding_gate($pdo, 5);
+  $u = uid();
 
   $label   = trim($_POST['label'] ?? '');
   $amount  = (float)($_POST['amount'] ?? 0);
@@ -435,7 +475,9 @@ function onboard_income_add(PDO $pdo){
 }
 
 function onboard_income_delete(PDO $pdo){
-  verify_csrf(); require_login(); $u = uid();
+  verify_csrf(); require_login();
+  require_onboarding_gate($pdo, 5);
+  $u = uid();
   $id = (int)($_POST['id'] ?? 0);
   if ($id) {
     $pdo->prepare("DELETE FROM basic_incomes WHERE id=? AND user_id=?")->execute([$id,$u]);
@@ -444,7 +486,10 @@ function onboard_income_delete(PDO $pdo){
   }
 }
 function onboard_categories_index(PDO $pdo){
-  require_login(); $u = uid();
+  require_login();
+  require_onboarding_gate($pdo, 4);
+  $u = uid();
+  set_step($pdo, 4);
 
   $stmt = $pdo->prepare("
     SELECT id, label, kind, COALESCE(NULLIF(color,''), '#6B7280') AS color
@@ -473,7 +518,9 @@ function onboard_categories_index(PDO $pdo){
 }
 
 function onboard_categories_add(PDO $pdo){
-  verify_csrf(); require_login(); $u = uid();
+  verify_csrf(); require_login();
+  require_onboarding_gate($pdo, 4);
+  $u = uid();
 
   $kind  = (($_POST['kind'] ?? '') === 'spending') ? 'spending' : 'income';
   $label = trim($_POST['label'] ?? '');
@@ -496,7 +543,9 @@ function onboard_categories_add(PDO $pdo){
 }
 
 function onboard_categories_delete(PDO $pdo){
-  verify_csrf(); require_login(); $u = uid();
+  verify_csrf(); require_login();
+  require_onboarding_gate($pdo, 4);
+  $u = uid();
 
   $id = (int)($_POST['id'] ?? 0);
   if (!$id) { redirect('/onboard/categories'); }
@@ -524,6 +573,7 @@ if (!function_exists('normalize_hex')) {
 
 function onboard_done_show(PDO $pdo){
   require_login();
+  require_onboarding_gate($pdo, 6);
 
   // Try to add a durable “onboard_done” flag so menus stay visible after Done
   try {
