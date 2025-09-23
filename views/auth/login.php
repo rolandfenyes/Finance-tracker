@@ -49,7 +49,9 @@ $activeLabel = $localeOptions[$currentLocale] ?? strtoupper($currentLocale);
     <div class="card space-y-6">
       <!-- Brand -->
       <div class="flex flex-col items-center text-center">
-        <img src="/logo.png" alt="App logo" class="h-14 w-14 rounded-xl shadow-sm object-contain" />
+         <div class="h-14 w-14 p-2 rounded-xl bg-brand-500 flex flex-col items-center justify-center shadow-sm">
+          <img src="/logo.png" alt="App logo" class="h-12 w-12 object-contain" />
+        </div>
         <div class="mt-2 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
           <?= htmlspecialchars($app['app']['name']) ?>
         </div>

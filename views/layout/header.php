@@ -873,7 +873,9 @@
   <header class="sticky top-0 z-40 border-b border-white/40 bg-white/60 backdrop-blur-xl transition dark:border-slate-800/60 dark:bg-slate-900/50">
     <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
       <a href="/" class="flex items-center gap-3 text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
-        <img src="/logo.png" alt="App logo" class="h-12 w-12 object-contain" />
+        <div class="h-12 w-12 p-2 rounded-xl bg-brand-500 flex flex-col items-center justify-center">
+          <img src="/logo.png" alt="App logo" class="h-10 w-10 object-contain" />
+        </div>
         
         <span><?= htmlspecialchars($app['app']['name']) ?></span>
       </a>
