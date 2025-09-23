@@ -14,6 +14,30 @@ function set_step(PDO $pdo, int $step){
   $pdo->prepare('UPDATE users SET onboard_step=? WHERE id=?')->execute([$step, uid()]);
 }
 
+function onboard_theme_show(PDO $pdo){
+  require_login();
+  set_step($pdo, 1);
+
+  $themes = available_themes();
+  $currentTheme = current_theme_slug();
+
+  view('onboard/theme', compact('themes', 'currentTheme'));
+}
+
+function onboard_theme_submit(PDO $pdo){
+  verify_csrf(); require_login();
+
+  $selected = trim($_POST['theme'] ?? '');
+  $catalog = available_themes();
+  $slug = isset($catalog[$selected]) ? $selected : default_theme_slug();
+
+  $stmt = $pdo->prepare('UPDATE users SET theme=? WHERE id=?');
+  $stmt->execute([$slug, uid()]);
+
+  set_step($pdo, 2);
+  redirect('/onboard/rules');
+}
+
 /** STEP 2: Cashflow rules */
 function onboard_rules_form(PDO $pdo){
   set_step($pdo, 2);
@@ -299,12 +323,20 @@ function onboard_has_categories(PDO $pdo, int $u): bool {
   return (bool)$stmt->fetchColumn();
 }
 
+function onboard_has_theme(PDO $pdo, int $u): bool {
+  $stmt = $pdo->prepare('SELECT theme FROM users WHERE id=?');
+  $stmt->execute([$u]);
+  $theme = (string)$stmt->fetchColumn();
+  return $theme !== '' && isset(available_themes()[$theme]);
+}
+
 // --- the dispatcher to the next step ---
 function onboard_next(PDO $pdo) {
   require_login(); $u = uid();
 
   // Ordered flow:
-  // 1) Rules → 2) Currencies → 3) Incomes → 4) Categories → 5) Done
+  // 1) Theme → 2) Rules → 3) Currencies → 4) Incomes → 5) Categories → 6) Done
+  if (!onboard_has_theme($pdo, $u))        { redirect('/onboard/theme'); }
   if (!onboard_has_rules($pdo, $u))       { redirect('/onboard/rules'); }
   if (!onboard_has_currencies($pdo, $u))  { redirect('/onboard/currencies'); }
   if (!onboard_has_income($pdo, $u))      { redirect('/onboard/income'); }

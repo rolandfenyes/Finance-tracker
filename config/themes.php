@@ -1,0 +1,100 @@
+<?php
+return [
+    'polar-quartz' => [
+        'name' => 'Polar Quartz',
+        'base' => '#f4f4f5',
+        'accent' => '#d4d4d8',
+        'muted' => '#f9fafb',
+        'deep' => '#18181b',
+        'description' => 'Crisp, gallery-white minimalism with soft slate undertones.',
+        'preview' => [
+            'light' => '#fafafa',
+            'dark' => '#18181b',
+        ],
+    ],
+    'verdant-horizon' => [
+        'name' => 'Verdant Horizon',
+        'base' => '#4b966e',
+        'accent' => '#3c7b5b',
+        'muted' => '#e6f1eb',
+        'deep' => '#163428',
+        'description' => 'Lush emerald glassmorphism inspired by dew-soaked forests.',
+        'preview' => [
+            'light' => '#e6f1eb',
+            'dark' => '#0f1e18',
+        ],
+        'default' => true,
+    ],
+    'celestial-tide' => [
+        'name' => 'Celestial Tide',
+        'base' => '#2563eb',
+        'accent' => '#1d4ed8',
+        'muted' => '#dbeafe',
+        'deep' => '#0f172a',
+        'description' => 'Iridescent blues inspired by moonlit seas and starfields.',
+        'preview' => [
+            'light' => '#dbeafe',
+            'dark' => '#0b1220',
+        ],
+    ],
+    'blush-nocturne' => [
+        'name' => 'Blush Nocturne',
+        'base' => '#db2777',
+        'accent' => '#be185d',
+        'muted' => '#fce7f3',
+        'deep' => '#831843',
+        'description' => 'Vibrant rose quartz gradients with nocturnal velvet shadows.',
+        'preview' => [
+            'light' => '#fce7f3',
+            'dark' => '#3b0a2a',
+        ],
+    ],
+    'ember-vanguard' => [
+        'name' => 'Ember Vanguard',
+        'base' => '#dc2626',
+        'accent' => '#b91c1c',
+        'muted' => '#fee2e2',
+        'deep' => '#450a0a',
+        'description' => 'Molten crimson energy with forged metal reflections.',
+        'preview' => [
+            'light' => '#fee2e2',
+            'dark' => '#2c0606',
+        ],
+    ],
+    'lilac-eclipse' => [
+        'name' => 'Lilac Eclipse',
+        'base' => '#7c3aed',
+        'accent' => '#6d28d9',
+        'muted' => '#ede9fe',
+        'deep' => '#312e81',
+        'description' => 'Ethereal violets drifting through nebular twilight.',
+        'preview' => [
+            'light' => '#ede9fe',
+            'dark' => '#1f1b4b',
+        ],
+    ],
+    'solaris-bloom' => [
+        'name' => 'Solaris Bloom',
+        'base' => '#f59e0b',
+        'accent' => '#d97706',
+        'muted' => '#fef3c7',
+        'deep' => '#78350f',
+        'description' => 'Sunlit amber radiance with dusk-lit silhouettes.',
+        'preview' => [
+            'light' => '#fef3c7',
+            'dark' => '#321709',
+        ],
+    ],
+    'dune-mirage' => [
+        'name' => 'Dune Mirage',
+        'base' => '#d4a373',
+        'accent' => '#c08457',
+        'muted' => '#f5e9db',
+        'deep' => '#5c3b1a',
+        'description' => 'Desert champagne neutrals with mirage-like warmth.',
+        'preview' => [
+            'light' => '#f5e9db',
+            'dark' => '#2f1a0c',
+        ],
+    ],
+];

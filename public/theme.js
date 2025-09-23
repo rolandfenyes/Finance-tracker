@@ -1,144 +1,92 @@
-(function(global){
-  const theme = {
-    name: 'MyMoneyMap Jade',
-    brand: {
-      primary: '#4b966e',
-      accent: '#3c7b5b',
-      muted: '#e6f1eb',
-      deep: '#163428',
-      palette: {
-        50: '#f1f7f4',
-        100: '#dcece2',
-        200: '#c0ddcc',
-        300: '#94c3aa',
-        400: '#69a986',
-        500: '#4b966e',
-        600: '#3c7b5b',
-        700: '#32644b',
-        800: '#2b513f',
-        900: '#234234',
-        950: '#11241d'
-      }
-    },
-    neutrals: {
-      text: {
-        light: 'rgba(35, 66, 52, 0.82)',
-        dark: 'rgba(226, 244, 236, 0.95)'
-      },
-      subtle: {
-        light: '#5a7466',
-        dark: '#9fb6a9'
-      }
-    },
-    typography: {
-      fontFamily: '"IBM Plex Sans"',
-      fontStack: ['"IBM Plex Sans"', 'Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif']
-    },
-    shadows: {
-      glass: '0 30px 60px -25px rgba(17, 36, 29, 0.45)',
-      brandGlow: '0 20px 45px -20px rgba(75, 150, 110, 0.65)'
-    },
-    radii: {
-      xl: '1.5rem',
-      '3xl': '1.75rem',
-      '4xl': '2.5rem'
-    },
-    blur: {
-      xs: '4px',
-      md: '12px',
-      xl: '22px'
-    },
-    gradients: {
-      mesh: {
-        light: 'radial-gradient(120% 120% at 10% 20%, rgba(75,150,110,0.18) 0%, transparent 55%), radial-gradient(90% 90% at 90% 0%, rgba(42,94,70,0.12) 0%, transparent 65%), linear-gradient(135deg, #f8fbf9 0%, #eef5f1 50%, #f6faf6 100%)',
-        dark: 'radial-gradient(120% 120% at 0% 0%, rgba(75,150,110,0.35) 0%, transparent 60%), radial-gradient(90% 90% at 100% 20%, rgba(28,66,50,0.5) 0%, transparent 70%), linear-gradient(160deg, #060d0b 0%, #0f1e18 55%, #0a1612 100%)'
-      },
-      bodyGlow: {
-        light: 'radial-gradient(30% 30% at 20% 20%, rgba(75, 150, 110, 0.35), transparent 65%), radial-gradient(45% 45% at 80% 0%, rgba(48, 104, 75, 0.25), transparent 70%)',
-        dark: 'radial-gradient(40% 40% at 12% 18%, rgba(75, 150, 110, 0.45), transparent 70%), radial-gradient(40% 40% at 85% 10%, rgba(18, 36, 29, 0.55), transparent 75%)'
-      }
-    },
-    surfaces: {
-      card: {
-        light: 'rgba(255, 255, 255, 0.82)',
-        dark: 'rgba(14, 27, 23, 0.78)',
-        borderLight: 'rgba(255, 255, 255, 0.45)',
-        borderDark: 'rgba(30, 64, 54, 0.55)'
-      },
-      tile: {
-        light: 'rgba(255,255,255,0.68)',
-        dark: 'rgba(18,30,26,0.6)',
-        borderLight: 'rgba(255,255,255,0.5)',
-        borderDark: 'rgba(43, 60, 53, 0.6)'
-      },
-      panel: {
-        light: 'rgba(255,255,255,0.74)',
-        dark: 'rgba(18, 30, 26, 0.68)',
-        borderLight: 'rgba(255,255,255,0.4)',
-        borderDark: 'rgba(43, 60, 53, 0.55)'
-      },
-      panelGhost: {
-        light: 'rgba(230, 241, 235, 0.55)',
-        dark: 'rgba(24, 39, 34, 0.6)',
-        borderLight: 'rgba(214, 229, 222, 0.65)',
-        borderDark: 'rgba(46, 72, 62, 0.7)'
-      },
-      list: {
-        containerLight: 'rgba(255,255,255,0.72)',
-        containerDark: 'rgba(16, 27, 23, 0.72)',
-        itemLight: 'rgba(255,255,255,0.95)',
-        itemAltLight: 'rgba(242, 249, 245, 0.92)',
-        itemDark: 'rgba(18,28,24,0.85)',
-        itemAltDark: 'rgba(11,22,19,0.82)',
-        borderLight: 'rgba(220, 235, 228, 0.7)',
-        borderDark: 'rgba(48, 66, 59, 0.65)',
-        dividerLight: 'rgba(211, 226, 220, 0.55)',
-        dividerDark: 'rgba(41, 58, 52, 0.55)'
-      },
-      modal: {
-        panelLight: 'rgba(255,255,255,0.85)',
-        panelDark: 'rgba(15,30,26,0.92)',
-        borderLight: 'rgba(255,255,255,0.25)',
-        borderDark: 'rgba(30,64,54,0.45)',
-        backdrop: 'rgba(6, 13, 11, 0.6)'
-      }
-    },
-    icons: {
-      neutral: {
-        bgLight: 'rgba(255,255,255,0.75)',
-        borderLight: 'rgba(223, 235, 229, 0.7)',
-        colorLight: '#32644b',
-        hoverLight: 'rgba(75,150,110,0.15)',
-        bgDark: 'rgba(16, 26, 23, 0.85)',
-        borderDark: 'rgba(51, 72, 64, 0.65)',
-        colorDark: '#d3efe1',
-        hoverDark: 'rgba(56, 94, 75, 0.4)'
-      },
-      primary: {
-        bgLight: 'rgba(75,150,110,0.18)',
-        borderLight: 'rgba(75,150,110,0.35)',
-        colorLight: '#2f6e54',
-        hoverLight: 'rgba(75,150,110,0.25)',
-        bgDark: 'rgba(75,150,110,0.28)',
-        borderDark: 'rgba(119, 201, 158, 0.45)',
-        colorDark: '#a0f0ce',
-        hoverDark: 'rgba(75,150,110,0.35)'
-      },
-      danger: {
-        bgLight: 'rgba(244, 63, 94, 0.12)',
-        borderLight: 'rgba(244, 63, 94, 0.35)',
-        colorLight: '#b91c1c',
-        hoverLight: 'rgba(244, 63, 94, 0.2)',
-        bgDark: 'rgba(244, 63, 94, 0.18)',
-        borderDark: 'rgba(248, 113, 113, 0.42)',
-        colorDark: '#fca5a5',
-        hoverDark: 'rgba(244, 63, 94, 0.3)'
-      }
-    }
-  };
+(function (global) {
+  const bases = global.__MYMONEYMAP_THEME_BASES || {};
 
-  function buildVariables(){
-    const palette = theme.brand.palette;
+  function clamp01(value) {
+    if (!Number.isFinite(value)) return 0;
+    return Math.min(1, Math.max(0, value));
+  }
+
+  function normalizeHex(value, fallback = '#4b966e') {
+    if (typeof value !== 'string') return fallback;
+    let hex = value.trim();
+    if (!hex) return fallback;
+    if (hex.startsWith('#')) hex = hex.slice(1);
+    if (hex.length === 3) {
+      hex = hex.split('').map((c) => c + c).join('');
+    }
+    if (hex.length !== 6 || /[^0-9a-f]/i.test(hex)) {
+      return fallback;
+    }
+    return `#${hex.toLowerCase()}`;
+  }
+
+  function hexToRgb(hex) {
+    const normalized = normalizeHex(hex);
+    const value = normalized.slice(1);
+    return {
+      r: parseInt(value.slice(0, 2), 16),
+      g: parseInt(value.slice(2, 4), 16),
+      b: parseInt(value.slice(4, 6), 16),
+    };
+  }
+
+  function rgbToHex({ r, g, b }) {
+    const toHex = (component) => {
+      const clamped = Math.max(0, Math.min(255, Math.round(component)));
+      return clamped.toString(16).padStart(2, '0');
+    };
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  }
+
+  function getBrightness(color) {
+    const { r, g, b } = hexToRgb(color);
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  }
+
+  function mix(colorA, colorB, amount) {
+    const ratio = clamp01(amount);
+    const rgbA = hexToRgb(colorA);
+    const rgbB = hexToRgb(colorB);
+    return rgbToHex({
+      r: rgbA.r * (1 - ratio) + rgbB.r * ratio,
+      g: rgbA.g * (1 - ratio) + rgbB.g * ratio,
+      b: rgbA.b * (1 - ratio) + rgbB.b * ratio,
+    });
+  }
+
+  function lighten(color, amount) {
+    return mix(color, '#ffffff', clamp01(amount));
+  }
+
+  function darken(color, amount) {
+    return mix(color, '#000000', clamp01(amount));
+  }
+
+  function toRgba(color, alpha) {
+    const { r, g, b } = hexToRgb(color);
+    return `rgba(${r}, ${g}, ${b}, ${clamp01(alpha)})`;
+  }
+
+  function createPalette(base) {
+    const color = normalizeHex(base);
+    return {
+      50: lighten(color, 0.92),
+      100: lighten(color, 0.82),
+      200: lighten(color, 0.7),
+      300: lighten(color, 0.52),
+      400: lighten(color, 0.32),
+      500: color,
+      600: darken(color, 0.12),
+      700: darken(color, 0.24),
+      800: darken(color, 0.36),
+      900: darken(color, 0.52),
+      950: darken(color, 0.68),
+    };
+  }
+
+  function buildVariables(theme) {
+    if (!theme) return '';
+    const palette = theme.brand.palette || {};
     const rootLines = [
       ':root {',
       `  --mm-font-family: ${theme.typography.fontStack.join(', ')};`,
@@ -147,11 +95,13 @@
       `  --mm-brand-muted: ${theme.brand.muted};`,
       `  --mm-brand-deep: ${theme.brand.deep};`,
       `  --mm-text-color: ${theme.neutrals.text.light};`,
-      `  --mm-subtle-text: ${theme.neutrals.subtle.light};`
+      `  --mm-subtle-text: ${theme.neutrals.subtle.light};`,
     ];
+
     Object.keys(palette).forEach((key) => {
       rootLines.push(`  --mm-brand-${key}: ${palette[key]};`);
     });
+
     rootLines.push(
       `  --mm-shadow-glass: ${theme.shadows.glass};`,
       `  --mm-shadow-brand-glow: ${theme.shadows.brandGlow};`,
@@ -193,7 +143,7 @@
       `  --mm-icon-danger-border: ${theme.icons.danger.borderLight};`,
       `  --mm-icon-danger-color: ${theme.icons.danger.colorLight};`,
       `  --mm-icon-danger-hover: ${theme.icons.danger.hoverLight};`,
-      `}`
+      `}`,
     );
 
     const darkLines = [
@@ -228,22 +178,290 @@
       `  --mm-icon-danger-color: ${theme.icons.danger.colorDark};`,
       `  --mm-icon-danger-hover: ${theme.icons.danger.hoverDark};`,
       `  --mm-body-glow: ${theme.gradients.bodyGlow.dark};`,
-      `}`
+      `}`,
     ];
 
     return rootLines.concat(darkLines).join('\n');
   }
 
-  function injectCSSVariables(doc){
-    if (!doc) return;
+  function injectCSSVariables(theme, doc) {
+    if (!doc || !theme) return;
     const existing = doc.getElementById('mymoneymap-theme-variables');
     if (existing) existing.remove();
     const style = doc.createElement('style');
     style.id = 'mymoneymap-theme-variables';
-    style.textContent = buildVariables();
+    style.textContent = buildVariables(theme);
     doc.head.appendChild(style);
   }
 
-  injectCSSVariables(global.document);
-  global.MyMoneyMapTheme = theme;
+  function createTheme(slug, meta = {}) {
+    const base = normalizeHex(meta.base || '#4b966e');
+    const accent = normalizeHex(meta.accent || darken(base, 0.18));
+    const muted = normalizeHex(meta.muted || lighten(base, 0.85));
+    const deep = normalizeHex(meta.deep || darken(base, 0.55));
+    const palette = createPalette(base);
+    const primary = palette[500];
+    const surfaceDeep = darken(base, 0.72);
+    const surfaceGhost = lighten(base, 0.82);
+    const borderLight = lighten(base, 0.72);
+    const borderDark = darken(base, 0.6);
+    const baseBrightness = getBrightness(base);
+    const textLightOverride = meta.text_light ? normalizeHex(meta.text_light) : null;
+    const textDarkOverride = meta.text_dark ? normalizeHex(meta.text_dark) : null;
+    const subtleLightOverride = meta.subtle_light ? normalizeHex(meta.subtle_light) : null;
+    const subtleDarkOverride = meta.subtle_dark ? normalizeHex(meta.subtle_dark) : null;
+    const isHighKeyBase = baseBrightness >= 0.8;
+    const fallbackLightText = isHighKeyBase
+      ? normalizeHex(meta.deep || '#1f2937')
+      : darken(base, 0.58);
+    const lightTextBase = textLightOverride || fallbackLightText;
+    const lightTextAlpha = (textLightOverride || isHighKeyBase) ? 0.98 : 0.82;
+    const darkTextBase = textDarkOverride || lighten(base, 0.74);
+    const darkTextAlpha = textDarkOverride ? 0.98 : 0.94;
+    const subtleLight =
+      subtleLightOverride ||
+      (isHighKeyBase ? lighten(lightTextBase, 0.55) : lighten(base, 0.4));
+    const subtleDark = subtleDarkOverride || lighten(base, 0.64);
+    const textDeep = toRgba(lightTextBase, lightTextAlpha);
+    const textBright = toRgba(darkTextBase, darkTextAlpha);
+
+    return {
+      slug,
+      name: meta.name || slug,
+      brand: {
+        primary,
+        accent,
+        muted,
+        deep,
+        palette,
+      },
+      neutrals: {
+        text: {
+          light: textDeep,
+          dark: textBright,
+        },
+        subtle: {
+          light: subtleLight,
+          dark: subtleDark,
+        },
+      },
+      typography: {
+        fontFamily: '"IBM Plex Sans"',
+        fontStack: ['"IBM Plex Sans"', 'Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
+      },
+      shadows: {
+        glass: `0 30px 60px -25px ${toRgba(darken(base, 0.75), 0.45)}`,
+        brandGlow: `0 20px 45px -20px ${toRgba(primary, 0.65)}`,
+      },
+      radii: {
+        xl: '1.5rem',
+        '3xl': '1.75rem',
+        '4xl': '2.5rem',
+      },
+      blur: {
+        xs: '4px',
+        md: '12px',
+        xl: '22px',
+      },
+      gradients: {
+        mesh: {
+          light: [
+            `radial-gradient(120% 120% at 10% 20%, ${toRgba(lighten(base, 0.15), 0.18)} 0%, transparent 55%)`,
+            `radial-gradient(90% 90% at 90% 0%, ${toRgba(accent, 0.12)} 0%, transparent 65%)`,
+            `linear-gradient(135deg, ${lighten(base, 0.9)} 0%, ${lighten(base, 0.74)} 50%, ${lighten(base, 0.96)} 100%)`,
+          ].join(', '),
+          dark: [
+            `radial-gradient(120% 120% at 0% 0%, ${toRgba(primary, 0.38)} 0%, transparent 60%)`,
+            `radial-gradient(90% 90% at 100% 20%, ${toRgba(deep, 0.5)} 0%, transparent 70%)`,
+            `linear-gradient(160deg, ${darken(base, 0.84)} 0%, ${darken(base, 0.62)} 55%, ${darken(base, 0.76)} 100%)`,
+          ].join(', '),
+        },
+        bodyGlow: {
+          light: [
+            `radial-gradient(32% 32% at 18% 18%, ${toRgba(primary, 0.35)}, transparent 65%)`,
+            `radial-gradient(45% 45% at 82% 4%, ${toRgba(accent, 0.24)}, transparent 70%)`,
+          ].join(', '),
+          dark: [
+            `radial-gradient(40% 40% at 12% 18%, ${toRgba(primary, 0.45)}, transparent 70%)`,
+            `radial-gradient(40% 40% at 88% 12%, ${toRgba(deep, 0.55)}, transparent 75%)`,
+          ].join(', '),
+        },
+      },
+      surfaces: {
+        card: {
+          light: 'rgba(255, 255, 255, 0.82)',
+          dark: toRgba(surfaceDeep, 0.78),
+          borderLight: 'rgba(255, 255, 255, 0.45)',
+          borderDark: toRgba(darken(base, 0.4), 0.55),
+        },
+        tile: {
+          light: 'rgba(255,255,255,0.68)',
+          dark: toRgba(darken(base, 0.7), 0.6),
+          borderLight: 'rgba(255,255,255,0.5)',
+          borderDark: toRgba(darken(base, 0.55), 0.6),
+        },
+        panel: {
+          light: 'rgba(255,255,255,0.74)',
+          dark: toRgba(darken(base, 0.65), 0.68),
+          borderLight: 'rgba(255,255,255,0.4)',
+          borderDark: toRgba(darken(base, 0.48), 0.55),
+        },
+        panelGhost: {
+          light: toRgba(surfaceGhost, 0.55),
+          dark: toRgba(darken(base, 0.55), 0.6),
+          borderLight: toRgba(lighten(base, 0.76), 0.65),
+          borderDark: toRgba(darken(base, 0.5), 0.7),
+        },
+        list: {
+          containerLight: 'rgba(255,255,255,0.72)',
+          containerDark: toRgba(darken(base, 0.78), 0.72),
+          itemLight: 'rgba(255,255,255,0.95)',
+          itemAltLight: toRgba(lighten(base, 0.88), 0.92),
+          itemDark: toRgba(darken(base, 0.72), 0.85),
+          itemAltDark: toRgba(darken(base, 0.86), 0.82),
+          borderLight: toRgba(borderLight, 0.7),
+          borderDark: toRgba(borderDark, 0.65),
+          dividerLight: toRgba(lighten(base, 0.7), 0.55),
+          dividerDark: toRgba(darken(base, 0.65), 0.55),
+        },
+        modal: {
+          panelLight: 'rgba(255,255,255,0.85)',
+          panelDark: toRgba(darken(base, 0.76), 0.92),
+          borderLight: 'rgba(255,255,255,0.25)',
+          borderDark: toRgba(darken(base, 0.45), 0.45),
+          backdrop: 'rgba(6, 13, 11, 0.6)',
+        },
+      },
+      icons: {
+        neutral: {
+          bgLight: 'rgba(255,255,255,0.75)',
+          borderLight: toRgba(lighten(base, 0.68), 0.7),
+          colorLight: darken(base, 0.3),
+          hoverLight: toRgba(primary, 0.15),
+          bgDark: toRgba(darken(base, 0.82), 0.85),
+          borderDark: toRgba(darken(base, 0.55), 0.65),
+          colorDark: lighten(base, 0.68),
+          hoverDark: toRgba(darken(base, 0.42), 0.4),
+        },
+        primary: {
+          bgLight: toRgba(primary, 0.18),
+          borderLight: toRgba(primary, 0.35),
+          colorLight: darken(base, 0.25),
+          hoverLight: toRgba(primary, 0.25),
+          bgDark: toRgba(primary, 0.28),
+          borderDark: toRgba(lighten(base, 0.4), 0.45),
+          colorDark: lighten(base, 0.62),
+          hoverDark: toRgba(primary, 0.35),
+        },
+        danger: {
+          bgLight: 'rgba(244, 63, 94, 0.12)',
+          borderLight: 'rgba(244, 63, 94, 0.35)',
+          colorLight: '#b91c1c',
+          hoverLight: 'rgba(244, 63, 94, 0.2)',
+          bgDark: 'rgba(244, 63, 94, 0.18)',
+          borderDark: 'rgba(248, 113, 113, 0.42)',
+          colorDark: '#fca5a5',
+          hoverDark: 'rgba(244, 63, 94, 0.3)',
+        },
+      },
+    };
+  }
+
+  function buildThemes(definitions) {
+    const themes = {};
+    Object.keys(definitions).forEach((slug) => {
+      themes[slug] = createTheme(slug, definitions[slug]);
+    });
+    return themes;
+  }
+
+  const themeDefinitions = Object.keys(bases).length
+    ? bases
+    : {
+        'verdant-horizon': {
+          name: 'Verdant Horizon',
+          base: '#4b966e',
+          accent: '#3c7b5b',
+          muted: '#e6f1eb',
+          deep: '#163428',
+        },
+      };
+
+  const themes = buildThemes(themeDefinitions);
+  const slugs = Object.keys(themes);
+
+  function resolveInitialSlug() {
+    const serverSelected = global.__MYMONEYMAP_SELECTED_THEME;
+    if (serverSelected && themes[serverSelected]) {
+      return serverSelected;
+    }
+
+    try {
+      const stored = global.localStorage && global.localStorage.getItem('mymoneymap-brand-theme');
+      if (stored && themes[stored]) {
+        return stored;
+      }
+    } catch (error) {
+      // ignore storage errors
+    }
+
+    return slugs[0] || 'verdant-horizon';
+  }
+
+  function applyTheme(slug, options = {}) {
+    if (!themes || !Object.keys(themes).length) return null;
+    const selected = themes[slug] || themes[resolveInitialSlug()];
+    if (!selected) return null;
+
+    injectCSSVariables(selected, global.document);
+
+    if (global.document && global.document.documentElement) {
+      global.document.documentElement.setAttribute('data-brand-theme', selected.slug);
+    }
+
+    global.MyMoneyMapTheme = selected;
+    global.MyMoneyMapThemeSlug = selected.slug;
+
+    if (!options.silent) {
+      const event = new CustomEvent('brandthemechange', {
+        detail: { slug: selected.slug, theme: selected },
+      });
+      if (global.document) {
+        global.document.dispatchEvent(event);
+      }
+    }
+
+    return selected;
+  }
+
+  const initialSlug = resolveInitialSlug();
+  const initialTheme = applyTheme(initialSlug, { silent: true });
+
+  if (initialTheme && initialSlug) {
+    try {
+      if (global.localStorage) {
+        global.localStorage.setItem('mymoneymap-brand-theme', initialSlug);
+      }
+    } catch (error) {
+      // ignore storage errors
+    }
+  }
+
+  global.MyMoneyMapThemes = themes;
+  global.MyMoneyMapThemeMeta = themeDefinitions;
+  global.MyMoneyMapTheme = initialTheme;
+  global.MyMoneyMapThemeSlug = initialTheme ? initialTheme.slug : initialSlug;
+  global.MyMoneyMapApplyTheme = function (slug) {
+    const applied = applyTheme(slug);
+    if (applied) {
+      try {
+        if (global.localStorage) {
+          global.localStorage.setItem('mymoneymap-brand-theme', applied.slug);
+        }
+      } catch (error) {
+        // ignore storage errors
+      }
+    }
+    return applied;
+  };
 })(window);
