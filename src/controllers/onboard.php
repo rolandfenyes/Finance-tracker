@@ -334,9 +334,15 @@ function onboard_has_categories(PDO $pdo, int $u): bool {
 }
 
 function onboard_has_theme(PDO $pdo, int $u): bool {
-  $stmt = $pdo->prepare('SELECT theme FROM users WHERE id=?');
+  $stmt = $pdo->prepare('SELECT theme, onboard_step FROM users WHERE id=?');
   $stmt->execute([$u]);
-  $theme = (string)$stmt->fetchColumn();
+  $row = $stmt->fetch(PDO::FETCH_ASSOC);
+  if (!$row) { return false; }
+
+  $step = (int)($row['onboard_step'] ?? 0);
+  if ($step < 2) { return false; }
+
+  $theme = (string)($row['theme'] ?? '');
   return $theme !== '' && isset(available_themes()[$theme]);
 }
 
