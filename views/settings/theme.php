@@ -14,6 +14,14 @@ $currentMeta = $currentMeta ?? theme_meta($currentTheme) ?? [];
             <?= __('Current theme: :name', ['name' => htmlspecialchars($currentMeta['name'])]) ?>
           </p>
         <?php endif; ?>
+        <p class="card-subtle mt-3 text-sm text-gray-500 dark:text-gray-300">
+          <?= __('Pick any palette to apply and save it instantly — no extra clicks needed.') ?>
+        </p>
+        <noscript>
+          <p class="mt-3 text-sm text-red-600">
+            <?= __('JavaScript is required for instant saving. Select a theme and use the save button below.') ?>
+          </p>
+        </noscript>
       </div>
       <a href="/settings" class="text-sm text-accent">← <?= __('Back to Settings') ?></a>
     </div>
@@ -73,7 +81,7 @@ $currentMeta = $currentMeta ?? theme_meta($currentTheme) ?? [];
         <?php endforeach; ?>
       </div>
 
-      <div class="flex items-center justify-end">
+      <div class="flex items-center justify-end" data-theme-submit-row>
         <button class="btn btn-primary px-6"><?= __('Save theme') ?></button>
       </div>
     </form>
@@ -82,11 +90,41 @@ $currentMeta = $currentMeta ?? theme_meta($currentTheme) ?? [];
 
 <script>
   document.addEventListener('DOMContentLoaded', () => {
-    const radios = document.querySelectorAll('[data-theme-choice]');
+    const form = document.getElementById('settings-theme-form');
+    if (!form) {
+      return;
+    }
+
+    const manualRow = form.querySelector('[data-theme-submit-row]');
+    if (manualRow) {
+      manualRow.setAttribute('hidden', 'hidden');
+      manualRow.classList.add('hidden');
+      manualRow.setAttribute('aria-hidden', 'true');
+    }
+
+    const radios = form.querySelectorAll('[data-theme-choice]');
+    let submitting = false;
+
     radios.forEach((radio) => {
       radio.addEventListener('change', () => {
-        if (radio.checked && window.MyMoneyMapApplyTheme) {
+        if (!radio.checked) {
+          return;
+        }
+
+        if (window.MyMoneyMapApplyTheme) {
           window.MyMoneyMapApplyTheme(radio.value);
+        }
+
+        if (submitting) {
+          return;
+        }
+
+        submitting = true;
+
+        if (typeof form.requestSubmit === 'function') {
+          form.requestSubmit();
+        } else {
+          form.submit();
         }
       });
     });
