@@ -2,12 +2,27 @@
 require_once __DIR__ . '/../helpers.php';
 require_once __DIR__ . '/../fx.php';
 
-function require_onboarding_gate(PDO $pdo, int $step){
-  // optional: prevent skipping steps
-  $q = $pdo->prepare('SELECT onboard_step FROM users WHERE id=?');
-  $q->execute([uid()]);
-  $s = (int)$q->fetchColumn();
-  if ($s < $step-1) redirect('/onboard/rules'); // go back to start
+function require_onboarding_gate(PDO $pdo, int $step): void {
+  $u = uid();
+  if (!$u) {
+    redirect('/login');
+  }
+
+  if ($step > 1 && !onboard_has_theme($pdo, $u)) {
+    redirect('/onboard/theme');
+  }
+  if ($step > 2 && !onboard_has_rules($pdo, $u)) {
+    redirect('/onboard/rules');
+  }
+  if ($step > 3 && !onboard_has_currencies($pdo, $u)) {
+    redirect('/onboard/currencies');
+  }
+  if ($step > 4 && !onboard_has_categories($pdo, $u)) {
+    redirect('/onboard/categories');
+  }
+  if ($step > 5 && !onboard_has_income($pdo, $u)) {
+    redirect('/onboard/income');
+  }
 }
 
 function set_step(PDO $pdo, int $step){
@@ -20,7 +35,8 @@ function onboard_theme_show(PDO $pdo){
   set_step($pdo, 1);
   $themes = available_themes();
   $currentTheme = current_theme_slug();
-  view('onboard/theme', compact('themes', 'currentTheme'));
+  $currentStep = 1;
+  view('onboard/theme', compact('themes', 'currentTheme', 'currentStep'));
 }
 
 function onboard_theme_submit(PDO $pdo){
@@ -37,12 +53,15 @@ function onboard_theme_submit(PDO $pdo){
 
 /** STEP 2: Cashflow rules */
 function onboard_rules_form(PDO $pdo){
+  require_onboarding_gate($pdo, 2);
   set_step($pdo, 2);
-  view('onboard/rules', []);
+  $currentStep = 2;
+  view('onboard/rules', compact('currentStep'));
 }
 
 function onboard_rules_submit(PDO $pdo){
   verify_csrf(); require_login();
+  require_onboarding_gate($pdo, 2);
   $rows = $_POST['rules'] ?? [];
   $u = uid();
 
@@ -63,14 +82,18 @@ function onboard_rules_submit(PDO $pdo){
 }
 // STEP 3: Currencies
 function onboard_currencies_form(PDO $pdo){
-  require_login(); set_step($pdo, 3);
+  require_login();
+  require_onboarding_gate($pdo, 3);
+  set_step($pdo, 3);
   $uc = $pdo->prepare("SELECT code,is_main FROM user_currencies WHERE user_id=? ORDER BY is_main DESC, code");
   $uc->execute([uid()]); $list = $uc->fetchAll(PDO::FETCH_ASSOC);
   view('onboard/currencies', compact('list'));
 }
 
 function onboard_currencies_submit(PDO $pdo){
-  verify_csrf(); require_login(); $u=uid();
+  verify_csrf(); require_login();
+  require_onboarding_gate($pdo, 3);
+  $u=uid();
   $codes = array_filter(array_map('trim', $_POST['codes'] ?? []));
   $main  = strtoupper(trim($_POST['main'] ?? ''));
 
@@ -93,6 +116,7 @@ function onboard_currencies_submit(PDO $pdo){
 
 // STEP 4: Categories
 function onboard_categories_form(PDO $pdo){
+  require_onboarding_gate($pdo, 4);
   set_step($pdo, 4);
   $suggest = [
     'income'   => ['Salary','Bonus','Refunds'],
@@ -102,7 +126,9 @@ function onboard_categories_form(PDO $pdo){
 }
 
 function onboard_categories_submit(PDO $pdo){
-  verify_csrf(); require_login(); $u=uid();
+  verify_csrf(); require_login();
+  require_onboarding_gate($pdo, 4);
+  $u=uid();
   $selIn  = $_POST['income']   ?? [];
   $selOut = $_POST['spending'] ?? [];
   $color  = '#6B7280';
@@ -126,6 +152,7 @@ function onboard_categories_submit(PDO $pdo){
 
 // STEP 5: Incomes
 function onboard_incomes_form(PDO $pdo){
+  require_onboarding_gate($pdo, 5);
   set_step($pdo, 5);
   // show 1–2 rows to add (label, amount, currency, category optional)
   $uc = $pdo->prepare("SELECT code,is_main FROM user_currencies WHERE user_id=? ORDER BY is_main DESC, code");
@@ -134,7 +161,9 @@ function onboard_incomes_form(PDO $pdo){
 }
 
 function onboard_incomes_submit(PDO $pdo){
-  verify_csrf(); require_login(); $u=uid();
+  verify_csrf(); require_login();
+  require_onboarding_gate($pdo, 5);
+  $u=uid();
   $rows = $_POST['incomes'] ?? [];
   $pdo->beginTransaction();
   try {
@@ -154,12 +183,14 @@ function onboard_incomes_submit(PDO $pdo){
 }
 
 function onboard_done(PDO $pdo){
+  require_onboarding_gate($pdo, 6);
   set_step($pdo, 6);
   // Optionally: create EF system categories if not present yet
   require_once __DIR__ . '/../helpers_ef.php';
   ef_ensure_categories($pdo, uid());
 
-  view('onboard/done', []);
+  $currentStep = 6;
+  view('onboard/done', compact('currentStep'));
 }
 
 // Pull a master list once (pass to the view). Replace/extend as needed.
@@ -189,7 +220,10 @@ function onboard_all_currencies(): array {
 }
 
 function onboard_currencies_index(PDO $pdo) {
-  require_login(); $u = uid();
+  require_login();
+  require_onboarding_gate($pdo, 3);
+  $u = uid();
+  set_step($pdo, 3);
 
   // NOTE: only code + is_main; no id
   $q = $pdo->prepare("SELECT code, is_main FROM user_currencies WHERE user_id=? ORDER BY is_main DESC, code");
@@ -197,25 +231,40 @@ function onboard_currencies_index(PDO $pdo) {
   $currencies = $q->fetchAll(PDO::FETCH_ASSOC);
 
   $allCurrencies = onboard_all_currencies();
-  view('onboard/currencies', compact('currencies','allCurrencies'));
+  $currentStep = 3;
+  view('onboard/currencies', compact('currencies','allCurrencies','currentStep'));
 }
 
 function onboard_currencies_add(PDO $pdo) {
-  verify_csrf(); require_login(); $u = uid();
+  verify_csrf(); require_login();
+  require_onboarding_gate($pdo, 3);
+  $u = uid();
 
   $code  = strtoupper(trim($_POST['code'] ?? ''));
   $isMain = !empty($_POST['is_main']);
 
-  if ($code === '') { $_SESSION['flash']='Pick a currency.'; redirect('/onboard/currencies'); }
+  if ($code === '') {
+    $_SESSION['flash']='Pick a currency.';
+    $_SESSION['flash_type'] = 'error';
+    redirect('/onboard/currencies');
+  }
 
   // validate code
   $valid = array_filter(onboard_all_currencies(), fn($c) => strtoupper($c['code']) === $code);
-  if (!$valid) { $_SESSION['flash']='Unknown currency code.'; redirect('/onboard/currencies'); }
+  if (!$valid) {
+    $_SESSION['flash']='Unknown currency code.';
+    $_SESSION['flash_type'] = 'error';
+    redirect('/onboard/currencies');
+  }
 
   // no duplicates
   $exists = $pdo->prepare("SELECT 1 FROM user_currencies WHERE user_id=? AND UPPER(code)=?");
   $exists->execute([$u,$code]);
-  if ($exists->fetchColumn()) { $_SESSION['flash']='You already added this currency.'; redirect('/onboard/currencies'); }
+  if ($exists->fetchColumn()) {
+    $_SESSION['flash']='You already added this currency.';
+    $_SESSION['flash_type'] = 'error';
+    redirect('/onboard/currencies');
+  }
 
   $pdo->beginTransaction();
   try {
@@ -233,15 +282,19 @@ function onboard_currencies_add(PDO $pdo) {
 
     $pdo->commit();
     $_SESSION['flash']='Currency added.';
+    $_SESSION['flash_type'] = 'success';
   } catch (Throwable $e) {
     $pdo->rollBack();
     $_SESSION['flash']='Could not add currency.';
+    $_SESSION['flash_type'] = 'error';
   }
   redirect('/onboard/currencies'); // <-- important
 }
 
 function onboard_currencies_delete(PDO $pdo) {
-  verify_csrf(); require_login(); $u = uid();
+  verify_csrf(); require_login();
+  require_onboarding_gate($pdo, 3);
+  $u = uid();
   $code = strtoupper(trim($_POST['code'] ?? ''));
   if ($code === '') { redirect('/onboard/currencies'); }
 
@@ -252,7 +305,11 @@ function onboard_currencies_delete(PDO $pdo) {
 
   $cnt = $pdo->prepare("SELECT COUNT(*) FROM user_currencies WHERE user_id=?");
   $cnt->execute([$u]); 
-  if ((int)$cnt->fetchColumn() <= 1) { $_SESSION['flash']='You must keep at least one currency.'; redirect('/onboard/currencies'); }
+  if ((int)$cnt->fetchColumn() <= 1) {
+    $_SESSION['flash']='You must keep at least one currency.';
+    $_SESSION['flash_type'] = 'error';
+    redirect('/onboard/currencies');
+  }
 
   $pdo->beginTransaction();
   try {
@@ -269,9 +326,11 @@ function onboard_currencies_delete(PDO $pdo) {
 
     $pdo->commit();
     $_SESSION['flash']='Currency removed.';
+    $_SESSION['flash_type'] = 'success';
   } catch (Throwable $e) {
     $pdo->rollBack();
     $_SESSION['flash']='Could not remove currency.';
+    $_SESSION['flash_type'] = 'error';
   }
   redirect('/onboard/currencies'); // <-- important
 }
@@ -310,9 +369,15 @@ function onboard_has_categories(PDO $pdo, int $u): bool {
 }
 
 function onboard_has_theme(PDO $pdo, int $u): bool {
-  $stmt = $pdo->prepare('SELECT theme FROM users WHERE id=?');
+  $stmt = $pdo->prepare('SELECT theme, onboard_step FROM users WHERE id=?');
   $stmt->execute([$u]);
-  $theme = (string)$stmt->fetchColumn();
+  $row = $stmt->fetch(PDO::FETCH_ASSOC);
+  if (!$row) { return false; }
+
+  $step = (int)($row['onboard_step'] ?? 0);
+  if ($step < 2) { return false; }
+
+  $theme = (string)($row['theme'] ?? '');
   return $theme !== '' && isset(available_themes()[$theme]);
 }
 
@@ -332,12 +397,23 @@ function onboard_next(PDO $pdo) {
 
 
 function onboard_income(PDO $pdo){
-  require_login(); $u = uid();
+  require_login();
+  require_onboarding_gate($pdo, 5);
+  $u = uid();
+  set_step($pdo, 5);
 
   // user currencies for selector
   $uc = $pdo->prepare("SELECT code, is_main FROM user_currencies WHERE user_id=? ORDER BY is_main DESC, code");
   $uc->execute([$u]);
   $userCurrencies = $uc->fetchAll(PDO::FETCH_ASSOC) ?: [['code'=>'HUF','is_main'=>true]];
+  $currentStep = 5;
+  $mainCurrency = null;
+  foreach ($userCurrencies as $ucRow) {
+    if (!empty($ucRow['is_main'])) { $mainCurrency = strtoupper($ucRow['code']); break; }
+  }
+  if ($mainCurrency === null && !empty($userCurrencies[0]['code'])) {
+    $mainCurrency = strtoupper($userCurrencies[0]['code']);
+  }
 
   // existing basic incomes (if any)
   $q = $pdo->prepare("
@@ -356,11 +432,13 @@ function onboard_income(PDO $pdo){
   $cats->execute([$u]);
   $categories = $cats->fetchAll(PDO::FETCH_ASSOC);
 
-  view('onboard/income', compact('rows','userCurrencies','categories'));
+  view('onboard/income', compact('rows','userCurrencies','categories','currentStep','mainCurrency'));
 }
 
 function onboard_income_add(PDO $pdo){
-  verify_csrf(); require_login(); $u = uid();
+  verify_csrf(); require_login();
+  require_onboarding_gate($pdo, 5);
+  $u = uid();
 
   $label   = trim($_POST['label'] ?? '');
   $amount  = (float)($_POST['amount'] ?? 0);
@@ -370,6 +448,7 @@ function onboard_income_add(PDO $pdo){
 
   if ($label === '' || $amount <= 0) {
     $_SESSION['flash'] = 'Please provide a name and a positive amount.';
+    $_SESSION['flash_type'] = 'error';
     redirect('/onboard/income');
   }
 
@@ -390,19 +469,27 @@ function onboard_income_add(PDO $pdo){
   ");
   $ins->execute([$u,$label,$amount,$currency,$catId,$from]);
 
-  // After add, go to next step automatically
-  redirect('/onboard/next');
+  $_SESSION['flash'] = 'Income saved. Add another or continue when you\'re ready.';
+  $_SESSION['flash_type'] = 'success';
+  redirect('/onboard/income');
 }
 
 function onboard_income_delete(PDO $pdo){
-  verify_csrf(); require_login(); $u = uid();
+  verify_csrf(); require_login();
+  require_onboarding_gate($pdo, 5);
+  $u = uid();
   $id = (int)($_POST['id'] ?? 0);
   if ($id) {
     $pdo->prepare("DELETE FROM basic_incomes WHERE id=? AND user_id=?")->execute([$id,$u]);
+    $_SESSION['flash'] = 'Income removed.';
+    $_SESSION['flash_type'] = 'success';
   }
 }
 function onboard_categories_index(PDO $pdo){
-  require_login(); $u = uid();
+  require_login();
+  require_onboarding_gate($pdo, 4);
+  $u = uid();
+  set_step($pdo, 4);
 
   $stmt = $pdo->prepare("
     SELECT id, label, kind, COALESCE(NULLIF(color,''), '#6B7280') AS color
@@ -413,17 +500,34 @@ function onboard_categories_index(PDO $pdo){
   $stmt->execute([$u]);
   $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-  view('onboard/categories', compact('rows'));
+  $suggestedIncome = [
+    ['label' => 'Salary', 'color' => '#4ADE80'],
+    ['label' => 'Side hustle', 'color' => '#22D3EE'],
+    ['label' => 'Bonus', 'color' => '#C4B5FD'],
+  ];
+  $suggestedSpending = [
+    ['label' => 'Housing', 'color' => '#F472B6'],
+    ['label' => 'Groceries', 'color' => '#FACC15'],
+    ['label' => 'Transport', 'color' => '#38BDF8'],
+    ['label' => 'Health & wellness', 'color' => '#34D399'],
+    ['label' => 'Fun money', 'color' => '#FB7185'],
+    ['label' => 'Subscriptions', 'color' => '#A5B4FC'],
+  ];
+  $currentStep = 4;
+  view('onboard/categories', compact('rows','suggestedIncome','suggestedSpending','currentStep'));
 }
 
 function onboard_categories_add(PDO $pdo){
-  verify_csrf(); require_login(); $u = uid();
+  verify_csrf(); require_login();
+  require_onboarding_gate($pdo, 4);
+  $u = uid();
 
   $kind  = (($_POST['kind'] ?? '') === 'spending') ? 'spending' : 'income';
   $label = trim($_POST['label'] ?? '');
   $color = trim($_POST['color'] ?? '#6B7280');
   if ($label === '') {
-    $_SESSION['flash_err'] = 'Label is required.';
+    $_SESSION['flash'] = 'Label is required.';
+    $_SESSION['flash_type'] = 'error';
     redirect('/onboard/categories');
   }
 
@@ -433,12 +537,15 @@ function onboard_categories_add(PDO $pdo){
   ");
   $ins->execute([$u, $label, $kind, $color]);
 
-  $_SESSION['flash_ok'] = 'Category added.';
+  $_SESSION['flash'] = 'Category added.';
+  $_SESSION['flash_type'] = 'success';
   redirect('/onboard/categories');
 }
 
 function onboard_categories_delete(PDO $pdo){
-  verify_csrf(); require_login(); $u = uid();
+  verify_csrf(); require_login();
+  require_onboarding_gate($pdo, 4);
+  $u = uid();
 
   $id = (int)($_POST['id'] ?? 0);
   if (!$id) { redirect('/onboard/categories'); }
@@ -448,8 +555,10 @@ function onboard_categories_delete(PDO $pdo){
   try {
     $del->execute([$id,$u]);
     $_SESSION['flash'] = 'Category removed.';
+    $_SESSION['flash_type'] = 'success';
   } catch (Throwable $e) {
     $_SESSION['flash'] = 'Could not delete this category.';
+    $_SESSION['flash_type'] = 'error';
   }
   redirect('/onboard/categories');
 }
@@ -464,6 +573,7 @@ if (!function_exists('normalize_hex')) {
 
 function onboard_done_show(PDO $pdo){
   require_login();
+  require_onboarding_gate($pdo, 6);
 
   // Try to add a durable “onboard_done” flag so menus stay visible after Done
   try {
