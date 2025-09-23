@@ -284,13 +284,53 @@ $babyPct   = round($doneCount / count($steps) * 100);
 
 /* ---------------- TOTAL NET LIQUID WORTH ---------------- */
 $totalNetLiquid = $efTotalMain + $goalsCurrentMain + $netThisMonth + $leftoverPrev;
+
+$hasTransactions = (abs($sumIn) + abs($sumOut)) > 0.01 || abs($netThisMonth) > 0.01;
+$hasEmergency    = $efTotalMain > 0.01;
+$hasGoals        = ($goalsActiveCount + $goalsDoneCount) > 0 && $goalsTarget > 0.01;
+$hasLoans        = $loanPrinMain > 0.01;
+$showQuickStart  = !($hasTransactions || $hasEmergency || $hasGoals || $hasLoans);
 ?>
+
+<?php if ($showQuickStart): ?>
+<section class="mb-8">
+  <div class="card flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div class="max-w-xl space-y-1">
+      <div class="card-kicker"><?= __('Getting started') ?></div>
+      <h2 class="card-title mt-1"><?= __('Use these quick actions to add your first data points.') ?></h2>
+      <p class="card-subtle"><?= __('Pick what you want to set up first—transactions, safety net, or savings goals.') ?></p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <a class="btn btn-primary" href="/current-month#quick-add">
+        <i data-lucide="plus-circle" class="h-4 w-4"></i>
+        <?= __('Add a transaction') ?>
+      </a>
+      <a class="btn btn-muted" href="/emergency">
+        <i data-lucide="life-buoy" class="h-4 w-4"></i>
+        <?= __('Set emergency target') ?>
+      </a>
+      <a class="btn btn-muted" href="/goals">
+        <i data-lucide="target" class="h-4 w-4"></i>
+        <?= __('Create a goal') ?>
+      </a>
+    </div>
+  </div>
+</section>
+<?php endif; ?>
 
 <section class="grid gap-6 lg:grid-cols-4">
   <!-- Total net liquid -->
   <div class="card lg:col-span-2">
     <div class="card-kicker"><?= __('Overview') ?></div>
-    <h2 class="card-title mt-1"><?= __('Total Net Liquid Worth') ?></h2>
+    <div class="flex items-start gap-2">
+      <h2 class="card-title mt-1"><?= __('Total Net Liquid Worth') ?></h2>
+      <span class="mt-1 inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/60 bg-white/70 text-slate-500 shadow-sm transition hover:text-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-300 dark:border-slate-700 dark:bg-slate-900/60"
+            title="<?= __('Includes emergency savings, goal balances, and this month’s net cashflow converted to your main currency.') ?>"
+            aria-label="<?= __('Includes emergency savings, goal balances, and this month’s net cashflow converted to your main currency.') ?>"
+            tabindex="0">
+        <i data-lucide="info" class="h-4 w-4"></i>
+      </span>
+    </div>
     <p class="mt-2 text-3xl font-semibold text-slate-900 dark:text-white"><?= moneyfmt($totalNetLiquid, $main) ?></p>
     <div class="mt-3 grid gap-2 text-[11px] text-slate-600 sm:grid-cols-2 dark:text-slate-300">
       <div class="chip"><?= __('EF: :amount', ['amount' => moneyfmt($efTotalMain, $main)]) ?></div>
@@ -303,7 +343,15 @@ $totalNetLiquid = $efTotalMain + $goalsCurrentMain + $netThisMonth + $leftoverPr
   <!-- Goals summary -->
   <div class="card">
     <div class="card-kicker"><?= __('Goals') ?></div>
-    <h3 class="card-title mt-1"><?= __('Progress') ?></h3>
+    <div class="flex items-start gap-2">
+      <h3 class="card-title mt-1"><?= __('Progress') ?></h3>
+      <span class="mt-1 inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/60 bg-white/70 text-slate-500 shadow-sm transition hover:text-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-300 dark:border-slate-700 dark:bg-slate-900/60"
+            title="<?= __('Shows progress toward active goals based on their target amounts.') ?>"
+            aria-label="<?= __('Shows progress toward active goals based on their target amounts.') ?>"
+            tabindex="0">
+        <i data-lucide="info" class="h-4 w-4"></i>
+      </span>
+    </div>
     <div class="mt-3 h-2 w-full overflow-hidden rounded-full bg-brand-100/60 dark:bg-slate-800/60">
       <div class="h-2 rounded-full bg-brand-500" style="width: <?= $goalsPct ?>%"></div>
     </div>
@@ -314,7 +362,15 @@ $totalNetLiquid = $efTotalMain + $goalsCurrentMain + $netThisMonth + $leftoverPr
   <!-- EF summary -->
   <div class="card">
     <div class="card-kicker"><?= __('Safety') ?></div>
-    <h3 class="card-title mt-1"><?= __('Emergency Fund') ?></h3>
+    <div class="flex items-start gap-2">
+      <h3 class="card-title mt-1"><?= __('Emergency Fund') ?></h3>
+      <span class="mt-1 inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/60 bg-white/70 text-slate-500 shadow-sm transition hover:text-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-300 dark:border-slate-700 dark:bg-slate-900/60"
+            title="<?= __('Tracks how close you are to your emergency savings target.') ?>"
+            aria-label="<?= __('Tracks how close you are to your emergency savings target.') ?>"
+            tabindex="0">
+        <i data-lucide="info" class="h-4 w-4"></i>
+      </span>
+    </div>
     <div class="mt-3 h-2 w-full overflow-hidden rounded-full bg-brand-100/60 dark:bg-slate-800/60">
       <div class="h-2 rounded-full bg-brand-600" style="width: <?= $efPct ?>%"></div>
     </div>

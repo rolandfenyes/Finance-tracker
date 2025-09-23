@@ -47,8 +47,17 @@
       <form class="grid gap-3 sm:grid-cols-12" method="post" action="/emergency/target">
         <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
         <div class="sm:col-span-7">
-          <label class="label"><?= __('Target amount') ?></label>
+          <label class="label flex items-center gap-2">
+            <?= __('Target amount') ?>
+            <span class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/60 bg-white/80 text-slate-500 shadow-sm transition hover:text-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-300 dark:border-slate-700 dark:bg-slate-900/50"
+                  title="<?= __('We use this amount to calculate your progress and suggestions.') ?>"
+                  aria-label="<?= __('We use this amount to calculate your progress and suggestions.') ?>"
+                  tabindex="0">
+              <i data-lucide="info" class="h-3.5 w-3.5"></i>
+            </span>
+          </label>
           <input name="target_amount" type="number" step="0.01" class="input" value="<?= htmlspecialchars($ef_target) ?>" required />
+          <p class="help"><?= __('We use this amount to calculate your progress and suggestions.') ?></p>
         </div>
         <div class="sm:col-span-5">
           <label class="label"><?= __('Currency') ?></label>
@@ -86,8 +95,17 @@
       <form method="post" action="/emergency/add" class="grid gap-3 sm:grid-cols-12">
         <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
         <div class="sm:col-span-5">
-          <label class="label"><?= __('Date') ?></label>
-          <input name="occurred_on" type="date" class="input" value="<?= date('Y-m-d') ?>" />
+          <label class="label flex items-center gap-2">
+            <?= __('Date') ?>
+            <span class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/60 bg-white/80 text-slate-500 shadow-sm transition hover:text-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-300 dark:border-slate-700 dark:bg-slate-900/50"
+                  title="<?= __('Log when the money moved so your timeline stays accurate.') ?>"
+                  aria-label="<?= __('Log when the money moved so your timeline stays accurate.') ?>"
+                  tabindex="0">
+              <i data-lucide="info" class="h-3.5 w-3.5"></i>
+            </span>
+          </label>
+          <input name="occurred_on" type="date" class="input" value="<?= date('Y-m-d') ?>" required />
+          <p class="help"><?= __('Log when the money moved so your timeline stays accurate.') ?></p>
         </div>
         <div class="sm:col-span-5">
           <label class="label"><?= __('Add money (:currency)', ['currency' => htmlspecialchars($ef_cur)]) ?></label>
@@ -107,8 +125,17 @@
       <form method="post" action="/emergency/withdraw" class="grid gap-3 sm:grid-cols-12">
         <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
         <div class="sm:col-span-5">
-          <label class="label"><?= __('Date') ?></label>
-          <input name="occurred_on" type="date" class="input" value="<?= date('Y-m-d') ?>" />
+          <label class="label flex items-center gap-2">
+            <?= __('Date') ?>
+            <span class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/60 bg-white/80 text-slate-500 shadow-sm transition hover:text-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-300 dark:border-slate-700 dark:bg-slate-900/50"
+                  title="<?= __('Log when the money moved so your timeline stays accurate.') ?>"
+                  aria-label="<?= __('Log when the money moved so your timeline stays accurate.') ?>"
+                  tabindex="0">
+              <i data-lucide="info" class="h-3.5 w-3.5"></i>
+            </span>
+          </label>
+          <input name="occurred_on" type="date" class="input" value="<?= date('Y-m-d') ?>" required />
+          <p class="help"><?= __('Log when the money moved so your timeline stays accurate.') ?></p>
         </div>
         <div class="sm:col-span-5">
           <label class="label"><?= __('Withdrawal (:currency)', ['currency' => htmlspecialchars($ef_cur)]) ?></label>

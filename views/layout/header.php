@@ -850,14 +850,16 @@
     $hideMenus   = ($onboarding && $currentPath !== '/onboard/done');
 
     $items = [
-      ['href'=>'/',              'label'=>'Dashboard',      'match'=>'#^/$#'],
-      ['href'=>'/current-month', 'label'=>'Current Month',  'match'=>'#^/current-month$#'],
-      ['href'=>'/goals',         'label'=>'Goals',          'match'=>'#^/goals(?:/.*)?$#'],
-      ['href'=>'/loans',         'label'=>'Loans',          'match'=>'#^/loans(?:/.*)?$#'],
-      ['href'=>'/emergency',     'label'=>'Emergency',      'match'=>'#^/emergency(?:/.*)?$#'],
-      ['href'=>'/scheduled',     'label'=>'Scheduled',      'match'=>'#^/scheduled(?:/.*)?$#'],
-      ['href'=>'/feedback',      'label'=>'Feedback',       'match'=>'#^/feedback$#'],
-      ['href'=>'/settings',      'label'=>'Settings',       'match'=>'#^/settings$#'],
+      ['href'=>'/',              'label'=>'Dashboard',       'match'=>'#^/$#'],
+      ['href'=>'/current-month', 'label'=>'Current Month',   'match'=>'#^/current-month$#'],
+      ['href'=>'/years',         'label'=>'Reports',         'match'=>'#^/years(?:/.*)?$#'],
+      ['href'=>'/goals',         'label'=>'Goals',           'match'=>'#^/goals(?:/.*)?$#'],
+      ['href'=>'/emergency',     'label'=>'Emergency Fund',  'match'=>'#^/emergency(?:/.*)?$#'],
+      ['href'=>'/loans',         'label'=>'Loans',           'match'=>'#^/loans(?:/.*)?$#'],
+      ['href'=>'/scheduled',     'label'=>'Scheduled',       'match'=>'#^/scheduled(?:/.*)?$#'],
+      ['href'=>'/stocks',        'label'=>'Investments',     'match'=>'#^/stocks(?:/.*)?$#'],
+      ['href'=>'/feedback',      'label'=>'Feedback',        'match'=>'#^/feedback$#'],
+      ['href'=>'/settings',      'label'=>'Settings',        'match'=>'#^/settings(?:/.*)?$#'],
     ];
     function nav_link(array $item, string $currentPath, string $extra=''): string {
       $active = preg_match($item['match'], $currentPath) === 1;

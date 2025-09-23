@@ -571,7 +571,7 @@
 </section>
 
 <!-- Add transaction -->
-<section class="mt-6 grid md:grid-cols-2 gap-6">
+<section id="quick-add" class="mt-6 grid md:grid-cols-2 gap-6">
   <div class="card md:col-span-2">
     <h3 class="text-base font-semibold mb-3"><?= __('Quick Add') ?></h3>
 
@@ -582,22 +582,32 @@
 
       <!-- Type -->
       <div class="field md:col-span-2">
-        <label class="label"><?= __('Type') ?></label>
-        <select name="kind" class="select">
+        <label class="label flex items-center gap-2">
+          <?= __('Type') ?>
+          <span class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/60 bg-white/80 text-slate-500 shadow-sm transition hover:text-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-300 dark:border-slate-700 dark:bg-slate-900/50"
+                title="<?= __('Choose income for money coming in or spending for cash going out.') ?>"
+                aria-label="<?= __('Choose income for money coming in or spending for cash going out.') ?>"
+                tabindex="0">
+            <i data-lucide="info" class="h-3.5 w-3.5"></i>
+          </span>
+        </label>
+        <select name="kind" class="select" required>
           <option value="income">Income</option>
           <option value="spending">Spending</option>
         </select>
+        <p class="help"><?= __('Choose income for money coming in or spending for cash going out.') ?></p>
       </div>
 
       <!-- Category -->
       <div class="field md:col-span-3">
-        <label class="label"><?= __('Category') ?></label>
+        <label class="label"><?= __('Category (optional)') ?></label>
         <select name="category_id" class="select">
           <option value="">— Category —</option>
           <?php foreach($cats as $c): ?>
             <option value="<?= $c['id'] ?>"><?= ucfirst($c['kind']) ?> · <?= htmlspecialchars($c['label']) ?></option>
           <?php endforeach; ?>
         </select>
+        <p class="help"><?= __('Optional — categorize to improve your reports later.') ?></p>
       </div>
 
       <!-- Amount + Currency -->
@@ -605,7 +615,7 @@
         <label class="label"><?= __('Amount') ?></label>
         <div class="grid grid-cols-5 gap-2">
           <input name="amount" type="number" step="0.01" class="input col-span-3" placeholder="0.00" required />
-          <select name="currency" class="select col-span-2">
+          <select name="currency" class="select col-span-2" required>
             <?php foreach ($userCurrencies as $c): ?>
               <option value="<?= htmlspecialchars($c['code']) ?>" <?= $c['is_main'] ? 'selected' : '' ?>>
                 <?= htmlspecialchars($c['code']) ?>
@@ -620,9 +630,18 @@
 
       <!-- Date -->
       <div class="field md:col-span-2">
-        <label class="label"><?= __('Date') ?></label>
-        <!-- <input name="occurred_on" type="date" value="<?= $ym ?>-01" class="input" /> -->
-         <input name="occurred_on" type="date" value="<?= date('Y-m-d') ?>" class="input" />
+        <label class="label flex items-center gap-2">
+          <?= __('Date') ?>
+          <span class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/60 bg-white/80 text-slate-500 shadow-sm transition hover:text-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-300 dark:border-slate-700 dark:bg-slate-900/50"
+                title="<?= __('Defaults to today so you can log recent activity quickly.') ?>"
+                aria-label="<?= __('Defaults to today so you can log recent activity quickly.') ?>"
+                tabindex="0">
+            <i data-lucide="info" class="h-3.5 w-3.5"></i>
+          </span>
+        </label>
+         <!-- <input name="occurred_on" type="date" value="<?= $ym ?>-01" class="input" /> -->
+         <input name="occurred_on" type="date" value="<?= date('Y-m-d') ?>" class="input" required />
+        <p class="help"><?= __('Defaults to today so you can log recent activity quickly.') ?></p>
 
       </div>
 

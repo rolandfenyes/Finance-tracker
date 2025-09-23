@@ -20,20 +20,38 @@
     <form method="post" action="/feedback/add" class="mt-5 grid gap-3 md:grid-cols-12">
       <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
       <div class="field md:col-span-2">
-        <label class="label"><?= __('Type') ?></label>
-        <select name="kind" class="select">
+        <label class="label flex items-center gap-2">
+          <?= __('Type') ?>
+          <span class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/60 bg-white/80 text-slate-500 shadow-sm transition hover:text-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-300 dark:border-slate-700 dark:bg-slate-900/50"
+                title="<?= __('Let others know if this is a suggestion or a bug.') ?>"
+                aria-label="<?= __('Let others know if this is a suggestion or a bug.') ?>"
+                tabindex="0">
+            <i data-lucide="info" class="h-3.5 w-3.5"></i>
+          </span>
+        </label>
+        <select name="kind" class="select" required>
           <option value="idea"><?= __('Suggestion') ?></option>
           <option value="bug"><?= __('Bug') ?></option>
         </select>
+        <p class="help"><?= __('Let others know if this is a suggestion or a bug.') ?></p>
       </div>
       <div class="field md:col-span-2">
-        <label class="label"><?= __('Severity') ?></label>
+        <label class="label flex items-center gap-2">
+          <?= __('Severity') ?>
+          <span class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/60 bg-white/80 text-slate-500 shadow-sm transition hover:text-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-300 dark:border-slate-700 dark:bg-slate-900/50"
+                title="<?= __('Optional — highlight how urgent the issue is for you.') ?>"
+                aria-label="<?= __('Optional — highlight how urgent the issue is for you.') ?>"
+                tabindex="0">
+            <i data-lucide="info" class="h-3.5 w-3.5"></i>
+          </span>
+        </label>
         <select name="severity" class="select">
           <option value="">—</option>
           <option value="low"><?= __('Low') ?></option>
           <option value="medium"><?= __('Medium') ?></option>
           <option value="high"><?= __('High') ?></option>
         </select>
+        <p class="help"><?= __('Optional — highlight how urgent the issue is for you.') ?></p>
       </div>
       <div class="field md:col-span-8">
         <label class="label"><?= __('Title') ?></label>
