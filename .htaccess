@@ -1,0 +1,16 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Serve existing files/directories as-is
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Otherwise, send the request to the front controller
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+# Fallback for environments without mod_rewrite
+<IfModule !mod_rewrite.c>
+    FallbackResource /index.php
+</IfModule>

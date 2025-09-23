@@ -25,9 +25,9 @@ Modern, mobile‑first personal finance tracker using Tailwind CSS and Chart.js.
 ````
 
 4. Set DB credentials in `config/config.php`.
-5. Launch a PHP dev server:
+5. Launch a PHP dev server from the project root (routes automatically point to `index.php`):
     ```bash
-    php -S localhost:8080 -t public
+    php -S localhost:8080 index.php
     ```
 6. Open http://localhost:8080
 
