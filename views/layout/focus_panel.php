@@ -31,7 +31,7 @@ if (!function_exists('render_focus_panel')) {
             'emerald' => 'border-emerald-300/70 bg-emerald-500/10 dark:border-emerald-500/40 dark:bg-emerald-500/20',
             'amber'   => 'border-amber-300/70 bg-amber-400/10 dark:border-amber-500/40 dark:bg-amber-500/20',
             'rose'    => 'border-rose-300/70 bg-rose-500/10 dark:border-rose-500/40 dark:bg-rose-500/20',
-            'neutral' => 'border-white/60 bg-white/60 dark:border-slate-700 dark:bg-slate-900/40',
+            'neutral' => 'border-slate-200/80 bg-white/85 dark:border-slate-700 dark:bg-slate-900/55',
         ];
         $toneClass = $toneClasses[$tone] ?? $toneClasses['brand'];
 
@@ -54,12 +54,12 @@ if (!function_exists('render_focus_panel')) {
             'info' => [
                 'label' => __('Helpful tip'),
                 'icon'  => 'sparkles',
-                'class' => 'border-white/60 bg-white/70 text-slate-700 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200',
+                'class' => 'border-slate-200/80 bg-white/85 text-slate-700 dark:border-slate-700 dark:bg-slate-900/55 dark:text-slate-200',
             ],
         ];
         ?>
         <section<?= $id ? ' id="' . htmlspecialchars($id, ENT_QUOTES) . '"' : '' ?> class="mb-10">
-          <div class="rounded-[2rem] border border-white/60 bg-white/70 p-6 shadow-glass backdrop-blur-md transition dark:border-slate-800/70 dark:bg-slate-900/60">
+          <div class="card px-6 py-6">
             <div class="flex flex-col gap-6 lg:flex-row lg:items-start">
               <div class="flex-1 space-y-5">
                 <?php if ($title): ?>
@@ -88,10 +88,10 @@ if (!function_exists('render_focus_panel')) {
                       $progress   = isset($item['progress']) && $item['progress'] !== '' ? max(0, min(100, (float)$item['progress'])) : null;
                       $progressLabel = trim((string)($item['progress_label'] ?? ($progress !== null ? ($progress . '%') : '')));
                       ?>
-                      <li class="flex flex-col gap-3 rounded-2xl border border-white/60 bg-white/60 p-4 transition hover:border-brand-200 hover:shadow-md dark:border-slate-800/60 dark:bg-slate-900/40 dark:hover:border-brand-500/40">
+                      <li class="flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white/85 p-4 transition hover:border-brand-200 hover:shadow-lg dark:border-slate-800/60 dark:bg-slate-900/55 dark:hover:border-brand-500/40">
                         <div class="flex items-start justify-between gap-4">
                           <div class="flex min-w-0 items-start gap-3">
-                            <span class="flex h-10 w-10 flex-none items-center justify-center rounded-2xl border border-white/70 bg-white/80 shadow-sm dark:border-slate-800/60 dark:bg-slate-900/60">
+                            <span class="flex h-10 w-10 flex-none items-center justify-center rounded-2xl border border-slate-200/80 bg-white/85 shadow-sm dark:border-slate-800/60 dark:bg-slate-900/60">
                               <i data-lucide="<?= htmlspecialchars($icon, ENT_QUOTES) ?>" class="h-5 w-5 text-brand-600 dark:text-brand-200"></i>
                             </span>
                             <div class="min-w-0 space-y-2">
@@ -141,7 +141,7 @@ if (!function_exists('render_focus_panel')) {
                 <?php endif; ?>
 
                 <?php if ($tips): ?>
-                  <div class="rounded-2xl border border-white/60 bg-white/70 p-4 text-sm text-slate-600 shadow-sm dark:border-slate-800/60 dark:bg-slate-900/40 dark:text-slate-300">
+                  <div class="rounded-2xl border border-slate-200/80 bg-white/85 p-4 text-sm text-slate-600 shadow-sm dark:border-slate-800/60 dark:bg-slate-900/55 dark:text-slate-300">
                     <div class="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
                       <i data-lucide="lightbulb" class="h-4 w-4"></i>
                       <span><?= __('Tips') ?></span>
@@ -190,7 +190,7 @@ if (!function_exists('render_focus_panel')) {
                         $aHref  = (string)$action['href'];
                         $aIcon  = trim((string)($action['icon'] ?? 'arrow-up-right'));
                         ?>
-                        <a href="<?= htmlspecialchars($aHref, ENT_QUOTES) ?>" class="flex items-center justify-between rounded-2xl border border-white/70 bg-white/70 px-4 py-2 text-sm font-semibold text-brand-700 transition hover:border-brand-300 hover:text-brand-800 dark:border-slate-800/60 dark:bg-slate-900/40 dark:text-brand-100 dark:hover:border-brand-400/60">
+                        <a href="<?= htmlspecialchars($aHref, ENT_QUOTES) ?>" class="flex items-center justify-between rounded-2xl border border-slate-200/80 bg-white/85 px-4 py-2 text-sm font-semibold text-brand-700 transition hover:border-brand-300 hover:text-brand-800 dark:border-slate-800/60 dark:bg-slate-900/55 dark:text-brand-100 dark:hover:border-brand-400/60">
                           <span><?= htmlspecialchars($aLabel, ENT_QUOTES) ?></span>
                           <i data-lucide="<?= htmlspecialchars($aIcon, ENT_QUOTES) ?>" class="h-4 w-4"></i>
                         </a>

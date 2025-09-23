@@ -106,12 +106,12 @@
         inset: 0;
         z-index: -2;
         background: var(--mm-body-glow);
-        opacity: 0.85;
+        opacity: 0.35;
         pointer-events: none;
         transition: opacity 0.4s ease;
       }
       :root[data-theme='dark'] body::before {
-        opacity: 0.55;
+        opacity: 0.28;
       }
       body.overlay-open {
         overflow: hidden;
@@ -133,17 +133,16 @@
         display: inline-flex;
         align-items: center;
         gap: 0.35rem;
-        padding: 0.3rem 0.75rem;
+        padding: 0.35rem 0.85rem;
         border-radius: 9999px;
-        border: 1px solid var(--mm-icon-border);
-        background: var(--mm-icon-bg);
-        color: var(--mm-icon-color);
+        border: 1px solid var(--mm-list-border);
+        background: var(--mm-list-item);
+        color: var(--mm-subtle-text);
         font-size: 11px;
         font-weight: 600;
         letter-spacing: 0.18em;
         text-transform: uppercase;
-        backdrop-filter: blur(var(--mm-blur-xs));
-        box-shadow: 0 10px 20px -18px rgba(17, 36, 29, 0.45);
+        transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
       }
       .edit-panel {
         margin-top: 0.75rem;
@@ -162,58 +161,86 @@
         background: var(--mm-list-item);
         box-shadow: inset 0 1px 2px rgba(17, 36, 29, 0.12);
       }
-      .tab-btn.active {
+      .tab-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        padding: 0.45rem 1rem;
+        border-radius: 9999px;
+        border: 1px solid var(--mm-list-border);
+        background: var(--mm-list-item);
+        color: var(--mm-subtle-text);
+        font-size: 0.75rem;
         font-weight: 600;
-        border-bottom-width: 2px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+      }
+      .tab-btn:hover {
+        border-color: rgba(75, 150, 110, 0.35);
+        color: var(--mm-brand-primary, #4b966e);
+      }
+      .tab-btn.active {
+        color: #fff;
+        background: var(--mm-brand-primary, #4b966e);
         border-color: var(--mm-brand-primary, #4b966e);
+        box-shadow: 0 16px 32px -24px rgba(75, 150, 110, 0.45);
+      }
+      .row-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        padding: 0.4rem 0.95rem;
+        border-radius: 0.9rem;
+        border: 1px solid var(--mm-list-border);
+        background: var(--mm-list-item);
+        color: var(--mm-subtle-text);
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+      }
+      .row-btn:hover {
+        border-color: rgba(75, 150, 110, 0.35);
         color: var(--mm-brand-primary, #4b966e);
       }
 
       .card {
         position: relative;
-        overflow: hidden;
         border-radius: var(--mm-radius-3xl, 1.75rem);
-        padding: 1.5rem;
+        padding: 1.75rem;
         border: 1px solid var(--mm-card-border);
         background: var(--mm-card-surface);
-        box-shadow: var(--mm-shadow-glass);
-        backdrop-filter: blur(var(--mm-blur-xl));
+        box-shadow: 0 24px 48px -32px rgba(17, 36, 29, 0.35);
+        backdrop-filter: blur(var(--mm-blur-md, 12px));
         transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
       }
-      .card::after {
-        content: '';
-        position: absolute;
-        inset: 0;
-        border-radius: inherit;
-        background: linear-gradient(135deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 45%);
-        opacity: 0.35;
-        pointer-events: none;
+      :root[data-theme='dark'] .card {
+        box-shadow: 0 24px 48px -28px rgba(3, 7, 5, 0.7);
       }
       .tile {
         position: relative;
-        overflow: hidden;
         border-radius: 1.25rem;
-        padding: 1rem;
+        padding: 1.25rem;
         border: 1px solid var(--mm-tile-border);
         background: var(--mm-tile-surface);
         backdrop-filter: blur(var(--mm-blur-md));
-        box-shadow: 0 18px 32px -26px rgba(17, 36, 29, 0.42);
-        transition: background 0.3s ease, border-color 0.3s ease;
+        box-shadow: 0 20px 36px -30px rgba(17, 36, 29, 0.32);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
       }
-      .tile::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        border-radius: inherit;
-        background: linear-gradient(150deg, rgba(75,150,110,0.12), transparent 65%);
-        pointer-events: none;
+      .tile:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 26px 48px -32px rgba(17, 36, 29, 0.34);
       }
       .panel {
         border-radius: 1.25rem;
         border: 1px solid var(--mm-panel-border);
         background: var(--mm-panel-surface);
         padding: 1.25rem;
-        box-shadow: 0 14px 28px -24px rgba(17, 36, 29, 0.42);
+        box-shadow: 0 20px 38px -30px rgba(17, 36, 29, 0.28);
         backdrop-filter: blur(var(--mm-blur-md));
       }
       .panel-ghost {
@@ -221,7 +248,7 @@
         border: 1px solid var(--mm-panel-ghost-border);
         background: var(--mm-panel-ghost-surface);
         padding: 1.25rem;
-        box-shadow: 0 12px 24px -20px rgba(17, 36, 29, 0.35);
+        box-shadow: 0 18px 32px -28px rgba(17, 36, 29, 0.25);
         backdrop-filter: blur(var(--mm-blur-xs));
       }
 
@@ -392,7 +419,7 @@
         @apply bg-brand-600 text-white shadow-brand-glow hover:bg-brand-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300 dark:bg-brand-500 dark:hover:bg-brand-400;
       }
       .btn-ghost {
-        @apply border border-white/60 bg-white/60 text-brand-700 hover:bg-brand-50/60 hover:text-brand-800 dark:border-slate-700 dark:bg-slate-900/50 dark:text-brand-100 dark:hover:bg-slate-800;
+        @apply border border-slate-200/80 bg-white/85 text-slate-700 hover:border-brand-300 hover:text-brand-700 dark:border-slate-800/60 dark:bg-slate-900/55 dark:text-slate-200 dark:hover:border-brand-500/50;
       }
       .btn-danger {
         @apply border border-rose-200/80 bg-rose-500/90 text-white shadow-sm hover:bg-rose-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-200 dark:border-rose-500/70 dark:bg-rose-500;
@@ -516,19 +543,18 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 2.5rem;
-        height: 2.5rem;
-        border-radius: 1rem;
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 0.9rem;
         border: 1px solid var(--mm-icon-border);
         background: var(--mm-icon-bg);
         color: var(--mm-icon-color);
-        transition: transform 0.2s ease, box-shadow 0.3s ease, background 0.3s ease, border-color 0.3s ease;
-        box-shadow: 0 14px 28px -22px rgba(17, 36, 29, 0.45);
+        transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+        box-shadow: 0 12px 24px -20px rgba(17, 36, 29, 0.35);
       }
       .icon-btn:hover {
         background: var(--mm-icon-hover);
         transform: translateY(-1px);
-        box-shadow: var(--mm-shadow-brand-glow);
       }
       .icon-btn:focus-visible {
         outline: 2px solid rgba(75,150,110,0.35);
@@ -539,19 +565,18 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 2.25rem;
-        height: 2.25rem;
-        border-radius: 0.9rem;
+        width: 2.1rem;
+        height: 2.1rem;
+        border-radius: 0.85rem;
         border: 1px solid var(--mm-icon-border);
         background: var(--mm-icon-bg);
         color: var(--mm-icon-color);
-        transition: transform 0.2s ease, box-shadow 0.3s ease, background 0.3s ease, border-color 0.3s ease;
-        box-shadow: 0 12px 24px -20px rgba(17, 36, 29, 0.4);
+        transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+        box-shadow: 0 10px 20px -18px rgba(17, 36, 29, 0.32);
       }
       .icon-action:hover {
         background: var(--mm-icon-hover);
         transform: translateY(-1px);
-        box-shadow: var(--mm-shadow-brand-glow);
       }
       .icon-action:focus-visible {
         outline: 2px solid rgba(75,150,110,0.35);
@@ -606,12 +631,28 @@
       .dark .border-gray-300 { border-color: rgba(64, 96, 83, 0.65); }
       .border-gray-100 { border-color: rgba(230, 241, 235, 0.7); }
       .dark .border-gray-100 { border-color: rgba(46, 72, 62, 0.55); }
+      .border-white\/70 { border-color: rgba(210, 232, 221, 0.82); }
+      .dark .border-white\/70 { border-color: rgba(47, 70, 60, 0.65); }
+      .border-white\/60 { border-color: rgba(206, 229, 219, 0.72); }
+      .dark .border-white\/60 { border-color: rgba(47, 70, 60, 0.58); }
+      .border-white\/50 { border-color: rgba(198, 224, 212, 0.62); }
+      .dark .border-white\/50 { border-color: rgba(43, 66, 56, 0.5); }
       .bg-gray-50 { background-color: rgba(241, 247, 244, 0.7); backdrop-filter: blur(14px); }
       .dark .bg-gray-50 { background-color: rgba(20, 33, 28, 0.55); }
       .bg-gray-200 { background-color: rgba(221, 236, 229, 0.65); }
       .dark .bg-gray-200 { background-color: rgba(37, 55, 48, 0.7); }
       .bg-white { background-color: rgba(255, 255, 255, 0.82); backdrop-filter: blur(18px); }
       .dark .bg-white { background-color: rgba(14, 27, 23, 0.72); }
+      .bg-white\/95 { background-color: rgba(255, 255, 255, 0.92); backdrop-filter: blur(18px); }
+      .dark .bg-white\/95 { background-color: rgba(12, 24, 20, 0.85); }
+      .bg-white\/90 { background-color: rgba(255, 255, 255, 0.88); backdrop-filter: blur(16px); }
+      .dark .bg-white\/90 { background-color: rgba(14, 24, 21, 0.8); }
+      .bg-white\/80 { background-color: rgba(250, 252, 250, 0.75); backdrop-filter: blur(16px); }
+      .dark .bg-white\/80 { background-color: rgba(16, 28, 25, 0.7); }
+      .bg-white\/70 { background-color: rgba(246, 250, 247, 0.68); backdrop-filter: blur(12px); }
+      .dark .bg-white\/70 { background-color: rgba(18, 30, 27, 0.6); }
+      .bg-white\/60 { background-color: rgba(240, 247, 243, 0.62); backdrop-filter: blur(10px); }
+      .dark .bg-white\/60 { background-color: rgba(18, 29, 26, 0.55); }
       .bg-gray-900 { background-color: #163428; }
       .dark .bg-gray-900 { background-color: #11241d; }
     }
@@ -1034,10 +1075,10 @@
     ];
     function nav_link(array $item, string $currentPath, string $extra=''): string {
       $active = preg_match($item['match'], $currentPath) === 1;
-      $base = 'px-3 py-2 rounded-2xl transition-colors text-sm font-medium flex items-center gap-2';
+      $base = 'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors';
       $cls  = $active
-        ? 'bg-brand-600 text-white shadow-brand-glow'
-        : 'text-slate-600 hover:text-brand-700 hover:bg-brand-50/70 dark:text-slate-300 dark:hover:text-brand-100 dark:hover:bg-slate-800/70';
+        ? 'bg-slate-900 text-white shadow-[0_12px_24px_-18px_rgba(15,36,29,0.45)] dark:bg-brand-500 dark:text-white'
+        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800/70';
       $label = __($item['label']);
       return '<a class="'.$base.' '.$cls.' '.$extra.'" href="'.$item['href'].'"'.($active?' aria-current="page"':'').'>'.htmlspecialchars($label).'</a>';
     }
@@ -1069,117 +1110,117 @@
     ];
   ?>
 <?php if (is_logged_in()): ?>
-  <header class="sticky top-0 z-40 border-b border-white/40 bg-white/60 backdrop-blur-xl transition dark:border-slate-800/60 dark:bg-slate-900/50">
-    <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-      <a href="/" class="flex items-center gap-3 text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
-        <div class="h-12 w-12 p-2 rounded-xl bg-brand-500 flex flex-col items-center justify-center">
-          <img src="/logo.png" alt="App logo" class="h-10 w-10 object-contain" />
-        </div>
-        
-        <span><?= htmlspecialchars($app['app']['name']) ?></span>
+  <header x-data="{ open:false }" @keydown.escape.window="open = false" class="sticky top-0 z-40 border-b border-slate-200/70 bg-white/80 backdrop-blur dark:border-slate-800/70 dark:bg-slate-950/60">
+    <div class="mx-auto flex w-full max-w-6xl items-center gap-3 px-4 py-3">
+      <a href="/" class="flex items-center gap-2 text-base font-semibold text-slate-900 transition hover:opacity-90 dark:text-white">
+        <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-brand-500/90 text-white shadow-sm">
+          <img src="/logo.png" alt="<?= htmlspecialchars($app['app']['name']) ?>" class="h-6 w-6 object-contain" />
+        </span>
+        <span class="hidden sm:inline"><?= htmlspecialchars($app['app']['name']) ?></span>
       </a>
 
       <?php if (!$hideMenus): ?>
-        <nav class="hidden items-center gap-3 text-sm sm:flex">
-          <?php if (is_logged_in()): ?>
-            <?php foreach ($items as $it): echo nav_link($it, $currentPath); endforeach; ?>
-            <button type="button" class="icon-btn" data-command-open>
-              <span class="sr-only"><?= __('Open command palette') ?></span>
-              <i data-lucide="search" class="h-5 w-5"></i>
-            </button>
-            <button type="button" class="icon-btn" @click="toggleTheme()" x-data="{}">
-              <span class="sr-only">Toggle theme</span>
-              <span x-cloak x-show="theme === 'light'" class="inline-flex">
-                <i data-lucide="sun" class="h-5 w-5"></i>
-              </span>
-              <span x-cloak x-show="theme === 'dark'" class="inline-flex">
-                <i data-lucide="moon" class="h-5 w-5"></i>
-              </span>
-            </button>
-            <form action="/logout" method="post" class="inline">
-              <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-              <button class="btn btn-primary ml-1">
-                <?= __('Logout') ?>
-              </button>
-            </form>
-          <?php endif; ?>
+        <nav class="hidden flex-1 items-center gap-1 lg:flex">
+          <?php foreach ($items as $it): echo nav_link($it, $currentPath); endforeach; ?>
         </nav>
-      <?php endif; ?>
 
-      <?php if (!$hideMenus): ?>
-        <div x-data="{open:false}" class="relative sm:hidden">
-          <button @click="open = !open" class="icon-btn">
-            <span class="sr-only">Open menu</span>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5">
-              <path d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
+        <div class="hidden items-center gap-1 lg:flex">
+          <button type="button" class="icon-btn" data-command-open>
+            <span class="sr-only"><?= __('Open command palette') ?></span>
+            <i data-lucide="search" class="h-5 w-5"></i>
           </button>
-          <div x-cloak x-show="open" @click.outside="open=false" x-transition class="absolute right-0 mt-3 w-64 space-y-2 rounded-3xl border border-white/70 bg-white/95 p-3 shadow-glass backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-900/90">
-            <?php if (is_logged_in()): ?>
-              <div class="grid gap-2 text-sm">
-                <?php foreach ($items as $it): ?>
-                  <?= nav_link($it, $currentPath, 'w-full') ?>
-                <?php endforeach; ?>
-                <button type="button" class="btn btn-muted w-full justify-center" data-command-open @click="open=false">
-                  <span class="flex items-center justify-center gap-2">
-                    <i data-lucide="search" class="h-4 w-4"></i>
-                    <span><?= __('Command palette') ?></span>
-                  </span>
-                </button>
-                <div class="mt-3 border-t border-white/70 pt-3 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
-                  <div class="mb-2 font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500"><?= __('Workflow') ?></div>
-                  <div class="grid gap-2">
-                    <?php foreach ($journeySteps as $step):
-                      $label = trim((string)$step['label']);
-                      if ($label === '') continue;
-                      $desc = trim((string)($step['description'] ?? ''));
-                      $href = $step['href'] ?? '#';
-                      $active = !empty($step['match']) && preg_match($step['match'], $currentPath) === 1;
-                      $icon = $step['icon'] ?? 'compass';
-                      $cls = $active
-                        ? 'border-brand-400/70 bg-brand-500/15 text-brand-700 dark:border-brand-500/40 dark:bg-brand-600/20 dark:text-brand-100'
-                        : 'border-white/60 bg-white/60 text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300';
-                    ?>
-                      <a href="<?= htmlspecialchars($href, ENT_QUOTES) ?>" class="rounded-2xl border px-3 py-2 <?= $cls ?>">
-                        <div class="flex items-center gap-2 font-semibold">
-                          <i data-lucide="<?= htmlspecialchars($icon, ENT_QUOTES) ?>" class="h-3.5 w-3.5"></i>
-                          <span><?= htmlspecialchars($label, ENT_QUOTES) ?></span>
-                        </div>
-                        <?php if ($desc): ?>
-                          <p class="mt-1 text-[11px] leading-tight text-slate-500 dark:text-slate-400"><?= htmlspecialchars($desc, ENT_QUOTES) ?></p>
-                        <?php endif; ?>
-                      </a>
-                    <?php endforeach; ?>
-                  </div>
-                </div>
-                <button type="button" class="icon-btn w-full justify-center" @click="toggleTheme(); open=false">
-                  <span class="sr-only">Toggle theme</span>
-                  <span x-show="theme === 'light'" class="flex items-center gap-2" x-cloak>
-                    <i data-lucide="sun" class="h-5 w-5"></i>
-                    <span><?= __('Light mode') ?></span>
-                  </span>
-                  <span x-show="theme === 'dark'" class="flex items-center gap-2" x-cloak>
-                    <i data-lucide="moon" class="h-5 w-5"></i>
-                    <span><?= __('Dark mode') ?></span>
-                  </span>
-                </button>
-                <form action="/logout" method="post" class="pt-1">
-                  <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-                  <button class="btn btn-primary w-full"><?= __('Logout') ?></button>
-                </form>
-              </div>
-            <?php else: ?>
-              <a class="btn btn-muted w-full" href="/login"><?= __('Login') ?></a>
-              <a class="btn btn-primary w-full" href="/register"><?= __('Register') ?></a>
-            <?php endif; ?>
-          </div>
+          <button type="button" class="icon-btn" @click="toggleTheme()" x-data="{}">
+            <span class="sr-only"><?= __('Toggle theme') ?></span>
+            <span x-cloak x-show="theme === 'light'"><i data-lucide="sun" class="h-5 w-5"></i></span>
+            <span x-cloak x-show="theme === 'dark'"><i data-lucide="moon" class="h-5 w-5"></i></span>
+          </button>
+          <form action="/logout" method="post" class="inline-flex">
+            <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+            <button class="btn btn-primary"><?= __('Logout') ?></button>
+          </form>
+        </div>
+
+        <div class="ml-auto flex items-center gap-1 lg:hidden">
+          <button type="button" class="icon-btn" data-command-open>
+            <span class="sr-only"><?= __('Open command palette') ?></span>
+            <i data-lucide="search" class="h-5 w-5"></i>
+          </button>
+          <button type="button" class="icon-btn" @click="open = !open" :aria-expanded="open ? 'true' : 'false'">
+            <span class="sr-only"><?= __('Open menu') ?></span>
+            <i data-lucide="menu" class="h-5 w-5"></i>
+          </button>
+        </div>
+      <?php else: ?>
+        <div class="ml-auto flex items-center gap-1">
+          <button type="button" class="icon-btn" @click="toggleTheme()" x-data="{}">
+            <span class="sr-only"><?= __('Toggle theme') ?></span>
+            <span x-cloak x-show="theme === 'light'"><i data-lucide="sun" class="h-5 w-5"></i></span>
+            <span x-cloak x-show="theme === 'dark'"><i data-lucide="moon" class="h-5 w-5"></i></span>
+          </button>
         </div>
       <?php endif; ?>
     </div>
 
     <?php if (!$hideMenus): ?>
-      <div class="mx-auto w-full max-w-6xl px-4 pb-4">
-        <div class="flex flex-nowrap gap-3 overflow-x-auto pb-1 pt-2">
+      <div x-cloak x-show="open" x-transition class="lg:hidden">
+        <div class="mx-auto w-full max-w-6xl px-4 pb-3">
+          <div class="rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-[0_24px_40px_-30px_rgba(15,36,29,0.35)] backdrop-blur dark:border-slate-800/70 dark:bg-slate-950/80" @click.outside="open = false">
+            <div class="grid gap-2 text-sm">
+              <?php foreach ($items as $it): ?>
+                <?= nav_link($it, $currentPath, 'w-full justify-between') ?>
+              <?php endforeach; ?>
+              <button type="button" class="btn btn-muted w-full justify-center" data-command-open @click="open = false">
+                <span class="flex items-center gap-2">
+                  <i data-lucide="search" class="h-4 w-4"></i>
+                  <span><?= __('Command palette') ?></span>
+                </span>
+              </button>
+            </div>
+            <div class="mt-4 flex items-center justify-between gap-2">
+              <button type="button" class="icon-btn" @click="toggleTheme(); open = false">
+                <span class="sr-only"><?= __('Toggle theme') ?></span>
+                <span x-cloak x-show="theme === 'light'"><i data-lucide="sun" class="h-5 w-5"></i></span>
+                <span x-cloak x-show="theme === 'dark'"><i data-lucide="moon" class="h-5 w-5"></i></span>
+              </button>
+              <form action="/logout" method="post" class="flex-1 text-right">
+                <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+                <button class="btn btn-primary w-full"><?= __('Logout') ?></button>
+              </form>
+            </div>
+            <div class="mt-4 border-t border-slate-200/70 pt-4 text-xs text-slate-500 dark:border-slate-800/60 dark:text-slate-400">
+              <div class="mb-2 font-semibold uppercase tracking-[0.18em]">
+                <?= __('Workflow') ?>
+              </div>
+              <div class="grid gap-2">
+                <?php foreach ($journeySteps as $step):
+                  $label = trim((string)$step['label']);
+                  if ($label === '') continue;
+                  $desc = trim((string)($step['description'] ?? ''));
+                  $href = $step['href'] ?? '#';
+                  $active = !empty($step['match']) && preg_match($step['match'], $currentPath) === 1;
+                  $icon = $step['icon'] ?? 'compass';
+                  $cls = $active
+                    ? 'border-slate-900 bg-slate-900 text-white dark:border-brand-500 dark:bg-brand-500 dark:text-white'
+                    : 'border-slate-200/80 bg-white/85 text-slate-600 dark:border-slate-800/60 dark:bg-slate-900/55 dark:text-slate-300';
+                ?>
+                  <a href="<?= htmlspecialchars($href, ENT_QUOTES) ?>" class="flex items-start justify-between gap-2 rounded-xl border px-3 py-2 <?= $cls ?>" @click="open = false">
+                    <span class="flex items-center gap-2 font-semibold">
+                      <i data-lucide="<?= htmlspecialchars($icon, ENT_QUOTES) ?>" class="h-4 w-4"></i>
+                      <span><?= htmlspecialchars($label, ENT_QUOTES) ?></span>
+                    </span>
+                    <?php if ($desc): ?>
+                      <span class="text-[11px] font-medium text-slate-500 dark:text-slate-400"><?= htmlspecialchars($desc, ENT_QUOTES) ?></span>
+                    <?php endif; ?>
+                  </a>
+                <?php endforeach; ?>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-slate-200/70 bg-white/70 dark:border-slate-800/70 dark:bg-transparent">
+        <div class="mx-auto flex w-full max-w-6xl gap-2 overflow-x-auto px-4 py-3">
           <?php foreach ($journeySteps as $step):
             $label = trim((string)$step['label']);
             if ($label === '') continue;
@@ -1188,20 +1229,16 @@
             $icon = $step['icon'] ?? 'compass';
             $active = !empty($step['match']) && preg_match($step['match'], $currentPath) === 1;
             $cls = $active
-              ? 'border-brand-400/70 bg-brand-500/10 text-brand-800 dark:border-brand-500/50 dark:bg-brand-600/20 dark:text-brand-50'
-              : 'border-white/60 bg-white/60 text-slate-600 transition hover:border-brand-300 hover:text-brand-700 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300 dark:hover:border-brand-500/40 dark:hover:text-brand-100';
+              ? 'border-slate-900 bg-slate-900 text-white shadow-[0_18px_36px_-28px_rgba(15,36,29,0.45)] dark:border-brand-500 dark:bg-brand-500 dark:text-white'
+              : 'border-slate-200/80 bg-white/85 text-slate-600 transition hover:border-brand-300 hover:text-brand-600 dark:border-slate-800/60 dark:bg-slate-900/55 dark:text-slate-300 dark:hover:border-brand-500/60 dark:hover:text-brand-200';
           ?>
-            <a href="<?= htmlspecialchars($href, ENT_QUOTES) ?>"
-               class="min-w-[13rem] flex-1 rounded-3xl border px-4 py-3 shadow-sm backdrop-blur <?= $cls ?>">
-              <div class="flex items-center justify-between gap-3">
-                <div class="flex items-center gap-2 text-sm font-semibold">
-                  <i data-lucide="<?= htmlspecialchars($icon, ENT_QUOTES) ?>" class="h-4 w-4"></i>
-                  <span><?= htmlspecialchars($label, ENT_QUOTES) ?></span>
-                </div>
-                <i data-lucide="arrow-up-right" class="h-4 w-4 opacity-50"></i>
+            <a href="<?= htmlspecialchars($href, ENT_QUOTES) ?>" class="flex min-w-[12rem] flex-col gap-2 rounded-2xl border px-4 py-3 text-sm <?= $cls ?>">
+              <div class="flex items-center gap-2 font-semibold">
+                <i data-lucide="<?= htmlspecialchars($icon, ENT_QUOTES) ?>" class="h-4 w-4"></i>
+                <span><?= htmlspecialchars($label, ENT_QUOTES) ?></span>
               </div>
               <?php if ($desc): ?>
-                <p class="mt-2 text-xs text-slate-500 dark:text-slate-400"><?= htmlspecialchars($desc, ENT_QUOTES) ?></p>
+                <p class="text-xs text-slate-500 dark:text-slate-400"><?= htmlspecialchars($desc, ENT_QUOTES) ?></p>
               <?php endif; ?>
             </a>
           <?php endforeach; ?>
@@ -1228,7 +1265,7 @@
             <input type="search"
                    data-command-search
                    autocomplete="off"
-                   class="w-full rounded-2xl border border-white/70 bg-white/90 py-2.5 pl-10 pr-3 text-sm text-slate-700 shadow-inner focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-200 dark:border-slate-800/70 dark:bg-slate-900/70 dark:text-slate-200"
+                   class="w-full rounded-2xl border border-slate-200/80 bg-white/90 py-2.5 pl-10 pr-3 text-sm text-slate-700 shadow-inner focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-200 dark:border-slate-800/70 dark:bg-slate-900/60 dark:text-slate-200"
                    placeholder="<?= __('Search pages or actions…') ?>" />
           </div>
           <div data-command-empty class="hidden rounded-2xl border border-dashed border-slate-200 bg-white/60 p-4 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-400">
@@ -1253,13 +1290,13 @@
                     $cmdKeywords = strtolower(trim((string)($cmd['keywords'] ?? '')));
                   ?>
                     <button type="button"
-                            class="flex w-full items-center justify-between gap-3 rounded-2xl border border-white/70 bg-white/80 px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:border-brand-300 hover:text-brand-700 dark:border-slate-800/70 dark:bg-slate-900/60 dark:text-slate-200 dark:hover:border-brand-500/40"
+                            class="flex w-full items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white/85 px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:border-brand-300 hover:text-brand-700 dark:border-slate-800/70 dark:bg-slate-900/55 dark:text-slate-200 dark:hover:border-brand-500/40"
                             data-command-item
                             data-command-href="<?= htmlspecialchars($cmdHref, ENT_QUOTES) ?>"
                             data-command-label="<?= htmlspecialchars(strtolower($cmdLabel), ENT_QUOTES) ?>"
                             data-command-keywords="<?= htmlspecialchars($cmdKeywords, ENT_QUOTES) ?>">
                       <span class="flex items-center gap-3">
-                        <span class="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-white/70 bg-white/70 dark:border-slate-800/70 dark:bg-slate-900/50">
+                        <span class="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200/80 bg-white/85 dark:border-slate-800/70 dark:bg-slate-900/55">
                           <i data-lucide="<?= htmlspecialchars($cmdIcon, ENT_QUOTES) ?>" class="h-4 w-4"></i>
                         </span>
                         <span class="flex flex-col text-left">

@@ -51,7 +51,7 @@ if (!function_exists('render_page_header')) {
       'positive'=> 'border-emerald-300/70 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/20 dark:text-emerald-100',
       'warning' => 'border-amber-300/70 bg-amber-400/10 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/20 dark:text-amber-100',
       'danger'  => 'border-rose-300/70 bg-rose-500/10 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/20 dark:text-rose-200',
-      'neutral' => 'border-white/70 bg-white/70 text-slate-700 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200',
+      'neutral' => 'border-slate-200/80 bg-white/80 text-slate-700 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200',
     ];
 
     $styleMap = [
@@ -64,7 +64,7 @@ if (!function_exists('render_page_header')) {
     ];
     ?>
     <section<?= $sectionId ? ' id="'.htmlspecialchars($sectionId, ENT_QUOTES).'"' : '' ?> class="mb-10">
-      <div class="rounded-[2.25rem] border border-white/60 bg-white/70 px-6 py-7 shadow-glass backdrop-blur-md transition dark:border-slate-800/70 dark:bg-slate-900/60">
+      <div class="card px-6 py-7">
         <?php if ($breadcrumbs): ?>
           <nav aria-label="<?= htmlspecialchars(__('Breadcrumb'), ENT_QUOTES) ?>" class="mb-4">
             <ol class="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
@@ -105,7 +105,7 @@ if (!function_exists('render_page_header')) {
                   if ($label === '') continue;
                   $icon = $item['icon'] ?? null;
                 ?>
-                  <span class="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/60 px-3 py-1 dark:border-slate-700 dark:bg-slate-900/50">
+                  <span class="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/80 px-3 py-1 dark:border-slate-700 dark:bg-slate-900/60">
                     <?php if ($icon): ?>
                       <i data-lucide="<?= htmlspecialchars($icon, ENT_QUOTES) ?>" class="h-3.5 w-3.5"></i>
                     <?php endif; ?>
@@ -180,15 +180,13 @@ if (!function_exists('render_page_header')) {
         </div>
 
         <?php if ($tabs): ?>
-          <nav class="mt-8 flex flex-wrap gap-2 border-t border-white/70 pt-4 text-sm dark:border-slate-800/70" aria-label="<?= htmlspecialchars(__('Page sections'), ENT_QUOTES) ?>">
+          <nav class="mt-8 flex flex-wrap gap-2 border-t border-slate-200/70 pt-4 text-sm dark:border-slate-800/70" aria-label="<?= htmlspecialchars(__('Page sections'), ENT_QUOTES) ?>">
             <?php foreach ($tabs as $tab):
               $label = trim((string)($tab['label'] ?? ''));
               if ($label === '') continue;
               $href = $tab['href'] ?? '#';
               $isActive = !empty($tab['active']);
-              $tabClass = $isActive
-                ? 'rounded-2xl border border-brand-400/70 bg-brand-500/10 px-4 py-2 font-semibold text-brand-700 dark:border-brand-500/50 dark:bg-brand-600/20 dark:text-brand-100'
-                : 'rounded-2xl border border-white/60 bg-white/50 px-4 py-2 font-medium text-slate-600 transition hover:border-brand-300 hover:text-brand-700 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300 dark:hover:border-brand-500/40 dark:hover:text-brand-100';
+              $tabClass = 'tab-btn' . ($isActive ? ' active' : '');
             ?>
               <a class="<?= $tabClass ?>" href="<?= htmlspecialchars($href, ENT_QUOTES) ?>">
                 <?= htmlspecialchars($label, ENT_QUOTES) ?>
