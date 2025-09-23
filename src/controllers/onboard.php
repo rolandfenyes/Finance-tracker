@@ -20,7 +20,8 @@ function onboard_theme_show(PDO $pdo){
   set_step($pdo, 1);
   $themes = available_themes();
   $currentTheme = current_theme_slug();
-  view('onboard/theme', compact('themes', 'currentTheme'));
+  $currentStep = 1;
+  view('onboard/theme', compact('themes', 'currentTheme', 'currentStep'));
 }
 
 function onboard_theme_submit(PDO $pdo){
@@ -38,7 +39,8 @@ function onboard_theme_submit(PDO $pdo){
 /** STEP 2: Cashflow rules */
 function onboard_rules_form(PDO $pdo){
   set_step($pdo, 2);
-  view('onboard/rules', []);
+  $currentStep = 2;
+  view('onboard/rules', compact('currentStep'));
 }
 
 function onboard_rules_submit(PDO $pdo){
@@ -159,7 +161,8 @@ function onboard_done(PDO $pdo){
   require_once __DIR__ . '/../helpers_ef.php';
   ef_ensure_categories($pdo, uid());
 
-  view('onboard/done', []);
+  $currentStep = 6;
+  view('onboard/done', compact('currentStep'));
 }
 
 // Pull a master list once (pass to the view). Replace/extend as needed.
@@ -197,7 +200,8 @@ function onboard_currencies_index(PDO $pdo) {
   $currencies = $q->fetchAll(PDO::FETCH_ASSOC);
 
   $allCurrencies = onboard_all_currencies();
-  view('onboard/currencies', compact('currencies','allCurrencies'));
+  $currentStep = 3;
+  view('onboard/currencies', compact('currencies','allCurrencies','currentStep'));
 }
 
 function onboard_currencies_add(PDO $pdo) {
@@ -206,16 +210,28 @@ function onboard_currencies_add(PDO $pdo) {
   $code  = strtoupper(trim($_POST['code'] ?? ''));
   $isMain = !empty($_POST['is_main']);
 
-  if ($code === '') { $_SESSION['flash']='Pick a currency.'; redirect('/onboard/currencies'); }
+  if ($code === '') {
+    $_SESSION['flash']='Pick a currency.';
+    $_SESSION['flash_type'] = 'error';
+    redirect('/onboard/currencies');
+  }
 
   // validate code
   $valid = array_filter(onboard_all_currencies(), fn($c) => strtoupper($c['code']) === $code);
-  if (!$valid) { $_SESSION['flash']='Unknown currency code.'; redirect('/onboard/currencies'); }
+  if (!$valid) {
+    $_SESSION['flash']='Unknown currency code.';
+    $_SESSION['flash_type'] = 'error';
+    redirect('/onboard/currencies');
+  }
 
   // no duplicates
   $exists = $pdo->prepare("SELECT 1 FROM user_currencies WHERE user_id=? AND UPPER(code)=?");
   $exists->execute([$u,$code]);
-  if ($exists->fetchColumn()) { $_SESSION['flash']='You already added this currency.'; redirect('/onboard/currencies'); }
+  if ($exists->fetchColumn()) {
+    $_SESSION['flash']='You already added this currency.';
+    $_SESSION['flash_type'] = 'error';
+    redirect('/onboard/currencies');
+  }
 
   $pdo->beginTransaction();
   try {
@@ -233,9 +249,11 @@ function onboard_currencies_add(PDO $pdo) {
 
     $pdo->commit();
     $_SESSION['flash']='Currency added.';
+    $_SESSION['flash_type'] = 'success';
   } catch (Throwable $e) {
     $pdo->rollBack();
     $_SESSION['flash']='Could not add currency.';
+    $_SESSION['flash_type'] = 'error';
   }
   redirect('/onboard/currencies'); // <-- important
 }
@@ -252,7 +270,11 @@ function onboard_currencies_delete(PDO $pdo) {
 
   $cnt = $pdo->prepare("SELECT COUNT(*) FROM user_currencies WHERE user_id=?");
   $cnt->execute([$u]); 
-  if ((int)$cnt->fetchColumn() <= 1) { $_SESSION['flash']='You must keep at least one currency.'; redirect('/onboard/currencies'); }
+  if ((int)$cnt->fetchColumn() <= 1) {
+    $_SESSION['flash']='You must keep at least one currency.';
+    $_SESSION['flash_type'] = 'error';
+    redirect('/onboard/currencies');
+  }
 
   $pdo->beginTransaction();
   try {
@@ -269,9 +291,11 @@ function onboard_currencies_delete(PDO $pdo) {
 
     $pdo->commit();
     $_SESSION['flash']='Currency removed.';
+    $_SESSION['flash_type'] = 'success';
   } catch (Throwable $e) {
     $pdo->rollBack();
     $_SESSION['flash']='Could not remove currency.';
+    $_SESSION['flash_type'] = 'error';
   }
   redirect('/onboard/currencies'); // <-- important
 }
@@ -338,6 +362,14 @@ function onboard_income(PDO $pdo){
   $uc = $pdo->prepare("SELECT code, is_main FROM user_currencies WHERE user_id=? ORDER BY is_main DESC, code");
   $uc->execute([$u]);
   $userCurrencies = $uc->fetchAll(PDO::FETCH_ASSOC) ?: [['code'=>'HUF','is_main'=>true]];
+  $currentStep = 5;
+  $mainCurrency = null;
+  foreach ($userCurrencies as $ucRow) {
+    if (!empty($ucRow['is_main'])) { $mainCurrency = strtoupper($ucRow['code']); break; }
+  }
+  if ($mainCurrency === null && !empty($userCurrencies[0]['code'])) {
+    $mainCurrency = strtoupper($userCurrencies[0]['code']);
+  }
 
   // existing basic incomes (if any)
   $q = $pdo->prepare("
@@ -356,7 +388,7 @@ function onboard_income(PDO $pdo){
   $cats->execute([$u]);
   $categories = $cats->fetchAll(PDO::FETCH_ASSOC);
 
-  view('onboard/income', compact('rows','userCurrencies','categories'));
+  view('onboard/income', compact('rows','userCurrencies','categories','currentStep','mainCurrency'));
 }
 
 function onboard_income_add(PDO $pdo){
@@ -370,6 +402,7 @@ function onboard_income_add(PDO $pdo){
 
   if ($label === '' || $amount <= 0) {
     $_SESSION['flash'] = 'Please provide a name and a positive amount.';
+    $_SESSION['flash_type'] = 'error';
     redirect('/onboard/income');
   }
 
@@ -390,8 +423,9 @@ function onboard_income_add(PDO $pdo){
   ");
   $ins->execute([$u,$label,$amount,$currency,$catId,$from]);
 
-  // After add, go to next step automatically
-  redirect('/onboard/next');
+  $_SESSION['flash'] = 'Income saved. Add another or continue when you\'re ready.';
+  $_SESSION['flash_type'] = 'success';
+  redirect('/onboard/income');
 }
 
 function onboard_income_delete(PDO $pdo){
@@ -399,6 +433,8 @@ function onboard_income_delete(PDO $pdo){
   $id = (int)($_POST['id'] ?? 0);
   if ($id) {
     $pdo->prepare("DELETE FROM basic_incomes WHERE id=? AND user_id=?")->execute([$id,$u]);
+    $_SESSION['flash'] = 'Income removed.';
+    $_SESSION['flash_type'] = 'success';
   }
 }
 function onboard_categories_index(PDO $pdo){
@@ -413,7 +449,21 @@ function onboard_categories_index(PDO $pdo){
   $stmt->execute([$u]);
   $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-  view('onboard/categories', compact('rows'));
+  $suggestedIncome = [
+    ['label' => 'Salary', 'color' => '#4ADE80'],
+    ['label' => 'Side hustle', 'color' => '#22D3EE'],
+    ['label' => 'Bonus', 'color' => '#C4B5FD'],
+  ];
+  $suggestedSpending = [
+    ['label' => 'Housing', 'color' => '#F472B6'],
+    ['label' => 'Groceries', 'color' => '#FACC15'],
+    ['label' => 'Transport', 'color' => '#38BDF8'],
+    ['label' => 'Health & wellness', 'color' => '#34D399'],
+    ['label' => 'Fun money', 'color' => '#FB7185'],
+    ['label' => 'Subscriptions', 'color' => '#A5B4FC'],
+  ];
+  $currentStep = 4;
+  view('onboard/categories', compact('rows','suggestedIncome','suggestedSpending','currentStep'));
 }
 
 function onboard_categories_add(PDO $pdo){
@@ -423,7 +473,8 @@ function onboard_categories_add(PDO $pdo){
   $label = trim($_POST['label'] ?? '');
   $color = trim($_POST['color'] ?? '#6B7280');
   if ($label === '') {
-    $_SESSION['flash_err'] = 'Label is required.';
+    $_SESSION['flash'] = 'Label is required.';
+    $_SESSION['flash_type'] = 'error';
     redirect('/onboard/categories');
   }
 
@@ -433,7 +484,8 @@ function onboard_categories_add(PDO $pdo){
   ");
   $ins->execute([$u, $label, $kind, $color]);
 
-  $_SESSION['flash_ok'] = 'Category added.';
+  $_SESSION['flash'] = 'Category added.';
+  $_SESSION['flash_type'] = 'success';
   redirect('/onboard/categories');
 }
 
@@ -448,8 +500,10 @@ function onboard_categories_delete(PDO $pdo){
   try {
     $del->execute([$id,$u]);
     $_SESSION['flash'] = 'Category removed.';
+    $_SESSION['flash_type'] = 'success';
   } catch (Throwable $e) {
     $_SESSION['flash'] = 'Could not delete this category.';
+    $_SESSION['flash_type'] = 'error';
   }
   redirect('/onboard/categories');
 }
