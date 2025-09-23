@@ -1,3 +1,21 @@
+<?php
+require_once __DIR__.'/../layout/page_header.php';
+
+render_page_header([
+  'kicker' => __('Settings'),
+  'title' => __('Currencies & conversion'),
+  'subtitle' => __('Select the currencies you use so reports and conversions stay accurate.'),
+  'actions' => [
+    ['label' => __('Add currency'), 'href' => '#currency-form', 'icon' => 'plus-circle', 'style' => 'primary'],
+    ['label' => __('Back to settings'), 'href' => '/settings', 'icon' => 'arrow-left', 'style' => 'muted'],
+  ],
+  'tabs' => [
+    ['label' => __('Current list'), 'href' => '#currency-list', 'active' => true],
+    ['label' => __('Add new'), 'href' => '#currency-form'],
+  ],
+]);
+?>
+
 <section class="max-w-3xl mx-auto">
   <div class="card space-y-6">
     <div class="flex items-center justify-between">
@@ -6,7 +24,7 @@
     </div>
 
     <div class="grid gap-6 md:grid-cols-2">
-      <div>
+      <div id="currency-list">
         <h2 class="font-medium mb-2"><?= __('Your currencies') ?></h2>
         <ul class="glass-stack">
           <?php foreach($userCurrencies as $c): ?>
@@ -44,7 +62,7 @@
         </ul>
       </div>
 
-      <div>
+      <div id="currency-form">
         <h2 class="font-medium mb-2"><?= __('Add currency') ?></h2>
         <form method="post" action="/settings/currencies/add" class="flex flex-wrap gap-2">
           <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />

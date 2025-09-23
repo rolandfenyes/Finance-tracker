@@ -1,4 +1,91 @@
-<section class="grid md:grid-cols-3 gap-4">
+<?php
+require_once __DIR__.'/../layout/page_header.php';
+require_once __DIR__.'/../layout/focus_panel.php';
+
+render_page_header([
+  'kicker' => __('Invest'),
+  'title' => __('Track your stock positions'),
+  'subtitle' => __('Log buys and sells, monitor open positions, and keep your cost basis tidy.'),
+  'meta' => [
+    ['icon' => 'pie-chart', 'label' => __('Open positions: :count', ['count' => count(array_filter($positions, fn($p) => (float)($p['qty'] ?? 0) > 0))])],
+  ],
+  'insight' => [
+    'label' => __('Cost basis'),
+    'value' => moneyfmt($portfolio_value),
+    'subline' => __('Sum of quantity × average buy price for open lots.'),
+  ],
+  'actions' => [
+    ['label' => __('Record a trade'), 'href' => '#trade-forms', 'icon' => 'plus', 'style' => 'primary'],
+    ['label' => __('Review positions'), 'href' => '#open-positions', 'icon' => 'bar-chart-3', 'style' => 'muted'],
+    ['label' => __('Download history'), 'href' => '#recent-trades', 'icon' => 'download', 'style' => 'link'],
+  ],
+  'tabs' => [
+    ['label' => __('Trade'), 'href' => '#trade-forms', 'active' => true],
+    ['label' => __('Positions'), 'href' => '#open-positions'],
+    ['label' => __('History'), 'href' => '#recent-trades'],
+  ],
+]);
+
+$openPositionsCount = count(array_filter($positions, static fn ($p) => (float)($p['qty'] ?? 0) > 0));
+$tradeCount = is_array($trades ?? null) ? count($trades) : 0;
+
+render_focus_panel([
+  'id' => 'stocks-focus',
+  'title' => __('Keep your investing journal tight'),
+  'description' => __('Capture every trade, reconcile positions, and keep a paper trail for taxes.'),
+  'items' => [
+    [
+      'icon' => 'plus-circle',
+      'label' => __('Record the latest trade'),
+      'description' => __('Log buys and sells with quantity, price, and currency the moment they happen.'),
+      'href' => '#trade-forms',
+      'state' => $tradeCount > 0 ? 'active' : 'warning',
+      'state_label' => $tradeCount > 0 ? __('Keep logging') : __('No trades yet'),
+    ],
+    [
+      'icon' => 'bar-chart-3',
+      'label' => __('Review open positions'),
+      'description' => __('Confirm quantity and average buy price so cost basis remains accurate.'),
+      'href' => '#open-positions',
+      'state' => $openPositionsCount > 0 ? 'success' : 'info',
+      'state_label' => $openPositionsCount > 0 ? __('Positions tracked') : __('No holdings'),
+      'meta' => __('Open: :count', ['count' => $openPositionsCount]),
+    ],
+    [
+      'icon' => 'file-down',
+      'label' => __('Download trade history'),
+      'description' => __('Export activity before tax season or when sharing updates with your advisor.'),
+      'href' => '#recent-trades',
+      'state' => $tradeCount > 0 ? 'active' : 'info',
+      'state_label' => $tradeCount > 0 ? __('Ready to export') : __('Log trades first'),
+    ],
+    [
+      'icon' => 'notebook-pen',
+      'label' => __('Jot notes about your thesis'),
+      'description' => __('Add context to each trade by keeping a separate note or tagging entries via the memo field.'),
+      'href' => '#recent-trades',
+      'state' => 'info',
+      'state_label' => __('Optional'),
+    ],
+  ],
+  'side' => [
+    'label' => __('Portfolio cost basis'),
+    'value' => moneyfmt($portfolio_value),
+    'subline' => __('Open positions: :count', ['count' => $openPositionsCount]),
+    'footnote' => __('Trades recorded here feed yearly insights and help reconcile capital gains elsewhere.'),
+    'actions' => [
+      ['label' => __('See yearly performance'), 'href' => '/years', 'icon' => 'line-chart'],
+      ['label' => __('Jump to dashboard'), 'href' => '/', 'icon' => 'layout-dashboard'],
+    ],
+  ],
+  'tips' => [
+    __('Use consistent symbol casing (e.g., AAPL) so duplicates don’t appear in the table.'),
+    __('Record trades in native currency—conversions happen automatically in yearly summaries.'),
+  ],
+]);
+?>
+
+<section id="trade-forms" class="grid md:grid-cols-3 gap-4">
   <div class="card">
     <h2 class="font-medium">Portfolio (cost basis)</h2>
     <p class="text-2xl mt-2 font-semibold"><?= moneyfmt($portfolio_value) ?></p>
@@ -30,7 +117,7 @@
 </section>
 
 <section class="mt-6 grid md:grid-cols-2 gap-6">
-  <div class="card overflow-x-auto">
+  <div id="open-positions" class="card overflow-x-auto">
     <h3 class="font-semibold mb-3">Open Positions</h3>
     <table class="table-glass min-w-full text-sm">
       <thead><tr class="text-left border-b"><th class="py-2 pr-3">Symbol</th><th class="py-2 pr-3">Qty</th><th class="py-2 pr-3">Avg Buy</th><th class="py-2 pr-3">Cost</th></tr></thead>
@@ -47,7 +134,7 @@
     </table>
   </div>
 
-  <div class="card overflow-x-auto">
+  <div id="recent-trades" class="card overflow-x-auto">
     <h3 class="font-semibold mb-3">Recent Trades</h3>
     <table class="table-glass min-w-full text-sm">
       <thead><tr class="text-left border-b"><th class="py-2 pr-3">Date</th><th class="py-2 pr-3">Side</th><th class="py-2 pr-3">Symbol</th><th class="py-2 pr-3">Qty</th><th class="py-2 pr-3">Price</th><th class="py-2 pr-3">Currency</th><th class="py-2 pr-3">Actions</th></tr></thead>

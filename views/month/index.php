@@ -11,8 +11,126 @@
   };
   // $ymPrev, $ymNext, $ymThis, $y, $m already computed in controller
   $ymLabel = format_month_year(sprintf('%04d-%02d-01', $y, $m));
+
+  require_once __DIR__.'/../layout/page_header.php';
+  require_once __DIR__.'/../layout/focus_panel.php';
+
+  render_page_header([
+    'kicker' => __('Plan & track'),
+    'title' => __('Current month cockpit'),
+    'subtitle' => __('Glance at budgets, compare real and virtual activity, and capture new entries instantly.'),
+    'meta' => [
+      ['icon' => 'calendar-range', 'label' => $ymLabel],
+      ['icon' => 'wallet', 'label' => __('Base currency: :code', ['code' => $main])],
+    ],
+    'insight' => [
+      'label' => __('Net this month'),
+      'value' => moneyfmt($sumIn_main - $sumOut_main, $main),
+      'subline' => __('Income :income · Spending :spending', [
+        'income' => moneyfmt($sumIn_main, $main),
+        'spending' => moneyfmt($sumOut_main, $main),
+      ]),
+    ],
+    'actions' => [
+      ['label' => __('Add transaction'), 'href' => '#quick-add', 'icon' => 'plus', 'style' => 'primary'],
+      ['label' => __('Open filters'), 'href' => '#filters', 'icon' => 'filter', 'style' => 'muted'],
+      ['label' => __('See schedules'), 'href' => '/scheduled#create-schedule', 'icon' => 'calendar-clock', 'style' => 'link'],
+    ],
+    'tabs' => [
+      ['label' => __('Summary'), 'href' => '#month-summary', 'active' => true],
+      ['label' => __('Guidance'), 'href' => '#cashflow-guidance'],
+      ['label' => __('Quick add'), 'href' => '#quick-add'],
+      ['label' => __('Transactions'), 'href' => '#transaction-list'],
+    ],
+  ]);
+
+  $filtersActive = false;
+  foreach (($_GET ?? []) as $fKey => $fValue) {
+    if ($fKey === 'ym' || $fKey === 'page') {
+      continue;
+    }
+    if ($fValue === '' || $fValue === null) {
+      continue;
+    }
+    $filtersActive = true;
+    break;
+  }
+
+  $rulesTotal = is_array($ruleGuides) ? count($ruleGuides) : 0;
+  $rulesOverBudget = 0;
+  if ($rulesTotal) {
+    foreach ($ruleGuides as $rg) {
+      if (($rg['budget'] ?? 0) > 0 && ($rg['spent'] ?? 0) > $rg['budget']) {
+        $rulesOverBudget++;
+      }
+    }
+  }
+
+  $hasActivity = ($sumIn_main + $sumOut_main) > 0;
+
+  render_focus_panel([
+    'id' => 'month-focus',
+    'title' => __('Master this month'),
+    'description' => __('Work the plan, monitor real-world results, and jump to the exact tools you need.'),
+    'items' => [
+      [
+        'icon' => 'calendar-days',
+        'label' => __('Review the monthly snapshot'),
+        'description' => __('Scan income vs. spending before drilling into categories or trends.'),
+        'href' => '#month-summary',
+        'state' => $hasActivity ? 'success' : 'warning',
+        'state_label' => $hasActivity ? __('Up to date') : __('No activity yet'),
+        'meta' => __('Main currency: :code', ['code' => $main]),
+      ],
+      [
+        'icon' => 'filter',
+        'label' => __('Refine what you’re seeing'),
+        'description' => __('Toggle filters to isolate specific categories, amounts, or counterparties.'),
+        'href' => '#filters',
+        'state' => $filtersActive ? 'active' : 'info',
+        'state_label' => $filtersActive ? __('Filtered') : __('All activity'),
+      ],
+      [
+        'icon' => 'pie-chart',
+        'label' => __('Protect each budget rule'),
+        'description' => $rulesTotal
+          ? __('Check which rules are trending hot and rebalance before month end.')
+          : __('Create cashflow rules so we can warn you before categories overspend.'),
+        'href' => '#cashflow-guidance',
+        'state' => $rulesTotal ? ($rulesOverBudget > 0 ? 'warning' : 'active') : 'info',
+        'state_label' => $rulesTotal
+          ? ($rulesOverBudget > 0 ? __('Needs attention') : __('On track'))
+          : __('Set up rules'),
+      ],
+      [
+        'icon' => 'bolt',
+        'label' => __('Speed-add new activity'),
+        'description' => __('Capture transactions as soon as they happen so insights stay trustworthy.'),
+        'href' => '#quick-add',
+        'state' => $hasActivity ? 'active' : 'warning',
+        'state_label' => $hasActivity ? __('Keep logging') : __('Start logging'),
+      ],
+    ],
+    'side' => [
+      'label' => __('Net this month'),
+      'value' => moneyfmt($sumIn_main - $sumOut_main, $main),
+      'subline' => __('Income :income · Spending :spending', [
+        'income' => moneyfmt($sumIn_main, $main),
+        'spending' => moneyfmt($sumOut_main, $main),
+      ]),
+      'footnote' => __('Virtual (planned) activity appears alongside real transactions for easy comparison.'),
+      'actions' => [
+        ['label' => __('Jump to trends'), 'href' => '#trends', 'icon' => 'chart-area'],
+        ['label' => __('See transaction list'), 'href' => '#transaction-list', 'icon' => 'list'],
+      ],
+    ],
+    'tips' => [
+      __('Use ⌘/Ctrl+F inside tables after filtering to quickly locate specific entries.'),
+      __('Scheduled payments appear as “virtual” entries—perfect for planning ahead.'),
+    ],
+  ]);
 ?>
-<section class="mb-4">
+<section id="month-picker" class="mb-4">
   <div class="rounded-3xl border border-gray-200 bg-white/80 p-3 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/60">
     <div class="flex items-center justify-between gap-3 sm:justify-start">
 
@@ -119,7 +237,7 @@
 
 
 <?php $ym = sprintf('%04d-%02d', $y, $m); ?>
-<section class="grid md:grid-cols-3 gap-4">
+<section id="month-summary" class="grid md:grid-cols-3 gap-4">
   <!-- Summary -->
   <div class="card">
     <h2 class="text-lg font-semibold mb-4"><?= __('Monthly Summary') ?></h2>
@@ -167,7 +285,7 @@
   </div>
 
   <!-- Cashflow Guidance -->
-  <section class="card md:col-span-2">
+  <section id="cashflow-guidance" class="card md:col-span-2">
     <div class="flex items-center justify-between">
       <h3 class="font-semibold"><?= __('Cashflow Guidance') ?></h3>
       <div class="text-xs text-gray-500"><?= __('Budgets are based on your cashflow rules & this month’s income.') ?></div>
@@ -241,7 +359,7 @@
 </section>
 
 <!-- Charts -->
-<section class="mt-6 grid md:grid-cols-2 gap-6">
+<section id="trends" class="mt-6 grid md:grid-cols-2 gap-6">
   <!-- A) Cumulative Net Cashflow (area line) -->
   <div class="card h-80">
     <h3 class="font-semibold mb-3"><?= __('Cumulative Net (:currency)', ['currency' => htmlspecialchars($main)]) ?></h3>
@@ -571,7 +689,7 @@
 </section>
 
 <!-- Add transaction -->
-<section class="mt-6 grid md:grid-cols-2 gap-6">
+<section id="quick-add" class="mt-6 grid md:grid-cols-2 gap-6">
   <div class="card md:col-span-2">
     <h3 class="text-base font-semibold mb-3"><?= __('Quick Add') ?></h3>
 
@@ -640,8 +758,128 @@
   </div>
 </section>
 
+<?php
+  $activeFilters = [];
+  if (!empty($flt['q'])) {
+    $activeFilters[] = __('Search “:term”', ['term' => $flt['q']]);
+  }
+  if (!empty($flt['kind'])) {
+    $activeFilters[] = $flt['kind'] === 'income' ? __('Only income') : __('Only spending');
+  }
+  if (!empty($flt['category_id'])) {
+    foreach ($cats as $cat) {
+      if ((int)$cat['id'] === (int)$flt['category_id']) {
+        $activeFilters[] = __('Category: :name', ['name' => $cat['label']]);
+        break;
+      }
+    }
+  }
+  if (!empty($flt['currency'])) {
+    $activeFilters[] = __('Currency: :code', ['code' => strtoupper($flt['currency'])]);
+  }
+  if (!empty($flt['date_from']) || !empty($flt['date_to'])) {
+    $activeFilters[] = __('Date range filtered');
+  }
+  if ($flt['amt_min'] !== null || $flt['amt_max'] !== null) {
+    $activeFilters[] = __('Amount range applied');
+  }
+  $resetUrl = $currentPath . '?ym=' . sprintf('%04d-%02d', $y, $m);
+?>
+
+<section id="filters" class="mt-6 card">
+  <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <div>
+      <div class="card-kicker"><?= __('Filters') ?></div>
+      <h3 class="card-title mt-1"><?= __('Focus the list') ?></h3>
+      <?php if ($activeFilters): ?>
+        <div class="mt-3 flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <?php foreach ($activeFilters as $badge): ?>
+            <span class="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/60 px-3 py-1 dark:border-slate-700 dark:bg-slate-900/50">
+              <i data-lucide="filter" class="h-3.5 w-3.5"></i>
+              <?= htmlspecialchars($badge) ?>
+            </span>
+          <?php endforeach; ?>
+        </div>
+      <?php else: ?>
+        <p class="card-subtle mt-2"><?= __('All transactions for the selected month are currently visible.') ?></p>
+      <?php endif; ?>
+    </div>
+    <a class="text-sm font-semibold text-brand-600 hover:text-brand-500 dark:text-brand-200 dark:hover:text-brand-100" href="<?= htmlspecialchars($resetUrl, ENT_QUOTES) ?>">
+      <?= __('Reset filters') ?>
+    </a>
+  </div>
+
+  <form method="get" action="<?= htmlspecialchars($currentPath, ENT_QUOTES) ?>" class="mt-5 grid gap-3 md:grid-cols-12">
+    <input type="hidden" name="ym" value="<?= htmlspecialchars(sprintf('%04d-%02d', $y, $m)) ?>" />
+
+    <div class="field md:col-span-4">
+      <label class="label" for="flt-q"><?= __('Search') ?></label>
+      <input id="flt-q" name="q" class="input" placeholder="<?= __('Note or category…') ?>" value="<?= htmlspecialchars($flt['q'] ?? '') ?>" />
+    </div>
+
+    <div class="field md:col-span-2">
+      <label class="label" for="flt-kind"><?= __('Kind') ?></label>
+      <select id="flt-kind" name="kind" class="select">
+        <option value=""><?= __('All') ?></option>
+        <option value="income" <?= ($flt['kind'] ?? '') === 'income' ? 'selected' : '' ?>><?= __('Income') ?></option>
+        <option value="spending" <?= ($flt['kind'] ?? '') === 'spending' ? 'selected' : '' ?>><?= __('Spending') ?></option>
+      </select>
+    </div>
+
+    <div class="field md:col-span-3">
+      <label class="label" for="flt-category"><?= __('Category') ?></label>
+      <select id="flt-category" name="category_id" class="select">
+        <option value=""><?= __('All categories') ?></option>
+        <?php foreach ($cats as $cat): ?>
+          <option value="<?= (int)$cat['id'] ?>" <?= (int)($flt['category_id'] ?? 0) === (int)$cat['id'] ? 'selected' : '' ?>>
+            <?= ucfirst($cat['kind']) ?> · <?= htmlspecialchars($cat['label']) ?>
+          </option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+
+    <div class="field md:col-span-3">
+      <label class="label" for="flt-currency"><?= __('Currency') ?></label>
+      <select id="flt-currency" name="currency" class="select">
+        <option value=""><?= __('Any currency') ?></option>
+        <?php foreach ($userCurrencies as $cur): ?>
+          <option value="<?= htmlspecialchars($cur['code']) ?>" <?= strtoupper($flt['currency'] ?? '') === strtoupper($cur['code']) ? 'selected' : '' ?>>
+            <?= htmlspecialchars($cur['code']) ?>
+          </option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+
+    <div class="field md:col-span-3">
+      <label class="label" for="flt-date-from"><?= __('Date from') ?></label>
+      <input id="flt-date-from" name="date_from" type="date" class="input" value="<?= htmlspecialchars($flt['date_from'] ?? '') ?>" />
+    </div>
+
+    <div class="field md:col-span-3">
+      <label class="label" for="flt-date-to"><?= __('Date to') ?></label>
+      <input id="flt-date-to" name="date_to" type="date" class="input" value="<?= htmlspecialchars($flt['date_to'] ?? '') ?>" />
+    </div>
+
+    <div class="field md:col-span-3">
+      <label class="label" for="flt-amt-min"><?= __('Min amount') ?></label>
+      <input id="flt-amt-min" name="amt_min" type="number" step="0.01" class="input" value="<?= htmlspecialchars($flt['amt_min'] ?? '') ?>" />
+    </div>
+
+    <div class="field md:col-span-3">
+      <label class="label" for="flt-amt-max"><?= __('Max amount') ?></label>
+      <input id="flt-amt-max" name="amt_max" type="number" step="0.01" class="input" value="<?= htmlspecialchars($flt['amt_max'] ?? '') ?>" />
+    </div>
+
+    <div class="md:col-span-12 flex flex-col gap-2 sm:flex-row sm:justify-end">
+      <button class="btn btn-muted sm:w-auto" type="submit" name="apply" value="1">
+        <?= __('Apply filters') ?>
+      </button>
+    </div>
+  </form>
+</section>
+
 <!-- Transactions -->
-<section class="mt-6 card">
+<section id="transaction-list" class="mt-6 card">
   <h3 class="font-semibold mb-3"><?= __('Transactions') ?></h3>
 
   <!-- Mobile: stacked cards -->

@@ -1,3 +1,16 @@
+<?php
+require_once __DIR__.'/../layout/page_header.php';
+
+render_page_header([
+  'kicker' => __('Settings'),
+  'title' => __('Account profile'),
+  'subtitle' => __('Update your name, birthdate, and password so records stay personal and secure.'),
+  'actions' => [
+    ['label' => __('Back to settings'), 'href' => '/settings', 'icon' => 'arrow-left', 'style' => 'muted'],
+  ],
+]);
+?>
+
 <section class="max-w-2xl mx-auto">
   <div class="card">
     <div class="flex items-center justify-between">

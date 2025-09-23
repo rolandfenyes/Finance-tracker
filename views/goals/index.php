@@ -1,4 +1,141 @@
-<section class="card">
+<?php
+require_once __DIR__.'/../layout/page_header.php';
+require_once __DIR__.'/../layout/focus_panel.php';
+
+$activeGoals = 0;
+$pausedGoals = 0;
+$doneGoals = 0;
+$goalsWithSchedules = 0;
+foreach ($rows as $goalRow) {
+  $status = $goalRow['status'] ?? 'active';
+  if ($status === 'done') {
+    $doneGoals++;
+  } elseif ($status === 'paused') {
+    $pausedGoals++;
+  } else {
+    $activeGoals++;
+  }
+  if (!empty($goalRow['sched_id'])) {
+    $goalsWithSchedules++;
+  }
+}
+$totalGoals = count($rows);
+
+render_page_header([
+  'kicker' => __('Plan'),
+  'title' => __('Design the future you want'),
+  'subtitle' => __('Capture milestones, automate contributions, and celebrate every finish line.'),
+  'meta' => [
+    ['icon' => 'target', 'label' => __('Total goals: :count', ['count' => $totalGoals])],
+  ],
+  'insight' => [
+    'label' => __('Active goals'),
+    'value' => (string)$activeGoals,
+    'subline' => __('Completed: :count · Paused: :paused', ['count' => $doneGoals, 'paused' => $pausedGoals]),
+  ],
+  'actions' => [
+    ['label' => __('Add goal'), 'href' => '#create-goal', 'icon' => 'target', 'style' => 'primary'],
+    ['label' => __('Log a contribution'), 'href' => '#goal-list', 'icon' => 'coins', 'style' => 'muted'],
+    ['label' => __('Link schedules'), 'href' => '/scheduled#create-schedule', 'icon' => 'link', 'style' => 'link'],
+  ],
+  'tabs' => [
+    ['label' => __('Create'), 'href' => '#create-goal', 'active' => true],
+    ['label' => __('All goals'), 'href' => '#goal-list'],
+  ],
+]);
+
+$hasGoals = $totalGoals > 0;
+$automationState = 'info';
+$automationLabel = __('Not linked yet');
+if ($hasGoals) {
+  if ($goalsWithSchedules > 0) {
+    if ($goalsWithSchedules >= $activeGoals && $activeGoals > 0) {
+      $automationState = 'success';
+      $automationLabel = __('Fully automated');
+    } else {
+      $automationState = 'active';
+      $automationLabel = __('Partially automated');
+    }
+  } else {
+    $automationState = 'warning';
+    $automationLabel = __('Link schedules');
+  }
+}
+
+render_focus_panel([
+  'id' => 'goal-focus',
+  'title' => __('Map out the wins ahead'),
+  'description' => __('Clarify your next milestone, automate contributions, and keep momentum visible.'),
+  'items' => [
+    [
+      'icon' => 'target',
+      'label' => __('Define or refresh a goal'),
+      'description' => __('Give every priority a name, target amount, and status so you can celebrate progress.'),
+      'href' => '#create-goal',
+      'state' => $hasGoals ? 'active' : 'warning',
+      'state_label' => $hasGoals ? __('Goals in play') : __('Start planning'),
+      'meta' => __('Total goals: :count', ['count' => $totalGoals]),
+    ],
+    [
+      'icon' => 'calendar-plus',
+      'label' => __('Automate your funding'),
+      'description' => __('Link or create scheduled transfers so deposits happen even on busy weeks.'),
+      'href' => '/scheduled#create-schedule',
+      'state' => $automationState,
+      'state_label' => $automationLabel,
+    ],
+    [
+      'icon' => 'coins',
+      'label' => __('Log a fresh contribution'),
+      'description' => __('Record the latest transfer to update progress bars and reinforce habits.'),
+      'href' => '#goal-list',
+      'state' => $hasGoals ? 'active' : 'info',
+      'state_label' => $hasGoals ? __('Keep funding') : __('No contributions yet'),
+    ],
+    [
+      'icon' => 'trophy',
+      'label' => __('Celebrate completed goals'),
+      'description' => __('Mark finished goals as done and move their funds to the next big priority.'),
+      'href' => '#goal-list',
+      'state' => $doneGoals > 0 ? 'success' : 'info',
+      'state_label' => $doneGoals > 0 ? __('Wins logged') : __('No wins yet'),
+    ],
+  ],
+  'side' => [
+    'label' => __('Active goals'),
+    'value' => (string)$activeGoals,
+    'subline' => __('Paused: :paused · Completed: :done', ['paused' => $pausedGoals, 'done' => $doneGoals]),
+    'footnote' => __('Linking a schedule keeps long-term goals funded without manual work.'),
+    'actions' => [
+      ['label' => __('Open linked schedules'), 'href' => '/scheduled#schedule-list', 'icon' => 'link'],
+      ['label' => __('Review loan payoffs'), 'href' => '/loans#loan-progress', 'icon' => 'badge-check'],
+    ],
+  ],
+  'tips' => [
+    __('Assign consistent colors to related goals so they stand out in charts.'),
+    __('Use the command palette (⌘/Ctrl+K) anytime to jump straight to another workspace.'),
+  ],
+]);
+?>
+
+<?php if ($totalGoals): ?>
+  <section id="goal-overview" class="mb-6 grid gap-4 md:grid-cols-3">
+    <div class="tile">
+      <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300"><?= __('Active') ?></div>
+      <div class="mt-2 text-2xl font-semibold text-slate-900 dark:text-white"><?= (int)$activeGoals ?></div>
+    </div>
+    <div class="tile">
+      <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300"><?= __('Paused') ?></div>
+      <div class="mt-2 text-2xl font-semibold text-slate-900 dark:text-white"><?= (int)$pausedGoals ?></div>
+    </div>
+    <div class="tile">
+      <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300"><?= __('Completed') ?></div>
+      <div class="mt-2 text-2xl font-semibold text-slate-900 dark:text-white"><?= (int)$doneGoals ?></div>
+    </div>
+  </section>
+<?php endif; ?>
+
+<section id="create-goal" class="card">
   <h1 class="text-xl font-semibold"><?= __('Goals') ?></h1>
   <?php if (!empty($_SESSION['flash'])): ?>
     <p class="mt-2 text-sm text-brand-600"><?= $_SESSION['flash']; unset($_SESSION['flash']); ?></p>
@@ -45,7 +182,7 @@
   </details>
 </section>
 
-<section class="mt-6 card">
+<section id="goal-list" class="mt-6 card">
   <div class="flex items-center justify-between mb-3">
     <h2 class="font-semibold"><?= __('Your goals') ?></h2>
   </div>

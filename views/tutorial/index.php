@@ -1,3 +1,16 @@
+<?php
+require_once __DIR__.'/../layout/page_header.php';
+
+render_page_header([
+  'kicker' => __('Guides'),
+  'title' => __('Learn the workflow'),
+  'subtitle' => __('Use this tour as a companion while you explore dashboards, automation, and planning tools.'),
+  'actions' => [
+    ['label' => __('Back to settings'), 'href' => '/settings', 'icon' => 'arrow-left', 'style' => 'muted'],
+  ],
+]);
+?>
+
 <section class="max-w-5xl mx-auto">
   <div class="grid md:grid-cols-12 gap-6">
     <!-- Sidebar / TOC -->

@@ -1,3 +1,21 @@
+<?php
+require_once __DIR__.'/../layout/page_header.php';
+
+render_page_header([
+  'kicker' => __('Settings'),
+  'title' => __('Shape how you categorize money'),
+  'subtitle' => __('Create clear income and spending buckets so reports stay meaningful.'),
+  'actions' => [
+    ['label' => __('Add category'), 'href' => '#category-form', 'icon' => 'plus-circle', 'style' => 'primary'],
+    ['label' => __('Back to settings'), 'href' => '/settings', 'icon' => 'arrow-left', 'style' => 'muted'],
+  ],
+  'tabs' => [
+    ['label' => __('Create'), 'href' => '#category-form', 'active' => true],
+    ['label' => __('Existing'), 'href' => '#category-list'],
+  ],
+]);
+?>
+
 <section class="max-w-4xl mx-auto">
   <div class="card space-y-6">
     <div class="flex items-center justify-between">
@@ -5,8 +23,8 @@
       <a href="/settings" class="text-sm text-accent"><?= __('← Back to Settings') ?></a>
     </div>
 
-    <div class="grid gap-6 md:grid-cols-2">
-      <div>
+    <div id="category-form" class="grid gap-6 md:grid-cols-2">
+      <div id="category-list">
         <h2 class="font-medium mb-2"><?= __('Add category') ?></h2>
         <form id="cat-add-form" method="post" action="/settings/categories/add" class="grid gap-2 sm:grid-cols-6">
           <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />

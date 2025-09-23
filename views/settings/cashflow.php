@@ -1,3 +1,33 @@
+<?php
+require_once __DIR__.'/../layout/page_header.php';
+
+$allocationPct = max(0, min(100, round($total, 2)));
+$allocationStatus = $total > 100
+  ? __('You’re over by :percent%. Rebalance your rules.', ['percent' => number_format($total - 100, 2)])
+  : ($total < 100
+    ? __(':percent% is still unallocated.', ['percent' => number_format(100 - $total, 2)])
+    : __('Perfect! Fully allocated.'));
+
+render_page_header([
+  'kicker' => __('Settings'),
+  'title' => __('Give every dollar a job'),
+  'subtitle' => __('Define how incoming money should flow between savings, debt, and spending buckets.'),
+  'insight' => [
+    'label' => __('Allocated'),
+    'value' => number_format($allocationPct, 2).'%',
+    'subline' => $allocationStatus,
+  ],
+  'actions' => [
+    ['label' => __('Add rule'), 'href' => '#cashflow-form', 'icon' => 'plus-circle', 'style' => 'primary'],
+    ['label' => __('Back to settings'), 'href' => '/settings', 'icon' => 'arrow-left', 'style' => 'muted'],
+  ],
+  'tabs' => [
+    ['label' => __('Rules'), 'href' => '#cashflow-form', 'active' => true],
+    ['label' => __('All allocations'), 'href' => '#cashflow-list'],
+  ],
+]);
+?>
+
 <section class="max-w-3xl mx-auto">
   <div class="card space-y-6">
     <div class="flex items-center justify-between">
@@ -9,7 +39,7 @@
       $pct = max(0, min(100, round($total,2)));
       $barColor = $pct < 100 ? 'bg-brand-500' : ($pct == 100 ? 'bg-brand-600' : 'bg-red-500');
     ?>
-    <div>
+    <div id="cashflow-form">
       <div class="flex justify-between text-xs text-gray-600">
         <span><?= __('Total allocation') ?></span>
         <span><?= number_format($pct,2) ?>%</span>
@@ -26,7 +56,7 @@
       <?php endif; ?>
     </div>
 
-    <div>
+    <div id="cashflow-list">
       <h2 class="font-medium mb-2"><?= __('Add rule') ?></h2>
       <form method="post" action="/settings/cashflow/add" class="grid gap-2 sm:grid-cols-6">
         <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />

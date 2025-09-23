@@ -838,6 +838,149 @@
       }
     })();
   </script>
+  <script>
+    (function() {
+      document.addEventListener('DOMContentLoaded', () => {
+        const dialog = document.getElementById('mm-command-palette');
+        if (!dialog) return;
+
+        const searchInput = dialog.querySelector('[data-command-search]');
+        const items = Array.from(dialog.querySelectorAll('[data-command-item]'));
+        const emptyState = dialog.querySelector('[data-command-empty]');
+        const closeButtons = dialog.querySelectorAll('[data-command-close]');
+        const openers = document.querySelectorAll('[data-command-open]');
+        let lastFocused = null;
+
+        const ensureIcons = () => {
+          if (window.lucide && typeof window.lucide.createIcons === 'function') {
+            window.lucide.createIcons();
+          }
+        };
+
+        const filterItems = (term) => {
+          const normalized = (term || '').toLowerCase();
+          let visibleCount = 0;
+          items.forEach((item) => {
+            const label = (item.dataset.commandLabel || '').toLowerCase();
+            const keywords = (item.dataset.commandKeywords || '').toLowerCase();
+            const haystack = `${label} ${keywords}`.trim();
+            const matches = normalized === '' || haystack.includes(normalized);
+            item.classList.toggle('hidden', !matches);
+            if (matches) {
+              visibleCount += 1;
+            }
+          });
+          if (emptyState) {
+            emptyState.classList.toggle('hidden', visibleCount > 0);
+          }
+        };
+
+        const openPalette = () => {
+          if (dialog.open) {
+            return;
+          }
+          lastFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          dialog.showModal();
+          ensureIcons();
+          filterItems('');
+          if (searchInput) {
+            searchInput.value = '';
+            searchInput.focus();
+          }
+        };
+
+        const closePalette = (restoreFocus = true) => {
+          if (!dialog.open) {
+            return;
+          }
+          dialog.close();
+          if (restoreFocus && lastFocused && typeof lastFocused.focus === 'function') {
+            lastFocused.focus();
+          }
+        };
+
+        openers.forEach((btn) => {
+          btn.addEventListener('click', (event) => {
+            event.preventDefault();
+            openPalette();
+          });
+        });
+
+        closeButtons.forEach((btn) => {
+          btn.addEventListener('click', () => closePalette());
+        });
+
+        dialog.addEventListener('cancel', (event) => {
+          event.preventDefault();
+          closePalette();
+        });
+
+        dialog.addEventListener('click', (event) => {
+          if (event.target === dialog) {
+            closePalette();
+          }
+        });
+
+        if (searchInput) {
+          searchInput.addEventListener('input', () => {
+            filterItems(searchInput.value || '');
+          });
+          searchInput.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowDown') {
+              event.preventDefault();
+              const visibleItems = items.filter((item) => !item.classList.contains('hidden'));
+              if (visibleItems.length) {
+                visibleItems[0].focus();
+              }
+            } else if (event.key === 'Escape') {
+              closePalette();
+            }
+          });
+        }
+
+        items.forEach((item) => {
+          item.setAttribute('tabindex', '0');
+          item.addEventListener('click', () => {
+            const href = item.dataset.commandHref || '#';
+            closePalette(false);
+            window.location.href = href;
+          });
+          item.addEventListener('keydown', (event) => {
+            const visibleItems = items.filter((node) => !node.classList.contains('hidden'));
+            const index = visibleItems.indexOf(item);
+            if (event.key === 'ArrowDown') {
+              event.preventDefault();
+              const next = visibleItems[(index + 1) % visibleItems.length];
+              next && next.focus();
+            } else if (event.key === 'ArrowUp') {
+              event.preventDefault();
+              if (index <= 0) {
+                searchInput && searchInput.focus();
+              } else {
+                visibleItems[index - 1].focus();
+              }
+            } else if (event.key === 'Enter') {
+              event.preventDefault();
+              item.click();
+            } else if (event.key === 'Escape') {
+              closePalette();
+            }
+          });
+        });
+
+        document.addEventListener('keydown', (event) => {
+          const key = event.key.toLowerCase();
+          if ((event.metaKey || event.ctrlKey) && key === 'k') {
+            event.preventDefault();
+            openPalette();
+          } else if (key === 'escape' && dialog.open) {
+            event.preventDefault();
+            closePalette();
+          }
+        });
+      });
+    })();
+  </script>
   <style>[x-cloak]{display:none!important}</style>
 </head>
 <body x-data="themeState()" x-init="init()" class="relative">
@@ -859,6 +1002,36 @@
       ['href'=>'/feedback',      'label'=>'Feedback',       'match'=>'#^/feedback$#'],
       ['href'=>'/settings',      'label'=>'Settings',       'match'=>'#^/settings$#'],
     ];
+    $journeySteps = [
+      [
+        'href' => '/',
+        'label' => __('Orient'),
+        'description' => __('Dashboard & current month'),
+        'icon' => 'radar',
+        'match' => '#^/(?:$|current-month$)#'
+      ],
+      [
+        'href' => '/goals',
+        'label' => __('Plan'),
+        'description' => __('Goals & automation'),
+        'icon' => 'rocket',
+        'match' => '#^/(?:goals|scheduled)(?:/.*)?$#'
+      ],
+      [
+        'href' => '/emergency',
+        'label' => __('Protect'),
+        'description' => __('Emergency fund & loans'),
+        'icon' => 'shield-check',
+        'match' => '#^/(?:emergency|loans)(?:/.*)?$#'
+      ],
+      [
+        'href' => '/years',
+        'label' => __('Review'),
+        'description' => __('History, stocks & insights'),
+        'icon' => 'line-chart',
+        'match' => '#^/(?:years|stocks|tutorial)(?:/.*)?$#'
+      ],
+    ];
     function nav_link(array $item, string $currentPath, string $extra=''): string {
       $active = preg_match($item['match'], $currentPath) === 1;
       $base = 'px-3 py-2 rounded-2xl transition-colors text-sm font-medium flex items-center gap-2';
@@ -868,6 +1041,32 @@
       $label = __($item['label']);
       return '<a class="'.$base.' '.$cls.' '.$extra.'" href="'.$item['href'].'"'.($active?' aria-current="page"':'').'>'.htmlspecialchars($label).'</a>';
     }
+
+    $commandSections = [
+      __('Navigation') => [
+        ['label' => __('Dashboard'), 'href' => '/', 'icon' => 'layout-dashboard', 'description' => __('Orient · Net worth, next steps'), 'keywords' => 'orient overview'],
+        ['label' => __('Current month'), 'href' => '/current-month', 'icon' => 'calendar-days', 'description' => __('Plan · Budgets & transactions'), 'keywords' => 'plan month transactions'],
+        ['label' => __('Goals'), 'href' => '/goals', 'icon' => 'target', 'description' => __('Plan · Milestones & funding'), 'keywords' => 'plan goals targets'],
+        ['label' => __('Loans'), 'href' => '/loans', 'icon' => 'badge-check', 'description' => __('Protect · Debts & payoffs'), 'keywords' => 'protect debts payoff'],
+        ['label' => __('Emergency fund'), 'href' => '/emergency', 'icon' => 'shield', 'description' => __('Protect · Safety net'), 'keywords' => 'protect emergency'],
+        ['label' => __('Scheduled payments'), 'href' => '/scheduled', 'icon' => 'calendar-clock', 'description' => __('Plan · Automation hub'), 'keywords' => 'automation recurring schedule'],
+        ['label' => __('Stocks'), 'href' => '/stocks', 'icon' => 'briefcase-business', 'description' => __('Review · Portfolio tracker'), 'keywords' => 'invest review stocks'],
+        ['label' => __('Yearly timeline'), 'href' => '/years', 'icon' => 'line-chart', 'description' => __('Review · Historical net results'), 'keywords' => 'review years history'],
+        ['label' => __('Settings'), 'href' => '/settings', 'icon' => 'settings-2', 'description' => __('Personalize & preferences'), 'keywords' => 'settings profile'],
+        ['label' => __('Tutorial'), 'href' => '/tutorial', 'icon' => 'book-open', 'description' => __('Guided walkthrough'), 'keywords' => 'help tutorial guide'],
+      ],
+      __('Quick actions') => [
+        ['label' => __('Add transaction'), 'href' => '/current-month#quick-add', 'icon' => 'plus-circle', 'description' => __('Capture income or spending now'), 'keywords' => 'add transaction quick'],
+        ['label' => __('Create a goal'), 'href' => '/goals#create-goal', 'icon' => 'target', 'description' => __('Start a new mission'), 'keywords' => 'goal create plan'],
+        ['label' => __('Log emergency deposit'), 'href' => '/emergency#ef-contribute', 'icon' => 'piggy-bank', 'description' => __('Boost the safety net'), 'keywords' => 'emergency deposit'],
+        ['label' => __('Add scheduled payment'), 'href' => '/scheduled#create-schedule', 'icon' => 'calendar-plus', 'description' => __('Automate a recurring bill'), 'keywords' => 'schedule recurring add'],
+      ],
+      __('Support') => [
+        ['label' => __('Open feedback form'), 'href' => '/feedback', 'icon' => 'message-circle', 'description' => __('Share ideas or issues'), 'keywords' => 'feedback support'],
+        ['label' => __('Switch theme'), 'href' => '/settings/theme', 'icon' => 'palette', 'description' => __('Pick a new palette'), 'keywords' => 'theme appearance'],
+        ['label' => __('Read tutorial'), 'href' => '/tutorial', 'icon' => 'graduation-cap', 'description' => __('Step-by-step help'), 'keywords' => 'help tutorial'],
+      ],
+    ];
   ?>
 <?php if (is_logged_in()): ?>
   <header class="sticky top-0 z-40 border-b border-white/40 bg-white/60 backdrop-blur-xl transition dark:border-slate-800/60 dark:bg-slate-900/50">
@@ -884,6 +1083,10 @@
         <nav class="hidden items-center gap-3 text-sm sm:flex">
           <?php if (is_logged_in()): ?>
             <?php foreach ($items as $it): echo nav_link($it, $currentPath); endforeach; ?>
+            <button type="button" class="icon-btn" data-command-open>
+              <span class="sr-only"><?= __('Open command palette') ?></span>
+              <i data-lucide="search" class="h-5 w-5"></i>
+            </button>
             <button type="button" class="icon-btn" @click="toggleTheme()" x-data="{}">
               <span class="sr-only">Toggle theme</span>
               <span x-cloak x-show="theme === 'light'" class="inline-flex">
@@ -917,6 +1120,38 @@
                 <?php foreach ($items as $it): ?>
                   <?= nav_link($it, $currentPath, 'w-full') ?>
                 <?php endforeach; ?>
+                <button type="button" class="btn btn-muted w-full justify-center" data-command-open @click="open=false">
+                  <span class="flex items-center justify-center gap-2">
+                    <i data-lucide="search" class="h-4 w-4"></i>
+                    <span><?= __('Command palette') ?></span>
+                  </span>
+                </button>
+                <div class="mt-3 border-t border-white/70 pt-3 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                  <div class="mb-2 font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500"><?= __('Workflow') ?></div>
+                  <div class="grid gap-2">
+                    <?php foreach ($journeySteps as $step):
+                      $label = trim((string)$step['label']);
+                      if ($label === '') continue;
+                      $desc = trim((string)($step['description'] ?? ''));
+                      $href = $step['href'] ?? '#';
+                      $active = !empty($step['match']) && preg_match($step['match'], $currentPath) === 1;
+                      $icon = $step['icon'] ?? 'compass';
+                      $cls = $active
+                        ? 'border-brand-400/70 bg-brand-500/15 text-brand-700 dark:border-brand-500/40 dark:bg-brand-600/20 dark:text-brand-100'
+                        : 'border-white/60 bg-white/60 text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300';
+                    ?>
+                      <a href="<?= htmlspecialchars($href, ENT_QUOTES) ?>" class="rounded-2xl border px-3 py-2 <?= $cls ?>">
+                        <div class="flex items-center gap-2 font-semibold">
+                          <i data-lucide="<?= htmlspecialchars($icon, ENT_QUOTES) ?>" class="h-3.5 w-3.5"></i>
+                          <span><?= htmlspecialchars($label, ENT_QUOTES) ?></span>
+                        </div>
+                        <?php if ($desc): ?>
+                          <p class="mt-1 text-[11px] leading-tight text-slate-500 dark:text-slate-400"><?= htmlspecialchars($desc, ENT_QUOTES) ?></p>
+                        <?php endif; ?>
+                      </a>
+                    <?php endforeach; ?>
+                  </div>
+                </div>
                 <button type="button" class="icon-btn w-full justify-center" @click="toggleTheme(); open=false">
                   <span class="sr-only">Toggle theme</span>
                   <span x-show="theme === 'light'" class="flex items-center gap-2" x-cloak>
@@ -941,6 +1176,109 @@
         </div>
       <?php endif; ?>
     </div>
+
+    <?php if (!$hideMenus): ?>
+      <div class="mx-auto w-full max-w-6xl px-4 pb-4">
+        <div class="flex flex-nowrap gap-3 overflow-x-auto pb-1 pt-2">
+          <?php foreach ($journeySteps as $step):
+            $label = trim((string)$step['label']);
+            if ($label === '') continue;
+            $href = $step['href'] ?? '#';
+            $desc = trim((string)($step['description'] ?? ''));
+            $icon = $step['icon'] ?? 'compass';
+            $active = !empty($step['match']) && preg_match($step['match'], $currentPath) === 1;
+            $cls = $active
+              ? 'border-brand-400/70 bg-brand-500/10 text-brand-800 dark:border-brand-500/50 dark:bg-brand-600/20 dark:text-brand-50'
+              : 'border-white/60 bg-white/60 text-slate-600 transition hover:border-brand-300 hover:text-brand-700 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300 dark:hover:border-brand-500/40 dark:hover:text-brand-100';
+          ?>
+            <a href="<?= htmlspecialchars($href, ENT_QUOTES) ?>"
+               class="min-w-[13rem] flex-1 rounded-3xl border px-4 py-3 shadow-sm backdrop-blur <?= $cls ?>">
+              <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2 text-sm font-semibold">
+                  <i data-lucide="<?= htmlspecialchars($icon, ENT_QUOTES) ?>" class="h-4 w-4"></i>
+                  <span><?= htmlspecialchars($label, ENT_QUOTES) ?></span>
+                </div>
+                <i data-lucide="arrow-up-right" class="h-4 w-4 opacity-50"></i>
+              </div>
+              <?php if ($desc): ?>
+                <p class="mt-2 text-xs text-slate-500 dark:text-slate-400"><?= htmlspecialchars($desc, ENT_QUOTES) ?></p>
+              <?php endif; ?>
+            </a>
+          <?php endforeach; ?>
+        </div>
+      </div>
+    <?php endif; ?>
   </header>
+  <?php if (!$hideMenus): ?>
+    <dialog id="mm-command-palette" aria-label="<?= htmlspecialchars(__('Command palette'), ENT_QUOTES) ?>">
+      <div class="modal-panel max-w-2xl">
+        <div class="modal-header">
+          <div>
+            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500"><?= __('Command palette') ?></div>
+            <p class="text-sm text-slate-500 dark:text-slate-400"><?= __('Type to jump anywhere or trigger quick actions.') ?></p>
+          </div>
+          <button type="button" class="icon-btn" data-command-close>
+            <span class="sr-only"><?= __('Close') ?></span>
+            <i data-lucide="x" class="h-4 w-4"></i>
+          </button>
+        </div>
+        <div class="modal-body space-y-4">
+          <div class="relative">
+            <i data-lucide="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"></i>
+            <input type="search"
+                   data-command-search
+                   autocomplete="off"
+                   class="w-full rounded-2xl border border-white/70 bg-white/90 py-2.5 pl-10 pr-3 text-sm text-slate-700 shadow-inner focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-200 dark:border-slate-800/70 dark:bg-slate-900/70 dark:text-slate-200"
+                   placeholder="<?= __('Search pages or actions…') ?>" />
+          </div>
+          <div data-command-empty class="hidden rounded-2xl border border-dashed border-slate-200 bg-white/60 p-4 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-400">
+            <?= __('No matches. Try different keywords.') ?>
+          </div>
+          <div data-command-list class="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+            <?php foreach ($commandSections as $sectionLabel => $sectionItems):
+              $sectionLabel = trim((string)$sectionLabel);
+              if ($sectionLabel === '' || empty($sectionItems)) continue;
+            ?>
+              <div class="space-y-2" data-command-section>
+                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+                  <?= htmlspecialchars($sectionLabel, ENT_QUOTES) ?>
+                </div>
+                <div class="space-y-1.5">
+                  <?php foreach ($sectionItems as $cmd):
+                    $cmdLabel = trim((string)($cmd['label'] ?? ''));
+                    if ($cmdLabel === '') continue;
+                    $cmdHref = (string)($cmd['href'] ?? '#');
+                    $cmdIcon = trim((string)($cmd['icon'] ?? 'arrow-up-right'));
+                    $cmdDescription = trim((string)($cmd['description'] ?? ''));
+                    $cmdKeywords = strtolower(trim((string)($cmd['keywords'] ?? '')));
+                  ?>
+                    <button type="button"
+                            class="flex w-full items-center justify-between gap-3 rounded-2xl border border-white/70 bg-white/80 px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:border-brand-300 hover:text-brand-700 dark:border-slate-800/70 dark:bg-slate-900/60 dark:text-slate-200 dark:hover:border-brand-500/40"
+                            data-command-item
+                            data-command-href="<?= htmlspecialchars($cmdHref, ENT_QUOTES) ?>"
+                            data-command-label="<?= htmlspecialchars(strtolower($cmdLabel), ENT_QUOTES) ?>"
+                            data-command-keywords="<?= htmlspecialchars($cmdKeywords, ENT_QUOTES) ?>">
+                      <span class="flex items-center gap-3">
+                        <span class="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-white/70 bg-white/70 dark:border-slate-800/70 dark:bg-slate-900/50">
+                          <i data-lucide="<?= htmlspecialchars($cmdIcon, ENT_QUOTES) ?>" class="h-4 w-4"></i>
+                        </span>
+                        <span class="flex flex-col text-left">
+                          <span class="font-semibold text-slate-900 dark:text-white"><?= htmlspecialchars($cmdLabel, ENT_QUOTES) ?></span>
+                          <?php if ($cmdDescription): ?>
+                            <span class="text-xs font-normal text-slate-500 dark:text-slate-400"><?= htmlspecialchars($cmdDescription, ENT_QUOTES) ?></span>
+                          <?php endif; ?>
+                        </span>
+                      </span>
+                      <span class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-300 dark:text-slate-600"><?= __('⌘K / Ctrl+K') ?></span>
+                    </button>
+                  <?php endforeach; ?>
+                </div>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        </div>
+      </div>
+    </dialog>
+  <?php endif; ?>
 <?php endif; ?>
   <main class="relative z-10 mx-auto w-full max-w-6xl px-4 py-8">

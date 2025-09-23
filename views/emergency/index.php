@@ -1,4 +1,101 @@
-<section class="card">
+<?php
+require_once __DIR__.'/../layout/page_header.php';
+require_once __DIR__.'/../layout/focus_panel.php';
+
+$progressValue = $efTarget > 0 ? ($efPct.'%') : __('Set a target');
+$progressSubline = $efTarget > 0
+  ? __('Saved :current of :target', ['current' => moneyfmt($ef_total, $ef_cur), 'target' => moneyfmt($ef_target, $ef_cur)])
+  : __('Once you set a target, we’ll track your progress here.');
+
+render_page_header([
+  'kicker' => __('Safety net'),
+  'title' => __('Build peace-of-mind savings'),
+  'subtitle' => __('Set your target, record deposits or withdrawals, and review a clear activity log.'),
+  'meta' => [
+    ['icon' => 'shield', 'label' => __('Target: :amount', ['amount' => moneyfmt($ef_target, $ef_cur)])],
+    ['icon' => 'wallet', 'label' => __('Current: :amount', ['amount' => moneyfmt($ef_total, $ef_cur)])],
+  ],
+  'insight' => [
+    'label' => __('Progress'),
+    'value' => $progressValue,
+    'subline' => $progressSubline,
+  ],
+  'actions' => [
+    ['label' => __('Adjust target'), 'href' => '#ef-target', 'icon' => 'sliders-horizontal', 'style' => 'primary'],
+    ['label' => __('Log deposit'), 'href' => '#ef-contribute', 'icon' => 'piggy-bank', 'style' => 'muted'],
+    ['label' => __('View history'), 'href' => '#ef-history', 'icon' => 'clock', 'style' => 'link'],
+  ],
+  'tabs' => [
+    ['label' => __('Setup'), 'href' => '#ef-target', 'active' => true],
+    ['label' => __('Contribute'), 'href' => '#ef-contribute'],
+    ['label' => __('History'), 'href' => '#ef-history'],
+  ],
+]);
+
+$hasTarget = $efTarget > 0;
+$historyCount = is_array($rows ?? null) ? count($rows) : 0;
+
+render_focus_panel([
+  'id' => 'ef-focus',
+  'title' => __('Stay ready for life’s surprises'),
+  'description' => __('Lock in the right target, keep deposits flowing, and monitor every withdrawal.'),
+  'items' => [
+    [
+      'icon' => 'flag',
+      'label' => __('Set or revisit your target'),
+      'description' => __('Choose a savings level that reflects your living expenses and risk comfort.'),
+      'href' => '#ef-target',
+      'state' => $hasTarget ? 'success' : 'warning',
+      'state_label' => $hasTarget ? __('Target set') : __('Needs target'),
+      'meta' => $hasTarget ? __('Goal: :amount', ['amount' => moneyfmt($ef_target, $ef_cur)]) : '',
+    ],
+    [
+      'icon' => 'piggy-bank',
+      'label' => __('Log a deposit or boost'),
+      'description' => __('Add new contributions so your progress percentage mirrors reality.'),
+      'href' => '#ef-contribute',
+      'state' => $ef_total > 0 ? 'active' : 'info',
+      'state_label' => $ef_total > 0 ? __('Keep saving') : __('No deposits yet'),
+      'progress' => $hasTarget ? $efPct : null,
+      'progress_label' => $hasTarget ? __(':percent% funded', ['percent' => $efPct]) : '',
+    ],
+    [
+      'icon' => 'shield-check',
+      'label' => __('Plan how you’ll use the fund'),
+      'description' => __('Track withdrawals intentionally so you can replenish them with confidence.'),
+      'href' => '#ef-contribute',
+      'state' => $historyCount > 0 ? 'active' : 'info',
+      'state_label' => $historyCount > 0 ? __('History tracked') : __('No usage yet'),
+    ],
+    [
+      'icon' => 'history',
+      'label' => __('Audit recent activity'),
+      'description' => __('Use the log to confirm every transfer and keep notes for future you.'),
+      'href' => '#ef-history',
+      'state' => $historyCount > 0 ? 'success' : 'info',
+      'state_label' => $historyCount > 0 ? __('Log ready') : __('Awaiting entries'),
+    ],
+  ],
+  'side' => [
+    'label' => __('Funded so far'),
+    'value' => $hasTarget ? ($efPct . '%') : __('Set a target'),
+    'subline' => $hasTarget
+      ? __('Saved :current of :target', ['current' => moneyfmt($ef_total, $ef_cur), 'target' => moneyfmt($ef_target, $ef_cur)])
+      : __('We’ll calculate progress once a target exists.'),
+    'footnote' => __('Conversions into your main currency happen automatically so insights stay comparable.'),
+    'actions' => [
+      ['label' => __('View suggestions'), 'href' => '#ef-contribute', 'icon' => 'sparkles'],
+      ['label' => __('Review scheduled bills'), 'href' => '/scheduled#schedule-list', 'icon' => 'calendar-days'],
+    ],
+  ],
+  'tips' => [
+    __('Use the suggested amount chips for quick one-click deposits that match your bills run-rate.'),
+    __('Withdrawals appear in the log instantly—add notes so you remember the story later.'),
+  ],
+]);
+?>
+
+<section id="ef-target" class="card">
   <h1 class="text-xl font-semibold text-slate-900 dark:text-white"><?= __('Emergency Fund') ?></h1>
   <?php if (!empty($_SESSION['flash'])): ?>
     <p class="mt-2 rounded-2xl border border-brand-300/60 bg-brand-500/10 px-3 py-2 text-sm font-medium text-brand-700 dark:border-brand-500/50 dark:bg-brand-600/10 dark:text-brand-100">
@@ -7,7 +104,7 @@
   <?php endif; ?>
 
   <div class="mt-6 grid gap-5 md:grid-cols-12">
-    <div class="panel md:col-span-6 space-y-5 p-5">
+    <div id="ef-contribute" class="panel md:col-span-6 space-y-5 p-5">
       <?php if (!empty($suggest)): ?>
         <div class="space-y-2">
           <div class="text-sm font-semibold text-slate-700 dark:text-slate-200"><?= __('Suggestion') ?></div>
@@ -128,7 +225,7 @@
   </div>
 </section>
 
-<section class="card mt-8">
+<section id="ef-history" class="card mt-8">
   <div class="mb-4 flex items-center justify-between">
     <h2 class="text-lg font-semibold text-slate-900 dark:text-white"><?= __('History') ?></h2>
   </div>

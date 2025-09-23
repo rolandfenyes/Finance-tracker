@@ -6,6 +6,80 @@ $localeFlags = [
   'hu' => '🇭🇺',
   'es' => '🇪🇸',
 ];
+
+require_once __DIR__.'/../layout/page_header.php';
+require_once __DIR__.'/../layout/focus_panel.php';
+
+render_page_header([
+  'kicker' => __('Settings'),
+  'title' => __('Personalize your experience'),
+  'subtitle' => __('Update account details, currencies, categories, and automation rules.'),
+  'meta' => [
+    ['icon' => 'user', 'label' => __('Signed in as :email', ['email' => $user['email'] ?? ''])],
+    ['icon' => 'globe', 'label' => __('Locale: :locale', ['locale' => strtoupper($currentLocale)])],
+  ],
+  'actions' => [
+    ['label' => __('Edit profile'), 'href' => '/settings/profile', 'icon' => 'settings-2', 'style' => 'primary'],
+    ['label' => __('Manage currencies'), 'href' => '/settings/currencies', 'icon' => 'coins', 'style' => 'muted'],
+    ['label' => __('Cashflow rules'), 'href' => '/settings/cashflow', 'icon' => 'sliders-horizontal', 'style' => 'link'],
+  ],
+]);
+
+$hasCashflowRules = !empty($cashflowRules ?? []);
+
+render_focus_panel([
+  'id' => 'settings-focus',
+  'title' => __('Tweak the system to match your life'),
+  'description' => __('Refresh your personal details, align money vocab, and keep automation humming.'),
+  'items' => [
+    [
+      'icon' => 'user-pen',
+      'label' => __('Update profile basics'),
+      'description' => __('Adjust your name, email, or password to keep the account current.'),
+      'href' => '/settings/profile',
+      'state' => 'active',
+      'state_label' => __('Profile ready'),
+    ],
+    [
+      'icon' => 'languages',
+      'label' => __('Choose language and locale'),
+      'description' => __('Switch the interface language so guidance speaks your words.'),
+      'href' => '/settings',
+      'state' => 'info',
+      'state_label' => __('Pick a favorite'),
+    ],
+    [
+      'icon' => 'coins',
+      'label' => __('Curate your currencies'),
+      'description' => __('Add every currency you earn, save, or spend so conversions stay accurate.'),
+      'href' => '/settings/currencies',
+      'state' => !empty($curr) ? 'active' : 'warning',
+      'state_label' => !empty($curr) ? __('Currencies set') : __('Add currencies'),
+    ],
+    [
+      'icon' => 'sliders-horizontal',
+      'label' => __('Refresh cashflow rules'),
+      'description' => __('Define how each paycheck funds needs, wants, savings, and debt.'),
+      'href' => '/settings/cashflow',
+      'state' => $hasCashflowRules ? 'active' : 'warning',
+      'state_label' => $hasCashflowRules ? __('Rules in place') : __('Needs setup'),
+    ],
+  ],
+  'side' => [
+    'label' => __('Signed in as'),
+    'value' => htmlspecialchars($user['email'] ?? '', ENT_QUOTES),
+    'subline' => __('Locale: :locale', ['locale' => strtoupper($currentLocale)]),
+    'footnote' => __('Changes save instantly—jump back to dashboards via the header workflow when you’re done.'),
+    'actions' => [
+      ['label' => __('Customize theme'), 'href' => '/settings/theme', 'icon' => 'palette'],
+      ['label' => __('Visit tutorial'), 'href' => '/tutorial', 'icon' => 'book-open'],
+    ],
+  ],
+  'tips' => [
+    __('Use matching category names here and in monthly views so guidance aligns.'),
+    __('The command palette (⌘/Ctrl+K) lists every settings page for quick access.'),
+  ],
+]);
 ?>
 <section class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
   <!-- User -->

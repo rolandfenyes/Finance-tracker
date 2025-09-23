@@ -1,4 +1,129 @@
-<section class="card">
+<?php
+require_once __DIR__.'/../layout/page_header.php';
+require_once __DIR__.'/../layout/focus_panel.php';
+
+$totalScheduled = count($rows);
+$today = date('Y-m-d');
+$nextDueDate = null;
+$upcomingCount = 0;
+$linkedCount = 0;
+
+foreach ($rows as $scheduledRow) {
+  if (!empty($scheduledRow['next_due'])) {
+    $date = $scheduledRow['next_due'];
+    if ($nextDueDate === null || $date < $nextDueDate) {
+      $nextDueDate = $date;
+    }
+    if ($date >= $today) {
+      $upcomingCount++;
+    }
+  }
+  if (!empty($scheduledRow['goal_id']) || !empty($scheduledRow['loan_id'])) {
+    $linkedCount++;
+  }
+}
+
+$nextDueLabel = $nextDueDate ? date('M j, Y', strtotime($nextDueDate)) : null;
+$insightSubline = $upcomingCount
+  ? __(':count payment(s) coming up', ['count' => $upcomingCount])
+  : ($totalScheduled ? __('No upcoming dates set') : __('Add your first recurring item.'));
+
+render_page_header([
+  'kicker' => __('Automate'),
+  'title' => __('Keep money on autopilot'),
+  'subtitle' => __('Capture recurring bills, savings contributions, and reminders in one organized list.'),
+  'meta' => [
+    ['icon' => 'repeat', 'label' => __('Schedules: :count', ['count' => $totalScheduled])],
+  ],
+  'insight' => [
+    'label' => __('Next due date'),
+    'value' => $nextDueLabel ? $nextDueLabel : __('None scheduled'),
+    'subline' => $insightSubline,
+  ],
+  'actions' => [
+    ['label' => __('Add scheduled payment'), 'href' => '#create-schedule', 'icon' => 'calendar-plus', 'style' => 'primary'],
+    ['label' => __('Link to a goal or loan'), 'href' => '#schedule-list', 'icon' => 'link', 'style' => 'muted'],
+    ['label' => __('Review monthly view'), 'href' => '/current-month#transaction-list', 'icon' => 'calendar-range', 'style' => 'link'],
+  ],
+  'tabs' => [
+    ['label' => __('Create'), 'href' => '#create-schedule', 'active' => true],
+    ['label' => __('All schedules'), 'href' => '#schedule-list'],
+  ],
+]);
+
+$hasSchedules = $totalScheduled > 0;
+$linkState = 'info';
+$linkLabel = __('No links yet');
+if ($hasSchedules) {
+  if ($linkedCount >= $totalScheduled && $totalScheduled > 0) {
+    $linkState = 'success';
+    $linkLabel = __('All linked');
+  } elseif ($linkedCount > 0) {
+    $linkState = 'active';
+    $linkLabel = __('Partially linked');
+  } else {
+    $linkState = 'warning';
+    $linkLabel = __('Link to goals/loans');
+  }
+}
+
+render_focus_panel([
+  'id' => 'schedule-focus',
+  'title' => __('Automate the predictable'),
+  'description' => __('Capture every recurring obligation, tie it to a purpose, and keep upcoming dates visible.'),
+  'items' => [
+    [
+      'icon' => 'plus-square',
+      'label' => __('Add recurring bills or transfers'),
+      'description' => __('Document each repeating payment so it appears in your monthly planning.'),
+      'href' => '#create-schedule',
+      'state' => $hasSchedules ? 'success' : 'warning',
+      'state_label' => $hasSchedules ? __('Captured') : __('Add schedules'),
+      'meta' => __('Total: :count', ['count' => $totalScheduled]),
+    ],
+    [
+      'icon' => 'calendar-clock',
+      'label' => __('Check upcoming due dates'),
+      'description' => __('Confirm nothing sneaks up on you by reviewing what’s scheduled next.'),
+      'href' => '#schedule-list',
+      'state' => $upcomingCount > 0 ? 'active' : 'info',
+      'state_label' => $upcomingCount > 0 ? __('Due soon') : __('No upcoming dates'),
+    ],
+    [
+      'icon' => 'link',
+      'label' => __('Connect to goals or loans'),
+      'description' => __('Tie every schedule to its destination so other dashboards stay synchronized.'),
+      'href' => '#schedule-list',
+      'state' => $linkState,
+      'state_label' => $linkLabel,
+    ],
+    [
+      'icon' => 'list-checks',
+      'label' => __('Review and adjust cadence'),
+      'description' => __('Use the summary list to tweak frequency, categories, or amounts as life changes.'),
+      'href' => '#schedule-list',
+      'state' => $hasSchedules ? 'active' : 'info',
+      'state_label' => $hasSchedules ? __('Keep refining') : __('Awaiting entries'),
+    ],
+  ],
+  'side' => [
+    'label' => __('Next due date'),
+    'value' => $nextDueLabel ? $nextDueLabel : __('None scheduled'),
+    'subline' => $insightSubline,
+    'footnote' => __('Month and emergency views use these schedules to forecast cash needs automatically.'),
+    'actions' => [
+      ['label' => __('Open month view'), 'href' => '/current-month#month-summary', 'icon' => 'calendar-range'],
+      ['label' => __('Jump to goals'), 'href' => '/goals#goal-list', 'icon' => 'target'],
+    ],
+  ],
+  'tips' => [
+    __('Prefix titles (e.g., “🏠 Rent”) so similar payments group together in lists.'),
+    __('Use the command palette (⌘/Ctrl+K) to add a schedule from anywhere in the app.'),
+  ],
+]);
+?>
+
+<section id="create-schedule" class="card">
   <h1 class="text-xl font-semibold"><?= __('Scheduled Payments') ?></h1>
   <p class="text-sm text-gray-500"><?= __('Set up recurring payments.') ?></p>
 
@@ -136,7 +261,7 @@
   </details>
 </section>
 
-<section class="mt-6 card">
+<section id="schedule-list" class="mt-6 card">
   <div class="flex items-center justify-between mb-3">
     <h2 class="font-semibold"><?= __('Scheduled payments') ?></h2>
   </div>

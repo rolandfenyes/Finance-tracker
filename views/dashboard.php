@@ -185,7 +185,8 @@ if (!function_exists('amortization_to_date_precise')) {
 }
 
 /* ---------------- LOANS SUMMARY (accurate) ---------------- */
-$loanPrinMain = 0.0; $loanBalMain = 0.0;
+$loanPrinMain = 0.0; $loanBalMain = 0.0; $loanCount = 0;
+$loanConfirmedCount = 0;
 
 $ln = $pdo->prepare("
   SELECT
@@ -204,6 +205,7 @@ $ln->execute([$main, $u]);
 $sumStmt = $pdo->prepare("SELECT COALESCE(SUM(principal_component),0) FROM loan_payments WHERE loan_id = ?");
 
 foreach ($ln as $L) {
+  $loanCount++;
   $loanCur   = strtoupper($L['currency'] ?: $main);
   $principal = (float)$L['principal'];
   $ratePct   = (float)$L['interest_rate'];
@@ -231,6 +233,7 @@ foreach ($ln as $L) {
   $principalMain = fx_convert($pdo, $principal, $loanCur, $main, $today);
 
   if ($histConf) {
+    $loanConfirmedCount++;
     $am = amortization_to_date_precise(
       $principal, $ratePct, $start, $end, $pday,
       $monthly_total, $ins, $extra, $today
@@ -284,9 +287,236 @@ $babyPct   = round($doneCount / count($steps) * 100);
 
 /* ---------------- TOTAL NET LIQUID WORTH ---------------- */
 $totalNetLiquid = $efTotalMain + $goalsCurrentMain + $netThisMonth + $leftoverPrev;
+
+require_once __DIR__.'/layout/page_header.php';
+require_once __DIR__.'/layout/focus_panel.php';
+
+$nextSteps = [];
+
+if ($efTarget > 0 && $efTotal < $efTarget) {
+  $nextSteps[] = [
+    'icon' => 'piggy-bank',
+    'title' => __('Boost your emergency fund'),
+    'body' => __('You are :percent% of the way to your safety net.', ['percent' => $efPct]),
+    'cta_label' => __('Log a deposit'),
+    'cta_href' => '/emergency#ef-contribute',
+  ];
+}
+
+if ($netThisMonth < -0.01) {
+  $nextSteps[] = [
+    'icon' => 'trending-down',
+    'title' => __('Review this month'),
+    'body' => __('Spending has exceeded income by :amount so far.', ['amount' => moneyfmt(abs($netThisMonth), $main)]),
+    'cta_label' => __('Open month analysis'),
+    'cta_href' => '/current-month#cashflow-guidance',
+  ];
+} elseif ($netThisMonth > 0.01) {
+  $nextSteps[] = [
+    'icon' => 'thumbs-up',
+    'title' => __('Great job staying ahead'),
+    'body' => __('You still have :amount unassigned this month. Point it to a goal before it disappears.', ['amount' => moneyfmt($netThisMonth, $main)]),
+    'cta_label' => __('Allocate to a goal'),
+    'cta_href' => '/goals#create-goal',
+  ];
+} else {
+  $nextSteps[] = [
+    'icon' => 'scale',
+    'title' => __('You are perfectly balanced'),
+    'body' => __('Income and spending are tied. Keep an eye on new transactions so you stay on target.'),
+    'cta_label' => __('Monitor transactions'),
+    'cta_href' => '/current-month#transaction-list',
+  ];
+}
+
+if ($loanBalMain > 0) {
+  $nextSteps[] = [
+    'icon' => 'badge-check',
+    'title' => __('Record your latest loan payment'),
+    'body' => __('You have :amount remaining across active loans. Logging payments keeps balances precise.', ['amount' => moneyfmt($loanBalMain, $main)]),
+    'cta_label' => __('Update loans'),
+    'cta_href' => '/loans#loan-progress',
+  ];
+}
+
+if (count($nextSteps) > 3) {
+  $nextSteps = array_slice($nextSteps, 0, 3);
+}
+
+render_page_header([
+  'kicker' => __('Overview'),
+  'title' => __('Your money mission control'),
+  'subtitle' => __('Stay oriented with liquidity, budgets, and obligations. Every card points to the next best move.'),
+  'meta' => [
+    ['icon' => 'calendar', 'label' => __('Current month: :month', ['month' => format_month_year()])],
+    ['icon' => 'wallet', 'label' => __('Main currency: :code', ['code' => $main])],
+  ],
+  'insight' => [
+    'label' => __('Net liquid worth'),
+    'value' => moneyfmt($totalNetLiquid, $main),
+    'subline' => __('Goals, emergency fund, and leftover income combined.'),
+  ],
+  'actions' => [
+    ['label' => __('Add transaction'), 'href' => '/current-month#quick-add', 'icon' => 'plus', 'style' => 'primary'],
+    ['label' => __('Create a goal'), 'href' => '/goals#create-goal', 'icon' => 'target', 'style' => 'muted'],
+    ['label' => __('Review budgets'), 'href' => '/settings/cashflow', 'icon' => 'sliders-horizontal', 'style' => 'link'],
+  ],
+]);
+
+$hasMonthActivity = ($sumIn > 0.0 || $sumOut > 0.0);
+$cashflowState = 'success';
+$cashflowLabel = __('Balanced');
+if ($netThisMonth > 0.01) {
+  $cashflowState = 'active';
+  $cashflowLabel = __('Money to assign');
+} elseif ($netThisMonth < -0.01) {
+  $cashflowState = 'warning';
+  $cashflowLabel = __('Overspending');
+}
+
+$efState = 'info';
+$efStateLabel = __('Set a target');
+if ($efTarget > 0) {
+  if ($efPct >= 100) {
+    $efState = 'success';
+    $efStateLabel = __('Target reached');
+  } elseif ($efPct >= 80) {
+    $efState = 'active';
+    $efStateLabel = __('Almost there');
+  } else {
+    $efState = 'warning';
+    $efStateLabel = __('Needs attention');
+  }
+}
+
+$loanState = 'info';
+$loanStateLabel = __('Track debts');
+if ($loanCount > 0) {
+  if ($loanBalMain <= 1) {
+    $loanState = 'success';
+    $loanStateLabel = __('Paid off');
+  } elseif ($loanConfirmedCount === $loanCount) {
+    $loanState = 'active';
+    $loanStateLabel = __('History confirmed');
+  } else {
+    $loanState = 'warning';
+    $loanStateLabel = __('Confirm history');
+  }
+}
+
+render_focus_panel([
+  'id' => 'dashboard-focus',
+  'title' => __('Stay on course today'),
+  'description' => __('Move through these checkpoints to keep cashflow, savings, and debt progress aligned.'),
+  'items' => [
+    [
+      'icon' => 'sparkles',
+      'label' => __('Capture today’s money moves'),
+      'description' => __('Log any new income or spending so the current month snapshot stays accurate.'),
+      'href' => '/current-month#quick-add',
+      'state' => $hasMonthActivity ? 'success' : 'warning',
+      'state_label' => $hasMonthActivity ? __('Updated') : __('Needs log'),
+      'meta' => __('Current month'),
+    ],
+    [
+      'icon' => 'scale',
+      'label' => __('Balance this month’s plan'),
+      'description' => __('Compare net income vs. spending and redirect extra cash toward a mission.'),
+      'href' => '/current-month#month-summary',
+      'state' => $cashflowState,
+      'state_label' => $cashflowLabel,
+      'meta' => __('Net: :amount', ['amount' => moneyfmt($netThisMonth, $main)]),
+    ],
+    [
+      'icon' => 'shield',
+      'label' => __('Boost your safety net'),
+      'description' => __('Add a deposit or adjust the target so your emergency fund keeps pace with real life.'),
+      'href' => '/emergency#ef-contribute',
+      'state' => $efState,
+      'state_label' => $efStateLabel,
+      'progress' => $efTarget > 0 ? $efPct : null,
+      'progress_label' => $efTarget > 0 ? __(':percent% funded', ['percent' => $efPct]) : '',
+      'meta' => __('Target: :amount', ['amount' => moneyfmt($efTarget, $efCur)]),
+    ],
+    [
+      'icon' => 'badge-check',
+      'label' => __('Keep loan tracking precise'),
+      'description' => $loanCount > 0
+        ? __('Confirm amortization history or record the latest payment so balances stay trustworthy.')
+        : __('Add every active loan to see your full payoff picture in one place.'),
+      'href' => $loanCount > 0 ? '/loans#loan-progress' : '/loans#create-loan',
+      'state' => $loanState,
+      'state_label' => $loanStateLabel,
+      'meta' => $loanCount > 0 ? __('Loans tracked: :count', ['count' => $loanCount]) : __('No loans yet'),
+    ],
+  ],
+  'side' => [
+    'label' => __('Net liquid worth'),
+    'value' => moneyfmt($totalNetLiquid, $main),
+    'subline' => __('Emergency fund, goal balances, and cashflow surplus combined.'),
+    'footnote' => __('Figures update instantly when you capture transactions or goal contributions.'),
+    'actions' => [
+      ['label' => __('Open month analysis'), 'href' => '/current-month#cashflow-guidance', 'icon' => 'line-chart'],
+      ['label' => __('Visit goals workspace'), 'href' => '/goals#goal-list', 'icon' => 'target'],
+    ],
+  ],
+  'tips' => [
+    __('Use the workflow strip in the header to move between Orient, Plan, Protect, and Review.'),
+    __('Anchor links in each step drop you directly into the right section of every page.'),
+  ],
+]);
 ?>
 
-<section class="grid gap-6 lg:grid-cols-4">
+<?php if ($nextSteps): ?>
+  <section id="next-steps" class="grid gap-6 lg:grid-cols-3">
+    <div class="card lg:col-span-2">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <div class="card-kicker"><?= __('Momentum') ?></div>
+          <h2 class="card-title mt-1"><?= __('Next best steps') ?></h2>
+        </div>
+        <span class="chip"><?= __('Workflow') ?></span>
+      </div>
+      <div class="mt-5 grid gap-4 md:grid-cols-3">
+        <?php foreach ($nextSteps as $step): ?>
+          <article class="panel h-full space-y-3">
+            <div class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+              <i data-lucide="<?= htmlspecialchars($step['icon'], ENT_QUOTES) ?>" class="h-4 w-4"></i>
+              <span><?= htmlspecialchars($step['title']) ?></span>
+            </div>
+            <p class="text-sm text-slate-600 dark:text-slate-300"><?= htmlspecialchars($step['body']) ?></p>
+            <a href="<?= htmlspecialchars($step['cta_href'], ENT_QUOTES) ?>"
+               class="inline-flex items-center gap-2 text-sm font-semibold text-brand-600 hover:text-brand-500 dark:text-brand-200 dark:hover:text-brand-100">
+              <?= htmlspecialchars($step['cta_label']) ?>
+              <i data-lucide="arrow-right" class="h-4 w-4"></i>
+            </a>
+          </article>
+        <?php endforeach; ?>
+      </div>
+    </div>
+
+    <div class="card" id="momentum-glance">
+      <div class="card-kicker"><?= __('Highlights') ?></div>
+      <h3 class="card-title mt-1"><?= __('Quick stats') ?></h3>
+      <ul class="mt-4 space-y-3 text-sm text-slate-600 dark:text-slate-300">
+        <li class="flex items-center justify-between">
+          <span><?= __('Goals active') ?></span>
+          <span class="font-semibold text-slate-900 dark:text-white"><?= (int)$goalsActiveCount ?></span>
+        </li>
+        <li class="flex items-center justify-between">
+          <span><?= __('Loans tracked') ?></span>
+          <span class="font-semibold text-slate-900 dark:text-white"><?= (int)$loanCount ?></span>
+        </li>
+        <li class="flex items-center justify-between">
+          <span><?= __('Emergency fund progress') ?></span>
+          <span class="font-semibold text-brand-600 dark:text-brand-200"><?= $efTarget > 0 ? ($efPct.'%') : __('Not set') ?></span>
+        </li>
+      </ul>
+    </div>
+  </section>
+<?php endif; ?>
+
+<section id="snapshot" class="grid gap-6 lg:grid-cols-4">
   <!-- Total net liquid -->
   <div class="card lg:col-span-2">
     <div class="card-kicker"><?= __('Overview') ?></div>
@@ -323,7 +553,7 @@ $totalNetLiquid = $efTotalMain + $goalsCurrentMain + $netThisMonth + $leftoverPr
   </div>
 </section>
 
-<section class="mt-8 grid gap-6 lg:grid-cols-3">
+<section id="monthly-performance" class="mt-8 grid gap-6 lg:grid-cols-3">
   <!-- Current month stats -->
   <div class="card lg:col-span-2">
     <div class="flex flex-wrap items-center justify-between gap-2">

@@ -1,3 +1,20 @@
+<?php
+require_once __DIR__.'/../layout/page_header.php';
+
+render_page_header([
+  'kicker' => __('Community'),
+  'title' => __('Feedback & bug reports'),
+  'subtitle' => __('Share ideas or flag issues so we can keep improving the experience together.'),
+  'actions' => [
+    ['label' => __('Refresh'), 'href' => '/feedback', 'icon' => 'refresh-ccw', 'style' => 'muted'],
+  ],
+  'tabs' => [
+    ['label' => __('Submit'), 'href' => '#feedback-form', 'active' => true],
+    ['label' => __('Browse'), 'href' => '#feedback-list'],
+  ],
+]);
+?>
+
 <section class="mx-auto max-w-5xl space-y-6">
   <div class="card">
     <div class="flex items-start justify-between gap-3">
@@ -17,7 +34,7 @@
     <?php endif; ?>
 
     <!-- Add form -->
-    <form method="post" action="/feedback/add" class="mt-5 grid gap-3 md:grid-cols-12">
+    <form id="feedback-form" method="post" action="/feedback/add" class="mt-5 grid gap-3 md:grid-cols-12">
       <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
       <div class="field md:col-span-2">
         <label class="label"><?= __('Type') ?></label>
@@ -79,7 +96,7 @@
   </div>
 
   <!-- List -->
-  <div class="mt-4 space-y-3">
+  <div id="feedback-list" class="mt-4 space-y-3">
     <?php if (empty($rows)): ?>
       <div class="card-subtle"><?= __('No feedback yet.') ?></div>
     <?php else:

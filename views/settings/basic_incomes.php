@@ -1,3 +1,17 @@
+<?php
+require_once __DIR__.'/../layout/page_header.php';
+
+render_page_header([
+  'kicker' => __('Settings'),
+  'title' => __('Recurring incomes'),
+  'subtitle' => __('Track salary, stipends, or any recurring cash coming into your plan.'),
+  'actions' => [
+    ['label' => __('Add income'), 'href' => '#income-form', 'icon' => 'plus-circle', 'style' => 'primary'],
+    ['label' => __('Back to settings'), 'href' => '/settings', 'icon' => 'arrow-left', 'style' => 'muted'],
+  ],
+]);
+?>
+
 <section class="max-w-5xl mx-auto">
   <div class="card">
     <div class="flex items-center justify-between">
@@ -9,7 +23,7 @@
     <p class="mt-3 text-sm text-brand-600"><?= $_SESSION['flash']; unset($_SESSION['flash']); ?></p>
   <?php endif; ?>
 
-    <div class="mt-6 grid md:grid-cols-12 gap-6">
+    <div id="income-form" class="mt-6 grid md:grid-cols-12 gap-6">
     <!-- Left: Add / Raise -->
     <div class="md:col-span-7">
       <h2 class="font-medium mb-3"><?= __('Add income / Record a raise') ?></h2>

@@ -3,6 +3,18 @@ $themes = $themes ?? available_themes();
 $currentTheme = $currentTheme ?? current_theme_slug();
 $currentMeta = $currentMeta ?? theme_meta($currentTheme) ?? [];
 ?>
+<?php
+require_once __DIR__.'/../layout/page_header.php';
+
+render_page_header([
+  'kicker' => __('Settings'),
+  'title' => __('Theme library'),
+  'subtitle' => __('Preview and apply curated palettes instantly across the app.'),
+  'actions' => [
+    ['label' => __('Back to settings'), 'href' => '/settings', 'icon' => 'arrow-left', 'style' => 'muted'],
+  ],
+]);
+?>
 <section class="max-w-4xl mx-auto">
   <div class="card">
     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

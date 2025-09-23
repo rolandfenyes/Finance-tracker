@@ -1,4 +1,161 @@
-<section class="card">
+<?php
+require_once __DIR__.'/../layout/page_header.php';
+require_once __DIR__.'/../layout/focus_panel.php';
+
+$loanCount = count($rows);
+$loansAutomated = 0;
+$historyConfirmed = 0;
+$progressAccumulator = 0.0;
+$progressSamples = 0;
+
+foreach ($rows as $loanRow) {
+  if (!empty($loanRow['scheduled_payment_id'])) {
+    $loansAutomated++;
+  }
+  if (!empty($loanRow['history_confirmed'])) {
+    $historyConfirmed++;
+  }
+  $principal = (float)($loanRow['principal'] ?? 0);
+  $balance = (float)($loanRow['_est_balance'] ?? ($loanRow['balance'] ?? 0));
+  if ($principal > 0) {
+    $progressSamples++;
+    $progressAccumulator += max(0, min(100, ($principal - $balance) / $principal * 100));
+  }
+}
+
+$avgProgress = $progressSamples ? round($progressAccumulator / $progressSamples) : 0;
+
+render_page_header([
+  'kicker' => __('Protect'),
+  'title' => __('Stay on top of your debts'),
+  'subtitle' => __('Track payoff progress, log payments the moment they clear, and keep schedules aligned.'),
+  'meta' => [
+    ['icon' => 'briefcase', 'label' => __('Loans tracked: :count', ['count' => $loanCount])],
+    ['icon' => 'calendar-check', 'label' => __('Automated: :count', ['count' => $loansAutomated])],
+  ],
+  'insight' => [
+    'label' => __('Average progress'),
+    'value' => $progressSamples ? ($avgProgress.'%') : __('No data yet'),
+    'subline' => $loanCount ? __('History confirmed on :count loans', ['count' => $historyConfirmed]) : __('Add your first loan to start tracking.'),
+  ],
+  'actions' => [
+    ['label' => __('Add loan'), 'href' => '#create-loan', 'icon' => 'plus-circle', 'style' => 'primary'],
+    ['label' => __('Record payment'), 'href' => '#loan-progress', 'icon' => 'receipt', 'style' => 'muted'],
+    ['label' => __('Schedule autopay'), 'href' => '/scheduled#create-schedule', 'icon' => 'calendar-plus', 'style' => 'link'],
+  ],
+  'tabs' => [
+    ['label' => __('Create'), 'href' => '#create-loan', 'active' => true],
+    ['label' => __('Portfolio'), 'href' => '#loan-progress'],
+  ],
+]);
+
+$hasLoans = $loanCount > 0;
+$historyState = 'info';
+$historyLabel = __('No loans yet');
+if ($hasLoans) {
+  if ($historyConfirmed >= $loanCount) {
+    $historyState = 'success';
+    $historyLabel = __('All confirmed');
+  } elseif ($historyConfirmed > 0) {
+    $historyState = 'active';
+    $historyLabel = __('Partially confirmed');
+  } else {
+    $historyState = 'warning';
+    $historyLabel = __('Needs confirmation');
+  }
+}
+
+$autopayState = 'info';
+$autopayLabel = __('Not linked');
+if ($hasLoans) {
+  if ($loansAutomated >= $loanCount && $loanCount > 0) {
+    $autopayState = 'success';
+    $autopayLabel = __('Autopay ready');
+  } elseif ($loansAutomated > 0) {
+    $autopayState = 'active';
+    $autopayLabel = __('Some automated');
+  } else {
+    $autopayState = 'warning';
+    $autopayLabel = __('Link autopay');
+  }
+}
+
+render_focus_panel([
+  'id' => 'loan-focus',
+  'title' => __('Keep payoff momentum visible'),
+  'description' => __('Confirm balances, capture every payment, and keep automated schedules aligned.'),
+  'items' => [
+    [
+      'icon' => 'library',
+      'label' => __('Document each loan'),
+      'description' => __('Enter principal, rate, and timeline details so we can forecast balances accurately.'),
+      'href' => '#create-loan',
+      'state' => $hasLoans ? 'success' : 'warning',
+      'state_label' => $hasLoans ? __('Tracked') : __('Add loans'),
+      'meta' => __('Total loans: :count', ['count' => $loanCount]),
+    ],
+    [
+      'icon' => 'timeline',
+      'label' => __('Confirm historical payments'),
+      'description' => __('Flag loans as up-to-date so amortization can estimate the remaining balance precisely.'),
+      'href' => '#loan-progress',
+      'state' => $historyState,
+      'state_label' => $historyLabel,
+    ],
+    [
+      'icon' => 'receipt',
+      'label' => __('Log the latest payment'),
+      'description' => __('Record principal and interest split each time you pay so payoff trends stay honest.'),
+      'href' => '#loan-progress',
+      'state' => $hasLoans ? ($loanBalMain > 1 ? 'active' : 'success') : 'info',
+      'state_label' => $hasLoans ? ($loanBalMain > 1 ? __('Keep paying') : __('Paid off')) : __('No data'),
+    ],
+    [
+      'icon' => 'calendar-plus',
+      'label' => __('Link or create autopay schedules'),
+      'description' => __('Attach recurring payments so upcoming due dates surface across the app.'),
+      'href' => '/scheduled#create-schedule',
+      'state' => $autopayState,
+      'state_label' => $autopayLabel,
+    ],
+  ],
+  'side' => [
+    'label' => __('Average payoff progress'),
+    'value' => $progressSamples ? ($avgProgress . '%') : __('No data yet'),
+    'subline' => $hasLoans
+      ? __('History confirmed on :count of :total loans', ['count' => $historyConfirmed, 'total' => $loanCount])
+      : __('Add your first loan to start tracking.'),
+    'footnote' => __('Linked schedules keep due dates synced with your month view and emergency fund suggestions.'),
+    'actions' => [
+      ['label' => __('Open emergency fund'), 'href' => '/emergency#ef-target', 'icon' => 'shield'],
+      ['label' => __('Visit scheduled payments'), 'href' => '/scheduled#schedule-list', 'icon' => 'calendar-range'],
+    ],
+  ],
+  'tips' => [
+    __('Use “History confirmed” once you’ve caught up all past payments—future projections will then stay tight.'),
+    __('Extra payments reduce balances immediately. Add them as part of each monthly log to see true velocity.'),
+  ],
+]);
+?>
+
+<?php if ($loanCount): ?>
+  <section id="loan-overview" class="mb-6 grid gap-4 md:grid-cols-3">
+    <div class="tile">
+      <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300"><?= __('With autopay') ?></div>
+      <div class="mt-2 text-2xl font-semibold text-slate-900 dark:text-white"><?= (int)$loansAutomated ?></div>
+    </div>
+    <div class="tile">
+      <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300"><?= __('History confirmed') ?></div>
+      <div class="mt-2 text-2xl font-semibold text-slate-900 dark:text-white"><?= (int)$historyConfirmed ?></div>
+    </div>
+    <div class="tile">
+      <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300"><?= __('Average progress') ?></div>
+      <div class="mt-2 text-2xl font-semibold text-slate-900 dark:text-white"><?= $progressSamples ? ($avgProgress.'%') : '—' ?></div>
+    </div>
+  </section>
+<?php endif; ?>
+
+<section id="create-loan" class="card">
   <h1 class="text-xl font-semibold"><?= __('Loans') ?></h1>
   <details class="mt-4">
     <summary class="cursor-pointer text-accent"><?= __('Add loan') ?></summary>
@@ -150,7 +307,7 @@
 
 </section>
 
-<section class="mt-6 card">
+<section id="loan-progress" class="mt-6 card">
   <div class="flex items-center justify-between mb-3">
     <h2 class="font-semibold"><?= __('Loans') ?></h2>
   </div>
