@@ -1,4 +1,4 @@
-<section class="bg-white rounded-2xl p-5 shadow-glass">
+<section class="card">
   <h1 class="text-xl font-semibold"><?= __('Scheduled Payments') ?></h1>
   <p class="text-sm text-gray-500"><?= __('Set up recurring payments.') ?></p>
 
@@ -136,14 +136,14 @@
   </details>
 </section>
 
-<section class="mt-6 bg-white rounded-2xl p-5 shadow-glass">
+<section class="mt-6 card">
   <div class="flex items-center justify-between mb-3">
     <h2 class="font-semibold"><?= __('Scheduled payments') ?></h2>
   </div>
 
   <!-- Desktop table -->
   <div class="hidden md:block overflow-x-auto">
-    <table class="min-w-full text-sm">
+    <table class="table-glass min-w-full text-sm">
       <thead>
         <tr class="text-left border-b">
           <th class="py-2 pr-3"><?= __('Title') ?></th>
@@ -176,7 +176,7 @@
                 <div class="flex flex-row gap-2">
                   <button
                     type="button"
-                    class="btn btn-primary !py-1 !px-3"
+                    class="icon-action icon-action--primary"
                     data-edit-scheduled
                     data-id="<?= (int)$r['id'] ?>"
                     data-title="<?= htmlspecialchars($r['title']) ?>"
@@ -185,13 +185,20 @@
                     data-next_due="<?= htmlspecialchars($r['next_due']) ?>"
                     data-category_id="<?= (int)($r['category_id'] ?? 0) ?>"
                     data-rrule="<?= htmlspecialchars($r['rrule'] ?? '') ?>"
-                  ><?= __('Edit') ?></button>
+                    title="<?= __('Edit') ?>"
+                  >
+                    <i data-lucide="pencil" class="h-4 w-4"></i>
+                    <span class="sr-only"><?= __('Edit') ?></span>
+                  </button>
 
                   <form method="post" action="/scheduled/delete" class="inline"
                         onsubmit="return confirm('<?= __('Delete this scheduled item?') ?>');">
                     <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                     <input type="hidden" name="id" value="<?= (int)$r['id'] ?>" />
-                    <button class="btn btn-danger !py-1 !px-3"><?= __('Remove') ?></button>
+                    <button class="icon-action icon-action--danger" title="<?= __('Remove') ?>">
+                      <i data-lucide="trash-2" class="h-4 w-4"></i>
+                      <span class="sr-only"><?= __('Remove') ?></span>
+                    </button>
                   </form>
                 </div>
               </div>
@@ -205,7 +212,7 @@
   <!-- Mobile cards -->
   <div class="md:hidden space-y-3">
     <?php foreach($rows as $r): ?>
-      <div class="rounded-xl border p-4">
+      <div class="panel p-4">
         <div class="flex items-start justify-between gap-3">
           <div>
             <div class="font-medium"><?= htmlspecialchars($r['title']) ?></div>
@@ -239,7 +246,7 @@
         <div class="mt-3 flex items-center justify-end gap-2">
           <button
             type="button"
-            class="btn btn-primary !py-1.5 !px-3"
+            class="icon-action icon-action--primary"
             data-edit-scheduled
             data-id="<?= (int)$r['id'] ?>"
             data-title="<?= htmlspecialchars($r['title']) ?>"
@@ -248,13 +255,20 @@
             data-next_due="<?= htmlspecialchars($r['next_due']) ?>"
             data-category_id="<?= (int)($r['category_id'] ?? 0) ?>"
             data-rrule="<?= htmlspecialchars($r['rrule'] ?? '') ?>"
-          ><?= __('Edit') ?></button>
+            title="<?= __('Edit') ?>"
+          >
+            <i data-lucide="pencil" class="h-4 w-4"></i>
+            <span class="sr-only"><?= __('Edit') ?></span>
+          </button>
 
           <form method="post" action="/scheduled/delete" class="inline"
                 onsubmit="return confirm('<?= __('Delete this scheduled item?') ?>');">
             <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
             <input type="hidden" name="id" value="<?= (int)$r['id'] ?>" />
-            <button class="btn btn-danger !py-1.5 !px-3"><?= __('Remove') ?></button>
+            <button class="icon-action icon-action--danger" title="<?= __('Remove') ?>">
+              <i data-lucide="trash-2" class="h-4 w-4"></i>
+              <span class="sr-only"><?= __('Remove') ?></span>
+            </button>
           </form>
         </div>
       </div>
@@ -446,7 +460,9 @@ document.querySelectorAll('input[id^="rrule-"]').forEach(h => {
     <!-- Header -->
     <div class="modal-header">
       <h3 id="sched-title" class="font-semibold"><?= __('Edit Scheduled Payment') ?></h3>
-      <button class="icon-btn" aria-label="<?= __('Close') ?>" data-close-sched>✕</button>
+      <button type="button" class="icon-btn" aria-label="<?= __('Close') ?>" data-close-sched>
+        <i data-lucide="x" class="h-5 w-5"></i>
+      </button>
     </div>
 
     <!-- Scrollable body -->
@@ -581,8 +597,18 @@ document.querySelectorAll('input[id^="rrule-"]').forEach(h => {
 <script>
   // --- open/close helpers ---
   const modal = document.getElementById('sched-modal');
-  function openSched(){ modal.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); }
-  function closeSched(){ modal.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }
+  function openSched(){
+    if (modal.classList.contains('hidden')) {
+      modal.classList.remove('hidden');
+      window.MyMoneyMapOverlay && window.MyMoneyMapOverlay.open();
+    }
+  }
+  function closeSched(){
+    if (!modal.classList.contains('hidden')) {
+      modal.classList.add('hidden');
+      window.MyMoneyMapOverlay && window.MyMoneyMapOverlay.close();
+    }
+  }
 
   // Close handlers
   modal.querySelectorAll('[data-close-sched]').forEach(el=>el.addEventListener('click', closeSched));

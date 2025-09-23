@@ -1,5 +1,5 @@
 <section class="max-w-3xl mx-auto">
-  <div class="bg-white rounded-2xl shadow-glass p-6">
+  <div class="card">
     <div class="flex items-start justify-between gap-3">
       <div>
         <h1 class="text-xl font-semibold"><?= __('Step :step · Basic income', ['step' => 4]) ?></h1>
@@ -92,7 +92,10 @@
                     onsubmit="return confirm('<?= addslashes(__('Remove this income?')) ?>')">
                 <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                 <input type="hidden" name="id" value="<?= (int)$r['id'] ?>" />
-                <button class="btn btn-danger !py-1.5 !px-3"><?= __('Remove') ?></button>
+                <button class="icon-action icon-action--danger" title="<?= __('Remove') ?>">
+                  <i data-lucide="trash-2" class="h-4 w-4"></i>
+                  <span class="sr-only"><?= __('Remove') ?></span>
+                </button>
               </form>
             </li>
           <?php endforeach; endif; ?>

@@ -2,7 +2,7 @@
   <div class="grid md:grid-cols-12 gap-6">
     <!-- Sidebar / TOC -->
     <aside class="md:col-span-4 lg:col-span-3">
-      <div class="sticky top-4 bg-white rounded-2xl shadow-glass p-4">
+      <div class="sticky top-4 card">
         <h2 class="text-sm font-semibold text-gray-700 mb-3"><?= __('Tutorial') ?></h2>
         <nav class="space-y-1 text-sm" id="toc">
           <a class="toc-link block px-2 py-1 rounded hover:bg-gray-50" href="#intro"><?= __('Welcome') ?></a>
@@ -24,12 +24,12 @@
     <!-- Content -->
     <div class="md:col-span-8 lg:col-span-9 space-y-6">
       <!-- Card -->
-      <div id="intro" class="bg-white rounded-2xl shadow-glass p-6">
+      <div id="intro" class="card">
         <h1 class="text-xl font-semibold mb-2"><?= __('Welcome to Finance Tracker 👋') ?></h1>
         <p class="text-gray-600"><?= __('This quick tour shows you how to get the most out of the app—tracking month-to-month, setting goals, handling loans, and building your emergency fund.') ?></p>
       </div>
 
-      <div id="dashboard" class="bg-white rounded-2xl shadow-glass p-6">
+      <div id="dashboard" class="card">
         <h2 class="text-lg font-semibold mb-2"><?= __('Dashboard') ?></h2>
         <ul class="list-disc pl-5 text-gray-700 space-y-1">
           <li><?= __('See income vs. spending, net position, and quick links to add transactions.') ?></li>
@@ -38,7 +38,7 @@
         </ul>
       </div>
 
-      <div id="month" class="bg-white rounded-2xl shadow-glass p-6">
+      <div id="month" class="card">
         <h2 class="text-lg font-semibold mb-2"><?= __('Monthly view') ?></h2>
         <p class="text-gray-700"><?= __('Your single source of truth for the month. It combines:') ?></p>
         <ul class="list-disc pl-5 text-gray-700 space-y-1">
@@ -49,7 +49,7 @@
         <p class="text-xs text-gray-500 mt-2"><?= __('Locked/virtual rows can’t be edited in the Month list to preserve consistency.') ?></p>
       </div>
 
-      <div id="transactions" class="bg-white rounded-2xl shadow-glass p-6">
+      <div id="transactions" class="card">
         <h2 class="text-lg font-semibold mb-2"><?= __('Transactions') ?></h2>
         <ul class="list-disc pl-5 text-gray-700 space-y-1">
           <li><?= __('Quick Add lets you choose kind, amount, currency, and category fast.') ?></li>
@@ -58,7 +58,7 @@
         </ul>
       </div>
 
-      <div id="scheduled" class="bg-white rounded-2xl shadow-glass p-6">
+      <div id="scheduled" class="card">
         <h2 class="text-lg font-semibold mb-2"><?= __('Scheduled payments') ?></h2>
         <ul class="list-disc pl-5 text-gray-700 space-y-1">
           <li><?= __('Create monthly/weekly repeating items using RRULEs.') ?></li>
@@ -67,7 +67,7 @@
         </ul>
       </div>
 
-      <div id="goals" class="bg-white rounded-2xl shadow-glass p-6">
+      <div id="goals" class="card">
         <h2 class="text-lg font-semibold mb-2"><?= __('Goals') ?></h2>
         <ul class="list-disc pl-5 text-gray-700 space-y-1">
           <li><?= __('Pick a currency, set a target, and add money manually or via schedule.') ?></li>
@@ -76,7 +76,7 @@
         </ul>
       </div>
 
-      <div id="loans" class="bg-white rounded-2xl shadow-glass p-6">
+      <div id="loans" class="card">
         <h2 class="text-lg font-semibold mb-2"><?= __('Loans') ?></h2>
         <ul class="list-disc pl-5 text-gray-700 space-y-1">
           <li><?= __('Enter principal, APR, start/end dates; optionally auto-create a repayment schedule.') ?></li>
@@ -85,7 +85,7 @@
         </ul>
       </div>
 
-      <div id="emergency" class="bg-white rounded-2xl shadow-glass p-6">
+      <div id="emergency" class="card">
         <h2 class="text-lg font-semibold mb-2"><?= __('Emergency Fund') ?></h2>
         <ul class="list-disc pl-5 text-gray-700 space-y-1">
           <li><?= __('Choose a target currency; totals are also shown in main currency using current FX.') ?></li>
@@ -94,12 +94,12 @@
         </ul>
       </div>
 
-      <div id="rules" class="bg-white rounded-2xl shadow-glass p-6">
+      <div id="rules" class="card">
         <h2 class="text-lg font-semibold mb-2"><?= __('Cashflow rules') ?></h2>
         <p class="text-gray-700"><?= __('Rules classify transactions automatically (e.g., “Title contains <em>Spotify</em> → Category: Subscriptions”). Start simple; refine over time.') ?></p>
       </div>
 
-      <div id="currencies" class="bg-white rounded-2xl shadow-glass p-6">
+      <div id="currencies" class="card">
         <h2 class="text-lg font-semibold mb-2"><?= __('Currencies & FX') ?></h2>
         <ul class="list-disc pl-5 text-gray-700 space-y-1">
           <li><?= __('Pick your main currency; add others you use.') ?></li>
@@ -107,7 +107,7 @@
         </ul>
       </div>
 
-      <div id="categories" class="bg-white rounded-2xl shadow-glass p-6">
+      <div id="categories" class="card">
         <h2 class="text-lg font-semibold mb-2"><?= __('Categories') ?></h2>
         <ul class="list-disc pl-5 text-gray-700 space-y-1">
           <li><?= __('Create Income/Spending categories. Colors help you scan lists quickly.') ?></li>
@@ -115,7 +115,7 @@
         </ul>
       </div>
 
-      <div id="shortcuts" class="bg-white rounded-2xl shadow-glass p-6">
+      <div id="shortcuts" class="card">
         <h2 class="text-lg font-semibold mb-2"><?= __('Tips & shortcuts') ?></h2>
         <ul class="list-disc pl-5 text-gray-700 space-y-1">
           <li><?= __('<kbd>Esc</kbd> closes dialogs.') ?></li>
@@ -151,7 +151,7 @@ function onScroll(){
   for (const s of sections) {
     if (s.offsetTop <= y) current = s.id;
   }
-  links.forEach(l => l.classList.toggle('bg-gray-100', l.getAttribute('href') === '#'+current));
+  links.forEach(l => l.classList.toggle('bg-brand-100/60', l.getAttribute('href') === '#'+current));
 }
 document.addEventListener('scroll', onScroll, { passive: true });
 onScroll();

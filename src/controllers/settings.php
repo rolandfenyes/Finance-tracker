@@ -3,7 +3,7 @@ require_once __DIR__ . '/../helpers.php';
 function settings_controller(PDO $pdo){
     require_login(); $u=uid();
     // Load user, currencies, rules, incomes
-    $user = $pdo->prepare('SELECT id,email,full_name FROM users WHERE id=?');
+    $user = $pdo->prepare('SELECT id,email,full_name,theme FROM users WHERE id=?');
     $user->execute([$u]); $user=$user->fetch();
 
     $curr = $pdo->prepare('SELECT uc.code, uc.is_main, c.name FROM user_currencies uc JOIN currencies c ON c.code=uc.code WHERE uc.user_id=? ORDER BY is_main DESC, code');

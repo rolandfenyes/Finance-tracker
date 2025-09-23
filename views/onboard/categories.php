@@ -1,5 +1,5 @@
 <section class="max-w-4xl mx-auto">
-  <div class="bg-white rounded-2xl shadow-glass p-6">
+  <div class="card">
     <div class="flex items-start justify-between gap-3">
       <div>
         <h1 class="text-xl font-semibold"><?= __('Step :step · Categories', ['step' => 5]) ?></h1>
@@ -12,7 +12,7 @@
     </div>
 
     <?php if (!empty($_SESSION['flash_ok']) || !empty($_SESSION['flash_err'])): ?>
-        <p class="mt-3 text-sm <?= !empty($_SESSION['flash_ok']) ? 'text-emerald-700' : 'text-red-600' ?>">
+        <p class="mt-3 text-sm <?= !empty($_SESSION['flash_ok']) ? 'text-brand-600' : 'text-red-600' ?>">
             <?= $_SESSION['flash_ok'] ?? $_SESSION['flash_err']; unset($_SESSION['flash_ok'], $_SESSION['flash_err']); ?>
         </p>
     <?php endif; ?>
@@ -36,7 +36,7 @@
             <option value="spending"><?= __('Spending') ?></option>
           </select>
           <input name="label" class="input sm:col-span-3" placeholder="<?= __('Label (e.g., Salary)') ?>" required />
-          <input name="color" type="color" value="#6B7280" class="h-10 w-16 rounded-xl border border-gray-300" />
+          <input name="color" type="color" value="#6B7280" class="color-input" />
           <div class="sm:col-span-6 flex justify-end">
             <button class="btn btn-primary"><?= __('Add') ?></button>
           </div>
@@ -66,7 +66,10 @@
                       onsubmit="return confirm('<?= addslashes(__('Delete this category?')) ?>');">
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                   <input type="hidden" name="id" value="<?= (int)$c['id'] ?>" />
-                  <button class="btn btn-danger !py-1.5 !px-3"><?= __('Remove') ?></button>
+                  <button class="icon-action icon-action--danger" title="<?= __('Remove') ?>">
+                    <i data-lucide="trash-2" class="h-4 w-4"></i>
+                    <span class="sr-only"><?= __('Remove') ?></span>
+                  </button>
                 </form>
               </li>
             <?php endforeach; endif; ?>
@@ -92,7 +95,10 @@
                       onsubmit="return confirm('<?= addslashes(__('Delete this category?')) ?>');">
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                   <input type="hidden" name="id" value="<?= (int)$c['id'] ?>" />
-                  <button class="btn btn-danger !py-1.5 !px-3"><?= __('Remove') ?></button>
+                  <button class="icon-action icon-action--danger" title="<?= __('Remove') ?>">
+                    <i data-lucide="trash-2" class="h-4 w-4"></i>
+                    <span class="sr-only"><?= __('Remove') ?></span>
+                  </button>
                 </form>
               </li>
             <?php endforeach; endif; ?>

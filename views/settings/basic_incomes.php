@@ -1,14 +1,15 @@
-<section class="max-w-5xl mx-auto bg-white rounded-2xl p-6 shadow-glass">
-  <div class="flex items-center justify-between">
-    <h1 class="text-xl font-semibold"><?= __('Manage Basic Incomes') ?></h1>
-    <a href="/settings" class="text-sm text-accent"><?= __('← Back to Settings') ?></a>
-  </div>
+<section class="max-w-5xl mx-auto">
+  <div class="card">
+    <div class="flex items-center justify-between">
+      <h1 class="text-xl font-semibold"><?= __('Manage Basic Incomes') ?></h1>
+      <a href="/settings" class="text-sm text-accent"><?= __('← Back to Settings') ?></a>
+    </div>
 
   <?php if (!empty($_SESSION['flash'])): ?>
-    <p class="mt-3 text-sm text-emerald-700"><?= $_SESSION['flash']; unset($_SESSION['flash']); ?></p>
+    <p class="mt-3 text-sm text-brand-600"><?= $_SESSION['flash']; unset($_SESSION['flash']); ?></p>
   <?php endif; ?>
 
-  <div class="mt-6 grid md:grid-cols-12 gap-6">
+    <div class="mt-6 grid md:grid-cols-12 gap-6">
     <!-- Left: Add / Raise -->
     <div class="md:col-span-7">
       <h2 class="font-medium mb-3"><?= __('Add income / Record a raise') ?></h2>
@@ -72,7 +73,7 @@
       ?>
       <div class="space-y-3">
         <?php if ($latest): foreach ($latest as $lab=>$r): ?>
-          <div class="rounded-xl border p-4 flex items-start justify-between">
+          <div class="panel p-4 flex items-start justify-between">
             <div class="min-w-0">
               <div class="font-medium truncate"><?= htmlspecialchars($lab) ?></div>
               <div class="text-xs text-gray-500 mt-0.5">
@@ -91,7 +92,7 @@
             <?php endif; endif; ?>
           </div>
         <?php endforeach; else: ?>
-          <div class="rounded-xl border p-4 text-sm text-gray-500"><?= __('No basic incomes yet.') ?></div>
+          <div class="panel p-4 text-sm text-gray-500"><?= __('No basic incomes yet.') ?></div>
         <?php endif; ?>
       </div>
     </aside>
@@ -100,7 +101,7 @@
   <!-- History -->
   <div class="mt-8 overflow-x-auto">
     <h2 class="font-medium mb-2"><?= __('History') ?></h2>
-    <table class="min-w-full text-sm">
+    <table class="table-glass min-w-full text-sm">
       <thead>
         <tr class="text-left border-b">
           <th class="py-2 pr-3"><?= __('Label') ?></th>
@@ -136,7 +137,12 @@
             <td class="py-2 pr-3"><?= htmlspecialchars($r['valid_to'] ?? '—') ?></td>
             <td class="py-2 pr-3">
               <details>
-                <summary class="cursor-pointer text-accent"><?= __('Edit') ?></summary>
+                <summary class="cursor-pointer text-accent flex items-center gap-2">
+                  <span class="icon-action icon-action--primary" aria-hidden="true">
+                    <i data-lucide="pencil" class="h-4 w-4"></i>
+                  </span>
+                  <span class="sr-only"><?= __('Edit') ?></span>
+                </summary>
                 <form class="mt-2 grid sm:grid-cols-12 gap-2" method="post" action="/settings/basic-incomes/edit">
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                   <input type="hidden" name="id" value="<?= $r['id'] ?>" />
@@ -161,7 +167,10 @@
                       onsubmit="return confirm('<?= addslashes(__('Delete this record?')) ?>')">
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                   <input type="hidden" name="id" value="<?= $r['id'] ?>" />
-                  <button class="btn btn-danger"><?= __('Remove') ?></button>
+                  <button class="icon-action icon-action--danger" title="<?= __('Remove') ?>">
+                    <i data-lucide="trash-2" class="h-4 w-4"></i>
+                    <span class="sr-only"><?= __('Remove') ?></span>
+                  </button>
                 </form>
               </details>
             </td>
@@ -169,5 +178,6 @@
         <?php endforeach; ?>
       </tbody>
     </table>
+    </div>
   </div>
 </section>

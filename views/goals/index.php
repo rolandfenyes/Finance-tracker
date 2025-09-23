@@ -1,7 +1,7 @@
-<section class="bg-white rounded-2xl p-5 shadow-glass">
+<section class="card">
   <h1 class="text-xl font-semibold"><?= __('Goals') ?></h1>
   <?php if (!empty($_SESSION['flash'])): ?>
-    <p class="mt-2 text-sm text-emerald-700"><?= $_SESSION['flash']; unset($_SESSION['flash']); ?></p>
+    <p class="mt-2 text-sm text-brand-600"><?= $_SESSION['flash']; unset($_SESSION['flash']); ?></p>
   <?php endif; ?>
 
   <details class="mt-4">
@@ -45,14 +45,14 @@
   </details>
 </section>
 
-<section class="mt-6 bg-white rounded-2xl p-5 shadow-glass">
+<section class="mt-6 card">
   <div class="flex items-center justify-between mb-3">
     <h2 class="font-semibold"><?= __('Your goals') ?></h2>
   </div>
 
   <!-- Desktop table -->
   <div class="hidden md:block overflow-x-auto">
-    <table class="min-w-full text-sm">
+    <table class="table-glass min-w-full text-sm">
       <thead>
       <tr class="text-left border-b">
         <th class="py-2 pr-3 w-[38%]"><?= __('Goal') ?></th>
@@ -81,8 +81,8 @@
               <?= $statusLabel ?> · <?= htmlspecialchars($cur) ?>
             </div>
             <div class="mt-2">
-              <div class="h-2 bg-gray-100 rounded-full">
-                <div class="h-2 bg-emerald-500 rounded-full" style="width: <?= number_format($pct,2,'.','') ?>%"></div>
+              <div class="h-2 bg-brand-100/60 rounded-full">
+                <div class="h-2 bg-brand-500 rounded-full" style="width: <?= number_format($pct,2,'.','') ?>%"></div>
               </div>
               <div class="mt-1 text-xs text-gray-600">
                 <?= moneyfmt($current,$cur) ?> / <?= moneyfmt($target,$cur) ?> (<?= number_format($pct,1) ?>%)
@@ -133,17 +133,20 @@
         default  => __('Active'),
       };
     ?>
-      <div class="rounded-xl border p-4">
+      <div class="panel p-4">
         <div class="flex items-center justify-between gap-3">
           <div>
             <div class="font-medium"><?= htmlspecialchars($g['title']) ?></div>
             <div class="text-xs text-gray-500"><?= $statusLabel ?> · <?= htmlspecialchars($cur) ?></div>
           </div>
-          <button class="btn btn-primary !px-3" data-open="#goal-edit-<?= (int)$g['id'] ?>"><?= __('Edit') ?></button>
+          <button class="icon-action icon-action--primary" data-open="#goal-edit-<?= (int)$g['id'] ?>" title="<?= __('Edit') ?>">
+            <i data-lucide="pencil" class="h-4 w-4"></i>
+            <span class="sr-only"><?= __('Edit') ?></span>
+          </button>
         </div>
         <div class="mt-3">
-          <div class="h-2 bg-gray-100 rounded-full">
-            <div class="h-2 bg-emerald-500 rounded-full" style="width: <?= number_format($pct,2,'.','') ?>%"></div>
+          <div class="h-2 bg-brand-100/60 rounded-full">
+            <div class="h-2 bg-brand-500 rounded-full" style="width: <?= number_format($pct,2,'.','') ?>%"></div>
           </div>
           <div class="mt-1 text-xs text-gray-600">
             <?= moneyfmt($current,$cur) ?> / <?= moneyfmt($target,$cur) ?>
@@ -172,7 +175,9 @@
     <!-- Header -->
     <div class="modal-header">
       <h3 id="goal-edit-title-<?= $goalId ?>" class="font-semibold"><?= __('Edit goal') ?></h3>
-      <button class="icon-btn" aria-label="<?= __('Close') ?>" data-close>✕</button>
+      <button type="button" class="icon-btn" aria-label="<?= __('Close') ?>" data-close>
+        <i data-lucide="x" class="h-5 w-5"></i>
+      </button>
     </div>
 
     <!-- Body -->
@@ -423,11 +428,31 @@
   // modal open/close
   document.addEventListener('click', (e)=>{
     const open = e.target.closest('[data-open]');
-    if (open){ document.querySelector(open.dataset.open)?.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); return; }
+    if (open){
+      const modal = document.querySelector(open.dataset.open);
+      if (modal){
+        modal.classList.remove('hidden');
+        window.MyMoneyMapOverlay && window.MyMoneyMapOverlay.open();
+      }
+      return;
+    }
     const close = e.target.closest('[data-close]');
-    if (close){ close.closest('.modal')?.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }
+    if (close){
+      const modal = close.closest('.modal');
+      if (modal && !modal.classList.contains('hidden')){
+        modal.classList.add('hidden');
+        window.MyMoneyMapOverlay && window.MyMoneyMapOverlay.close();
+      }
+    }
   });
-  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') document.querySelectorAll('.modal').forEach(m=>m.classList.add('hidden')); });
+  document.addEventListener('keydown', (e)=>{
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal:not(.hidden)').forEach((modal)=>{
+        modal.classList.add('hidden');
+        window.MyMoneyMapOverlay && window.MyMoneyMapOverlay.close();
+      });
+    }
+  });
 
   // when opening goals edit modal
   const sel = modal.querySelector('select[name="scheduled_payment_id"]');
