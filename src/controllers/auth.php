@@ -30,8 +30,8 @@ function register_step1_submit(PDO $pdo) {
                  VALUES (?,?,?,?,?,true)')
       ->execute([$name, $email, $hash, $dob?:null, 1]);
 
-  // Log in + jump to step 2
+  // Log in + jump to step 1
   $uid = (int)$pdo->lastInsertId();
   $_SESSION['uid'] = $uid;
-  redirect('/onboard/rules');
+  redirect('/onboard/theme');
 }
