@@ -14,51 +14,40 @@ function set_step(PDO $pdo, int $step){
   $pdo->prepare('UPDATE users SET onboard_step=? WHERE id=?')->execute([$step, uid()]);
 }
 
+// STEP 1: Theme
 function onboard_theme_show(PDO $pdo){
   require_login();
   set_step($pdo, 1);
-
   $themes = available_themes();
   $currentTheme = current_theme_slug();
-
   view('onboard/theme', compact('themes', 'currentTheme'));
 }
 
 function onboard_theme_submit(PDO $pdo){
   verify_csrf(); require_login();
-
   $selected = trim($_POST['theme'] ?? '');
   $catalog = available_themes();
   $slug = isset($catalog[$selected]) ? $selected : default_theme_slug();
-
   $stmt = $pdo->prepare('UPDATE users SET theme=? WHERE id=?');
   $stmt->execute([$slug, uid()]);
-
   set_step($pdo, 2);
   redirect('/onboard/rules');
 }
 
+
 /** STEP 2: Cashflow rules */
 function onboard_rules_form(PDO $pdo){
   set_step($pdo, 2);
-  view('onboard/rules', [
-    // helpful copy, examples are rendered in the view
-  ]);
+  view('onboard/rules', []);
 }
 
 function onboard_rules_submit(PDO $pdo){
   verify_csrf(); require_login();
-  // Expect an array of rules: [{label, percent, applies_to}], minimal MVP:
-  // We'll store into cashflow_rules table you already have.
-  $rows = $_POST['rules'] ?? [];  // rules[label][], rules[percent][] etc. if you prefer flat fields
+  $rows = $_POST['rules'] ?? [];
   $u = uid();
 
-  // Simple example parser (adapt to your form names):
   $pdo->beginTransaction();
   try {
-    // Optional: wipe any existing rules the user created in onboarding
-    // $pdo->prepare('DELETE FROM cashflow_rules WHERE user_id=?')->execute([$u]);
-
     foreach ($rows as $r) {
       $label = trim($r['label'] ?? '');
       $pct   = (float)($r['percent'] ?? 0);
@@ -67,17 +56,14 @@ function onboard_rules_submit(PDO $pdo){
           ->execute([$u,$label,$pct]);
     }
     $pdo->commit();
-  } catch(Throwable $e) {
-    $pdo->rollBack();
-  }
+  } catch(Throwable $e) { $pdo->rollBack(); }
 
   set_step($pdo, 3);
   redirect('/onboard/currencies');
 }
-
+// STEP 3: Currencies
 function onboard_currencies_form(PDO $pdo){
   require_login(); set_step($pdo, 3);
-  // pre-fill with geo/IP guess later; for now show USD/EUR/HUF
   $uc = $pdo->prepare("SELECT code,is_main FROM user_currencies WHERE user_id=? ORDER BY is_main DESC, code");
   $uc->execute([uid()]); $list = $uc->fetchAll(PDO::FETCH_ASSOC);
   view('onboard/currencies', compact('list'));
@@ -88,10 +74,8 @@ function onboard_currencies_submit(PDO $pdo){
   $codes = array_filter(array_map('trim', $_POST['codes'] ?? []));
   $main  = strtoupper(trim($_POST['main'] ?? ''));
 
-  if (!count($codes)) {
-    // sensible fallback
-    $codes = ['USD']; $main = 'USD';
-  }
+  if (!count($codes)) { $codes = ['USD']; $main = 'USD'; }
+
   $pdo->beginTransaction();
   try {
     $pdo->prepare('DELETE FROM user_currencies WHERE user_id=?')->execute([$u]);
@@ -104,39 +88,12 @@ function onboard_currencies_submit(PDO $pdo){
   } catch(Throwable $e) { $pdo->rollBack(); }
 
   set_step($pdo, 4);
-  redirect('/onboard/incomes');
+  redirect('/onboard/categories'); // <— CHANGED: goes to Categories now
 }
 
-function onboard_incomes_form(PDO $pdo){
-  set_step($pdo, 4);
-  // show 1–2 rows to add (label, amount, currency, category optional)
-  $uc = $pdo->prepare("SELECT code,is_main FROM user_currencies WHERE user_id=? ORDER BY is_main DESC, code");
-  $uc->execute([uid()]); $curr = $uc->fetchAll(PDO::FETCH_ASSOC);
-  view('onboard/incomes', compact('curr'));
-}
-
-function onboard_incomes_submit(PDO $pdo){
-  verify_csrf(); require_login(); $u=uid();
-  $rows = $_POST['incomes'] ?? [];
-  $pdo->beginTransaction();
-  try {
-    foreach ($rows as $r) {
-      $label = trim($r['label'] ?? 'Salary');
-      $amount= (float)($r['amount'] ?? 0);
-      $cur   = strtoupper(trim($r['currency'] ?? ''));
-      if ($amount <= 0) continue;
-      $pdo->prepare("INSERT INTO basic_incomes(user_id,label,amount,currency,valid_from) VALUES (?,?,?,?,CURRENT_DATE)")
-          ->execute([$u,$label,$amount,$cur ?: null]);
-    }
-    $pdo->commit();
-  } catch(Throwable $e) { $pdo->rollBack(); }
-
-  set_step($pdo, 5);
-  redirect('/onboard/categories');
-}
-
+// STEP 4: Categories
 function onboard_categories_form(PDO $pdo){
-  set_step($pdo, 5);
+  set_step($pdo, 4);
   $suggest = [
     'income'   => ['Salary','Bonus','Refunds'],
     'spending' => ['Rent','Utilities','Groceries','Transport','Eating out','Entertainment','Subscriptions'],
@@ -162,6 +119,35 @@ function onboard_categories_submit(PDO $pdo){
     }
     $pdo->commit();
   } catch(Throwable $e){ $pdo->rollBack(); }
+
+  set_step($pdo, 5);
+  redirect('/onboard/income');
+}
+
+// STEP 5: Incomes
+function onboard_incomes_form(PDO $pdo){
+  set_step($pdo, 5);
+  // show 1–2 rows to add (label, amount, currency, category optional)
+  $uc = $pdo->prepare("SELECT code,is_main FROM user_currencies WHERE user_id=? ORDER BY is_main DESC, code");
+  $uc->execute([uid()]); $curr = $uc->fetchAll(PDO::FETCH_ASSOC);
+  view('onboard/incomes', compact('curr'));
+}
+
+function onboard_incomes_submit(PDO $pdo){
+  verify_csrf(); require_login(); $u=uid();
+  $rows = $_POST['incomes'] ?? [];
+  $pdo->beginTransaction();
+  try {
+    foreach ($rows as $r) {
+      $label = trim($r['label'] ?? 'Salary');
+      $amount= (float)($r['amount'] ?? 0);
+      $cur   = strtoupper(trim($r['currency'] ?? ''));
+      if ($amount <= 0) continue;
+      $pdo->prepare("INSERT INTO basic_incomes(user_id,label,amount,currency,valid_from) VALUES (?,?,?,?,CURRENT_DATE)")
+          ->execute([$u,$label,$amount,$cur ?: null]);
+    }
+    $pdo->commit();
+  } catch(Throwable $e) { $pdo->rollBack(); }
 
   set_step($pdo, 6);
   redirect('/onboard/done');
@@ -334,17 +320,16 @@ function onboard_has_theme(PDO $pdo, int $u): bool {
 function onboard_next(PDO $pdo) {
   require_login(); $u = uid();
 
-  // Ordered flow:
-  // 1) Theme → 2) Rules → 3) Currencies → 4) Incomes → 5) Categories → 6) Done
-  if (!onboard_has_theme($pdo, $u))        { redirect('/onboard/theme'); }
+  // 1) Theme → 2) Rules → 3) Currencies → 4) Categories → 5) Basic Incomes → 6) Done
+  if (!onboard_has_theme($pdo, $u))       { redirect('/onboard/theme'); }
   if (!onboard_has_rules($pdo, $u))       { redirect('/onboard/rules'); }
   if (!onboard_has_currencies($pdo, $u))  { redirect('/onboard/currencies'); }
+  if (!onboard_has_categories($pdo, $u))  { redirect('/onboard/categories'); } // <— moved up
   if (!onboard_has_income($pdo, $u))      { redirect('/onboard/income'); }
-  if (!onboard_has_categories($pdo, $u))  { redirect('/onboard/categories'); }
 
-  // All set → final screen
   redirect('/onboard/done');
 }
+
 
 function onboard_income(PDO $pdo){
   require_login(); $u = uid();
