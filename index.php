@@ -530,6 +530,12 @@ switch ($path) {
         feedback_index($pdo);
         break;
 
+    case '/more':
+        require_login();
+        require __DIR__ . '/src/controllers/more.php';
+        more_show($pdo);
+        break;
+
     case '/feedback/add':
         require_login();
         require __DIR__ . '/src/controllers/feedback.php';

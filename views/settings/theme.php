@@ -23,7 +23,16 @@ $currentMeta = $currentMeta ?? theme_meta($currentTheme) ?? [];
           </p>
         </noscript>
       </div>
-      <a href="/settings" class="text-sm text-accent">← <?= __('Back to Settings') ?></a>
+      <div class="flex items-center gap-2">
+        <a href="/settings" class="hidden sm:inline-flex items-center gap-1 text-sm font-medium text-accent">
+          <span aria-hidden="true">←</span>
+          <span><?= __('Back to Settings') ?></span>
+        </a>
+        <a href="/more" class="inline-flex sm:hidden items-center gap-1 text-sm font-medium text-accent">
+          <span aria-hidden="true">←</span>
+          <span><?= __('Back to More') ?></span>
+        </a>
+      </div>
     </div>
 
     <?php if (!empty($_SESSION['flash'])): ?>
@@ -46,22 +55,20 @@ $currentMeta = $currentMeta ?? theme_meta($currentTheme) ?? [];
             $accent = $meta['accent'] ?? $primary;
             $description = trim($meta['description'] ?? '');
           ?>
-          <label class="group relative block cursor-pointer rounded-3xl border transition-all duration-200 p-5 backdrop-blur hover:-translate-y-1 <?= $isActive ? 'border-brand-500 bg-white/85 shadow-brand-glow dark:bg-slate-900/70' : 'border-white/60 bg-white/60 hover:border-brand-200 hover:bg-brand-50/60 dark:border-slate-700 dark:bg-slate-900/40 dark:hover:bg-slate-800/80' ?>">
+          <label class="group relative block cursor-pointer rounded-3xl border transition-all duration-200 p-5 backdrop-blur hover:-translate-y-1 focus-within:outline focus-within:outline-2 focus-within:outline-brand-300 <?= $isActive ? 'border-brand-500 bg-white/85 shadow-brand-glow dark:bg-slate-900/70' : 'border-white/60 bg-white/60 hover:border-brand-200 hover:bg-brand-50/60 dark:border-slate-700 dark:bg-slate-900/40 dark:hover:bg-slate-800/80' ?>">
           <input type="radio" name="theme" value="<?= htmlspecialchars($slug) ?>" class="sr-only" <?= $isActive ? 'checked' : '' ?> data-theme-choice>
-          <div class="flex items-start justify-between gap-4">
-            <div>
+          <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+            <div class="min-w-0 space-y-2">
               <div class="text-xs font-semibold uppercase tracking-[0.28em] text-brand-700 dark:text-brand-200">#<?= str_pad(strtoupper(str_replace('-', '', $slug)), 6, '•') ?></div>
-              <div class="mt-2 text-lg font-semibold text-gray-800 dark:text-gray-100"><?= htmlspecialchars($meta['name'] ?? $slug) ?></div>
+              <div class="text-lg font-semibold text-gray-800 dark:text-gray-100 break-words"><?= htmlspecialchars($meta['name'] ?? $slug) ?></div>
               <?php if ($description !== ''): ?>
-                <p class="mt-2 text-sm text-gray-600 dark:text-gray-300 leading-relaxed"><?= htmlspecialchars($description) ?></p>
+                <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed"><?= htmlspecialchars($description) ?></p>
               <?php endif; ?>
             </div>
-            <div class="flex-shrink-0">
-              <div class="flex items-center gap-2">
-                <span class="h-10 w-10 rounded-2xl border border-white/50 shadow-sm" style="background: <?= htmlspecialchars($lightSwatch) ?>"></span>
-                <span class="h-10 w-10 rounded-2xl border border-white/40 shadow-sm" style="background: linear-gradient(135deg, <?= htmlspecialchars($primary) ?>, <?= htmlspecialchars($accent) ?>);"></span>
-                <span class="h-10 w-10 rounded-2xl border border-white/30 shadow-sm" style="background: <?= htmlspecialchars($darkSwatch) ?>"></span>
-              </div>
+            <div class="flex flex-wrap items-center gap-3 sm:flex-nowrap sm:gap-2">
+              <span class="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/50 shadow-sm" style="background: <?= htmlspecialchars($lightSwatch) ?>"></span>
+              <span class="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/40 shadow-sm" style="background: linear-gradient(135deg, <?= htmlspecialchars($primary) ?>, <?= htmlspecialchars($accent) ?>);"></span>
+              <span class="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/30 shadow-sm" style="background: <?= htmlspecialchars($darkSwatch) ?>"></span>
             </div>
           </div>
           <div class="mt-4 grid grid-cols-2 gap-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300">
