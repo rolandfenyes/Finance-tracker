@@ -444,7 +444,7 @@
   <div class="card h-80 overflow-hidden">
     <h3 class="font-semibold mb-3"><?= __('Top Spending Categories (:currency)', ['currency' => htmlspecialchars($main)]) ?></h3>
     <?php
-      // Build grouped sums from $allTx in MAIN (spending only)
+      // Build grouped sums from all transactions in MAIN (spending only)
       $grp = []; $cols = [];
       foreach (($allTx ?? []) as $r) {
         if (($r['kind'] ?? '') !== 'spending') continue;
@@ -646,7 +646,7 @@
 
   <!-- Mobile: stacked cards -->
   <div class="md:hidden space-y-3">
-    <?php foreach ($allTx as $row): ?>
+    <?php foreach ($txDisplay as $row): ?>
       <?php
         $isVirtual = !empty($row['is_virtual']);
         $nativeCur = $row['currency'] ?: $main;
@@ -825,7 +825,7 @@
         </tr>
       </thead>
       <tbody>
-        <?php foreach ($allTx as $row): ?>
+        <?php foreach ($txDisplay as $row): ?>
           <?php
             $isVirtual = !empty($row['is_virtual']);
             $isEF      = isset($row['source']) && $row['source'] === 'ef';

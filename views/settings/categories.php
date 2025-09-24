@@ -67,10 +67,12 @@
               ?>
                 <li class="glass-stack__item">
                   <details class="group">
-                    <summary class="flex cursor-pointer items-center justify-between gap-3">
-                      <div class="flex items-center gap-2">
+                    <summary class="flex cursor-pointer flex-wrap gap-3 sm:flex-nowrap sm:items-center sm:justify-between">
+                      <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:flex-nowrap">
                         <span class="inline-block h-3 w-3 rounded-full" style="background: <?= htmlspecialchars($c['color'] ?? '#6B7280') ?>;"></span>
-                        <span class="font-medium"><?= htmlspecialchars($c['label']) ?></span>
+                        <span class="font-medium break-words leading-snug">
+                          <?= htmlspecialchars($c['label']) ?>
+                        </span>
                         <?php if ($isEF): ?>
                           <span class="chip"><?= __('Protected') ?></span>
                         <?php endif; ?>
@@ -80,7 +82,7 @@
                           <span class="chip" title="<?= __('No cashflow rule set') ?>">⚠️ <?= __('No rule') ?></span>
                         <?php endif; ?>
                       </div>
-                      <span class="flex items-center gap-2 text-sm text-gray-500">
+                      <span class="flex flex-shrink-0 items-center gap-2 text-sm text-gray-500">
                         <span class="icon-action icon-action--primary" aria-hidden="true">
                           <i data-lucide="pencil" class="h-4 w-4"></i>
                         </span>
