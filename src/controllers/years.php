@@ -124,8 +124,10 @@ function month_tx_add(PDO $pdo){
                   $main, $rate, $amount_main]);
 
   // redirect back
-  $y = (int)($_POST['y'] ?? date('Y')); $m = (int)($_POST['m'] ?? date('n'));
-  redirect("/years/$y/$m");
+  $y = (int)($_POST['y'] ?? date('Y'));
+  $m = (int)($_POST['m'] ?? date('n'));
+  $ym = sprintf('%04d-%02d', $y, $m);
+  redirect('/current-month?ym=' . $ym . '#quick-add');
 }
 
 function month_tx_edit(PDO $pdo){
@@ -156,14 +158,17 @@ function month_tx_edit(PDO $pdo){
   $stmt->execute([$kind, $amount, ($currency ?: $main), $occurred_on, $note,
                   $rate, $amount_main, $main, $id, $u]);
 
-  $y=(int)($_POST['y'] ?? date('Y')); $m=(int)($_POST['m'] ?? date('n'));
-  redirect("/years/$y/$m");
+  $y = (int)($_POST['y'] ?? date('Y'));
+  $m = (int)($_POST['m'] ?? date('n'));
+  $ym = sprintf('%04d-%02d', $y, $m);
+  redirect('/current-month?ym=' . $ym);
 }
 
 function month_tx_delete(PDO $pdo){ verify_csrf(); require_login();
   $y=(int)$_POST['y']; $m=(int)$_POST['m']; $u=uid();
   $pdo->prepare('DELETE FROM transactions WHERE id=? AND user_id=?')->execute([(int)$_POST['id'],$u]);
-  redirect('/years/'.$y.'/'.$m);
+  $ym = sprintf('%04d-%02d', $y, $m);
+  redirect('/current-month?ym=' . $ym);
 }
 
 function month_read_filters(): array {

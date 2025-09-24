@@ -571,7 +571,7 @@
 </section>
 
 <!-- Add transaction -->
-<section class="mt-6 grid md:grid-cols-2 gap-6">
+<section id="quick-add" class="mt-6 grid md:grid-cols-2 gap-6">
   <div class="card md:col-span-2">
     <h3 class="text-base font-semibold mb-3"><?= __('Quick Add') ?></h3>
 
@@ -585,7 +585,7 @@
         <label class="label"><?= __('Type') ?></label>
         <select name="kind" class="select">
           <option value="income">Income</option>
-          <option value="spending">Spending</option>
+          <option value="spending" selected>Spending</option>
         </select>
       </div>
 
