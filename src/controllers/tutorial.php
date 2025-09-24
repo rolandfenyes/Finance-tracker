@@ -14,7 +14,7 @@ function tutorial_done(PDO $pdo){
   } catch (Throwable $e) { /* ignore */ }
 
   try {
-    $stmt = $pdo->prepare("UPDATE users SET tutorial_seen = TRUE WHERE id = ?");
+    $stmt = $pdo->prepare("UPDATE users SET tutorial_seen = TRUE, needs_tutorial = FALSE WHERE id = ?");
     $stmt->execute([uid()]);
   } catch (Throwable $e) { /* ignore */ }
 
