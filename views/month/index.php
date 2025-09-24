@@ -575,7 +575,13 @@
   <div class="card md:col-span-2">
     <h3 class="text-base font-semibold mb-3"><?= __('Quick Add') ?></h3>
 
-    <form class="grid gap-4 md:grid-cols-12 md:items-end" method="post" action="/months/tx/add">
+    <form
+      class="grid gap-4 md:grid-cols-12 md:items-end"
+      method="post"
+      action="/months/tx/add"
+      data-restore-focus="#quick-add-amount"
+      data-restore-focus-select="true"
+    >
       <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
       <input type="hidden" name="y" value="<?= $y ?>" />
       <input type="hidden" name="m" value="<?= $m ?>" />
@@ -604,7 +610,7 @@
       <div class="field md:col-span-4">
         <label class="label"><?= __('Amount') ?></label>
         <div class="grid grid-cols-5 gap-2">
-          <input name="amount" type="number" step="0.01" class="input col-span-3" placeholder="0.00" required />
+          <input id="quick-add-amount" name="amount" type="number" step="0.01" class="input col-span-3" placeholder="0.00" required />
           <select name="currency" class="select col-span-2">
             <?php foreach ($userCurrencies as $c): ?>
               <option value="<?= htmlspecialchars($c['code']) ?>" <?= $c['is_main'] ? 'selected' : '' ?>>
@@ -639,75 +645,6 @@
     </form>
   </div>
 </section>
-
-<script>
-  (function () {
-    const quickAdd = document.querySelector('#quick-add form');
-    if (!quickAdd) return;
-
-    let storage;
-    try {
-      storage = window.sessionStorage;
-    } catch (err) {
-      storage = null;
-    }
-    if (!storage) return;
-
-    const SCROLL_KEY = 'month:quick-add:scroll';
-    const FOCUS_KEY = 'month:quick-add:focus';
-
-    quickAdd.addEventListener('submit', () => {
-      try {
-        const y = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
-        storage.setItem(SCROLL_KEY, String(Math.max(0, Math.round(y))));
-        storage.setItem(FOCUS_KEY, '1');
-      } catch (err) {
-        // no-op when sessionStorage is unavailable
-      }
-    });
-
-    const restore = () => {
-      try {
-        const raw = storage.getItem(SCROLL_KEY);
-        if (raw === null) return;
-        storage.removeItem(SCROLL_KEY);
-
-        const scrollTarget = parseInt(raw, 10);
-        if (!Number.isNaN(scrollTarget)) {
-          try {
-            window.scrollTo({ top: scrollTarget, behavior: 'instant' });
-          } catch (err) {
-            window.scrollTo(0, scrollTarget);
-          }
-        }
-
-        const shouldFocus = storage.getItem(FOCUS_KEY) === '1';
-        storage.removeItem(FOCUS_KEY);
-        if (shouldFocus) {
-          const amount = quickAdd.querySelector('input[name="amount"]');
-          if (amount) {
-            try {
-              amount.focus({ preventScroll: true });
-            } catch (err) {
-              amount.focus();
-            }
-            if (typeof amount.select === 'function') {
-              amount.select();
-            }
-          }
-        }
-      } catch (err) {
-        // ignore restore errors
-      }
-    };
-
-    if (document.readyState === 'complete') {
-      restore();
-    } else {
-      window.addEventListener('load', restore, { once: true });
-    }
-  })();
-</script>
 
 <!-- Transactions -->
 <section class="mt-6 card">
