@@ -20,6 +20,50 @@
         return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
       };
 
+      const html = document.documentElement;
+      const hasClassList = !!(html && html.classList);
+
+      const parseState = (raw) => {
+        if (!raw) return null;
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object') {
+            return parsed;
+          }
+        } catch (err) {
+          // ignore parse errors
+        }
+        return null;
+      };
+
+      const resolveScrollTarget = (state) => {
+        if (!state || typeof state !== 'object') return null;
+        const value = typeof state.y === 'number' ? state.y : parseInt(state.y, 10);
+        if (Number.isNaN(value)) return null;
+        return Math.max(0, Math.round(value));
+      };
+
+      const storageKey = toKey(currentPath());
+      let storedState;
+      let hasLoadedState = false;
+
+      const loadStoredState = () => {
+        if (hasLoadedState) {
+          return storedState;
+        }
+
+        hasLoadedState = true;
+        const raw = storage.getItem(storageKey);
+        if (!raw) {
+          storedState = null;
+          return storedState;
+        }
+
+        storage.removeItem(storageKey);
+        storedState = parseState(raw);
+        return storedState;
+      };
+
       const formMutates = (form) => {
         if (!form || isTruthy(form.dataset.skipScroll)) return false;
 
@@ -70,23 +114,68 @@
         rememberScroll(form);
       }, true);
 
-      const restore = () => {
-        const key = currentPath();
-        const raw = storage.getItem(toKey(key));
-        if (!raw) return;
+      const initialState = loadStoredState();
+      const initialScrollTarget = resolveScrollTarget(initialState);
+      if (hasClassList && typeof initialScrollTarget === 'number' && initialScrollTarget > 0) {
+        html.classList.add('mm-scroll-restoring');
+      }
 
-        storage.removeItem(toKey(key));
-
-        let state;
-        try {
-          state = JSON.parse(raw);
-        } catch (err) {
+      const releaseScrollMask = () => {
+        if (!hasClassList || !html.classList.contains('mm-scroll-restoring')) {
           return;
         }
-        if (!state || typeof state !== 'object') return;
 
-        const scrollTarget = typeof state.y === 'number' ? state.y : parseInt(state.y, 10);
-        if (!Number.isNaN(scrollTarget)) {
+        const body = document.body;
+        let cleaned = false;
+
+        const cleanup = () => {
+          if (cleaned) {
+            return;
+          }
+          cleaned = true;
+          html.classList.remove('mm-scroll-restoring');
+          html.classList.remove('mm-scroll-restore-ready');
+        };
+
+        const startFade = () => {
+          html.classList.add('mm-scroll-restore-ready');
+
+          if (body && typeof body.addEventListener === 'function') {
+            const handleTransitionEnd = (event) => {
+              if (!event || event.propertyName === 'opacity') {
+                body.removeEventListener('transitionend', handleTransitionEnd);
+                cleanup();
+              }
+            };
+
+            body.addEventListener('transitionend', handleTransitionEnd);
+            window.setTimeout(() => {
+              body.removeEventListener('transitionend', handleTransitionEnd);
+              cleanup();
+            }, 400);
+          } else {
+            window.setTimeout(cleanup, 240);
+          }
+        };
+
+        if (typeof window.requestAnimationFrame === 'function') {
+          window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(startFade);
+          });
+        } else {
+          window.setTimeout(startFade, 0);
+        }
+      };
+
+      const restore = () => {
+        const state = loadStoredState();
+        if (!state) {
+          releaseScrollMask();
+          return;
+        }
+
+        const scrollTarget = resolveScrollTarget(state);
+        if (typeof scrollTarget === 'number') {
           try {
             window.scrollTo({ top: scrollTarget, behavior: 'instant' });
           } catch (err) {
@@ -116,6 +205,8 @@
             }
           }
         }
+
+        releaseScrollMask();
       };
 
       if (document.readyState === 'complete') {
