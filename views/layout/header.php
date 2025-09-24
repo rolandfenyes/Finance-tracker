@@ -3,7 +3,10 @@
 <html lang="<?= htmlspecialchars(app_locale(), ENT_QUOTES) ?>" class="scroll-smooth">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+  />
   <title><?= htmlspecialchars($app['app']['name']) ?></title>
   
   <!-- Favicons -->
@@ -22,6 +25,13 @@
   <!-- Branding -->
   <meta name="apple-mobile-web-app-title" content="MyMoneyMap">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-orientation" content="portrait">
+  <meta http-equiv="ScreenOrientation" content="autoRotate:disabled">
+  <meta name="screen-orientation" content="portrait">
+  <meta name="x5-orientation" content="portrait">
+  <meta name="x5-fullscreen" content="true">
+  <meta name="full-screen" content="yes">
   <meta name="theme-color" content="#4b966e">
 
 
@@ -97,6 +107,47 @@
       window.__mymoneymapTheme = { storageKey, initial };
     })();
   </script>
+  <script>
+    (function () {
+      const preventZoom = (event) => {
+        if (!event) return;
+        if (event.touches && event.touches.length > 1) {
+          event.preventDefault();
+        }
+        if (typeof event.scale === 'number' && event.scale !== 1) {
+          event.preventDefault();
+        }
+      };
+
+      document.addEventListener('gesturestart', preventZoom, { passive: false });
+      document.addEventListener('gesturechange', preventZoom, { passive: false });
+      document.addEventListener('gestureend', preventZoom, { passive: false });
+      document.addEventListener('touchstart', preventZoom, { passive: false });
+      document.addEventListener('touchmove', preventZoom, { passive: false });
+
+      let lastTouchEnd = 0;
+      document.addEventListener('touchend', (event) => {
+        const now = Date.now();
+        if (now - lastTouchEnd <= 350) {
+          event.preventDefault();
+        }
+        lastTouchEnd = now;
+      }, { passive: false });
+
+      const lockOrientation = () => {
+        if (window.screen && window.screen.orientation && typeof window.screen.orientation.lock === 'function') {
+          window.screen.orientation.lock('portrait').catch(() => {});
+        }
+      };
+
+      window.addEventListener('orientationchange', lockOrientation);
+      window.addEventListener('load', lockOrientation);
+
+      if (document.documentElement) {
+        document.documentElement.style.touchAction = 'manipulation';
+      }
+    })();
+  </script>
   <style type="text/tailwindcss">
     @layer base {
       :root {
@@ -105,12 +156,16 @@
       :root[data-theme='dark'] {
         color-scheme: dark;
       }
+      html {
+        touch-action: manipulation;
+      }
       body {
         @apply font-brand antialiased min-h-screen transition-colors duration-300 ease-out;
         color: var(--mm-text-color);
         background-image: var(--mm-mesh-background);
         background-attachment: fixed;
         background-size: cover;
+        padding-bottom: env(safe-area-inset-bottom);
       }
       :root[data-theme='dark'] body {
         color: var(--mm-text-color);
@@ -141,6 +196,23 @@
       }
       main {
         @apply flex-1;
+      }
+      @media (orientation: landscape) and (max-width: 960px) {
+        body::after {
+          content: attr(data-rotate-message);
+          position: fixed;
+          inset: 0;
+          z-index: 60;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 2.5rem;
+          background: rgba(0, 0, 0, 0.8);
+          color: #ffffff;
+          font-size: 1.125rem;
+          text-align: center;
+          line-height: 1.6;
+        }
       }
     }
 
@@ -334,6 +406,12 @@
         box-shadow: inset 0 1px 2px rgba(17, 36, 29, 0.08);
         backdrop-filter: blur(var(--mm-blur-xs));
         transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+      }
+      input[type='date'].input,
+      input[type='datetime-local'].input,
+      input[type='month'].input,
+      input[type='time'].input {
+        min-width: 0;
       }
       .input::placeholder,
       .select::placeholder,
@@ -607,6 +685,64 @@
   </style>
 
   <style type="text/tailwindcss">
+      .mobile-nav {
+        padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+        box-shadow: 0 -20px 36px -24px rgba(17, 36, 29, 0.45);
+      }
+      .dark .mobile-nav {
+        box-shadow: 0 -20px 40px -26px rgba(0, 0, 0, 0.65);
+      }
+      .mobile-nav__items {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        overflow-x: auto;
+        padding: 0 0.5rem;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+      .mobile-nav__items::-webkit-scrollbar {
+        display: none;
+      }
+      .mobile-nav__link {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        min-width: 4.5rem;
+        border-radius: 1.25rem;
+        padding: 0.65rem 0.55rem 0.55rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+        color: rgba(51, 65, 85, 0.72);
+      }
+      .mobile-nav__link:hover,
+      .mobile-nav__link:focus-visible {
+        color: var(--mm-brand-primary, #4b966e);
+        transform: translateY(-2px);
+        background: rgba(75, 150, 110, 0.08);
+      }
+      .mobile-nav__link--active {
+        color: var(--mm-brand-primary, #4b966e);
+        background: rgba(75, 150, 110, 0.12);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.45);
+      }
+      .dark .mobile-nav__link {
+        color: rgba(226, 232, 240, 0.7);
+      }
+      .dark .mobile-nav__link:hover,
+      .dark .mobile-nav__link:focus-visible {
+        background: rgba(75, 150, 110, 0.14);
+      }
+      .dark .mobile-nav__link--active {
+        background: rgba(75, 150, 110, 0.24);
+        box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.18);
+      }
+    }
+
     @layer utilities {
       .text-gray-500 { color: #5a7466; }
       .dark .text-gray-500 { color: #9fb6a9; }
@@ -856,7 +992,12 @@
   </script>
   <style>[x-cloak]{display:none!important}</style>
 </head>
-<body x-data="themeState()" x-init="init()" class="relative">
+<body
+  x-data="themeState()"
+  x-init="init()"
+  class="relative"
+  data-rotate-message="<?= htmlspecialchars(__('Please rotate back to portrait for the best experience.'), ENT_QUOTES) ?>"
+>
   <div class="pointer-events-none fixed inset-0 -z-10 opacity-60 mix-blend-normal">
     <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(75,150,110,0.18),transparent_55%),radial-gradient(circle_at_80%_0%,rgba(50,100,75,0.22),transparent_65%)] dark:bg-[radial-gradient(circle_at_15%_15%,rgba(75,150,110,0.35),transparent_60%),radial-gradient(circle_at_85%_5%,rgba(18,36,29,0.55),transparent_70%)]"></div>
   </div>
@@ -866,14 +1007,14 @@
     $hideMenus   = ($onboarding && $currentPath !== '/onboard/done');
 
     $items = [
-      ['href'=>'/',              'label'=>'Dashboard',      'match'=>'#^/$#'],
-      ['href'=>'/current-month', 'label'=>'Current Month',  'match'=>'#^/current-month$#'],
-      ['href'=>'/goals',         'label'=>'Goals',          'match'=>'#^/goals(?:/.*)?$#'],
-      ['href'=>'/loans',         'label'=>'Loans',          'match'=>'#^/loans(?:/.*)?$#'],
-      ['href'=>'/emergency',     'label'=>'Emergency',      'match'=>'#^/emergency(?:/.*)?$#'],
-      ['href'=>'/scheduled',     'label'=>'Scheduled',      'match'=>'#^/scheduled(?:/.*)?$#'],
-      ['href'=>'/feedback',      'label'=>'Feedback',       'match'=>'#^/feedback$#'],
-      ['href'=>'/settings',      'label'=>'Settings',       'match'=>'#^/settings$#'],
+      ['href'=>'/',              'label'=>'Dashboard',      'match'=>'#^/$#',                    'icon' => 'layout-dashboard'],
+      ['href'=>'/current-month', 'label'=>'Current Month',  'match'=>'#^/current-month$#',       'icon' => 'calendar'],
+      ['href'=>'/goals',         'label'=>'Goals',          'match'=>'#^/goals(?:/.*)?$#',       'icon' => 'goal'],
+      ['href'=>'/loans',         'label'=>'Loans',          'match'=>'#^/loans(?:/.*)?$#',       'icon' => 'landmark'],
+      ['href'=>'/emergency',     'label'=>'Emergency',      'match'=>'#^/emergency(?:/.*)?$#',   'icon' => 'lifebuoy'],
+      ['href'=>'/scheduled',     'label'=>'Scheduled',      'match'=>'#^/scheduled(?:/.*)?$#',   'icon' => 'calendar-clock'],
+      ['href'=>'/feedback',      'label'=>'Feedback',       'match'=>'#^/feedback$#',            'icon' => 'message-circle'],
+      ['href'=>'/settings',      'label'=>'Settings',       'match'=>'#^/settings$#',            'icon' => 'settings'],
     ];
     function nav_link(array $item, string $currentPath, string $extra=''): string {
       $active = preg_match($item['match'], $currentPath) === 1;
@@ -959,4 +1100,57 @@
     </div>
   </header>
 <?php endif; ?>
-  <main class="relative z-10 mx-auto w-full max-w-6xl px-4 py-8">
+<?php if (is_logged_in() && !$hideMenus): ?>
+  <nav
+    class="mobile-nav fixed inset-x-0 bottom-0 z-40 border-t border-white/60 bg-white/85 backdrop-blur-xl dark:border-slate-800/70 dark:bg-slate-950/70 md:hidden"
+    aria-label="<?= htmlspecialchars(__('Primary navigation'), ENT_QUOTES) ?>"
+  >
+    <ul class="mobile-nav__items w-full justify-between">
+      <?php foreach ($items as $it):
+        $active = preg_match($it['match'], $currentPath) === 1;
+        $label = __($it['label']);
+        $icon  = $it['icon'] ?? 'circle';
+        $href  = htmlspecialchars($it['href'], ENT_QUOTES);
+      ?>
+        <li class="flex-1 min-w-[4.5rem]">
+          <a
+            class="mobile-nav__link <?= $active ? 'mobile-nav__link--active' : '' ?>"
+            href="<?= $href ?>"
+            title="<?= htmlspecialchars($label) ?>"
+            <?= $active ? 'aria-current="page"' : '' ?>
+          >
+            <span class="flex h-9 w-9 items-center justify-center rounded-full border border-white/60 bg-white/80 shadow-sm dark:border-slate-700 dark:bg-slate-900/60">
+              <i data-lucide="<?= htmlspecialchars($icon) ?>" class="h-4 w-4"></i>
+            </span>
+            <span class="text-[0.65rem] leading-3 tracking-wide uppercase">
+              <?= htmlspecialchars($label) ?>
+            </span>
+          </a>
+        </li>
+      <?php endforeach; ?>
+        <li class="flex-1 min-w-[4.5rem]">
+          <button
+            type="button"
+            class="mobile-nav__link"
+            @click="toggleTheme()"
+            title="<?= htmlspecialchars(__('Toggle theme')) ?>"
+            aria-label="<?= htmlspecialchars(__('Toggle theme')) ?>"
+          >
+            <span class="flex h-9 w-9 items-center justify-center rounded-full border border-white/60 bg-white/80 shadow-sm dark:border-slate-700 dark:bg-slate-900/60">
+              <span x-cloak x-show="theme === 'light'" class="inline-flex">
+                <i data-lucide="sun" class="h-4 w-4"></i>
+              </span>
+              <span x-cloak x-show="theme === 'dark'" class="inline-flex">
+                <i data-lucide="moon" class="h-4 w-4"></i>
+              </span>
+            </span>
+            <span class="text-[0.65rem] leading-3 tracking-wide uppercase">
+              <?= __('Theme') ?>
+            </span>
+          </button>
+        </li>
+    </ul>
+  </nav>
+<?php endif; ?>
+  <?php $mainPadding = (is_logged_in() && !$hideMenus) ? 'pb-28 sm:pb-24 lg:pb-20' : 'pb-16'; ?>
+  <main class="relative z-10 mx-auto w-full max-w-6xl px-4 pt-8 <?= $mainPadding ?>">
