@@ -1007,15 +1007,23 @@
     $onboarding  = str_starts_with($currentPath, '/onboard');
     $hideMenus   = ($onboarding && $currentPath !== '/onboard/done');
 
-    $items = [
-      ['href'=>'/',              'label'=>'Dashboard',      'match'=>'#^/$#',                    'icon' => 'layout-dashboard'],
-      ['href'=>'/current-month', 'label'=>'Current Month',  'match'=>'#^/current-month$#',       'icon' => 'calendar'],
-      ['href'=>'/goals',         'label'=>'Goals',          'match'=>'#^/goals(?:/.*)?$#',       'icon' => 'goal'],
-      ['href'=>'/loans',         'label'=>'Loans',          'match'=>'#^/loans(?:/.*)?$#',       'icon' => 'landmark'],
-      ['href'=>'/emergency',     'label'=>'Emergency',      'match'=>'#^/emergency(?:/.*)?$#',   'icon' => 'lifebuoy'],
-      ['href'=>'/scheduled',     'label'=>'Scheduled',      'match'=>'#^/scheduled(?:/.*)?$#',   'icon' => 'calendar-clock'],
-      ['href'=>'/feedback',      'label'=>'Feedback',       'match'=>'#^/feedback$#',            'icon' => 'message-circle'],
-      ['href'=>'/settings',      'label'=>'Settings',       'match'=>'#^/settings$#',            'icon' => 'settings'],
+    $desktopItems = [
+      ['href'=>'/',              'label'=>'Dashboard',        'match'=>'#^/$#',                    'icon' => 'layout-dashboard'],
+      ['href'=>'/current-month', 'label'=>'Current Month',    'match'=>'#^/current-month$#',       'icon' => 'calendar'],
+      ['href'=>'/goals',         'label'=>'Goals',            'match'=>'#^/goals(?:/.*)?$#',       'icon' => 'goal'],
+      ['href'=>'/loans',         'label'=>'Loans',            'match'=>'#^/loans(?:/.*)?$#',       'icon' => 'landmark'],
+      ['href'=>'/emergency',     'label'=>'Emergency Fund',   'match'=>'#^/emergency(?:/.*)?$#',   'icon' => 'lifebuoy'],
+      ['href'=>'/scheduled',     'label'=>'Scheduled',        'match'=>'#^/scheduled(?:/.*)?$#',   'icon' => 'calendar-clock'],
+      ['href'=>'/feedback',      'label'=>'Feedback',         'match'=>'#^/feedback$#',            'icon' => 'message-circle'],
+      ['href'=>'/settings',      'label'=>'Settings',         'match'=>'#^/settings$#',            'icon' => 'settings'],
+      ['href'=>'/more',          'label'=>'More',             'match'=>'#^/more(?:/.*)?$#',        'icon' => 'ellipsis'],
+    ];
+    $mobileNavItems = [
+      ['href'=>'/',              'label'=>'Dashboard',      'match'=>'#^/$#',                                         'icon' => 'layout-dashboard'],
+      ['href'=>'/years',         'label'=>'Months',         'match'=>'#^/(current-month|years(?:/.*)?|months(?:/.*)?)$#', 'icon' => 'calendar-range'],
+      ['href'=>'/goals',         'label'=>'Goals',          'match'=>'#^/goals(?:/.*)?$#',                              'icon' => 'goal'],
+      ['href'=>'/emergency',     'label'=>'Emergency Fund', 'match'=>'#^/emergency(?:/.*)?$#',                          'icon' => 'lifebuoy'],
+      ['href'=>'/more',          'label'=>'More',           'match'=>'#^/more(?:/.*)?$#',                               'icon' => 'ellipsis'],
     ];
     function nav_link(array $item, string $currentPath, string $extra=''): string {
       $active = preg_match($item['match'], $currentPath) === 1;
@@ -1041,7 +1049,7 @@
       <?php if (!$hideMenus): ?>
         <nav class="hidden items-center gap-3 text-sm sm:flex">
           <?php if (is_logged_in()): ?>
-            <?php foreach ($items as $it): echo nav_link($it, $currentPath); endforeach; ?>
+            <?php foreach ($desktopItems as $it): echo nav_link($it, $currentPath); endforeach; ?>
             <button type="button" class="icon-btn" @click="toggleTheme()" x-data="{}">
               <span class="sr-only">Toggle theme</span>
               <span x-cloak x-show="theme === 'light'" class="inline-flex">
@@ -1072,7 +1080,7 @@
           <div x-cloak x-show="open" @click.outside="open=false" x-transition class="absolute right-0 mt-3 w-64 space-y-2 rounded-3xl border border-white/70 bg-white/95 p-3 shadow-glass backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-900/90">
             <?php if (is_logged_in()): ?>
               <div class="grid gap-2 text-sm">
-                <?php foreach ($items as $it): ?>
+                <?php foreach ($desktopItems as $it): ?>
                   <?= nav_link($it, $currentPath, 'w-full') ?>
                 <?php endforeach; ?>
                 <button type="button" class="icon-btn w-full justify-center" @click="toggleTheme(); open=false">
@@ -1107,7 +1115,7 @@
     aria-label="<?= htmlspecialchars(__('Primary navigation'), ENT_QUOTES) ?>"
   >
     <ul class="mobile-nav__items w-full justify-between">
-      <?php foreach ($items as $it):
+      <?php foreach ($mobileNavItems as $it):
         $active = preg_match($it['match'], $currentPath) === 1;
         $label = __($it['label']);
         $icon  = $it['icon'] ?? 'circle';
@@ -1129,27 +1137,6 @@
           </a>
         </li>
       <?php endforeach; ?>
-        <li class="flex-1 min-w-[4.5rem]">
-          <button
-            type="button"
-            class="mobile-nav__link"
-            @click="toggleTheme()"
-            title="<?= htmlspecialchars(__('Toggle theme')) ?>"
-            aria-label="<?= htmlspecialchars(__('Toggle theme')) ?>"
-          >
-            <span class="flex h-9 w-9 items-center justify-center rounded-full border border-white/60 bg-white/80 shadow-sm dark:border-slate-700 dark:bg-slate-900/60">
-              <span x-cloak x-show="theme === 'light'" class="inline-flex">
-                <i data-lucide="sun" class="h-4 w-4"></i>
-              </span>
-              <span x-cloak x-show="theme === 'dark'" class="inline-flex">
-                <i data-lucide="moon" class="h-4 w-4"></i>
-              </span>
-            </span>
-            <span class="text-[0.65rem] leading-3 tracking-wide uppercase">
-              <?= __('Theme') ?>
-            </span>
-          </button>
-        </li>
     </ul>
   </nav>
 <?php endif; ?>
