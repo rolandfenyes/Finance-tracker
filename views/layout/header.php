@@ -1036,20 +1036,19 @@
 
     $desktopItems = [
       ['href'=>'/',              'label'=>'Dashboard',        'match'=>'#^/$#',                    'icon' => 'layout-dashboard'],
-      ['href'=>'/current-month', 'label'=>'Current Month',    'match'=>'#^/current-month$#',       'icon' => 'calendar'],
+      ['href'=>'/current-month', 'label'=>'Months',    'match'=>'#^/current-month$#',       'icon' => 'calendar'],
       ['href'=>'/goals',         'label'=>'Goals',            'match'=>'#^/goals(?:/.*)?$#',       'icon' => 'goal'],
       ['href'=>'/loans',         'label'=>'Loans',            'match'=>'#^/loans(?:/.*)?$#',       'icon' => 'landmark'],
       ['href'=>'/emergency',     'label'=>'Emergency Fund',   'match'=>'#^/emergency(?:/.*)?$#',   'icon' => 'life-buoy'],
       ['href'=>'/scheduled',     'label'=>'Scheduled',        'match'=>'#^/scheduled(?:/.*)?$#',   'icon' => 'calendar-clock'],
       ['href'=>'/feedback',      'label'=>'Feedback',         'match'=>'#^/feedback$#',            'icon' => 'message-circle'],
       ['href'=>'/settings',      'label'=>'Settings',         'match'=>'#^/settings$#',            'icon' => 'settings'],
-      ['href'=>'/more',          'label'=>'More',             'match'=>'#^/more(?:/.*)?$#',        'icon' => 'ellipsis'],
     ];
     $mobileNavItems = [
       ['href'=>'/',              'label'=>'Dashboard',      'match'=>'#^/$#',                                                        'icon' => 'layout-dashboard'],
-      ['href'=>'/current-month', 'label'=>'Current month',  'match'=>'#^/(current-month(?:/.*)?|months(?:/.*)?|years(?:/.*)?)$#', 'icon' => 'calendar-range'],
+      ['href'=>'/current-month', 'label'=>'Months',  'match'=>'#^/(current-month(?:/.*)?|months(?:/.*)?|years(?:/.*)?)$#', 'icon' => 'calendar-range'],
       ['href'=>'/goals',         'label'=>'Goals',          'match'=>'#^/goals(?:/.*)?$#',                                           'icon' => 'goal'],
-      ['href'=>'/emergency',     'label'=>'Emergency Fund', 'match'=>'#^/emergency(?:/.*)?$#',                                       'icon' => 'life-buoy'],
+      ['href'=>'/emergency',     'label'=>'Emergency', 'match'=>'#^/emergency(?:/.*)?$#',                                       'icon' => 'life-buoy'],
       ['href'=>'/more',          'label'=>'More',           'match'=>'#^/more(?:/.*)?$#',                                            'icon' => 'ellipsis'],
     ];
     function nav_link(array $item, string $currentPath, string $extra=''): string {

@@ -20,7 +20,7 @@ $localeFlags = $localeFlags ?? [];
 
 <div class="mx-auto w-full max-w-3xl space-y-6 px-4 pb-28 pt-6 sm:px-6 lg:px-0">
   <div class="flex justify-center">
-    <span class="inline-flex h-16 w-16 items-center justify-center rounded-3xl border border-white/60 bg-white/80 p-3 shadow-glass backdrop-blur dark:border-slate-800/70 dark:bg-slate-900/70">
+    <span class="inline-flex h-16 w-16 items-center justify-center rounded-3xl border border-white/60 p-3 shadow-glass backdrop-blur bg-brand-500">
       <img src="/logo.png" alt="App logo" class="h-full w-full object-contain" />
     </span>
   </div>
@@ -46,7 +46,53 @@ $localeFlags = $localeFlags ?? [];
     </div>
   </section>
 
-  <section
+  <?php foreach ($navSections as $index => $section):
+    $title = trim($section['title'] ?? '');
+    $items = $section['items'] ?? [];
+    if (!$items) { continue; }
+    $sectionId = 'more-section-' . $index;
+  ?>
+    <section class="card" <?= $title ? 'aria-labelledby="' . htmlspecialchars($sectionId, ENT_QUOTES) . '"' : '' ?>>
+      <?php if ($title): ?>
+        <h2 id="<?= htmlspecialchars($sectionId, ENT_QUOTES) ?>" class="card-title">
+          <?= htmlspecialchars($title) ?>
+        </h2>
+      <?php endif; ?>
+      <div class="mt-4" role="list">
+        <div class="glass-stack" role="presentation">
+          <?php foreach ($items as $item):
+            $href = $item['href'] ?? '#';
+            $label = $item['label'] ?? '';
+            $description = $item['description'] ?? '';
+            $icon = $item['icon'] ?? 'circle';
+          ?>
+            <a
+              role="listitem"
+              class="glass-stack__item group flex items-center gap-4 text-left transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:-translate-y-0.5 focus-visible:shadow-lg focus-visible:outline-none"
+              href="<?= htmlspecialchars($href, ENT_QUOTES) ?>"
+            >
+              <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-100/80 text-brand-700 transition group-hover:bg-brand-200 group-hover:text-brand-900 dark:bg-brand-500/15 dark:text-brand-100 dark:group-hover:bg-brand-500/25">
+                <i data-lucide="<?= htmlspecialchars($icon) ?>" class="h-5 w-5"></i>
+              </span>
+              <span class="flex-1">
+                <span class="block text-base font-semibold text-slate-900 transition group-hover:text-brand-900 dark:text-white dark:group-hover:text-brand-100">
+                  <?= htmlspecialchars($label) ?>
+                </span>
+                <?php if ($description): ?>
+                  <span class="mt-1 block text-sm text-slate-500 transition group-hover:text-slate-700 dark:text-slate-300/80 dark:group-hover:text-slate-200/90">
+                    <?= htmlspecialchars($description) ?>
+                  </span>
+                <?php endif; ?>
+              </span>
+              <i data-lucide="chevron-right" class="h-5 w-5 text-slate-400 transition group-hover:translate-x-1 group-hover:text-brand-600 dark:text-slate-500 dark:group-hover:text-brand-200"></i>
+            </a>
+          <?php endforeach; ?>
+        </div>
+      </div>
+    </section>
+  <?php endforeach; ?>
+
+<section
     class="card"
     x-data="{
       mode: document.documentElement.dataset.theme || (document.documentElement.classList.contains('dark') ? 'dark' : 'light'),
@@ -139,52 +185,6 @@ $localeFlags = $localeFlags ?? [];
       </div>
     </section>
   <?php endif; ?>
-
-  <?php foreach ($navSections as $index => $section):
-    $title = trim($section['title'] ?? '');
-    $items = $section['items'] ?? [];
-    if (!$items) { continue; }
-    $sectionId = 'more-section-' . $index;
-  ?>
-    <section class="card" <?= $title ? 'aria-labelledby="' . htmlspecialchars($sectionId, ENT_QUOTES) . '"' : '' ?>>
-      <?php if ($title): ?>
-        <h2 id="<?= htmlspecialchars($sectionId, ENT_QUOTES) ?>" class="card-title">
-          <?= htmlspecialchars($title) ?>
-        </h2>
-      <?php endif; ?>
-      <div class="mt-4" role="list">
-        <div class="glass-stack" role="presentation">
-          <?php foreach ($items as $item):
-            $href = $item['href'] ?? '#';
-            $label = $item['label'] ?? '';
-            $description = $item['description'] ?? '';
-            $icon = $item['icon'] ?? 'circle';
-          ?>
-            <a
-              role="listitem"
-              class="glass-stack__item group flex items-center gap-4 text-left transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:-translate-y-0.5 focus-visible:shadow-lg focus-visible:outline-none"
-              href="<?= htmlspecialchars($href, ENT_QUOTES) ?>"
-            >
-              <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-100/80 text-brand-700 transition group-hover:bg-brand-200 group-hover:text-brand-900 dark:bg-brand-500/15 dark:text-brand-100 dark:group-hover:bg-brand-500/25">
-                <i data-lucide="<?= htmlspecialchars($icon) ?>" class="h-5 w-5"></i>
-              </span>
-              <span class="flex-1">
-                <span class="block text-base font-semibold text-slate-900 transition group-hover:text-brand-900 dark:text-white dark:group-hover:text-brand-100">
-                  <?= htmlspecialchars($label) ?>
-                </span>
-                <?php if ($description): ?>
-                  <span class="mt-1 block text-sm text-slate-500 transition group-hover:text-slate-700 dark:text-slate-300/80 dark:group-hover:text-slate-200/90">
-                    <?= htmlspecialchars($description) ?>
-                  </span>
-                <?php endif; ?>
-              </span>
-              <i data-lucide="chevron-right" class="h-5 w-5 text-slate-400 transition group-hover:translate-x-1 group-hover:text-brand-600 dark:text-slate-500 dark:group-hover:text-brand-200"></i>
-            </a>
-          <?php endforeach; ?>
-        </div>
-      </div>
-    </section>
-  <?php endforeach; ?>
 
   <section class="card">
     <form action="/logout" method="post" class="space-y-3">
