@@ -12,21 +12,28 @@ if ($firstSource !== '') {
 $initial = strtoupper($firstChar ?: '?');
 ?>
 
-<div class="mx-auto flex w-full max-w-3xl flex-col gap-10 pb-28">
+<div class="mx-auto w-full max-w-3xl space-y-8 pb-28">
+  <div class="flex justify-center pt-6">
+    <span class="inline-flex h-16 w-16 items-center justify-center rounded-3xl border border-white/70 bg-white/80 p-3 shadow-glass backdrop-blur-xl dark:border-slate-800/70 dark:bg-slate-900/70">
+      <img src="/logo.png" alt="App logo" class="h-full w-full object-contain" />
+    </span>
+  </div>
+
   <section class="rounded-4xl border border-white/60 bg-white/80 p-6 shadow-glass backdrop-blur-xl dark:border-slate-800/70 dark:bg-slate-900/70">
-    <div class="flex items-center gap-5">
+    <div class="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:text-left">
       <div class="flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-brand-400/90 to-brand-600/90 text-2xl font-semibold tracking-tight text-white shadow-brand-glow">
         <?= htmlspecialchars($initial) ?>
       </div>
-      <div class="flex-1">
-        <p class="text-sm font-medium uppercase tracking-[0.2em] text-slate-500/80 dark:text-slate-300/60"><?= __('Signed in as') ?></p>
-        <p class="mt-1 text-2xl font-semibold text-slate-900 dark:text-white"><?= htmlspecialchars($displayName) ?></p>
+      <div class="sm:flex-1">
+        <p class="text-xs font-semibold uppercase tracking-[0.35em] text-slate-500/80 dark:text-slate-300/60"><?= __('Signed in as') ?></p>
+        <p class="mt-2 text-xl font-semibold text-slate-900 dark:text-white sm:text-2xl"><?= htmlspecialchars($displayName) ?></p>
         <?php if ($email && strtolower($email) !== strtolower($displayName)): ?>
-          <p class="text-sm text-slate-500 dark:text-slate-300/80"><?= htmlspecialchars($email) ?></p>
+          <p class="mt-1 break-all text-sm text-slate-500 dark:text-slate-300/80"><?= htmlspecialchars($email) ?></p>
         <?php endif; ?>
       </div>
-      <div class="shrink-0">
-        <a href="/settings/profile" class="btn btn-muted whitespace-nowrap px-4 py-2 text-sm font-semibold">
+      <div class="w-full sm:w-auto">
+        <a href="/settings/profile" class="btn btn-muted flex w-full items-center justify-center gap-2 whitespace-nowrap px-4 py-2 text-sm font-semibold sm:w-auto">
+          <i data-lucide="pencil" class="h-4 w-4"></i>
           <?= __('Edit profile') ?>
         </a>
       </div>
@@ -36,13 +43,25 @@ $initial = strtoupper($firstChar ?: '?');
   <section
     class="rounded-4xl border border-white/60 bg-white/80 p-6 shadow-glass backdrop-blur-xl dark:border-slate-800/70 dark:bg-slate-900/70"
     x-data="{
-      mode: $root.theme,
+      mode: document.documentElement.dataset.theme || (document.documentElement.classList.contains('dark') ? 'dark' : 'light'),
       init() {
-        this.mode = $root.theme;
-        document.addEventListener('themechange', (event) => { this.mode = event.detail.theme; });
+        const controller = window.MyMoneyMapThemeController;
+        if (controller && typeof controller.current === 'function') {
+          this.mode = controller.current();
+        }
+        document.addEventListener('themechange', (event) => {
+          if (event && event.detail && event.detail.theme) {
+            this.mode = event.detail.theme;
+          }
+        });
       },
       set(mode) {
-        $root.applyTheme(mode);
+        const controller = window.MyMoneyMapThemeController;
+        if (controller && typeof controller.apply === 'function') {
+          controller.apply(mode);
+        } else {
+          document.dispatchEvent(new CustomEvent('mymoneymap:set-theme', { detail: { theme: mode } }));
+        }
         this.mode = mode;
       }
     }"
@@ -56,34 +75,36 @@ $initial = strtoupper($firstChar ?: '?');
         <p class="mt-1 text-sm text-slate-500 dark:text-slate-300/80"><?= __('Choose the look that feels most comfortable for your eyes.') ?></p>
       </div>
     </div>
-    <div class="mt-6 grid gap-4 sm:grid-cols-2">
+    <div class="mt-6 grid gap-3 sm:grid-cols-2">
       <button
         type="button"
-        class="flex items-center justify-between rounded-3xl border-2 px-4 py-3 text-left transition"
-        :class="mode === 'light' ? 'border-brand-500/80 bg-brand-50/80 text-brand-900 shadow-brand-glow' : 'border-white/40 bg-white/60 text-slate-600 dark:border-slate-700/80 dark:bg-slate-900/60 dark:text-slate-300'"
+        class="flex items-center justify-between rounded-full border px-4 py-3 text-left text-sm font-semibold transition sm:text-base"
+        :class="mode === 'light' ? 'border-brand-500/80 bg-brand-50/80 text-brand-900 shadow-brand-glow' : 'border-white/50 bg-white/70 text-slate-600 dark:border-slate-700/80 dark:bg-slate-900/60 dark:text-slate-300'"
         @click="set('light')"
+        :aria-pressed="mode === 'light'"
       >
-        <span class="flex items-center gap-3 text-base font-semibold">
+        <span class="flex items-center gap-3">
           <span class="flex h-10 w-10 items-center justify-center rounded-full bg-brand-500/90 text-white shadow">
             <i data-lucide="sun" class="h-5 w-5"></i>
           </span>
           <?= __('Light mode') ?>
         </span>
-        <i data-lucide="check" class="h-5 w-5" x-show="mode === 'light'"></i>
+        <i data-lucide="check" class="h-5 w-5" x-cloak x-show="mode === 'light'"></i>
       </button>
       <button
         type="button"
-        class="flex items-center justify-between rounded-3xl border-2 px-4 py-3 text-left transition"
-        :class="mode === 'dark' ? 'border-brand-400/80 bg-brand-600/20 text-brand-50 shadow-brand-glow' : 'border-white/40 bg-white/60 text-slate-600 dark:border-slate-700/80 dark:bg-slate-900/60 dark:text-slate-300'"
+        class="flex items-center justify-between rounded-full border px-4 py-3 text-left text-sm font-semibold transition sm:text-base"
+        :class="mode === 'dark' ? 'border-brand-400/80 bg-brand-600/20 text-brand-50 shadow-brand-glow' : 'border-white/50 bg-white/70 text-slate-600 dark:border-slate-700/80 dark:bg-slate-900/60 dark:text-slate-300'"
         @click="set('dark')"
+        :aria-pressed="mode === 'dark'"
       >
-        <span class="flex items-center gap-3 text-base font-semibold">
+        <span class="flex items-center gap-3">
           <span class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900/90 text-white shadow dark:bg-slate-800">
             <i data-lucide="moon" class="h-5 w-5"></i>
           </span>
           <?= __('Dark mode') ?>
         </span>
-        <i data-lucide="check" class="h-5 w-5" x-show="mode === 'dark'"></i>
+        <i data-lucide="check" class="h-5 w-5" x-cloak x-show="mode === 'dark'"></i>
       </button>
     </div>
   </section>

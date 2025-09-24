@@ -781,6 +781,24 @@
         theme: document.documentElement.dataset.theme || (document.documentElement.classList.contains('dark') ? 'dark' : 'light'),
         init() {
           this.applyTheme(this.theme, true);
+          document.addEventListener('mymoneymap:set-theme', (event) => {
+            const requested = event && event.detail ? event.detail.theme : null;
+            if (requested) {
+              this.applyTheme(requested);
+            }
+          });
+          const self = this;
+          window.MyMoneyMapThemeController = {
+            apply(mode) {
+              self.applyTheme(mode);
+            },
+            toggle() {
+              self.toggleTheme();
+            },
+            current() {
+              return self.theme;
+            }
+          };
         },
         applyTheme(value, isInit = false) {
           const previous = document.documentElement.dataset.theme;
@@ -788,6 +806,9 @@
           document.documentElement.dataset.theme = value;
           document.documentElement.classList.toggle('dark', value === 'dark');
           try { localStorage.setItem('mymoneymap-theme', value); } catch (e) {}
+          if (window.MyMoneyMapThemeController) {
+            window.MyMoneyMapThemeController.theme = value;
+          }
           if (isInit || previous !== value) {
             document.dispatchEvent(new CustomEvent('themechange', { detail: { theme: value } }));
           }
@@ -1012,7 +1033,7 @@
       ['href'=>'/current-month', 'label'=>'Current Month',    'match'=>'#^/current-month$#',       'icon' => 'calendar'],
       ['href'=>'/goals',         'label'=>'Goals',            'match'=>'#^/goals(?:/.*)?$#',       'icon' => 'goal'],
       ['href'=>'/loans',         'label'=>'Loans',            'match'=>'#^/loans(?:/.*)?$#',       'icon' => 'landmark'],
-      ['href'=>'/emergency',     'label'=>'Emergency Fund',   'match'=>'#^/emergency(?:/.*)?$#',   'icon' => 'lifebuoy'],
+      ['href'=>'/emergency',     'label'=>'Emergency Fund',   'match'=>'#^/emergency(?:/.*)?$#',   'icon' => 'life-buoy'],
       ['href'=>'/scheduled',     'label'=>'Scheduled',        'match'=>'#^/scheduled(?:/.*)?$#',   'icon' => 'calendar-clock'],
       ['href'=>'/feedback',      'label'=>'Feedback',         'match'=>'#^/feedback$#',            'icon' => 'message-circle'],
       ['href'=>'/settings',      'label'=>'Settings',         'match'=>'#^/settings$#',            'icon' => 'settings'],
@@ -1022,7 +1043,7 @@
       ['href'=>'/',              'label'=>'Dashboard',      'match'=>'#^/$#',                                         'icon' => 'layout-dashboard'],
       ['href'=>'/years',         'label'=>'Months',         'match'=>'#^/(current-month|years(?:/.*)?|months(?:/.*)?)$#', 'icon' => 'calendar-range'],
       ['href'=>'/goals',         'label'=>'Goals',          'match'=>'#^/goals(?:/.*)?$#',                              'icon' => 'goal'],
-      ['href'=>'/emergency',     'label'=>'Emergency Fund', 'match'=>'#^/emergency(?:/.*)?$#',                          'icon' => 'lifebuoy'],
+      ['href'=>'/emergency',     'label'=>'Emergency Fund', 'match'=>'#^/emergency(?:/.*)?$#',                          'icon' => 'life-buoy'],
       ['href'=>'/more',          'label'=>'More',           'match'=>'#^/more(?:/.*)?$#',                               'icon' => 'ellipsis'],
     ];
     function nav_link(array $item, string $currentPath, string $extra=''): string {
@@ -1036,7 +1057,7 @@
     }
   ?>
 <?php if (is_logged_in()): ?>
-  <header class="sticky top-0 z-40 border-b border-white/40 bg-white/60 backdrop-blur-xl transition dark:border-slate-800/60 dark:bg-slate-900/50">
+  <header class="sticky top-0 z-40 border-b border-white/40 bg-white/60 backdrop-blur-xl transition dark:border-slate-800/60 dark:bg-slate-900/50 hidden md:block">
     <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
       <a href="/" class="flex items-center gap-3 text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
         <div class="h-12 w-12 p-2 rounded-xl bg-brand-500 flex flex-col items-center justify-center">

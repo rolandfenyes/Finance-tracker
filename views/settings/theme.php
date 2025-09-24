@@ -23,7 +23,11 @@ $currentMeta = $currentMeta ?? theme_meta($currentTheme) ?? [];
           </p>
         </noscript>
       </div>
-      <a href="/settings" class="text-sm text-accent">← <?= __('Back to Settings') ?></a>
+      <a href="/settings" class="inline-flex items-center gap-1 text-sm font-medium text-accent">
+        <span aria-hidden="true">←</span>
+        <span class="hidden sm:inline"><?= __('Back to Settings') ?></span>
+        <span class="sm:hidden"><?= __('Back to More') ?></span>
+      </a>
     </div>
 
     <?php if (!empty($_SESSION['flash'])): ?>

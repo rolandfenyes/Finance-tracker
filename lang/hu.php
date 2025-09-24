@@ -363,6 +363,8 @@ return [
     'left' => 'maradt',
     'over' => 'túllépve',
     'Manage Currencies' => 'Pénznemek kezelése',
+    'Back to Settings' => 'Vissza a beállításokhoz',
+    'Back to More' => 'Vissza a Továbbiakhoz',
     '← Back to Settings' => '← Vissza a beállításokhoz',
     'Your currencies' => 'Pénznemeid',
     'Set main' => 'Legyen fő pénznem',

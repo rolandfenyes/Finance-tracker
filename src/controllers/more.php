@@ -12,8 +12,14 @@ function more_show(PDO $pdo): void
 
     $navSections = [
         [
-            'title' => __('Money & budgeting'),
+            'title' => __('Overview & money'),
             'items' => [
+                [
+                    'label' => __('Dashboard'),
+                    'description' => __('Snapshot of balances, trends, and recent activity.'),
+                    'href' => '/',
+                    'icon' => 'layout-dashboard',
+                ],
                 [
                     'label' => __('Current month'),
                     'description' => __('Review this month\'s spending, income, and budgets.'),
@@ -25,18 +31,6 @@ function more_show(PDO $pdo): void
                     'description' => __('Track upcoming bills and automatic payments.'),
                     'href' => '/scheduled',
                     'icon' => 'calendar-clock',
-                ],
-                [
-                    'label' => __('Basic incomes'),
-                    'description' => __('Manage recurring income sources and salary updates.'),
-                    'href' => '/settings/basic-incomes',
-                    'icon' => 'coins',
-                ],
-                [
-                    'label' => __('Cashflow rules'),
-                    'description' => __('Adjust envelope allocations and automation preferences.'),
-                    'href' => '/settings/cashflow',
-                    'icon' => 'sliders-horizontal',
                 ],
             ],
         ],
@@ -59,36 +53,7 @@ function more_show(PDO $pdo): void
                     'label' => __('Emergency fund'),
                     'description' => __('Grow and protect your safety net for surprises.'),
                     'href' => '/emergency',
-                    'icon' => 'lifebuoy',
-                ],
-            ],
-        ],
-        [
-            'title' => __('Insights & reports'),
-            'items' => [
-                [
-                    'label' => __('Dashboard'),
-                    'description' => __('Snapshot of balances, trends, and recent activity.'),
-                    'href' => '/',
-                    'icon' => 'layout-dashboard',
-                ],
-                [
-                    'label' => __('Months & years'),
-                    'description' => __('Browse historical months and yearly summaries.'),
-                    'href' => '/years',
-                    'icon' => 'calendar-range',
-                ],
-                [
-                    'label' => __('Stocks'),
-                    'description' => __('Track portfolio performance and trades.'),
-                    'href' => '/stocks',
-                    'icon' => 'line-chart',
-                ],
-                [
-                    'label' => __('Feedback'),
-                    'description' => __('Share product ideas or report an issue.'),
-                    'href' => '/feedback',
-                    'icon' => 'message-circle',
+                    'icon' => 'life-buoy',
                 ],
             ],
         ],
@@ -96,22 +61,22 @@ function more_show(PDO $pdo): void
             'title' => __('Settings & personalisation'),
             'items' => [
                 [
-                    'label' => __('Settings overview'),
-                    'description' => __('Review currencies, incomes, and automation shortcuts.'),
-                    'href' => '/settings',
-                    'icon' => 'settings',
-                ],
-                [
-                    'label' => __('Profile settings'),
-                    'description' => __('Update your personal details and contact info.'),
-                    'href' => '/settings/profile',
-                    'icon' => 'user-cog',
-                ],
-                [
                     'label' => __('Theme & appearance'),
                     'description' => __('Fine-tune colours, typography, and look & feel.'),
                     'href' => '/settings/theme',
                     'icon' => 'palette',
+                ],
+                [
+                    'label' => __('Basic incomes'),
+                    'description' => __('Manage recurring income sources and salary updates.'),
+                    'href' => '/settings/basic-incomes',
+                    'icon' => 'coins',
+                ],
+                [
+                    'label' => __('Cashflow rules'),
+                    'description' => __('Adjust envelope allocations and automation preferences.'),
+                    'href' => '/settings/cashflow',
+                    'icon' => 'sliders-horizontal',
                 ],
                 [
                     'label' => __('Currencies'),
@@ -124,6 +89,29 @@ function more_show(PDO $pdo): void
                     'description' => __('Organise income and spending categories.'),
                     'href' => '/settings/categories',
                     'icon' => 'tags',
+                ],
+                [
+                    'label' => __('Language'),
+                    'description' => __('Switch the interface to your preferred language.'),
+                    'href' => '/settings#language',
+                    'icon' => 'languages',
+                ],
+            ],
+        ],
+        [
+            'title' => __('Help & feedback'),
+            'items' => [
+                [
+                    'label' => __('Tutorial'),
+                    'description' => __('Learn the ropes of goals, loans, and budgeting.'),
+                    'href' => '/tutorial',
+                    'icon' => 'graduation-cap',
+                ],
+                [
+                    'label' => __('Feedback'),
+                    'description' => __('Share product ideas or report an issue.'),
+                    'href' => '/feedback',
+                    'icon' => 'message-circle',
                 ],
             ],
         ],

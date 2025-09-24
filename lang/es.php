@@ -361,6 +361,8 @@ return [
     'left' => 'restante',
     'over' => 'excedido',
     'Manage Currencies' => 'Administrar monedas',
+    'Back to Settings' => 'Volver a Configuración',
+    'Back to More' => 'Volver a Más',
     '← Back to Settings' => '← Volver a Configuración',
     'Your currencies' => 'Tus monedas',
     'Set main' => 'Establecer principal',

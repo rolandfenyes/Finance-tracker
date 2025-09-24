@@ -2,7 +2,11 @@
   <div class="card space-y-6">
     <div class="flex items-center justify-between">
       <h1 class="text-xl font-semibold"><?= __('Manage Currencies') ?></h1>
-      <a href="/settings" class="text-sm text-accent"><?= __('← Back to Settings') ?></a>
+      <a href="/settings" class="inline-flex items-center gap-1 text-sm font-medium text-accent">
+        <span aria-hidden="true">←</span>
+        <span class="hidden sm:inline"><?= __('Back to Settings') ?></span>
+        <span class="sm:hidden"><?= __('Back to More') ?></span>
+      </a>
     </div>
 
     <div class="grid gap-6 md:grid-cols-2">
