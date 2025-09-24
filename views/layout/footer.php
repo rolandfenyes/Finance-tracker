@@ -1,5 +1,131 @@
 </main>
   <script>
+    (function () {
+      let storage;
+      try {
+        storage = window.sessionStorage;
+      } catch (err) {
+        storage = null;
+      }
+      if (!storage) {
+        return;
+      }
+
+      const KEY_PREFIX = 'mymoneymap:scroll:';
+      const currentPath = () => window.location.pathname || '/';
+      const toKey = (key) => KEY_PREFIX + key;
+      const isTruthy = (value) => {
+        if (!value) return false;
+        const normalized = String(value).toLowerCase();
+        return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
+      };
+
+      const formMutates = (form) => {
+        if (!form || isTruthy(form.dataset.skipScroll)) return false;
+
+        const method = (form.getAttribute('method') || 'GET').toUpperCase();
+        if (method !== 'GET') return true;
+
+        const overrideInput = form.querySelector('input[name="_method"]');
+        if (overrideInput) {
+          const override = String(overrideInput.value || '').toUpperCase();
+          if (override && override !== 'GET') {
+            return true;
+          }
+        }
+
+        return form.hasAttribute('data-preserve-scroll');
+      };
+
+      const rememberScroll = (form) => {
+        if (!formMutates(form)) return;
+
+        const key = (form.dataset.scrollKey && form.dataset.scrollKey.trim() !== '')
+          ? form.dataset.scrollKey.trim()
+          : currentPath();
+
+        const scrollY = Math.max(0, Math.round(
+          window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0
+        ));
+
+        const state = { y: scrollY };
+
+        if (form.dataset.restoreFocus) {
+          state.focus = form.dataset.restoreFocus;
+          if (isTruthy(form.dataset.restoreFocusSelect)) {
+            state.focusSelect = true;
+          }
+        }
+
+        try {
+          storage.setItem(toKey(key), JSON.stringify(state));
+        } catch (err) {
+          // Ignore storage errors
+        }
+      };
+
+      document.addEventListener('submit', (event) => {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement)) return;
+        rememberScroll(form);
+      }, true);
+
+      const restore = () => {
+        const key = currentPath();
+        const raw = storage.getItem(toKey(key));
+        if (!raw) return;
+
+        storage.removeItem(toKey(key));
+
+        let state;
+        try {
+          state = JSON.parse(raw);
+        } catch (err) {
+          return;
+        }
+        if (!state || typeof state !== 'object') return;
+
+        const scrollTarget = typeof state.y === 'number' ? state.y : parseInt(state.y, 10);
+        if (!Number.isNaN(scrollTarget)) {
+          try {
+            window.scrollTo({ top: scrollTarget, behavior: 'instant' });
+          } catch (err) {
+            window.scrollTo(0, scrollTarget);
+          }
+        }
+
+        if (state.focus) {
+          const el = document.querySelector(state.focus);
+          if (el) {
+            try {
+              el.focus({ preventScroll: true });
+            } catch (err) {
+              try {
+                el.focus();
+              } catch (err2) {
+                // ignore focus errors
+              }
+            }
+
+            if (state.focusSelect && typeof el.select === 'function') {
+              try {
+                el.select();
+              } catch (err) {
+                // ignore select errors
+              }
+            }
+          }
+        }
+      };
+
+      if (document.readyState === 'complete') {
+        restore();
+      } else {
+        window.addEventListener('load', restore, { once: true });
+      }
+    })();
+  </script>
+  <script>
     const mmChartStore = window.__mmChartStore = window.__mmChartStore || new Map();
 
     function mmBuildLineChart(id, labels, dataset) {
