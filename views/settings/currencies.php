@@ -61,3 +61,71 @@
     </div>
   </div>
 </section>
+
+<div
+  id="currency-adding-overlay"
+  class="fixed inset-0 z-50 hidden bg-slate-900/40 backdrop-blur-sm dark:bg-slate-900/70"
+  aria-hidden="true"
+>
+  <div class="absolute left-1/2 top-1/2 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 px-4">
+    <div
+      class="rounded-3xl bg-white/95 px-8 py-6 text-center shadow-xl ring-1 ring-black/5 dark:bg-slate-900/95 dark:text-white dark:ring-white/10"
+      role="status"
+      aria-live="assertive"
+      aria-busy="true"
+    >
+      <div class="mx-auto flex h-12 w-12 items-center justify-center" aria-hidden="true">
+        <div class="h-12 w-12 rounded-full border-4 border-brand-500/30 border-t-brand-500 animate-spin"></div>
+      </div>
+      <p class="mt-4 text-sm font-medium text-slate-700 dark:text-slate-100">
+        <?= __('Adding currency to your account, please wait') ?>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const form = document.querySelector('form[action="/settings/currencies/add"]');
+    const overlay = document.getElementById('currency-adding-overlay');
+    if (!form || !overlay) return;
+
+    const submitButton = form.querySelector('button[type="submit"]');
+    let overlayActive = false;
+
+    const showOverlay = () => {
+      if (overlayActive) return;
+      overlayActive = true;
+      overlay.classList.remove('hidden');
+      overlay.setAttribute('aria-hidden', 'false');
+      if (submitButton) {
+        submitButton.setAttribute('disabled', 'disabled');
+      }
+      if (window.MyMoneyMapOverlay && typeof window.MyMoneyMapOverlay.open === 'function') {
+        window.MyMoneyMapOverlay.open();
+      }
+    };
+
+    const resetOverlay = () => {
+      const wasActive = overlayActive;
+      overlayActive = false;
+      overlay.classList.add('hidden');
+      overlay.setAttribute('aria-hidden', 'true');
+      if (submitButton) {
+        submitButton.removeAttribute('disabled');
+      }
+      if (wasActive && window.MyMoneyMapOverlay && typeof window.MyMoneyMapOverlay.close === 'function') {
+        window.MyMoneyMapOverlay.close();
+      }
+    };
+
+    form.addEventListener('submit', () => {
+      if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
+        return;
+      }
+      showOverlay();
+    });
+
+    window.addEventListener('pageshow', resetOverlay);
+  });
+</script>
