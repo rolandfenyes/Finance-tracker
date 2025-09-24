@@ -67,6 +67,7 @@ return [
     'Balance: :amount' => 'Saldo: :amount',
     'Amount' => 'Monto',
     'Dashboard' => 'Panel',
+    'Current month' => 'Mes actual',
     'Emergency' => 'Emergencia',
     'Scheduled' => 'Programado',
     'Feedback' => 'Comentarios',

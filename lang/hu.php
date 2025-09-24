@@ -69,6 +69,7 @@ return [
     'Language' => 'Nyelv',
     'Welcome back' => 'Üdv újra',
     'Dashboard' => 'Vezérlőpult',
+    'Current month' => 'Aktuális hónap',
     'Emergency' => 'Vészalap',
     'Scheduled' => 'Ütemezett',
     'Feedback' => 'Visszajelzés',

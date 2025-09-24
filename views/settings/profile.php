@@ -2,11 +2,16 @@
   <div class="card">
     <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <h1 class="text-xl font-semibold">Profile</h1>
-      <a href="/settings" class="inline-flex items-center gap-1 text-sm font-medium text-accent">
-        <span aria-hidden="true">←</span>
-        <span class="hidden sm:inline"><?= __('Back to Settings') ?></span>
-        <span class="sm:hidden"><?= __('Back to More') ?></span>
-      </a>
+      <div class="flex items-center gap-2">
+        <a href="/settings" class="hidden sm:inline-flex items-center gap-1 text-sm font-medium text-accent">
+          <span aria-hidden="true">←</span>
+          <span><?= __('Back to Settings') ?></span>
+        </a>
+        <a href="/more" class="inline-flex sm:hidden items-center gap-1 text-sm font-medium text-accent">
+          <span aria-hidden="true">←</span>
+          <span><?= __('Back to More') ?></span>
+        </a>
+      </div>
     </div>
 
     <?php if (!empty($_SESSION['flash'])): ?>

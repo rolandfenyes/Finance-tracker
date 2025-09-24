@@ -193,6 +193,11 @@
           pointer-events: none;
           transform: translateY(-0.75rem);
         }
+        body.overlay-open .mobile-nav {
+          transform: translateY(calc(100% + 1.5rem));
+          opacity: 0;
+          pointer-events: none;
+        }
       }
       main {
         @apply flex-1;
@@ -689,6 +694,7 @@
       .mobile-nav {
         padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
         box-shadow: 0 -20px 36px -24px rgba(17, 36, 29, 0.45);
+        transition: transform 0.3s ease, opacity 0.3s ease;
       }
       .dark .mobile-nav {
         box-shadow: 0 -20px 40px -26px rgba(0, 0, 0, 0.65);
@@ -1040,11 +1046,11 @@
       ['href'=>'/more',          'label'=>'More',             'match'=>'#^/more(?:/.*)?$#',        'icon' => 'ellipsis'],
     ];
     $mobileNavItems = [
-      ['href'=>'/',              'label'=>'Dashboard',      'match'=>'#^/$#',                                         'icon' => 'layout-dashboard'],
-      ['href'=>'/years',         'label'=>'Months',         'match'=>'#^/(current-month|years(?:/.*)?|months(?:/.*)?)$#', 'icon' => 'calendar-range'],
-      ['href'=>'/goals',         'label'=>'Goals',          'match'=>'#^/goals(?:/.*)?$#',                              'icon' => 'goal'],
-      ['href'=>'/emergency',     'label'=>'Emergency Fund', 'match'=>'#^/emergency(?:/.*)?$#',                          'icon' => 'life-buoy'],
-      ['href'=>'/more',          'label'=>'More',           'match'=>'#^/more(?:/.*)?$#',                               'icon' => 'ellipsis'],
+      ['href'=>'/',              'label'=>'Dashboard',      'match'=>'#^/$#',                                                        'icon' => 'layout-dashboard'],
+      ['href'=>'/current-month', 'label'=>'Current month',  'match'=>'#^/(current-month(?:/.*)?|months(?:/.*)?|years(?:/.*)?)$#', 'icon' => 'calendar-range'],
+      ['href'=>'/goals',         'label'=>'Goals',          'match'=>'#^/goals(?:/.*)?$#',                                           'icon' => 'goal'],
+      ['href'=>'/emergency',     'label'=>'Emergency Fund', 'match'=>'#^/emergency(?:/.*)?$#',                                       'icon' => 'life-buoy'],
+      ['href'=>'/more',          'label'=>'More',           'match'=>'#^/more(?:/.*)?$#',                                            'icon' => 'ellipsis'],
     ];
     function nav_link(array $item, string $currentPath, string $extra=''): string {
       $active = preg_match($item['match'], $currentPath) === 1;
