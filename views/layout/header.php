@@ -685,6 +685,7 @@
   </style>
 
   <style type="text/tailwindcss">
+    @layer components {
       .mobile-nav {
         padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
         box-shadow: 0 -20px 36px -24px rgba(17, 36, 29, 0.45);
