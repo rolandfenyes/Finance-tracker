@@ -444,7 +444,7 @@
   <div class="card h-80 overflow-hidden">
     <h3 class="font-semibold mb-3"><?= __('Top Spending Categories (:currency)', ['currency' => htmlspecialchars($main)]) ?></h3>
     <?php
-      // Build grouped sums from $allTx in MAIN (spending only)
+      // Build grouped sums from all transactions in MAIN (spending only)
       $grp = []; $cols = [];
       foreach (($allTx ?? []) as $r) {
         if (($r['kind'] ?? '') !== 'spending') continue;
@@ -571,11 +571,17 @@
 </section>
 
 <!-- Add transaction -->
-<section class="mt-6 grid md:grid-cols-2 gap-6">
+<section id="quick-add" class="mt-6 grid md:grid-cols-2 gap-6">
   <div class="card md:col-span-2">
     <h3 class="text-base font-semibold mb-3"><?= __('Quick Add') ?></h3>
 
-    <form class="grid gap-4 md:grid-cols-12 md:items-end" method="post" action="/months/tx/add">
+    <form
+      class="grid gap-4 md:grid-cols-12 md:items-end"
+      method="post"
+      action="/months/tx/add"
+      data-restore-focus="#quick-add-amount"
+      data-restore-focus-select="true"
+    >
       <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
       <input type="hidden" name="y" value="<?= $y ?>" />
       <input type="hidden" name="m" value="<?= $m ?>" />
@@ -585,7 +591,7 @@
         <label class="label"><?= __('Type') ?></label>
         <select name="kind" class="select">
           <option value="income">Income</option>
-          <option value="spending">Spending</option>
+          <option value="spending" selected>Spending</option>
         </select>
       </div>
 
@@ -604,7 +610,7 @@
       <div class="field md:col-span-4">
         <label class="label"><?= __('Amount') ?></label>
         <div class="grid grid-cols-5 gap-2">
-          <input name="amount" type="number" step="0.01" class="input col-span-3" placeholder="0.00" required />
+          <input id="quick-add-amount" name="amount" type="number" step="0.01" class="input col-span-3" placeholder="0.00" required />
           <select name="currency" class="select col-span-2">
             <?php foreach ($userCurrencies as $c): ?>
               <option value="<?= htmlspecialchars($c['code']) ?>" <?= $c['is_main'] ? 'selected' : '' ?>>
@@ -646,7 +652,7 @@
 
   <!-- Mobile: stacked cards -->
   <div class="md:hidden space-y-3">
-    <?php foreach ($allTx as $row): ?>
+    <?php foreach ($txDisplay as $row): ?>
       <?php
         $isVirtual = !empty($row['is_virtual']);
         $nativeCur = $row['currency'] ?: $main;
@@ -825,7 +831,7 @@
         </tr>
       </thead>
       <tbody>
-        <?php foreach ($allTx as $row): ?>
+        <?php foreach ($txDisplay as $row): ?>
           <?php
             $isVirtual = !empty($row['is_virtual']);
             $isEF      = isset($row['source']) && $row['source'] === 'ef';

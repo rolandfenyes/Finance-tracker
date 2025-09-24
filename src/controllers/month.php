@@ -286,17 +286,26 @@ function month_show(PDO $pdo, ?int $year = null, ?int $month = null) {
   foreach ($realTx_full as $r) { $adder($r); }
   foreach ($virtualTx   as $r) { $adder($r); }
 
-  // -------------------- MERGE (virtual + paged reals) FOR DISPLAY --------------------
-  $allTx = array_merge($virtualTx, $realTx_page);
-  usort($allTx, function($a,$b){
-    $da = strtotime($a['occurred_on']); $db = strtotime($b['occurred_on']);
+  // -------------------- MERGE (virtual + reals) --------------------
+  $sortTx = function($a, $b) {
+    $da = strtotime($a['occurred_on']);
+    $db = strtotime($b['occurred_on']);
     if ($da === $db) {
-      $av = !empty($a['is_virtual']); $bv = !empty($b['is_virtual']);
+      $av = !empty($a['is_virtual']);
+      $bv = !empty($b['is_virtual']);
       if ($av !== $bv) return $av ? 1 : -1; // real first
       return ($b['id'] ?? 0) <=> ($a['id'] ?? 0);
     }
     return $db <=> $da;
-  });
+  };
+
+  // For table display we only keep the current page of real tx
+  $txDisplay = array_merge($virtualTx, $realTx_page);
+  usort($txDisplay, $sortTx);
+
+  // For calculations/charts we need the full month selection
+  $allTx = array_merge($virtualTx, $realTx_full);
+  usort($allTx, $sortTx);
 
   // -------------------- AUX --------------------
   // Categories (with color) for legend & filters
@@ -414,7 +423,7 @@ function month_show(PDO $pdo, ?int $year = null, ?int $month = null) {
 
   // -------------------- VIEW --------------------
   view('month/index', compact(
-    'allTx','y','m','first','last','main',
+    'txDisplay','allTx','y','m','first','last','main',
     'sumIn_main','sumOut_main','sumIn_native_by_cur','sumOut_native_by_cur',
     'cats','g','e','userCurrencies',
     'page','totalPages','flt', // ← for filters + pagination UI
