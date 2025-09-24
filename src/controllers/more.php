@@ -90,12 +90,6 @@ function more_show(PDO $pdo): void
                     'href' => '/settings/categories',
                     'icon' => 'tags',
                 ],
-                [
-                    'label' => __('Language'),
-                    'description' => __('Switch the interface to your preferred language.'),
-                    'href' => '/settings#language',
-                    'icon' => 'languages',
-                ],
             ],
         ],
         [
@@ -117,9 +111,20 @@ function more_show(PDO $pdo): void
         ],
     ];
 
+    $localeOptions = available_locales();
+    $currentLocale = app_locale();
+    $localeFlags = [
+        'en' => '🇺🇸',
+        'hu' => '🇭🇺',
+        'es' => '🇪🇸',
+    ];
+
     view('more/index', [
         'user' => $user,
         'displayName' => $displayName,
         'navSections' => $navSections,
+        'localeOptions' => $localeOptions,
+        'currentLocale' => $currentLocale,
+        'localeFlags' => $localeFlags,
     ]);
 }
