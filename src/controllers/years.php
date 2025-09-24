@@ -127,7 +127,7 @@ function month_tx_add(PDO $pdo){
   $y = (int)($_POST['y'] ?? date('Y'));
   $m = (int)($_POST['m'] ?? date('n'));
   $ym = sprintf('%04d-%02d', $y, $m);
-  redirect('/current-month?ym=' . $ym . '#quick-add');
+  redirect('/current-month?ym=' . $ym);
 }
 
 function month_tx_edit(PDO $pdo){
