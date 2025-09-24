@@ -394,30 +394,51 @@
       </div>
     </div>
 
-    <!-- Footer (identical to Loans) -->
-    <div class="modal-footer bg-gray-50">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
-        <!-- Quick “Add money now” bar (matches Loans quick payment bar layout & spacing) -->
-        <div class="flex flex-col md:flex-row items-center gap-2">
-          <form method="post" action="/goals/tx/add" class="flex flex-col md:flex-row items-center gap-2">
-            <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-            <input type="hidden" name="goal_id" value="<?= $goalId ?>" />
-            <input name="occurred_on" type="date" value="<?= date('Y-m-d') ?>" class="input">
-            <input name="amount" type="number" step="0.01" placeholder="<?= __('Amount') ?>" class="input" required>
-            <button class="w-80 btn btn-emerald"><?= __('Add money') ?></button>
-          </form>
-
-          
-        </div>
-        <!-- Danger: Delete goal (right aligned on larger screens) -->
-        <form method="post" action="/goals/delete" onsubmit="return confirm('<?= __('Delete this goal?') ?>')" class="mx-auto w-full">
+    <div class="px-6 pb-6">
+      <div class="mt-6 space-y-4">
+        <form
+          method="post"
+          action="/goals/tx/add"
+          class="grid gap-2 sm:grid-cols-3"
+        >
           <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-          <input type="hidden" name="id" value="<?= $goalId ?>" />
-          <button class="btn btn-danger w-full"><?= __('Delete') ?></button>
+          <input type="hidden" name="goal_id" value="<?= $goalId ?>" />
+          <input
+            name="occurred_on"
+            type="date"
+            value="<?= date('Y-m-d') ?>"
+            class="input sm:col-span-1"
+          >
+          <input
+            name="amount"
+            type="number"
+            step="0.01"
+            placeholder="<?= __('Amount') ?>"
+            class="input sm:col-span-1"
+            required
+          >
+          <button class="btn btn-emerald w-full sm:w-auto sm:col-span-1">
+            <?= __('Add money') ?>
+          </button>
         </form>
 
-        <button class="btn" data-close><?= __('Cancel') ?></button>
-        <button class="btn btn-primary" onclick="document.getElementById('goal-form-<?= $goalId ?>').submit()"><?= __('Save') ?></button>
+        <form
+          method="post"
+          action="/goals/delete"
+          onsubmit="return confirm('<?= __('Delete this goal?') ?>')"
+          class="w-full"
+        >
+          <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+          <input type="hidden" name="id" value="<?= $goalId ?>" />
+          <button class="btn btn-danger w-full">
+            <?= __('Delete') ?>
+          </button>
+        </form>
+
+        <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <button class="btn" data-close><?= __('Cancel') ?></button>
+          <button class="btn btn-primary" form="goal-form-<?= $goalId ?>"><?= __('Save') ?></button>
+        </div>
       </div>
     </div>
   </div>

@@ -2,7 +2,16 @@
   <div class="card space-y-6">
     <div class="flex items-center justify-between">
       <h1 class="text-xl font-semibold"><?= __('Manage Categories') ?></h1>
-      <a href="/settings" class="text-sm text-accent"><?= __('← Back to Settings') ?></a>
+      <div class="flex items-center gap-2">
+        <a href="/settings" class="hidden sm:inline-flex items-center gap-1 text-sm font-medium text-accent">
+          <span aria-hidden="true">←</span>
+          <span><?= __('Back to Settings') ?></span>
+        </a>
+        <a href="/more" class="inline-flex sm:hidden items-center gap-1 text-sm font-medium text-accent">
+          <span aria-hidden="true">←</span>
+          <span><?= __('Back to More') ?></span>
+        </a>
+      </div>
     </div>
 
     <div class="grid gap-6 md:grid-cols-2">

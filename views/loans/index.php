@@ -328,7 +328,7 @@
     </div>
 
     <!-- Body -->
-    <form method="post" action="/loans/edit" class="modal-body grid gap-4 md:grid-cols-12">
+    <form method="post" action="/loans/edit" id="loan-form-<?= (int)$l['id'] ?>" class="modal-body grid gap-4 md:grid-cols-12">
       <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
       <input type="hidden" name="id" value="<?= (int)$l['id'] ?>" />
 
@@ -542,22 +542,37 @@
 
     </form>
 
-    <!-- Sticky footer -->
-    <div class="modal-footer bg-gray-50">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
-        <!-- Quick payment -->
-        <form class="grid grid-cols-2 md:grid-cols-4 gap-2 w-full md:w-auto"
-              method="post" action="/loans/payment/add">
+    <div class="px-6 pb-6">
+      <div class="mt-6 space-y-4">
+        <form
+          class="grid gap-2 sm:grid-cols-2 lg:grid-cols-5"
+          method="post"
+          action="/loans/payment/add"
+        >
           <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
           <input type="hidden" name="loan_id" value="<?= (int)$l['id'] ?>" />
-          <input name="paid_on" type="date" value="<?= date('Y-m-d') ?>" class="input">
-          <input name="amount" type="number" step="0.01" placeholder="<?= __('Payment amount') ?>" class="input" required>
-          <button class="btn btn-emerald md:col-span-1"><?= __('Record Payment') ?></button>
+          <input
+            name="paid_on"
+            type="date"
+            value="<?= date('Y-m-d') ?>"
+            class="input sm:col-span-1 lg:col-span-2"
+          >
+          <input
+            name="amount"
+            type="number"
+            step="0.01"
+            placeholder="<?= __('Payment amount') ?>"
+            class="input sm:col-span-1 lg:col-span-2"
+            required
+          >
+          <button class="btn btn-emerald w-full sm:w-auto sm:col-span-2 lg:col-span-1">
+            <?= __('Record Payment') ?>
+          </button>
         </form>
 
-        <div class="flex justify-end gap-2">
+        <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
           <button class="btn" data-close><?= __('Cancel') ?></button>
-          <button class="btn btn-primary" onclick="this.closest('.modal').querySelector('form').submit()"><?= __('Save') ?></button>
+          <button class="btn btn-primary" form="loan-form-<?= (int)$l['id'] ?>"><?= __('Save') ?></button>
         </div>
       </div>
     </div>

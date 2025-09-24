@@ -74,7 +74,7 @@ $localeFlags = [
 
   <?php if ($localeOptions): ?>
   <!-- Language -->
-  <div class="card">
+  <div class="card" id="language">
     <div class="card-kicker"><?= __('Preferences') ?></div>
     <h2 class="card-title mt-1"><?= __('Language') ?></h2>
     <p class="card-subtle mt-2"><?= __('Choose your preferred interface language.') ?></p>
