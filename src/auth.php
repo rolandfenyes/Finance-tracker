@@ -147,6 +147,7 @@ function handle_login(PDO $pdo) {
         $needs = $pdo->prepare('SELECT needs_tutorial FROM users WHERE id=?');
         $needs->execute([$uid]);
         if ((bool)$needs->fetchColumn()) {
+            $pdo->prepare('UPDATE users SET needs_tutorial = FALSE WHERE id = ?')->execute([$uid]);
             redirect('/tutorial');
         }
 
