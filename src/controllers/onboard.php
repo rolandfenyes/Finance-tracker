@@ -599,7 +599,7 @@ function onboard_done_finish(PDO $pdo){
   try { $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS tutorial_seen boolean NOT NULL DEFAULT false"); } catch (Throwable $e) {}
 
   try {
-    $stmt = $pdo->prepare("UPDATE users SET tutorial_seen = TRUE, onboard_done = TRUE WHERE id = ?");
+    $stmt = $pdo->prepare("UPDATE users SET tutorial_seen = TRUE, needs_tutorial = FALSE, onboard_done = TRUE WHERE id = ?");
     $stmt->execute([uid()]);
   } catch (Throwable $e) { /* ignore */ }
 

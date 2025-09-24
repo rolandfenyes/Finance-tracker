@@ -8,6 +8,10 @@ require $root . '/src/helpers.php';
 require $root . '/src/auth.php';
 require $root . '/src/fx.php';
 
+if (isset($pdo) && $pdo instanceof PDO) {
+    attempt_remembered_login($pdo);
+}
+
 $rawPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $base = rtrim($config['app']['base_url'] ?? '', '/');
 if ($base !== '' && str_starts_with($rawPath, $base)) {
