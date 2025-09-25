@@ -207,6 +207,17 @@
       body.overlay-open {
         overflow: hidden;
       }
+      .status-bar-spacer {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: env(safe-area-inset-top, 0px);
+        background: linear-gradient(180deg, var(--mm-statusbar-bg, rgba(255,255,255,0.88)) 0%, rgba(255,255,255,0) 90%);
+        pointer-events: none;
+        z-index: 30;
+        transition: background 0.4s ease;
+      }
       @media (max-width: 640px) {
         body.overlay-open header {
           opacity: 0;
@@ -1057,6 +1068,7 @@
   <div class="pointer-events-none fixed inset-0 -z-10 opacity-60 mix-blend-normal">
     <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(75,150,110,0.18),transparent_55%),radial-gradient(circle_at_80%_0%,rgba(50,100,75,0.22),transparent_65%)] dark:bg-[radial-gradient(circle_at_15%_15%,rgba(75,150,110,0.35),transparent_60%),radial-gradient(circle_at_85%_5%,rgba(18,36,29,0.55),transparent_70%)]"></div>
   </div>
+  <div class="status-bar-spacer" aria-hidden="true"></div>
   <?php
     $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/';
     $onboarding  = str_starts_with($currentPath, '/onboard');

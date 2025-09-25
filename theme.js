@@ -117,6 +117,7 @@
       `  --mm-mesh-background-dark: ${theme.gradients.mesh.dark};`,
       `  --mm-body-glow: ${theme.gradients.bodyGlow.light};`,
       `  --mm-body-glow-dark: ${theme.gradients.bodyGlow.dark};`,
+      `  --mm-statusbar-bg: ${theme.statusBar.light};`,
       `  --mm-card-surface: ${theme.surfaces.card.light};`,
       `  --mm-card-border: ${theme.surfaces.card.borderLight};`,
       `  --mm-tile-surface: ${theme.surfaces.tile.light};`,
@@ -179,6 +180,7 @@
       `  --mm-icon-danger-border: ${theme.icons.danger.borderDark};`,
       `  --mm-icon-danger-color: ${theme.icons.danger.colorDark};`,
       `  --mm-icon-danger-hover: ${theme.icons.danger.hoverDark};`,
+      `  --mm-statusbar-bg: ${theme.statusBar.dark};`,
       `  --mm-body-glow: ${theme.gradients.bodyGlow.dark};`,
       `}`,
     ];
@@ -205,6 +207,8 @@
     const primary = palette[500];
     const surfaceDeep = darken(base, 0.72);
     const surfaceGhost = lighten(base, 0.82);
+    const statusLight = toRgba(lighten(base, 0.86), 0.88);
+    const statusDark = toRgba(darken(base, 0.7), 0.85);
     const borderLight = lighten(base, 0.72);
     const borderDark = darken(base, 0.6);
     const baseBrightness = getBrightness(base);
@@ -288,6 +292,10 @@
             `radial-gradient(40% 40% at 88% 12%, ${toRgba(deep, 0.55)}, transparent 75%)`,
           ].join(', '),
         },
+      },
+      statusBar: {
+        light: statusLight,
+        dark: statusDark,
       },
       surfaces: {
         card: {
