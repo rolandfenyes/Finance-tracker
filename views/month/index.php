@@ -25,26 +25,20 @@
 
       <!-- Month pill (click anywhere to open) -->
       <div class="relative">
-        <!-- Visible pill -->
-        <button id="month-pill"
-                type="button"
-                class="group inline-flex items-center gap-3 rounded-2xl border border-gray-200 bg-white/90 px-5 py-3 text-left shadow-sm transition hover:bg-brand-50/70 dark:border-slate-700 dark:bg-slate-900/60 dark:hover:bg-slate-800"
-                aria-haspopup="dialog"
-                aria-expanded="false">
-          <i data-lucide="calendar" class="h-5 w-5 text-gray-700 dark:text-slate-200"></i>
-          <span class="leading-tight font-semibold text-gray-900 dark:text-white">
-            <?= htmlspecialchars($ymLabel) ?>
-          </span>
-          <i data-lucide="chevron-down" class="h-4 w-4 text-gray-500 transition group-hover:translate-y-[1px] dark:text-slate-400"></i>
-        </button>
-
-        <!-- Real input (visually hidden but clickable via JS) -->
         <input id="month-input"
                type="month"
                name="ym"
                value="<?= htmlspecialchars(sprintf('%04d-%02d', $y, $m)) ?>"
-               class="sr-only"
-               aria-hidden="true" />
+               aria-label="<?= __('Select month') ?>"
+               class="peer absolute inset-0 z-10 h-full w-full cursor-pointer appearance-none opacity-0"
+        />
+        <div class="inline-flex items-center gap-3 rounded-2xl border border-gray-200 bg-white/90 px-5 py-3 text-left shadow-sm transition pointer-events-none peer-hover:bg-brand-50/70 peer-focus-visible:ring-2 peer-focus-visible:ring-brand-500 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-900/60 dark:peer-hover:bg-slate-800 dark:peer-focus-visible:ring-offset-slate-900">
+          <i data-lucide="calendar" class="h-5 w-5 text-gray-700 dark:text-slate-200"></i>
+          <span class="leading-tight font-semibold text-gray-900 dark:text-white">
+            <?= htmlspecialchars($ymLabel) ?>
+          </span>
+          <i data-lucide="chevron-down" class="h-4 w-4 text-gray-500 transition peer-hover:translate-y-[1px] peer-focus-visible:translate-y-[1px] dark:text-slate-400"></i>
+        </div>
       </div>
 
       <!-- Next -->
@@ -81,25 +75,34 @@
 <script>
   // Make the whole pill open the native month picker
   (function(){
-    const pill  = document.getElementById('month-pill');
     const input = document.getElementById('month-input');
 
-    if (!pill || !input) return;
+    if (!input) return;
 
-    // When the pill is clicked, forward focus/click to the hidden input
-    pill.addEventListener('click', () => {
-      // On iOS Safari the .showPicker() is not universal; fallback to focus+click
-      if (input.showPicker) {
-        input.showPicker();
-      } else {
-        input.focus();
-        input.click();
+    const openPicker = () => {
+      if (typeof input.showPicker === 'function') {
+        try {
+          input.showPicker();
+          return;
+        } catch (err) {
+          // ignore showPicker errors and fall back
+        }
+      }
+      input.focus();
+    };
+
+    input.addEventListener('click', openPicker);
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openPicker();
       }
     });
 
     // When month changes, reload with ?ym=YYYY-MM while preserving other filters
     input.addEventListener('change', () => {
       const ym = input.value; // 'YYYY-MM'
+      if (!ym) return;
       const url = new URL(window.location.href);
       url.searchParams.set('ym', ym);
       url.searchParams.delete('page'); // reset pagination

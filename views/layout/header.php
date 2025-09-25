@@ -20,7 +20,7 @@
   <link rel="apple-touch-icon" sizes="120x120" href="/apple-touch-icon-120x120.png?v=2">
 
   <!-- Android / PWA -->
-  <link rel="manifest" href="/site.webmanifest?v=2">
+  <link rel="manifest" href="/manifest.php?v=3">
 
   <!-- Branding -->
   <meta name="apple-mobile-web-app-title" content="MyMoneyMap">
@@ -32,16 +32,36 @@
   <meta name="x5-orientation" content="portrait">
   <meta name="x5-fullscreen" content="true">
   <meta name="full-screen" content="yes">
-  <meta name="theme-color" content="#4b966e">
+  <?php
+    $themeDefinitions = available_themes();
+    $selectedTheme = current_theme_slug();
+    $selectedThemeMeta = $themeDefinitions[$selectedTheme] ?? [];
+    $initialLightThemeColor = $selectedThemeMeta['muted'] ?? '#f8fbf9';
+    $initialDarkThemeColor = $selectedThemeMeta['deep'] ?? ($selectedThemeMeta['base'] ?? '#0f1e18');
+  ?>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta
+    name="theme-color"
+    content="<?= htmlspecialchars($initialLightThemeColor, ENT_QUOTES) ?>"
+    data-theme-color="default"
+  >
+  <meta
+    name="theme-color"
+    media="(prefers-color-scheme: light)"
+    content="<?= htmlspecialchars($initialLightThemeColor, ENT_QUOTES) ?>"
+    data-theme-color="light"
+  >
+  <meta
+    name="theme-color"
+    media="(prefers-color-scheme: dark)"
+    content="<?= htmlspecialchars($initialDarkThemeColor, ENT_QUOTES) ?>"
+    data-theme-color="dark"
+  >
 
 
 
   <!-- Tailwind CDN (JIT) -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <?php
-    $themeDefinitions = available_themes();
-    $selectedTheme = current_theme_slug();
-  ?>
   <script>
     window.__MYMONEYMAP_THEME_BASES = <?= json_encode($themeDefinitions, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES) ?>;
     window.__MYMONEYMAP_SELECTED_THEME = <?= json_encode($selectedTheme, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES) ?>;
@@ -692,9 +712,17 @@
   <style type="text/tailwindcss">
     @layer components {
       .mobile-nav {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
         padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
         box-shadow: 0 -20px 36px -24px rgba(17, 36, 29, 0.45);
         transition: transform 0.3s ease, opacity 0.3s ease;
+        transform: translateZ(0);
+        will-change: transform;
+        contain: layout paint;
+        backface-visibility: hidden;
       }
       .dark .mobile-nav {
         box-shadow: 0 -20px 40px -26px rgba(0, 0, 0, 0.65);
@@ -730,11 +758,11 @@
       .mobile-nav__link:focus-visible {
         color: var(--mm-brand-primary, #4b966e);
         transform: translateY(-2px);
-        background: rgba(75, 150, 110, 0.08);
+        background: rgba(var(--mm-brand-primary-rgb, 75, 150, 110), 0.08);
       }
       .mobile-nav__link--active {
         color: var(--mm-brand-primary, #4b966e);
-        background: rgba(75, 150, 110, 0.12);
+        background: rgba(var(--mm-brand-primary-rgb, 75, 150, 110), 0.12);
         box-shadow: inset 0 1px 0 rgba(255,255,255,0.45);
       }
       .dark .mobile-nav__link {
@@ -742,10 +770,10 @@
       }
       .dark .mobile-nav__link:hover,
       .dark .mobile-nav__link:focus-visible {
-        background: rgba(75, 150, 110, 0.14);
+        background: rgba(var(--mm-brand-primary-rgb, 75, 150, 110), 0.14);
       }
       .dark .mobile-nav__link--active {
-        background: rgba(75, 150, 110, 0.24);
+        background: rgba(var(--mm-brand-primary-rgb, 75, 150, 110), 0.24);
         box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.18);
       }
     }
