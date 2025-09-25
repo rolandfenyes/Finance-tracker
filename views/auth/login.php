@@ -136,9 +136,168 @@ $activeLabel = $localeOptions[$currentLocale] ?? strtoupper($currentLocale);
         </p>
       </form>
 
+      <div id="passkey-login-block" class="mt-6 space-y-3">
+        <div class="flex items-center gap-3 text-[10px] uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
+          <div class="h-px flex-1 bg-slate-200 dark:bg-slate-700"></div>
+          <span><?= __('Or use biometrics') ?></span>
+          <div class="h-px flex-1 bg-slate-200 dark:bg-slate-700"></div>
+        </div>
+        <button
+          type="button"
+          id="passkey-login-button"
+          class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-brand-500/40 bg-white/80 px-4 py-2.5 text-sm font-semibold text-brand-700 shadow-sm transition hover:bg-brand-50 dark:border-brand-400/40 dark:bg-slate-900/70 dark:text-brand-100 dark:hover:bg-slate-800"
+        >
+          <span aria-hidden="true">🔐</span>
+          <span><?= __('Sign in with Face ID or fingerprint') ?></span>
+        </button>
+        <p id="passkey-login-message" class="hidden text-center text-xs"></p>
+      </div>
+
       <p class="text-center text-[11px] text-slate-500 dark:text-slate-400">
         <?= __('By continuing you agree to the Terms & Privacy Policy.') ?>
       </p>
     </div>
   </div>
 </section>
+
+<script>
+  (function () {
+    const block = document.getElementById('passkey-login-block');
+    const button = document.getElementById('passkey-login-button');
+    const message = document.getElementById('passkey-login-message');
+    if (!block || !button) {
+      return;
+    }
+
+    const resetMessageClasses = () => {
+      if (!message) return;
+      message.classList.remove('text-rose-600', 'dark:text-rose-300', 'text-slate-500', 'dark:text-slate-300', 'text-emerald-600', 'dark:text-emerald-300');
+    };
+
+    const showMessage = (text, tone = 'error') => {
+      if (!message) return;
+      resetMessageClasses();
+      if (tone === 'info') {
+        message.classList.add('text-slate-500', 'dark:text-slate-300');
+      } else if (tone === 'success') {
+        message.classList.add('text-emerald-600', 'dark:text-emerald-300');
+      } else {
+        message.classList.add('text-rose-600', 'dark:text-rose-300');
+      }
+      message.textContent = text;
+      message.classList.remove('hidden');
+    };
+
+    const clearMessage = () => {
+      if (!message) return;
+      message.classList.add('hidden');
+      message.textContent = '';
+      resetMessageClasses();
+    };
+
+    if (!window.PublicKeyCredential) {
+      block.remove();
+      return;
+    }
+
+    const base64urlToBuffer = (value) => {
+      const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+      const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+      const binary = atob(padded);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return bytes.buffer;
+    };
+
+    const bufferToBase64url = (buffer) => {
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      bytes.forEach((b) => {
+        binary += String.fromCharCode(b);
+      });
+      return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+    };
+
+    if (typeof window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function') {
+      window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then((available) => {
+        if (!available && block.parentElement) {
+          block.remove();
+        }
+      }).catch(() => {});
+    }
+
+    button.addEventListener('click', async () => {
+      clearMessage();
+      button.disabled = true;
+      button.classList.add('opacity-70');
+      try {
+        const optionsResp = await fetch('/webauthn/options/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+        });
+        const optionsJson = await optionsResp.json();
+        if (!optionsResp.ok || !optionsJson.success) {
+          const err = optionsJson && optionsJson.error ? optionsJson.error : <?= json_encode(__('Could not start passkey login.')) ?>;
+          throw new Error(err);
+        }
+
+        const publicKey = optionsJson.publicKey;
+        publicKey.challenge = base64urlToBuffer(publicKey.challenge);
+        if (Array.isArray(publicKey.allowCredentials)) {
+          if (publicKey.allowCredentials.length) {
+            publicKey.allowCredentials = publicKey.allowCredentials.map((cred) => ({
+              ...cred,
+              id: base64urlToBuffer(cred.id),
+            }));
+          } else {
+            delete publicKey.allowCredentials;
+          }
+        }
+
+        showMessage(<?= json_encode(__('Touch your sensor to continue…')) ?>, 'info');
+        const assertion = await navigator.credentials.get({ publicKey });
+        if (!assertion) {
+          throw new Error(<?= json_encode(__('Biometric prompt was dismissed.')) ?>);
+        }
+
+        const credential = {
+          id: assertion.id,
+          rawId: bufferToBase64url(assertion.rawId),
+          type: assertion.type,
+          response: {
+            clientDataJSON: bufferToBase64url(assertion.response.clientDataJSON),
+            authenticatorData: bufferToBase64url(assertion.response.authenticatorData),
+            signature: bufferToBase64url(assertion.response.signature),
+            userHandle: assertion.response.userHandle ? bufferToBase64url(assertion.response.userHandle) : null,
+          },
+        };
+
+        const loginResp = await fetch('/webauthn/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ credential }),
+        });
+        const loginJson = await loginResp.json();
+        if (!loginResp.ok || !loginJson.success) {
+          const err = loginJson && loginJson.error ? loginJson.error : <?= json_encode(__('Could not complete biometric sign-in.')) ?>;
+          throw new Error(err);
+        }
+
+        const redirectTo = loginJson.redirect || '/';
+        window.location.href = redirectTo;
+      } catch (error) {
+        if (error && (error.name === 'AbortError' || error.name === 'NotAllowedError')) {
+          showMessage(<?= json_encode(__('Biometric prompt was dismissed.')) ?>);
+        } else {
+          showMessage(error && error.message ? error.message : <?= json_encode(__('Could not complete biometric sign-in.')) ?>);
+        }
+      } finally {
+        button.disabled = false;
+        button.classList.remove('opacity-70');
+      }
+    });
+  })();
+</script>

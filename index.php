@@ -6,6 +6,7 @@ $config = require $root . '/config/config.php';
 require $root . '/config/db.php';
 require $root . '/src/helpers.php';
 require $root . '/src/auth.php';
+require $root . '/src/webauthn.php';
 require $root . '/src/fx.php';
 
 if (isset($pdo) && $pdo instanceof PDO) {
@@ -144,6 +145,94 @@ switch ($path) {
 
 
     // Auth
+    case '/webauthn/options/register':
+        require_login();
+        if ($method !== 'POST') {
+            header('Allow: POST');
+            http_response_code(405);
+            exit;
+        }
+        try {
+            $options = webauthn_registration_options($pdo, uid());
+        } catch (Throwable $e) {
+            json_error(__('Could not start passkey registration.'));
+        }
+        json_response(['success' => true] + $options);
+        break;
+
+    case '/webauthn/register':
+        require_login();
+        if ($method !== 'POST') {
+            header('Allow: POST');
+            http_response_code(405);
+            exit;
+        }
+        $input = read_json_input();
+        $credential = $input['credential'] ?? null;
+        if (!is_array($credential)) {
+            json_error(__('Invalid registration payload.'));
+        }
+        $label = isset($input['label']) ? (string)$input['label'] : null;
+        $result = webauthn_finish_registration($pdo, $credential, $label);
+        if (empty($result['success'])) {
+            $message = isset($result['error']) ? (string)$result['error'] : __('Registration failed.');
+            json_error($message);
+        }
+        json_response([
+            'success' => true,
+            'id' => $result['id'] ?? null,
+        ]);
+        break;
+
+    case '/webauthn/options/login':
+        if ($method !== 'POST') {
+            header('Allow: POST');
+            http_response_code(405);
+            exit;
+        }
+        try {
+            $options = webauthn_login_options();
+        } catch (Throwable $e) {
+            json_error(__('Could not start passkey login.'));
+        }
+        json_response(['success' => true] + $options);
+        break;
+
+    case '/webauthn/login':
+        if ($method !== 'POST') {
+            header('Allow: POST');
+            http_response_code(405);
+            exit;
+        }
+        $input = read_json_input();
+        $credential = $input['credential'] ?? null;
+        if (!is_array($credential)) {
+            json_error(__('Invalid login payload.'));
+        }
+        $result = webauthn_finish_login($pdo, $credential);
+        if (empty($result['success']) || empty($result['user_id'])) {
+            $message = isset($result['error']) ? (string)$result['error'] : __('Login failed.');
+            json_error($message);
+        }
+
+        $userId = (int)$result['user_id'];
+        $_SESSION['uid'] = $userId;
+        if ($pdo instanceof PDO) {
+            forget_remember_token($pdo, $userId);
+        }
+
+        try {
+            $redirectTo = post_login_redirect_path($pdo, $userId);
+        } catch (Throwable $e) {
+            $redirectTo = '/';
+        }
+
+        json_response([
+            'success' => true,
+            'redirect' => $redirectTo,
+        ]);
+        break;
+
     case '/login':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') { handle_login($pdo); }
         view('auth/login');
@@ -195,6 +284,15 @@ switch ($path) {
         } else {
             settings_profile_show($pdo);
         }
+        break;
+
+    case '/settings/passkeys/delete':
+        require_login();
+        require __DIR__ . '/src/controllers/settings_profile.php';
+        if ($method === 'POST') {
+            settings_passkeys_delete($pdo);
+        }
+        redirect('/settings/profile');
         break;
 
     case '/settings/theme':
