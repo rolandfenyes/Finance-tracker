@@ -7,27 +7,40 @@ on:
 jobs:
     deploy:
         runs-on: ubuntu-latest
-
         steps:
             - name: Checkout
               uses: actions/checkout@v4
 
-            - name: Setup SSH key with passphrase
+            # If your key is stored raw (multiline) in the secret:
+            - name: Write SSH key
               run: |
                   mkdir -p ~/.ssh
-                  echo "${{ secrets.NETHELY_SSH_KEY }}" > ~/.ssh/id_rsa
-                  chmod 600 ~/.ssh/id_rsa
+                  printf '%s\n' "${{ secrets.NETHELY_SSH_KEY }}" > ~/.ssh/id_ci
+                  chmod 600 ~/.ssh/id_ci
 
-                  # Start ssh-agent
+            - name: Unlock key with ssh-agent (ASKPASS)
+              env:
+                  SSH_PASSPHRASE: ${{ secrets.NETHELY_SSH_PASSPHRASE }}
+              run: |
                   eval "$(ssh-agent -s)"
-
-                  # Add the private key with passphrase from secrets
-                  ssh-add <(echo "${{ secrets.NETHELY_SSH_KEY }}") <<< "${{ secrets.NETHELY_SSH_PASSPHRASE }}"
+                  # Create a tiny askpass script that prints the passphrase
+                  echo '#!/usr/bin/env bash' > /tmp/askpass.sh
+                  echo 'echo "$SSH_PASSPHRASE"' >> /tmp/askpass.sh
+                  chmod +x /tmp/askpass.sh
+                  export SSH_ASKPASS=/tmp/askpass.sh
+                  export DISPLAY=:0  # required by ssh-add when using ASKPASS
+                  setsid -w ssh-add ~/.ssh/id_ci < /dev/null
 
             - name: Trust Nethely host key
               run: |
                   ssh-keyscan -p "${{ secrets.NETHELY_SSH_PORT }}" "${{ secrets.NETHELY_SSH_HOST }}" >> ~/.ssh/known_hosts
                   chmod 600 ~/.ssh/known_hosts
+
+            # Optional: quick auth check with verbose SSH (shows which key is offered)
+            - name: Debug SSH auth (optional)
+              run: |
+                  ssh -vvv -o IdentitiesOnly=yes -p "${{ secrets.NETHELY_SSH_PORT }}" \
+                    "${{ secrets.NETHELY_SSH_USER }}@${{ secrets.NETHELY_SSH_HOST }}" 'exit 0' || true
 
             - name: Deploy via rsync
               run: |
@@ -36,5 +49,5 @@ jobs:
                     --exclude='.github/' \
                     --exclude='.env' \
                     --exclude='.env.*' \
-                    -e "ssh -p ${{ secrets.NETHELY_SSH_PORT }}" \
+                    -e "ssh -p ${{ secrets.NETHELY_SSH_PORT }} -o IdentitiesOnly=yes" \
                     ./ "${{ secrets.NETHELY_SSH_USER }}@${{ secrets.NETHELY_SSH_HOST }}:${{ secrets.NETHELY_DEPLOY_PATH }}"
