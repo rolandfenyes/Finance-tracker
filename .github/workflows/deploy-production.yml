@@ -12,44 +12,6 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
 
-            - name: Prepare SSH key
-              run: |
-                  mkdir -p ~/.ssh
-                  printf '%s\n' "${{ secrets.NETHELY_SSH_KEY }}" > ~/.ssh/id_rsa
-                  chmod 600 ~/.ssh/id_rsa
-                  ssh-keyscan -p "${{ secrets.NETHELY_SSH_PORT }}" "${{ secrets.NETHELY_SSH_HOST }}" >> ~/.ssh/known_hosts
-                  chmod 600 ~/.ssh/known_hosts
-
-            - name: Upload files via rsync
-              env:
-                  RSYNC_RSH: ssh -i ~/.ssh/id_rsa -p ${{ secrets.NETHELY_SSH_PORT }} -o StrictHostKeyChecking=yes
-              run: |
-                  set -euo pipefail
-                  rsync \
-                      -az \
-                      --delete \
-                      --exclude='.git/' \
-                      --exclude='.github/' \
-                      --exclude='.env' \
-                      --exclude='.env.*' \
-                      -e "$RSYNC_RSH" \
-                      ./ "${{ secrets.NETHELY_SSH_USER }}@${{ secrets.NETHELY_SSH_HOST }}:${{ secrets.NETHELY_DEPLOY_PATH }}"
-
-
-name: Deploy to Nethely (production)
-
-on:
-    push:
-        branches: ['production']
-
-jobs:
-    deploy:
-        runs-on: ubuntu-latest
-
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
-
             - name: Trust Nethely host key
               run: |
                   mkdir -p ~/.ssh
