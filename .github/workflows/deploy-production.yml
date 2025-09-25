@@ -7,6 +7,7 @@ on:
 jobs:
     deploy:
         runs-on: ubuntu-latest
+
         steps:
             - name: Checkout
               uses: actions/checkout@v4
@@ -15,68 +16,15 @@ jobs:
               run: |
                   mkdir -p ~/.ssh
                   ssh-keyscan -p "${{ secrets.NETHELY_SSH_PORT }}" "${{ secrets.NETHELY_SSH_HOST }}" >> ~/.ssh/known_hosts
+                  chmod 600 ~/.ssh/known_hosts
 
-            - name: Upload files via SCP
-              uses: appleboy/[email protected]
+            - name: Upload files via rsync
+              uses: appleboy/ssh-action@v1.0.3
               with:
                   host: ${{ secrets.NETHELY_SSH_HOST }}
                   username: ${{ secrets.NETHELY_SSH_USER }}
                   key: ${{ secrets.NETHELY_SSH_KEY }}
+                  passphrase: ${{ secrets.NETHELY_SSH_PASSPHRASE }}
                   port: ${{ secrets.NETHELY_SSH_PORT }}
-                  source: '.'
-                  target: ${{ secrets.NETHELY_DEPLOY_PATH }}
-                  # keep the server in sync, exclude CI/dev artifacts
-                  strip_components: 0
-                  overwrite: true
-                  rm: true
-                  exclude: |
-                      .git*
-                      .github
-                      node_modules
-                      vendor/**/.git
-                      tests
-                      README.md
-                      .env*
-                      docker*
-                      **/.DS_Store
-            - name: Post-deploy: Composer + SQL migrations
-              uses: appleboy/[email protected]
-              with:
-                  host: ${{ secrets.NETHELY_SSH_HOST }}
-                  username: ${{ secrets.NETHELY_SSH_USER }}
-                  key: ${{ secrets.NETHELY_SSH_KEY }}
-                  port: ${{ secrets.NETHELY_SSH_PORT }}
-                  envs: DB_HOST,DB_PORT,DB_NAME,DB_USER,DB_PASS,MIGRATIONS_DIR,PHP_BIN
                   script: |
-                    set -euo pipefail
-                    cd "${{ secrets.NETHELY_DEPLOY_PATH }}"
-
-                    # Match CLI PHP if needed (Nethely lets you tweak PHP over SSH too)
-                    PHP_BIN=${PHP_BIN:-php}
-
-                    # Install PHP deps if your app uses Composer (Pro supports Composer over SSH)
-                    if command -v composer >/dev/null 2>&1; then
-                      composer install --no-dev --prefer-dist --no-interaction --no-progress
-                    fi
-
-                    # Ensure writable paths if needed
-                    [ -d storage ] && chmod -R u+rwX,go-rwx storage || true
-
-                    # Run PostgreSQL migrations (preferred: on the server)
-                    if command -v psql >/dev/null 2>&1; then
-                      echo "Running .sql migrations via psql..."
-                      DIR="${MIGRATIONS_DIR:-database/migrations}"
-                      shopt -s nullglob
-                      for f in "$DIR"/*.sql; do
-                        echo "Applying $f"
-                        PGPASSWORD="$DB_PASS" psql \
-                          -h "${DB_HOST:-psql.nethely.hu}" \
-                          -p "${DB_PORT:-5432}" \
-                          -U "$DB_USER" -d "$DB_NAME" \
-                          -v ON_ERROR_STOP=1 -f "$f"
-                      done
-                    else
-                      echo "psql not found on server. Provide a PHP-based migration runner and call it here:"
-                      echo "$PHP_BIN scripts/run_migrations.php"
-                      exit 1
-                    fi
+                      set -euo pipefail
