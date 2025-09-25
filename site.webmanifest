@@ -2,8 +2,8 @@
     "name": "MyMoneyMap",
     "short_name": "MyMoneyMap",
     "display": "standalone",
-    "background_color": "#ffffff",
-    "theme_color": "#4b966e",
+    "background_color": "#e6f1eb",
+    "theme_color": "#163428",
     "icons": [
         { "src": "/android-chrome-192x192.png?v=2", "sizes": "192x192", "type": "image/png" },
         {
