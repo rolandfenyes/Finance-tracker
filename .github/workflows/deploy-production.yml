@@ -12,28 +12,29 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
 
-            - name: Trust Nethely host key
+            - name: Setup SSH key with passphrase
               run: |
                   mkdir -p ~/.ssh
+                  echo "${{ secrets.NETHELY_SSH_KEY }}" > ~/.ssh/id_rsa
+                  chmod 600 ~/.ssh/id_rsa
+
+                  # Start ssh-agent
+                  eval "$(ssh-agent -s)"
+
+                  # Add the private key with passphrase from secrets
+                  ssh-add <(echo "${{ secrets.NETHELY_SSH_KEY }}") <<< "${{ secrets.NETHELY_SSH_PASSPHRASE }}"
+
+            - name: Trust Nethely host key
+              run: |
                   ssh-keyscan -p "${{ secrets.NETHELY_SSH_PORT }}" "${{ secrets.NETHELY_SSH_HOST }}" >> ~/.ssh/known_hosts
                   chmod 600 ~/.ssh/known_hosts
 
-            - name: Upload files via rsync
-              uses: appleboy/ssh-action@v1.0.3
-              with:
-                  host: ${{ secrets.NETHELY_SSH_HOST }}
-                  username: ${{ secrets.NETHELY_SSH_USER }}
-                  key: ${{ secrets.NETHELY_SSH_KEY }}
-                  passphrase: ${{ secrets.NETHELY_SSH_PASSPHRASE }}
-                  port: ${{ secrets.NETHELY_SSH_PORT }}
-                  script: |
-                      set -euo pipefail
-                      rsync \
-                          -az \
-                          --delete \
-                          --exclude='.git/' \
-                          --exclude='.github/' \
-                          --exclude='.env' \
-                          --exclude='.env.*' \
-                          -e "$RSYNC_RSH" \
-                          ./ "${{ secrets.NETHELY_SSH_USER }}@${{ secrets.NETHELY_SSH_HOST }}:${{ secrets.NETHELY_DEPLOY_PATH }}"
+            - name: Deploy via rsync
+              run: |
+                  rsync -az --delete \
+                    --exclude='.git/' \
+                    --exclude='.github/' \
+                    --exclude='.env' \
+                    --exclude='.env.*' \
+                    -e "ssh -p ${{ secrets.NETHELY_SSH_PORT }}" \
+                    ./ "${{ secrets.NETHELY_SSH_USER }}@${{ secrets.NETHELY_SSH_HOST }}:${{ secrets.NETHELY_DEPLOY_PATH }}"
