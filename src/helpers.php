@@ -13,6 +13,36 @@ function redirect(string $to) {
     exit;
 }
 
+function json_response($data, int $status = 200): void
+{
+    if (!headers_sent()) {
+        header('Content-Type: application/json');
+    }
+    http_response_code($status);
+    echo json_encode($data, JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
+function json_error(string $message, int $status = 400): void
+{
+    json_response(['success' => false, 'error' => $message], $status);
+}
+
+function read_json_input(): array
+{
+    $raw = file_get_contents('php://input');
+    if ($raw === false || $raw === '') {
+        return [];
+    }
+
+    $data = json_decode($raw, true);
+    if (json_last_error() !== JSON_ERROR_NONE || !is_array($data)) {
+        return [];
+    }
+
+    return $data;
+}
+
 function is_logged_in(): bool { return isset($_SESSION['uid']); }
 function require_login() { if (!is_logged_in()) redirect('/login'); }
 function uid(): int { return (int)($_SESSION['uid'] ?? 0); }
