@@ -20,7 +20,7 @@
   <link rel="apple-touch-icon" sizes="120x120" href="/apple-touch-icon-120x120.png?v=2">
 
   <!-- Android / PWA -->
-  <link rel="manifest" href="/site.webmanifest?v=2">
+  <link rel="manifest" href="/manifest.php?v=3">
 
   <!-- Branding -->
   <meta name="apple-mobile-web-app-title" content="MyMoneyMap">
@@ -32,7 +32,29 @@
   <meta name="x5-orientation" content="portrait">
   <meta name="x5-fullscreen" content="true">
   <meta name="full-screen" content="yes">
-  <meta name="theme-color" content="#4b966e">
+  <?php
+    $selectedThemeMeta = $themeDefinitions[$selectedTheme] ?? [];
+    $initialLightThemeColor = $selectedThemeMeta['muted'] ?? '#f8fbf9';
+    $initialDarkThemeColor = $selectedThemeMeta['deep'] ?? ($selectedThemeMeta['base'] ?? '#0f1e18');
+  ?>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta
+    name="theme-color"
+    content="<?= htmlspecialchars($initialLightThemeColor, ENT_QUOTES) ?>"
+    data-theme-color="default"
+  >
+  <meta
+    name="theme-color"
+    media="(prefers-color-scheme: light)"
+    content="<?= htmlspecialchars($initialLightThemeColor, ENT_QUOTES) ?>"
+    data-theme-color="light"
+  >
+  <meta
+    name="theme-color"
+    media="(prefers-color-scheme: dark)"
+    content="<?= htmlspecialchars($initialDarkThemeColor, ENT_QUOTES) ?>"
+    data-theme-color="dark"
+  >
 
 
 
