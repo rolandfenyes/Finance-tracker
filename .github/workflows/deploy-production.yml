@@ -18,18 +18,37 @@ jobs:
                   echo "${{ secrets.NETHELY_SSH_KEY }}" > ~/.ssh/id_rsa
                   chmod 600 ~/.ssh/id_rsa
 
+            - name: Prep SSH key
+              run: |
+                  mkdir -p ~/.ssh
+                  echo "${{ secrets.NETHELY_SSH_KEY }}" > ~/.ssh/id_rsa
+                  chmod 600 ~/.ssh/id_rsa
+
             - name: Trust Nethely host key
               run: |
                   mkdir -p ~/.ssh
                   ssh-keyscan -p "${{ secrets.NETHELY_SSH_PORT }}" "${{ secrets.NETHELY_SSH_HOST }}" >> ~/.ssh/known_hosts
                   chmod 600 ~/.ssh/known_hosts
 
+            # 1) Make sure the remote dir exists and is writable
+            - name: Ensure remote path
+              run: |
+                  ssh -i ~/.ssh/id_rsa -p "${{ secrets.NETHELY_SSH_PORT }}" \
+                  "${{ secrets.NETHELY_SSH_USER }}@${{ secrets.NETHELY_SSH_HOST }}" \
+                  'mkdir -p "$DEPLOY" && test -w "$DEPLOY"' \
+                  DEPLOY="${{ secrets.NETHELY_DEPLOY_PATH }}"
+
+            # 2) rsync with shared-host friendly flags
             - name: Deploy via rsync
               run: |
-                  rsync -az --delete \
-                    --exclude='.git/' \
-                    --exclude='.github/' \
-                    --exclude='.env' \
-                    --exclude='.env.*' \
-                    -e "ssh -i ~/.ssh/id_rsa -p ${{ secrets.NETHELY_SSH_PORT }}" \
-                    ./ "${{ secrets.NETHELY_SSH_USER }}@${{ secrets.NETHELY_SSH_HOST }}:${{ secrets.NETHELY_DEPLOY_PATH }}"
+                  rsync -rtz --delete \
+                  --exclude='.git/' \
+                  --exclude='.github/' \
+                  --exclude='.env' \
+                  --exclude='.env.*' \
+                  --no-perms --no-owner --no-group \
+                  --omit-dir-times \
+                  --chmod=Du=rwx,Dgo=rx,Fu=rw,Fgo=r \
+                  --temp-dir="${{ secrets.NETHELY_DEPLOY_PATH }}/.rsynctmp" \
+                  -e "ssh -i ~/.ssh/id_rsa -p ${{ secrets.NETHELY_SSH_PORT }}" \
+                  ./ "${{ secrets.NETHELY_SSH_USER }}@${{ secrets.NETHELY_SSH_HOST }}:${{ secrets.NETHELY_DEPLOY_PATH }}/"
