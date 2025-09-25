@@ -754,6 +754,10 @@
         transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
         color: rgba(51, 65, 85, 0.72);
       }
+      .mobile-nav__icon {
+        transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+        color: inherit;
+      }
       .mobile-nav__link:hover,
       .mobile-nav__link:focus-visible {
         color: var(--mm-brand-primary, #4b966e);
@@ -765,6 +769,12 @@
         background: rgba(var(--mm-brand-primary-rgb, 75, 150, 110), 0.12);
         box-shadow: inset 0 1px 0 rgba(255,255,255,0.45);
       }
+      .mobile-nav__link--active .mobile-nav__icon {
+        border-color: rgba(var(--mm-brand-primary-rgb, 75, 150, 110), 0.35);
+        background: rgba(var(--mm-brand-primary-rgb, 75, 150, 110), 0.18);
+        box-shadow: 0 6px 16px rgba(var(--mm-brand-primary-rgb, 75, 150, 110), 0.24);
+        color: var(--mm-brand-primary, #4b966e);
+      }
       .dark .mobile-nav__link {
         color: rgba(226, 232, 240, 0.7);
       }
@@ -775,6 +785,12 @@
       .dark .mobile-nav__link--active {
         background: rgba(var(--mm-brand-primary-rgb, 75, 150, 110), 0.24);
         box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.18);
+      }
+      .dark .mobile-nav__link--active .mobile-nav__icon {
+        border-color: rgba(var(--mm-brand-primary-rgb, 75, 150, 110), 0.45);
+        background: rgba(var(--mm-brand-primary-rgb, 75, 150, 110), 0.32);
+        box-shadow: 0 8px 20px rgba(var(--mm-brand-primary-rgb, 75, 150, 110), 0.32);
+        color: var(--mm-brand-50, var(--mm-brand-primary, #4b966e));
       }
     }
 
@@ -1182,7 +1198,7 @@
             title="<?= htmlspecialchars($label) ?>"
             <?= $active ? 'aria-current="page"' : '' ?>
           >
-            <span class="flex h-9 w-9 items-center justify-center rounded-full border border-white/60 bg-white/80 shadow-sm dark:border-slate-700 dark:bg-slate-900/60">
+            <span class="mobile-nav__icon flex h-9 w-9 items-center justify-center rounded-full border border-white/60 bg-white/80 shadow-sm dark:border-slate-700 dark:bg-slate-900/60">
               <i data-lucide="<?= htmlspecialchars($icon) ?>" class="h-4 w-4"></i>
             </span>
             <span class="text-[0.65rem] leading-3 tracking-wide uppercase">
