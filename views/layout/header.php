@@ -692,9 +692,17 @@
   <style type="text/tailwindcss">
     @layer components {
       .mobile-nav {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
         padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
         box-shadow: 0 -20px 36px -24px rgba(17, 36, 29, 0.45);
         transition: transform 0.3s ease, opacity 0.3s ease;
+        transform: translateZ(0);
+        will-change: transform;
+        contain: layout paint;
+        backface-visibility: hidden;
       }
       .dark .mobile-nav {
         box-shadow: 0 -20px 40px -26px rgba(0, 0, 0, 0.65);
