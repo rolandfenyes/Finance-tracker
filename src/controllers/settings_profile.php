@@ -1,12 +1,15 @@
 <?php
 require_once __DIR__ . '/../helpers.php';
+require_once __DIR__ . '/../webauthn.php';
 
 function settings_profile_show(PDO $pdo){
   require_login(); $u = uid();
   $stmt = $pdo->prepare('SELECT email, full_name, date_of_birth FROM users WHERE id=?');
   $stmt->execute([$u]); $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-  view('settings/profile', compact('user'));
+  $passkeys = webauthn_list_passkeys($pdo, $u);
+
+  view('settings/profile', compact('user', 'passkeys'));
 }
 
 function settings_profile_update(PDO $pdo){
@@ -36,5 +39,21 @@ function settings_profile_update(PDO $pdo){
   } catch (Throwable $e){
     $_SESSION['flash'] = 'Could not update profile.';
   }
+  redirect('/settings/profile');
+}
+
+function settings_passkeys_delete(PDO $pdo)
+{
+  verify_csrf();
+  require_login();
+  $u = uid();
+  $id = (int)($_POST['id'] ?? 0);
+
+  if ($id > 0 && webauthn_delete_passkey($pdo, $u, $id)) {
+    $_SESSION['flash_success'] = __('Passkey removed.');
+  } else {
+    $_SESSION['flash'] = __('Could not remove passkey.');
+  }
+
   redirect('/settings/profile');
 }
