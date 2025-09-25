@@ -34,3 +34,44 @@ jobs:
                       --exclude='.env.*' \
                       -e "$RSYNC_RSH" \
                       ./ "${{ secrets.NETHELY_SSH_USER }}@${{ secrets.NETHELY_SSH_HOST }}:${{ secrets.NETHELY_DEPLOY_PATH }}"
+
+
+name: Deploy to Nethely (production)
+
+on:
+    push:
+        branches: ['production']
+
+jobs:
+    deploy:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Trust Nethely host key
+              run: |
+                  mkdir -p ~/.ssh
+                  ssh-keyscan -p "${{ secrets.NETHELY_SSH_PORT }}" "${{ secrets.NETHELY_SSH_HOST }}" >> ~/.ssh/known_hosts
+                  chmod 600 ~/.ssh/known_hosts
+
+            - name: Upload files via rsync
+              uses: appleboy/ssh-action@v1.0.3
+              with:
+                  host: ${{ secrets.NETHELY_SSH_HOST }}
+                  username: ${{ secrets.NETHELY_SSH_USER }}
+                  key: ${{ secrets.NETHELY_SSH_KEY }}
+                  passphrase: ${{ secrets.NETHELY_SSH_PASSPHRASE }}
+                  port: ${{ secrets.NETHELY_SSH_PORT }}
+                  script: |
+                      set -euo pipefail
+                      rsync \
+                          -az \
+                          --delete \
+                          --exclude='.git/' \
+                          --exclude='.github/' \
+                          --exclude='.env' \
+                          --exclude='.env.*' \
+                          -e "$RSYNC_RSH" \
+                          ./ "${{ secrets.NETHELY_SSH_USER }}@${{ secrets.NETHELY_SSH_HOST }}:${{ secrets.NETHELY_DEPLOY_PATH }}"
