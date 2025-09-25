@@ -33,6 +33,8 @@
   <meta name="x5-fullscreen" content="true">
   <meta name="full-screen" content="yes">
   <?php
+    $themeDefinitions = available_themes();
+    $selectedTheme = current_theme_slug();
     $selectedThemeMeta = $themeDefinitions[$selectedTheme] ?? [];
     $initialLightThemeColor = $selectedThemeMeta['muted'] ?? '#f8fbf9';
     $initialDarkThemeColor = $selectedThemeMeta['deep'] ?? ($selectedThemeMeta['base'] ?? '#0f1e18');
@@ -60,10 +62,6 @@
 
   <!-- Tailwind CDN (JIT) -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <?php
-    $themeDefinitions = available_themes();
-    $selectedTheme = current_theme_slug();
-  ?>
   <script>
     window.__MYMONEYMAP_THEME_BASES = <?= json_encode($themeDefinitions, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES) ?>;
     window.__MYMONEYMAP_SELECTED_THEME = <?= json_encode($selectedTheme, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES) ?>;
@@ -760,11 +758,11 @@
       .mobile-nav__link:focus-visible {
         color: var(--mm-brand-primary, #4b966e);
         transform: translateY(-2px);
-        background: rgba(75, 150, 110, 0.08);
+        background: rgba(var(--mm-brand-primary-rgb, 75, 150, 110), 0.08);
       }
       .mobile-nav__link--active {
         color: var(--mm-brand-primary, #4b966e);
-        background: rgba(75, 150, 110, 0.12);
+        background: rgba(var(--mm-brand-primary-rgb, 75, 150, 110), 0.12);
         box-shadow: inset 0 1px 0 rgba(255,255,255,0.45);
       }
       .dark .mobile-nav__link {
@@ -772,10 +770,10 @@
       }
       .dark .mobile-nav__link:hover,
       .dark .mobile-nav__link:focus-visible {
-        background: rgba(75, 150, 110, 0.14);
+        background: rgba(var(--mm-brand-primary-rgb, 75, 150, 110), 0.14);
       }
       .dark .mobile-nav__link--active {
-        background: rgba(75, 150, 110, 0.24);
+        background: rgba(var(--mm-brand-primary-rgb, 75, 150, 110), 0.24);
         box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.18);
       }
     }

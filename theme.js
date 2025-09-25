@@ -87,6 +87,7 @@
   function buildVariables(theme) {
     if (!theme) return '';
     const palette = theme.brand.palette || {};
+    const primaryRgb = hexToRgb(theme.brand.primary || '#4b966e');
     const rootLines = [
       ':root {',
       `  --mm-font-family: ${theme.typography.fontStack.join(', ')};`,
@@ -94,6 +95,7 @@
       `  --mm-brand-accent: ${theme.brand.accent};`,
       `  --mm-brand-muted: ${theme.brand.muted};`,
       `  --mm-brand-deep: ${theme.brand.deep};`,
+      `  --mm-brand-primary-rgb: ${primaryRgb.r}, ${primaryRgb.g}, ${primaryRgb.b};`,
       `  --mm-text-color: ${theme.neutrals.text.light};`,
       `  --mm-subtle-text: ${theme.neutrals.subtle.light};`,
     ];
