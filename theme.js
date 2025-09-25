@@ -87,6 +87,7 @@
   function buildVariables(theme) {
     if (!theme) return '';
     const palette = theme.brand.palette || {};
+    const primaryRgb = hexToRgb(theme.brand.primary || '#4b966e');
     const rootLines = [
       ':root {',
       `  --mm-font-family: ${theme.typography.fontStack.join(', ')};`,
@@ -94,6 +95,7 @@
       `  --mm-brand-accent: ${theme.brand.accent};`,
       `  --mm-brand-muted: ${theme.brand.muted};`,
       `  --mm-brand-deep: ${theme.brand.deep};`,
+      `  --mm-brand-primary-rgb: ${primaryRgb.r}, ${primaryRgb.g}, ${primaryRgb.b};`,
       `  --mm-text-color: ${theme.neutrals.text.light};`,
       `  --mm-subtle-text: ${theme.neutrals.subtle.light};`,
     ];
@@ -375,6 +377,21 @@
     return themes;
   }
 
+  function updateMetaThemeColors(theme) {
+    if (!theme || !global.document) return;
+    const brand = theme.brand || {};
+    const surfaces = theme.surfaces || {};
+    const lightColor = brand.muted || (surfaces.panelGhost && surfaces.panelGhost.light) || '#f8fbf9';
+    const darkColor = brand.deep || (surfaces.panel && surfaces.panel.dark) || '#0f1e18';
+    const defaultMeta = global.document.querySelector('meta[name="theme-color"][data-theme-color="default"]');
+    const lightMeta = global.document.querySelector('meta[name="theme-color"][data-theme-color="light"]');
+    const darkMeta = global.document.querySelector('meta[name="theme-color"][data-theme-color="dark"]');
+
+    if (defaultMeta) defaultMeta.setAttribute('content', lightColor);
+    if (lightMeta) lightMeta.setAttribute('content', lightColor);
+    if (darkMeta) darkMeta.setAttribute('content', darkColor);
+  }
+
   const themeDefinitions = Object.keys(bases).length
     ? bases
     : {
@@ -414,6 +431,7 @@
     if (!selected) return null;
 
     injectCSSVariables(selected, global.document);
+    updateMetaThemeColors(selected);
 
     if (global.document && global.document.documentElement) {
       global.document.documentElement.setAttribute('data-brand-theme', selected.slug);

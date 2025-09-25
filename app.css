@@ -20,6 +20,15 @@
     .textarea {
         @apply w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm
            focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    input[type='date'],
+    input[type='month'],
+    input[type='time'] {
+        min-width: 0;
+        width: 100%;
     }
 
     .textarea {
