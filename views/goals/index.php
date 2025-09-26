@@ -399,28 +399,37 @@
 
         </div>
 
+        <div class="md:col-span-12">
+          <section class="mt-8 rounded-2xl border border-rose-200/80 bg-rose-50/70 p-4 text-sm text-rose-600 dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-200">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div class="space-y-1">
+                <h4 class="text-base font-semibold"><?= __('Danger zone') ?></h4>
+                <p class="text-sm text-rose-500 dark:text-rose-200/80">
+                  <?= __('Deleting a goal will remove its transactions.') ?>
+                </p>
+              </div>
+              <form
+                method="post"
+                action="/goals/delete"
+                onsubmit="return confirm('<?= __('Delete this goal?') ?>')"
+                class="sm:shrink-0"
+              >
+                <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+                <input type="hidden" name="id" value="<?= $goalId ?>" />
+                <button class="btn btn-danger w-full sm:w-auto">
+                  <?= __('Delete') ?>
+                </button>
+              </form>
+            </div>
+          </section>
+        </div>
       </div>
     </div>
 
-    <div class="px-6 pb-6">
-      <div class="mt-6 space-y-4">
-        <form
-          method="post"
-          action="/goals/delete"
-          onsubmit="return confirm('<?= __('Delete this goal?') ?>')"
-          class="w-full"
-        >
-          <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-          <input type="hidden" name="id" value="<?= $goalId ?>" />
-          <button class="btn btn-danger w-full">
-            <?= __('Delete') ?>
-          </button>
-        </form>
-
-        <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
-          <button class="btn" data-close><?= __('Cancel') ?></button>
-          <button class="btn btn-primary" form="goal-form-<?= $goalId ?>"><?= __('Save') ?></button>
-        </div>
+    <div class="modal-footer">
+      <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+        <button class="btn" data-close><?= __('Cancel') ?></button>
+        <button class="btn btn-primary" form="goal-form-<?= $goalId ?>"><?= __('Save') ?></button>
       </div>
     </div>
   </div>
@@ -438,7 +447,7 @@
     </div>
 
     <div class="modal-body">
-      <form method="post" action="/goals/tx/add" class="grid gap-3 sm:grid-cols-12">
+      <form id="goal-add-form-<?= $goalId ?>" method="post" action="/goals/tx/add" class="grid gap-3 sm:grid-cols-12">
         <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
         <input type="hidden" name="goal_id" value="<?= $goalId ?>" />
         <div class="sm:col-span-5">
@@ -449,11 +458,14 @@
           <label class="label"><?= __('Amount (:currency)', ['currency' => htmlspecialchars($cur)]) ?></label>
           <input name="amount" type="number" step="0.01" class="input" placeholder="0.00" required />
         </div>
-        <div class="sm:col-span-12 flex justify-end gap-2">
-          <button type="button" class="btn" data-close><?= __('Cancel') ?></button>
-          <button class="btn btn-primary"><?= __('Add money') ?></button>
-        </div>
       </form>
+    </div>
+
+    <div class="modal-footer">
+      <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+        <button type="button" class="btn" data-close><?= __('Cancel') ?></button>
+        <button class="btn btn-primary" form="goal-add-form-<?= $goalId ?>"><?= __('Add money') ?></button>
+      </div>
     </div>
   </div>
 </div>

@@ -7,11 +7,15 @@
     'button_label' => __('Add'),
     'data_restore_focus' => '#quick-add-amount',
     'data_restore_focus_select' => true,
+    'render_button' => true,
+    'form_id' => null,
   ];
   $cfg = array_merge($defaults, $quickAddConfig ?? []);
   $amountId = $cfg['amount_id'];
   $restoreFocus = $cfg['data_restore_focus'];
   $restoreSelect = $cfg['data_restore_focus_select'];
+  $renderButton = $cfg['render_button'];
+  $formId = $cfg['form_id'];
 ?>
 <form
   class="<?= htmlspecialchars($cfg['form_classes']) ?>"
@@ -19,6 +23,7 @@
   action="/months/tx/add"
   data-restore-focus="<?= htmlspecialchars($restoreFocus) ?>"
   data-restore-focus-select="<?= $restoreSelect ? 'true' : 'false' ?>"
+  <?= $formId ? 'id="'.htmlspecialchars($formId).'"' : '' ?>
 >
   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
   <input type="hidden" name="y" value="<?= $y ?>" />
@@ -67,8 +72,10 @@
     <input name="note" class="input" placeholder="<?= __('Add a short note…') ?>" />
   </div>
 
-  <div class="<?= htmlspecialchars($cfg['button_wrapper_classes']) ?>">
-    <button class="<?= htmlspecialchars($cfg['button_classes']) ?>"><?= htmlspecialchars($cfg['button_label']) ?></button>
-  </div>
+  <?php if ($renderButton): ?>
+    <div class="<?= htmlspecialchars($cfg['button_wrapper_classes']) ?>">
+      <button class="<?= htmlspecialchars($cfg['button_classes']) ?>"><?= htmlspecialchars($cfg['button_label']) ?></button>
+    </div>
+  <?php endif; ?>
 </form>
 <?php unset($quickAddConfig); ?>

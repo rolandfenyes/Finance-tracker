@@ -342,9 +342,10 @@
     </div>
 
     <!-- Body -->
-    <form method="post" action="/loans/edit" id="loan-form-<?= (int)$l['id'] ?>" class="modal-body grid gap-4 md:grid-cols-12">
-      <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-      <input type="hidden" name="id" value="<?= (int)$l['id'] ?>" />
+    <div class="modal-body">
+      <form method="post" action="/loans/edit" id="loan-form-<?= (int)$l['id'] ?>" class="grid gap-4 md:grid-cols-12">
+        <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+        <input type="hidden" name="id" value="<?= (int)$l['id'] ?>" />
 
       <!-- Left: details -->
       <div class="md:col-span-7 space-y-3">
@@ -554,10 +555,34 @@
 
       </div>
 
-    </form>
+      </form>
 
-    <div class="px-6 pb-6">
-      <div class="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
+      <section class="mt-8 rounded-2xl border border-rose-200/80 bg-rose-50/70 p-4 text-sm text-rose-600 dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-200">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div class="space-y-1">
+            <h4 class="text-base font-semibold"><?= __('Danger zone') ?></h4>
+            <p class="text-sm text-rose-500 dark:text-rose-200/80">
+              <?= __('Deleting this loan will remove its payment history.') ?>
+            </p>
+          </div>
+          <form
+            method="post"
+            action="/loans/delete"
+            onsubmit="return confirm('<?= __('Delete this loan?') ?>')"
+            class="sm:shrink-0"
+          >
+            <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+            <input type="hidden" name="id" value="<?= (int)$l['id'] ?>" />
+            <button class="btn btn-danger w-full sm:w-auto">
+              <?= __('Delete loan') ?>
+            </button>
+          </form>
+        </div>
+      </section>
+    </div>
+
+    <div class="modal-footer">
+      <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
         <button class="btn" data-close><?= __('Cancel') ?></button>
         <button class="btn btn-primary" form="loan-form-<?= (int)$l['id'] ?>"><?= __('Save') ?></button>
       </div>
@@ -578,6 +603,7 @@
 
     <div class="modal-body">
       <form
+        id="loan-pay-form-<?= (int)$l['id'] ?>"
         class="grid gap-3 sm:grid-cols-12"
         method="post"
         action="/loans/payment/add"
@@ -604,11 +630,14 @@
             required
           >
         </div>
-        <div class="sm:col-span-12 flex justify-end gap-2">
-          <button type="button" class="btn" data-close><?= __('Cancel') ?></button>
-          <button class="btn btn-primary"><?= __('Record Payment') ?></button>
-        </div>
       </form>
+    </div>
+
+    <div class="modal-footer">
+      <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+        <button type="button" class="btn" data-close><?= __('Cancel') ?></button>
+        <button class="btn btn-primary" form="loan-pay-form-<?= (int)$l['id'] ?>"><?= __('Record Payment') ?></button>
+      </div>
     </div>
   </div>
 </div>

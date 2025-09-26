@@ -145,7 +145,7 @@
     </div>
 
     <div class="modal-body">
-      <form method="post" action="/emergency/add" class="grid gap-3 sm:grid-cols-12">
+      <form id="ef-add-form" method="post" action="/emergency/add" class="grid gap-3 sm:grid-cols-12">
         <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
         <div class="sm:col-span-6">
           <label class="label"><?= __('Date') ?></label>
@@ -159,11 +159,14 @@
           <label class="label"><?= __('Note (optional)') ?></label>
           <input name="note" class="input" placeholder="<?= __('e.g., paycheck buffer') ?>" />
         </div>
-        <div class="sm:col-span-12 flex justify-end gap-2">
-          <button type="button" class="btn" data-close><?= __('Cancel') ?></button>
-          <button class="btn btn-primary"><?= __('Add') ?></button>
-        </div>
       </form>
+    </div>
+
+    <div class="modal-footer">
+      <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+        <button type="button" class="btn" data-close><?= __('Cancel') ?></button>
+        <button class="btn btn-primary" form="ef-add-form"><?= __('Add') ?></button>
+      </div>
     </div>
   </div>
 </div>
@@ -180,7 +183,7 @@
     </div>
 
     <div class="modal-body">
-      <form method="post" action="/emergency/withdraw" class="grid gap-3 sm:grid-cols-12">
+      <form id="ef-withdraw-form" method="post" action="/emergency/withdraw" class="grid gap-3 sm:grid-cols-12">
         <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
         <div class="sm:col-span-6">
           <label class="label"><?= __('Date') ?></label>
@@ -194,11 +197,14 @@
           <label class="label"><?= __('Note (optional)') ?></label>
           <input name="note" class="input" placeholder="<?= __('e.g., car repair') ?>" />
         </div>
-        <div class="sm:col-span-12 flex justify-end gap-2">
-          <button type="button" class="btn" data-close><?= __('Cancel') ?></button>
-          <button class="btn btn-danger"><?= __('Withdraw') ?></button>
-        </div>
       </form>
+    </div>
+
+    <div class="modal-footer">
+      <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+        <button type="button" class="btn" data-close><?= __('Cancel') ?></button>
+        <button class="btn btn-danger" form="ef-withdraw-form"><?= __('Withdraw') ?></button>
+      </div>
     </div>
   </div>
 </div>
