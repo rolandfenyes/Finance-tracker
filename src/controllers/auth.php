@@ -26,9 +26,16 @@ function register_step1_submit(PDO $pdo) {
   }
 
   $hash = password_hash($pass, PASSWORD_DEFAULT);
+  try {
+    $encryptedName = $name !== '' ? pii_encrypt($name) : null;
+  } catch (Throwable $e) {
+    $_SESSION['flash'] = __('We could not secure your profile. Contact support.');
+    redirect('/register');
+  }
+
   $pdo->prepare('INSERT INTO users(full_name, email, password_hash, date_of_birth, onboard_step, needs_tutorial)
                  VALUES (?,?,?,?,?,true)')
-      ->execute([$name, $email, $hash, $dob?:null, 1]);
+      ->execute([$encryptedName, $email, $hash, $dob?:null, 1]);
 
   // Log in + jump to step 1
   $uid = (int)$pdo->lastInsertId();

@@ -1,8 +1,30 @@
 <?php
-session_start();
-
 $root = __DIR__;
+require $root . '/config/load_env.php';
 $config = require $root . '/config/config.php';
+
+$sessionName = $config['app']['session_name'] ?? 'moneymap_sess';
+$https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+    || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower((string)$_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https')
+    || (isset($_SERVER['HTTP_X_FORWARDED_SSL']) && strtolower((string)$_SERVER['HTTP_X_FORWARDED_SSL']) === 'on');
+
+if (session_status() === PHP_SESSION_NONE) {
+    if (!headers_sent()) {
+        $cookieParams = [
+            'lifetime' => 0,
+            'path' => '/',
+            'secure' => $https,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ];
+        session_set_cookie_params($cookieParams);
+        if ($sessionName && session_name() !== $sessionName) {
+            session_name($sessionName);
+        }
+    }
+    session_start();
+}
+
 require $root . '/config/db.php';
 require $root . '/src/helpers.php';
 require $root . '/src/auth.php';
@@ -274,7 +296,31 @@ switch ($path) {
         require __DIR__ . '/src/controllers/settings.php';
         settings_controller($pdo);
         break;
-        
+
+    case '/settings/privacy':
+        require_login();
+        require __DIR__ . '/src/controllers/settings_privacy.php';
+        settings_privacy_show($pdo);
+        break;
+
+    case '/settings/privacy/export':
+        require_login();
+        require __DIR__ . '/src/controllers/settings_privacy.php';
+        if ($method === 'POST') {
+            settings_privacy_export($pdo);
+        }
+        redirect('/settings/privacy');
+        break;
+
+    case '/settings/privacy/delete':
+        require_login();
+        require __DIR__ . '/src/controllers/settings_privacy.php';
+        if ($method === 'POST') {
+            settings_privacy_delete($pdo);
+        }
+        redirect('/settings/privacy');
+        break;
+
     // Profile
     case '/settings/profile':
         require_login();
@@ -284,6 +330,15 @@ switch ($path) {
         } else {
             settings_profile_show($pdo);
         }
+        break;
+
+    case '/settings/profile/password':
+        require_login();
+        require __DIR__ . '/src/controllers/settings_profile.php';
+        if ($method === 'POST') {
+            settings_profile_password_update($pdo);
+        }
+        redirect('/settings/profile');
         break;
 
     case '/settings/passkeys/delete':
@@ -653,6 +708,10 @@ switch ($path) {
         require __DIR__ . '/src/controllers/feedback.php';
         if ($_SERVER['REQUEST_METHOD'] === 'POST') { feedback_delete($pdo); }
         redirect('/feedback');
+        break;
+
+    case '/privacy':
+        view('legal/privacy');
         break;
 
 

@@ -187,6 +187,11 @@
         background-size: cover;
         padding-bottom: env(safe-area-inset-bottom);
       }
+      @media (max-width: 767px) {
+        body.has-mobile-nav {
+          padding-bottom: calc(env(safe-area-inset-bottom) + 5.5rem);
+        }
+      }
       :root[data-theme='dark'] body {
         color: var(--mm-text-color);
         background-image: var(--mm-mesh-background-dark);
@@ -1047,16 +1052,6 @@
     })();
   </script>
   <style>[x-cloak]{display:none!important}</style>
-</head>
-<body
-  x-data="themeState()"
-  x-init="init()"
-  class="relative"
-  data-rotate-message="<?= htmlspecialchars(__('Please rotate back to portrait for the best experience.'), ENT_QUOTES) ?>"
->
-  <div class="pointer-events-none fixed inset-0 -z-10 opacity-60 mix-blend-normal">
-    <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(75,150,110,0.18),transparent_55%),radial-gradient(circle_at_80%_0%,rgba(50,100,75,0.22),transparent_65%)] dark:bg-[radial-gradient(circle_at_15%_15%,rgba(75,150,110,0.35),transparent_60%),radial-gradient(circle_at_85%_5%,rgba(18,36,29,0.55),transparent_70%)]"></div>
-  </div>
   <?php
     $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/';
     $onboarding  = str_starts_with($currentPath, '/onboard');
@@ -1088,7 +1083,19 @@
       $label = __($item['label']);
       return '<a class="'.$base.' '.$cls.' '.$extra.'" href="'.$item['href'].'"'.($active?' aria-current="page"':'').'>'.htmlspecialchars($label).'</a>';
     }
+  $hasMobileNav = (is_logged_in() && !$hideMenus);
   ?>
+</head>
+<body
+  x-data="themeState()"
+  x-init="init()"
+  class="relative flex min-h-screen flex-col <?= $hasMobileNav ? 'has-mobile-nav' : '' ?>"
+  data-rotate-message="<?= htmlspecialchars(__('Please rotate back to portrait for the best experience.'), ENT_QUOTES) ?>"
+>
+  <div class="pointer-events-none fixed inset-0 -z-10 opacity-60 mix-blend-normal">
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(75,150,110,0.18),transparent_55%),radial-gradient(circle_at_80%_0%,rgba(50,100,75,0.22),transparent_65%)] dark:bg-[radial-gradient(circle_at_15%_15%,rgba(75,150,110,0.35),transparent_60%),radial-gradient(circle_at_85%_5%,rgba(18,36,29,0.55),transparent_70%)]"></div>
+  </div>
+
 <?php if (is_logged_in()): ?>
   <header class="sticky top-0 z-40 border-b border-white/40 bg-white/60 backdrop-blur-xl transition dark:border-slate-800/60 dark:bg-slate-900/50 hidden md:block">
     <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
@@ -1195,4 +1202,4 @@
   </nav>
 <?php endif; ?>
   <?php $mainPadding = (is_logged_in() && !$hideMenus) ? 'pb-28 sm:pb-24 lg:pb-20' : 'pb-16'; ?>
-  <main class="relative z-10 mx-auto w-full max-w-6xl px-4 pt-8 <?= $mainPadding ?>">
+  <main class="relative z-10 mx-auto w-full max-w-6xl flex-1 px-4 pt-8 <?= $mainPadding ?>">
