@@ -18,7 +18,7 @@ $currentLocale = $currentLocale ?? app_locale();
 $localeFlags = $localeFlags ?? [];
 ?>
 
-<div class="mx-auto w-full max-w-3xl space-y-6 px-4 pb-28 pt-6 sm:px-6 lg:px-0">
+<div class="mx-auto w-full max-w-3xl space-y-6 pb-6 pt-6 sm:px-6 lg:px-0">
   <div class="flex justify-center">
     <span class="inline-flex h-16 w-16 items-center justify-center rounded-3xl border border-white/60 p-3 shadow-glass backdrop-blur bg-brand-500">
       <img src="/logo.png" alt="App logo" class="h-full w-full object-contain" />

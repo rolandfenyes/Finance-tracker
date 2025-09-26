@@ -716,7 +716,8 @@
         left: 0;
         right: 0;
         bottom: 0;
-        padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+        padding-top: max(0.5rem, env(safe-area-inset-bottom));
+        padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
         box-shadow: 0 -20px 36px -24px rgba(17, 36, 29, 0.45);
         transition: transform 0.3s ease, opacity 0.3s ease;
         transform: translateZ(0);
@@ -1092,7 +1093,7 @@
       ['href'=>'/',              'label'=>'Dashboard',      'match'=>'#^/$#',                                                        'icon' => 'layout-dashboard'],
       ['href'=>'/current-month', 'label'=>'Months',  'match'=>'#^/(current-month(?:/.*)?|months(?:/.*)?|years(?:/.*)?)$#', 'icon' => 'calendar-range'],
       ['href'=>'/goals',         'label'=>'Goals',          'match'=>'#^/goals(?:/.*)?$#',                                           'icon' => 'goal'],
-      ['href'=>'/emergency',     'label'=>'Emergency', 'match'=>'#^/emergency(?:/.*)?$#',                                       'icon' => 'life-buoy'],
+      // ['href'=>'/emergency',     'label'=>'Emergency', 'match'=>'#^/emergency(?:/.*)?$#',                                       'icon' => 'life-buoy'],
       ['href'=>'/more',          'label'=>'More',           'match'=>'#^/more(?:/.*)?$#',                                            'icon' => 'ellipsis'],
     ];
     function nav_link(array $item, string $currentPath, string $extra=''): string {
