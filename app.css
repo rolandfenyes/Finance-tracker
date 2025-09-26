@@ -29,6 +29,23 @@
     input[type='time'] {
         min-width: 0;
         width: 100%;
+        -webkit-appearance: none;
+        appearance: none;
+        line-height: 1.45;
+        min-height: 2.75rem;
+        padding-block: 0.6rem;
+    }
+
+    input[type='date']::-webkit-date-and-time-value,
+    input[type='month']::-webkit-date-and-time-value,
+    input[type='time']::-webkit-date-and-time-value {
+        min-height: 1.45em;
+        text-align: left;
+    }
+
+    input[type='date']::-webkit-calendar-picker-indicator,
+    input[type='month']::-webkit-calendar-picker-indicator {
+        margin-inline-start: 0.25rem;
     }
 
     .textarea {
