@@ -163,7 +163,7 @@
     </div>
 
     <div class="modal-footer">
-      <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+      <div class="flex flex-row flex-wrap gap-2 justify-end">
         <button type="button" class="btn" data-close><?= __('Cancel') ?></button>
         <button class="btn btn-primary" form="ef-add-form"><?= __('Add') ?></button>
       </div>
@@ -201,7 +201,7 @@
     </div>
 
     <div class="modal-footer">
-      <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+      <div class="flex flex-row flex-wrap gap-2 justify-end">
         <button type="button" class="btn" data-close><?= __('Cancel') ?></button>
         <button class="btn btn-danger" form="ef-withdraw-form"><?= __('Withdraw') ?></button>
       </div>

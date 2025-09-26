@@ -582,7 +582,7 @@
     </div>
 
     <div class="modal-footer">
-      <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+      <div class="flex flex-row flex-wrap gap-2 justify-end">
         <button class="btn" data-close><?= __('Cancel') ?></button>
         <button class="btn btn-primary" form="loan-form-<?= (int)$l['id'] ?>"><?= __('Save') ?></button>
       </div>
@@ -634,7 +634,7 @@
     </div>
 
     <div class="modal-footer">
-      <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+      <div class="flex flex-row flex-wrap gap-2 justify-end">
         <button type="button" class="btn" data-close><?= __('Cancel') ?></button>
         <button class="btn btn-primary" form="loan-pay-form-<?= (int)$l['id'] ?>"><?= __('Record Payment') ?></button>
       </div>

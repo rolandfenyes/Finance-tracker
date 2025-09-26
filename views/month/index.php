@@ -628,7 +628,7 @@
     </div>
 
     <div class="modal-footer px-5 py-4">
-      <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+      <div class="flex flex-row flex-wrap gap-2 justify-end">
         <button type="button" class="btn" onclick="closeTxModal('tx-add')"><?= __('Cancel') ?></button>
         <button class="btn btn-primary" form="quick-add-modal-form"><?= __('Add') ?></button>
       </div>
@@ -954,7 +954,7 @@
                   </div>
 
                   <div class="modal-footer px-5 py-4">
-                    <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                    <div class="flex flex-row flex-wrap gap-2 justify-end">
                       <button type="button" class="btn" onclick="closeTxModal('tx<?= (int)$row['id'] ?>')"><?= __('Cancel') ?></button>
                       <button class="btn btn-primary" form="tx-form-<?= (int)$row['id'] ?>"><?= __('Save') ?></button>
                     </div>
