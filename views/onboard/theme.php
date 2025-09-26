@@ -65,14 +65,16 @@ $currentTheme = $currentTheme ?? current_theme_slug();
         $darkSwatch = $preview['dark'] ?? ($meta['deep'] ?? '#111827');
         $primary = $meta['base'] ?? '#4b966e';
         $accent = $meta['accent'] ?? $primary;
-        $description = trim($meta['description'] ?? '');
+        $name = __($meta['name'] ?? $slug);
+        $descriptionRaw = trim($meta['description'] ?? '');
+        $description = $descriptionRaw !== '' ? __($descriptionRaw) : '';
       ?>
       <label class="group relative block cursor-pointer rounded-3xl border transition-all duration-200 p-5 backdrop-blur hover:-translate-y-1 <?= $isActive ? 'border-brand-500 bg-white/85 shadow-brand-glow dark:bg-slate-900/70' : 'border-white/60 bg-white/60 hover:border-brand-200 hover:bg-brand-50/60 dark:border-slate-700 dark:bg-slate-900/40 dark:hover:bg-slate-800/80' ?>">
         <input type="radio" name="theme" value="<?= htmlspecialchars($slug) ?>" class="sr-only" <?= $isActive ? 'checked' : '' ?> data-theme-choice>
         <div class="flex items-start justify-between gap-4">
           <div>
             <div class="text-xs font-semibold uppercase tracking-[0.28em] text-brand-700 dark:text-brand-200">#<?= str_pad(strtoupper(str_replace('-', '', $slug)), 6, '•') ?></div>
-            <div class="mt-2 text-lg font-semibold text-gray-800 dark:text-gray-100"><?= htmlspecialchars($meta['name'] ?? $slug) ?></div>
+            <div class="mt-2 text-lg font-semibold text-gray-800 dark:text-gray-100"><?= htmlspecialchars($name) ?></div>
             <?php if ($description !== ''): ?>
               <p class="mt-2 text-sm text-gray-600 dark:text-gray-300 leading-relaxed"><?= htmlspecialchars($description) ?></p>
             <?php endif; ?>
