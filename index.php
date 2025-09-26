@@ -332,6 +332,15 @@ switch ($path) {
         }
         break;
 
+    case '/settings/profile/password':
+        require_login();
+        require __DIR__ . '/src/controllers/settings_profile.php';
+        if ($method === 'POST') {
+            settings_profile_password_update($pdo);
+        }
+        redirect('/settings/profile');
+        break;
+
     case '/settings/passkeys/delete':
         require_login();
         require __DIR__ . '/src/controllers/settings_profile.php';

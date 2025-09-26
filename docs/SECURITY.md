@@ -13,6 +13,7 @@ Make sure the environment file is not world-readable and is excluded from versio
 
 - `MM_DATA_KEY` must be a high-entropy secret shared by **every** process that touches the database (web, CLI, workers).
 - The key can be supplied as raw text or as Base64; it is hashed internally to derive the cryptographic key material.
+- When no `MM_DATA_KEY` is provided the application will lazily generate a 32-byte Base64 key and store it in `storage/data_key.php`. Make sure this file is readable only by the web user and included in secure backups.
 - When Sodium is available, the app uses `sodium_crypto_secretbox` (XSalsa20-Poly1305). Otherwise it falls back to AES-256-GCM via OpenSSL.
 - New profile names are encrypted transparently. To secure existing records, run:
 

@@ -30,14 +30,11 @@ function json_error(string $message, int $status = 400): void
 
 function pii_crypto_is_configured(): bool
 {
-    $config = app_config('security') ?? [];
-    $key = (string)($config['data_key'] ?? '');
-
-    if ($key === '' && isset($_ENV['MM_DATA_KEY'])) {
-        $key = (string)$_ENV['MM_DATA_KEY'];
+    try {
+        return pii_encryption_key() !== '';
+    } catch (Throwable $e) {
+        return false;
     }
-
-    return $key !== '';
 }
 
 function pii_encryption_key(): string
@@ -56,7 +53,35 @@ function pii_encryption_key(): string
     }
 
     if ($raw === '') {
-        throw new RuntimeException('Sensitive data encryption key missing. Set MM_DATA_KEY in your environment.');
+        $storageDir = __DIR__ . '/../storage';
+        $keyFile = $storageDir . '/data_key.php';
+
+        if (is_file($keyFile) && is_readable($keyFile)) {
+            $stored = require $keyFile;
+            if (is_string($stored)) {
+                $raw = $stored;
+            }
+        }
+
+        if ($raw === '') {
+            if (!is_dir($storageDir)) {
+                @mkdir($storageDir, 0700, true);
+            }
+
+            if (!is_dir($storageDir) || !is_writable($storageDir)) {
+                throw new RuntimeException('Sensitive data encryption key missing and storage directory is not writable.');
+            }
+
+            $generated = base64_encode(random_bytes(32));
+            $raw = $generated;
+            $content = "<?php\nreturn " . var_export($raw, true) . ";\n";
+
+            if (file_put_contents($keyFile, $content, LOCK_EX) === false) {
+                throw new RuntimeException('Failed to persist generated encryption key.');
+            }
+
+            @chmod($keyFile, 0600);
+        }
     }
 
     $decoded = base64_decode($raw, true);

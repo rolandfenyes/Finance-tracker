@@ -40,19 +40,32 @@
         <input name="date_of_birth" type="date" class="input" value="<?= htmlspecialchars($user['date_of_birth'] ?? '') ?>" />
       </div>
 
+      <div class="flex justify-end">
+        <button class="btn btn-primary">Save changes</button>
+      </div>
+    </form>
+
+    <form method="post" action="/settings/profile/password" class="mt-8 grid gap-4 rounded-2xl border border-white/50 bg-white/60 p-4 shadow-sm dark:border-slate-800/60 dark:bg-slate-900/40">
+      <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+
+      <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100"><?= __('Change password') ?></h2>
+      <p class="text-sm text-slate-600 dark:text-slate-400">
+        <?= __('Update your password without affecting other profile details.') ?>
+      </p>
+
       <div class="grid md:grid-cols-2 gap-3">
         <div class="field">
-          <label class="label">New password</label>
-          <input name="password" type="password" class="input" placeholder="Leave blank to keep current" />
+          <label class="label"><?= __('New password') ?></label>
+          <input name="password" type="password" class="input" placeholder="<?= htmlspecialchars(__('Enter new password')) ?>" required />
         </div>
         <div class="field">
-          <label class="label">Confirm password</label>
-          <input name="password2" type="password" class="input" placeholder="Confirm new password" />
+          <label class="label"><?= __('Confirm password') ?></label>
+          <input name="password2" type="password" class="input" placeholder="<?= htmlspecialchars(__('Confirm new password')) ?>" required />
         </div>
       </div>
 
       <div class="flex justify-end">
-        <button class="btn btn-primary">Save changes</button>
+        <button class="btn btn-secondary"><?= __('Update password') ?></button>
       </div>
     </form>
 
