@@ -7,6 +7,9 @@ return [
         'user' => getenv('MM_DB_USER') ?: 'rolandcsabafenyes',
         'pass' => getenv('MM_DB_PASS') ?: 'asd',
     ],
+    'security' => [
+        'data_key' => getenv('MM_DATA_KEY') ?: '',
+    ],
     'app' => [
         'name' => 'MyMoneyMap',
         'base_url' => '/', // if hosted in subfolder, e.g. '/moneymap/'

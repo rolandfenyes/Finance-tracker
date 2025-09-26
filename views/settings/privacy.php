@@ -30,6 +30,10 @@
 
       <dl class="mt-4 grid gap-4 sm:grid-cols-2">
         <div>
+          <dt class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400"><?= __('Full name') ?></dt>
+          <dd class="mt-1 text-sm font-medium text-slate-900 dark:text-white"><?= htmlspecialchars($account['full_name'] ?? '') ?></dd>
+        </div>
+        <div>
           <dt class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400"><?= __('Email address') ?></dt>
           <dd class="mt-1 text-sm font-medium text-slate-900 dark:text-white"><?= htmlspecialchars($account['email'] ?? '') ?></dd>
         </div>

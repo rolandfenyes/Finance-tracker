@@ -58,6 +58,11 @@ function feedback_index(PDO $pdo){
   $stmt->execute($params);
   $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+  foreach ($rows as &$row) {
+    $row['full_name'] = pii_decrypt($row['full_name'] ?? null);
+  }
+  unset($row);
+
   view('feedback/index', compact('rows','page','pages','flt'));
 }
 

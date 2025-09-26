@@ -24,7 +24,7 @@ Modern, mobile‑first personal finance tracker using Tailwind CSS and Chart.js.
     ```
 ````
 
-4. Set DB credentials in `config/config.php`.
+4. Copy `.env.example` to `.env` and adjust the values for your environment (database host, name, user, password, and `MM_DATA_KEY`).
 5. Launch a PHP dev server from the project root (routes automatically point to `index.php`):
     ```bash
     php -S localhost:8080 index.php
@@ -37,11 +37,17 @@ Modern, mobile‑first personal finance tracker using Tailwind CSS and Chart.js.
 -   Tailwind via CDN (JIT, mobile‑first)
 -   Alpine.js for sprinkles, Chart.js for charts
 
-## Notes
+## Configuration & Security
 
--   This is a production‑grade scaffold with secure patterns (prepared statements, password hashing). Extend as needed.
--   Dave Ramsey support: use `baby_steps` for status + `emergency_fund`, `goals`, `loans` to reflect progress.
-
-```
+-   **Environment variables** – Use the provided `.env` file or your web server configuration to define:
+    -   `MM_DB_HOST`, `MM_DB_PORT`, `MM_DB_NAME`, `MM_DB_USER`, `MM_DB_PASS`
+    -   `MM_DATA_KEY` – a 32-byte secret (Base64 or raw string) used to encrypt personal data before it is written to the database.
+    -   Set additional variables (e.g. locale defaults) as needed.
+-   **Sensitive data encryption** – Names and other personal identifiers are encrypted at rest using Sodium (or AES-256-GCM when Sodium is unavailable). Provide a consistent `MM_DATA_KEY` in every environment (application servers, CLI jobs, and background workers). To migrate existing data, run:
+    ```bash
+    php scripts/encrypt_full_names.php
+    ```
+-   **Database connection** – Credentials are read from the environment. For production deployments consider using managed secrets stores and enforcing TLS connections to PostgreSQL.
+-   **Dave Ramsey support** – use `baby_steps` for status + `emergency_fund`, `goals`, `loans` to reflect progress.
 
 ```

@@ -28,6 +28,142 @@ function json_error(string $message, int $status = 400): void
     json_response(['success' => false, 'error' => $message], $status);
 }
 
+function pii_crypto_is_configured(): bool
+{
+    $config = app_config('security') ?? [];
+    $key = (string)($config['data_key'] ?? '');
+
+    if ($key === '' && isset($_ENV['MM_DATA_KEY'])) {
+        $key = (string)$_ENV['MM_DATA_KEY'];
+    }
+
+    return $key !== '';
+}
+
+function pii_encryption_key(): string
+{
+    static $key;
+
+    if ($key !== null) {
+        return $key;
+    }
+
+    $config = app_config('security') ?? [];
+    $raw = (string)($config['data_key'] ?? '');
+
+    if ($raw === '' && isset($_ENV['MM_DATA_KEY'])) {
+        $raw = (string)$_ENV['MM_DATA_KEY'];
+    }
+
+    if ($raw === '') {
+        throw new RuntimeException('Sensitive data encryption key missing. Set MM_DATA_KEY in your environment.');
+    }
+
+    $decoded = base64_decode($raw, true);
+    $material = $decoded !== false && $decoded !== '' ? $decoded : $raw;
+
+    if (function_exists('sodium_crypto_secretbox')) {
+        $key = substr(hash('sha256', $material, true), 0, SODIUM_CRYPTO_SECRETBOX_KEYBYTES);
+    } else {
+        $key = substr(hash('sha256', $material, true), 0, 32);
+    }
+
+    return $key;
+}
+
+function pii_encrypt(?string $value): ?string
+{
+    if ($value === null) {
+        return null;
+    }
+
+    if ($value === '') {
+        return '';
+    }
+
+    $key = pii_encryption_key();
+
+    if (function_exists('sodium_crypto_secretbox')) {
+        $nonce = random_bytes(SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
+        $cipher = sodium_crypto_secretbox($value, $nonce, $key);
+        return base64_encode($nonce . $cipher);
+    }
+
+    if (!function_exists('openssl_encrypt')) {
+        throw new RuntimeException('OpenSSL extension is required when Sodium is unavailable to encrypt sensitive data.');
+    }
+
+    $iv = random_bytes(12);
+    $tag = '';
+    $cipher = openssl_encrypt($value, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $iv, $tag);
+
+    if ($cipher === false) {
+        throw new RuntimeException('Unable to encrypt sensitive data.');
+    }
+
+    return base64_encode($iv . $tag . $cipher);
+}
+
+function pii_decrypt(?string $value, ?bool &$wasEncrypted = null): ?string
+{
+    if ($value === null || $value === '') {
+        $wasEncrypted = true;
+        return $value;
+    }
+
+    $data = base64_decode($value, true);
+    if ($data === false) {
+        $wasEncrypted = false;
+        return $value;
+    }
+
+    if (!pii_crypto_is_configured()) {
+        $wasEncrypted = false;
+        return $value;
+    }
+
+    try {
+        $key = pii_encryption_key();
+    } catch (Throwable $e) {
+        $wasEncrypted = false;
+        return $value;
+    }
+
+    if (function_exists('sodium_crypto_secretbox_open')) {
+        if (strlen($data) <= SODIUM_CRYPTO_SECRETBOX_NONCEBYTES) {
+            $wasEncrypted = false;
+            return $value;
+        }
+        $nonce = substr($data, 0, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
+        $cipher = substr($data, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
+        $plain = sodium_crypto_secretbox_open($cipher, $nonce, $key);
+        if ($plain === false) {
+            $wasEncrypted = false;
+            return $value;
+        }
+        $wasEncrypted = true;
+        return $plain;
+    }
+
+    if (!function_exists('openssl_decrypt') || strlen($data) <= 28) {
+        $wasEncrypted = false;
+        return $value;
+    }
+
+    $iv = substr($data, 0, 12);
+    $tag = substr($data, 12, 16);
+    $cipher = substr($data, 28);
+    $plain = openssl_decrypt($cipher, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $iv, $tag);
+
+    if ($plain === false) {
+        $wasEncrypted = false;
+        return $value;
+    }
+
+    $wasEncrypted = true;
+    return $plain;
+}
+
 function read_json_input(): array
 {
     $raw = file_get_contents('php://input');

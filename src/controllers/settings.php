@@ -4,7 +4,9 @@ function settings_controller(PDO $pdo){
     require_login(); $u=uid();
     // Load user, currencies, rules, incomes
     $user = $pdo->prepare('SELECT id,email,full_name,theme FROM users WHERE id=?');
-    $user->execute([$u]); $user=$user->fetch();
+    $user->execute([$u]);
+    $user=$user->fetch() ?: [];
+    $user['full_name'] = pii_decrypt($user['full_name'] ?? null);
 
     $curr = $pdo->prepare('SELECT uc.code, uc.is_main, c.name FROM user_currencies uc JOIN currencies c ON c.code=uc.code WHERE uc.user_id=? ORDER BY is_main DESC, code');
     $curr->execute([$u]); $curr=$curr->fetchAll();

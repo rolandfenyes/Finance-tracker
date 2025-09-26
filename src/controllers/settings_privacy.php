@@ -9,6 +9,7 @@ function settings_privacy_show(PDO $pdo): void
     $stmt = $pdo->prepare('SELECT email, full_name, created_at, needs_tutorial, onboard_step FROM users WHERE id = ? LIMIT 1');
     $stmt->execute([$userId]);
     $account = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+    $account['full_name'] = pii_decrypt($account['full_name'] ?? null);
 
     $counts = [
         'transactions' => fetch_single_value($pdo, 'SELECT COUNT(*) FROM transactions WHERE user_id = ?', [$userId]),
@@ -136,6 +137,7 @@ function build_user_data_export(PDO $pdo, int $userId): array
     $metaStmt = $pdo->prepare('SELECT id, email, full_name, date_of_birth, created_at, theme FROM users WHERE id = ? LIMIT 1');
     $metaStmt->execute([$userId]);
     $profile = $metaStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+    $profile['full_name'] = pii_decrypt($profile['full_name'] ?? null);
     unset($profile['id']);
 
     $collections = [

@@ -1,5 +1,6 @@
 <?php
 $root = __DIR__;
+require $root . '/config/load_env.php';
 $config = require $root . '/config/config.php';
 
 $sessionName = $config['app']['session_name'] ?? 'moneymap_sess';

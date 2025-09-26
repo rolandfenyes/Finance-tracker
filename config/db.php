@@ -1,4 +1,5 @@
 <?php
+require __DIR__ . '/load_env.php';
 $config = require __DIR__ . '/config.php';
 $dsn = sprintf('pgsql:host=%s;port=%s;dbname=%s', $config['db']['host'], $config['db']['port'], $config['db']['name']);
 try {

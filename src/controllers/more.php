@@ -7,6 +7,7 @@ function more_show(PDO $pdo): void
     $stmt = $pdo->prepare('SELECT full_name, email FROM users WHERE id = ? LIMIT 1');
     $stmt->execute([$userId]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC) ?: ['full_name' => '', 'email' => ''];
+    $user['full_name'] = pii_decrypt($user['full_name'] ?? null);
 
     $displayName = trim($user['full_name'] ?? '') ?: ($user['email'] ?? '');
 

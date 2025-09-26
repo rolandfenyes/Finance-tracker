@@ -5,7 +5,9 @@ require_once __DIR__ . '/../webauthn.php';
 function settings_profile_show(PDO $pdo){
   require_login(); $u = uid();
   $stmt = $pdo->prepare('SELECT email, full_name, date_of_birth FROM users WHERE id=?');
-  $stmt->execute([$u]); $user = $stmt->fetch(PDO::FETCH_ASSOC);
+  $stmt->execute([$u]);
+  $user = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+  $user['full_name'] = pii_decrypt($user['full_name'] ?? null);
 
   $passkeys = webauthn_list_passkeys($pdo, $u);
 
@@ -17,6 +19,13 @@ function settings_profile_update(PDO $pdo){
 
   $full = trim($_POST['full_name'] ?? '');
   $dob  = $_POST['date_of_birth'] ?? null;
+
+  try {
+    $nameToStore = $full !== '' ? pii_encrypt($full) : null;
+  } catch (Throwable $e) {
+    $_SESSION['flash'] = __('We could not update your profile encryption settings.');
+    redirect('/settings/profile');
+  }
 
   // Optional: change password
   $pass = $_POST['password'] ?? '';
@@ -30,10 +39,10 @@ function settings_profile_update(PDO $pdo){
       }
       $hash = password_hash($pass, PASSWORD_DEFAULT);
       $stmt = $pdo->prepare('UPDATE users SET full_name=?, date_of_birth=?, password_hash=? WHERE id=?');
-      $stmt->execute([$full ?: null, $dob ?: null, $hash, $u]);
+      $stmt->execute([$nameToStore, $dob ?: null, $hash, $u]);
     } else {
       $stmt = $pdo->prepare('UPDATE users SET full_name=?, date_of_birth=? WHERE id=?');
-      $stmt->execute([$full ?: null, $dob ?: null, $u]);
+      $stmt->execute([$nameToStore, $dob ?: null, $u]);
     }
     $_SESSION['flash_success'] = 'Profile updated.';
   } catch (Throwable $e){

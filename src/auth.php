@@ -12,7 +12,8 @@ function handle_register(PDO $pdo) {
     $hash = password_hash($pass, PASSWORD_DEFAULT);
     $stmt = $pdo->prepare('INSERT INTO users(email,password_hash,full_name) VALUES(?,?,?) RETURNING id');
     try {
-        $stmt->execute([$email,$hash,$name]);
+        $encryptedName = $name !== '' ? pii_encrypt($name) : null;
+        $stmt->execute([$email,$hash,$encryptedName]);
         $uid = (int)$stmt->fetchColumn();
         $_SESSION['uid'] = $uid;
         // Add default currencies
@@ -22,8 +23,8 @@ function handle_register(PDO $pdo) {
         // Initialize baby steps
         for ($i=1;$i<=7;$i++) { $pdo->prepare('INSERT INTO baby_steps(user_id,step,status) VALUES(?,?,?)')->execute([$uid,$i,'in_progress']); }
         redirect('/');
-    } catch (PDOException $e) {
-        $_SESSION['flash'] = __('Registration failed.');
+    } catch (Throwable $e) {
+        $_SESSION['flash'] = __('Registration failed. Please contact support.');
         redirect('/register');
     }
 }
