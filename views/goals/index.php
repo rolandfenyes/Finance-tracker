@@ -108,8 +108,12 @@
           </td>
 
           <td class="py-3 pr-0 align-middle" style="text-align:right;">
-            <button class="btn btn-primary !px-3"
-                    data-open="#goal-edit-<?= (int)$g['id'] ?>"><?= __('Edit / Add money') ?></button>
+            <div class="flex justify-end gap-2">
+              <button class="btn btn-primary !px-3"
+                      data-open="#goal-add-<?= (int)$g['id'] ?>"><?= __('Add money') ?></button>
+              <button class="btn !px-3"
+                      data-open="#goal-edit-<?= (int)$g['id'] ?>"><?= __('Edit') ?></button>
+            </div>
           </td>
         </tr>
       <?php endforeach; if(!count($rows)): ?>
@@ -161,6 +165,10 @@
               <?php endif; ?>
             </div>
           <?php endif; ?>
+        </div>
+
+        <div class="mt-3 flex flex-col gap-2">
+          <button class="btn btn-primary" data-open="#goal-add-<?= (int)$g['id'] ?>"><?= __('Add money') ?></button>
         </div>
       </div>
     <?php endforeach; ?>
@@ -398,32 +406,6 @@
       <div class="mt-6 space-y-4">
         <form
           method="post"
-          action="/goals/tx/add"
-          class="grid gap-2 sm:grid-cols-3"
-        >
-          <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-          <input type="hidden" name="goal_id" value="<?= $goalId ?>" />
-          <input
-            name="occurred_on"
-            type="date"
-            value="<?= date('Y-m-d') ?>"
-            class="input sm:col-span-1"
-          >
-          <input
-            name="amount"
-            type="number"
-            step="0.01"
-            placeholder="<?= __('Amount') ?>"
-            class="input sm:col-span-1"
-            required
-          >
-          <button class="btn btn-emerald w-full sm:w-auto sm:col-span-1">
-            <?= __('Add money') ?>
-          </button>
-        </form>
-
-        <form
-          method="post"
           action="/goals/delete"
           onsubmit="return confirm('<?= __('Delete this goal?') ?>')"
           class="w-full"
@@ -440,6 +422,38 @@
           <button class="btn btn-primary" form="goal-form-<?= $goalId ?>"><?= __('Save') ?></button>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<div id="goal-add-<?= $goalId ?>" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="goal-add-title-<?= $goalId ?>">
+  <div class="modal-backdrop" data-close></div>
+
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h3 id="goal-add-title-<?= $goalId ?>" class="font-semibold"><?= __('Add money') ?></h3>
+      <button type="button" class="icon-btn" aria-label="<?= __('Close') ?>" data-close>
+        <i data-lucide="x" class="h-5 w-5"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <form method="post" action="/goals/tx/add" class="grid gap-3 sm:grid-cols-12">
+        <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+        <input type="hidden" name="goal_id" value="<?= $goalId ?>" />
+        <div class="sm:col-span-5">
+          <label class="label"><?= __('Date') ?></label>
+          <input name="occurred_on" type="date" class="input" value="<?= date('Y-m-d') ?>" />
+        </div>
+        <div class="sm:col-span-5">
+          <label class="label"><?= __('Amount (:currency)', ['currency' => htmlspecialchars($cur)]) ?></label>
+          <input name="amount" type="number" step="0.01" class="input" placeholder="0.00" required />
+        </div>
+        <div class="sm:col-span-12 flex justify-end gap-2">
+          <button type="button" class="btn" data-close><?= __('Cancel') ?></button>
+          <button class="btn btn-primary"><?= __('Add money') ?></button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
@@ -474,13 +488,6 @@
       });
     }
   });
-
-  // when opening goals edit modal
-  const sel = modal.querySelector('select[name="scheduled_payment_id"]');
-  if (sel) {
-    const linkedId = btn.getAttribute('data-sched_id') || '';
-    Array.from(sel.options).forEach(o => { o.selected = (String(o.value) === String(linkedId)); });
-  }
 
   // tabs
   document.querySelectorAll('.tab-btn').forEach(btn=>{
