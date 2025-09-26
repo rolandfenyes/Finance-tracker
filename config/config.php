@@ -1,11 +1,11 @@
 <?php
 return [
     'db' => [
-        'host' => '127.0.0.1',
-        'port' => '5432',
-        'name' => 'moneymap',
-        'user' => 'rolandcsabafenyes',
-        'pass' => 'asd',
+        'host' => getenv('MM_DB_HOST') ?: '127.0.0.1',
+        'port' => getenv('MM_DB_PORT') ?: '5432',
+        'name' => getenv('MM_DB_NAME') ?: 'moneymap',
+        'user' => getenv('MM_DB_USER') ?: 'rolandcsabafenyes',
+        'pass' => getenv('MM_DB_PASS') ?: 'asd',
     ],
     'app' => [
         'name' => 'MyMoneyMap',

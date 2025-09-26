@@ -90,6 +90,12 @@ function more_show(PDO $pdo): void
                     'href' => '/settings/categories',
                     'icon' => 'tags',
                 ],
+                [
+                    'label' => __('Data & Privacy'),
+                    'description' => __('Download or erase the information stored for your account.'),
+                    'href' => '/settings/privacy',
+                    'icon' => 'shield-check',
+                ],
             ],
         ],
         [
