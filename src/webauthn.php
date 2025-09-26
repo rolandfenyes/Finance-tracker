@@ -81,12 +81,17 @@ function webauthn_clear_challenge(string $type): void
 
 function webauthn_registration_options(PDO $pdo, int $userId): array
 {
-    $stmt = $pdo->prepare("SELECT email, COALESCE(NULLIF(full_name, ''), email) AS display_name FROM users WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT email, full_name FROM users WHERE id = ?");
     $stmt->execute([$userId]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$user) {
         throw new RuntimeException('User not found');
+    }
+
+    $displayName = trim((string)pii_decrypt($user['full_name'] ?? null));
+    if ($displayName === '') {
+        $displayName = (string)$user['email'];
     }
 
     $challenge = random_bytes(32);
@@ -116,7 +121,7 @@ function webauthn_registration_options(PDO $pdo, int $userId): array
             'user' => [
                 'id' => base64url_encode($userHandle),
                 'name' => (string)$user['email'],
-                'displayName' => (string)($user['display_name'] ?? $user['email']),
+                'displayName' => $displayName,
             ],
             'pubKeyCredParams' => [
                 ['type' => 'public-key', 'alg' => -7],

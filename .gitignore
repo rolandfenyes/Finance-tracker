@@ -2,6 +2,8 @@
 
 /vendor/*
 /config/app.php
+.env
+.env.local
 
 /tmp/cache/models/*
 !/tmp/cache/models/empty

@@ -21,6 +21,16 @@ $localeFlags = [
     </p>
   </div>
 
+  <!-- Privacy -->
+  <div class="card">
+    <div class="card-kicker"><?= __('Security') ?></div>
+    <h2 class="card-title mt-1"><?= __('Data & Privacy') ?></h2>
+    <p class="card-subtle mt-2"><?= __('Download, review, or erase the personal information stored for your account.') ?></p>
+    <p class="card-subtle mt-3">
+      <a class="text-accent" href="/settings/privacy"><?= __('Open privacy controls →') ?></a>
+    </p>
+  </div>
+
   <!-- Theme -->
   <?php
     $themeCatalog = available_themes();
