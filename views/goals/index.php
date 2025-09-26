@@ -189,7 +189,7 @@
     </div>
 
     <!-- Body -->
-    <div class="modal-body">
+    <div class="modal-body flex flex-col gap-6">
       <div class="grid gap-4 md:grid-cols-12">
         <form id="goal-form-<?= $goalId ?>" method="post" action="/goals/edit" class="col-span-6 grid gap-4 md:grid-cols-7">
           <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
@@ -399,31 +399,30 @@
 
         </div>
 
-        <div class="md:col-span-12">
-          <section class="mt-8 rounded-2xl border border-rose-200/80 bg-rose-50/70 p-4 text-sm text-rose-600 dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-200">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div class="space-y-1">
-                <h4 class="text-base font-semibold"><?= __('Danger zone') ?></h4>
-                <p class="text-sm text-rose-500 dark:text-rose-200/80">
-                  <?= __('Deleting a goal will remove its transactions.') ?>
-                </p>
-              </div>
-              <form
-                method="post"
-                action="/goals/delete"
-                onsubmit="return confirm('<?= __('Delete this goal?') ?>')"
-                class="sm:shrink-0"
-              >
-                <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-                <input type="hidden" name="id" value="<?= $goalId ?>" />
-                <button class="btn btn-danger w-full sm:w-auto">
-                  <?= __('Delete') ?>
-                </button>
-              </form>
-            </div>
-          </section>
-        </div>
       </div>
+
+      <section class="rounded-2xl border border-rose-200/80 bg-rose-50/70 p-4 text-sm text-rose-600 dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-200">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div class="space-y-1">
+            <h4 class="text-base font-semibold"><?= __('Danger zone') ?></h4>
+            <p class="text-sm text-rose-500 dark:text-rose-200/80">
+              <?= __('Deleting a goal will remove its transactions.') ?>
+            </p>
+          </div>
+          <form
+            method="post"
+            action="/goals/delete"
+            onsubmit="return confirm('<?= __('Delete this goal?') ?>')"
+            class="sm:shrink-0"
+          >
+            <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+            <input type="hidden" name="id" value="<?= $goalId ?>" />
+            <button class="btn btn-danger w-full sm:w-auto">
+              <?= __('Delete') ?>
+            </button>
+          </form>
+        </div>
+      </section>
     </div>
 
     <div class="modal-footer">

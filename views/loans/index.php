@@ -342,7 +342,7 @@
     </div>
 
     <!-- Body -->
-    <div class="modal-body">
+    <div class="modal-body flex flex-col gap-6">
       <form method="post" action="/loans/edit" id="loan-form-<?= (int)$l['id'] ?>" class="grid gap-4 md:grid-cols-12">
         <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
         <input type="hidden" name="id" value="<?= (int)$l['id'] ?>" />
@@ -557,7 +557,7 @@
 
       </form>
 
-      <section class="mt-8 rounded-2xl border border-rose-200/80 bg-rose-50/70 p-4 text-sm text-rose-600 dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-200">
+      <section class="rounded-2xl border border-rose-200/80 bg-rose-50/70 p-4 text-sm text-rose-600 dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-200">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div class="space-y-1">
             <h4 class="text-base font-semibold"><?= __('Danger zone') ?></h4>

@@ -550,6 +550,7 @@
         max-width: 52rem;
         width: calc(100% - 2rem);
         max-height: calc(100dvh - 3rem);
+        min-height: 0;
         border-radius: 1.5rem;
         overflow: hidden;
         border: 1px solid var(--mm-modal-border);
@@ -575,6 +576,7 @@
       .modal-body {
         flex: 1;
         overflow-y: auto;
+        min-height: 0;
         padding: 1.25rem 1.5rem;
         color: var(--mm-text-color);
       }
@@ -631,6 +633,7 @@
       }
       dialog[open] .modal-body {
         flex: 1;
+        min-height: 0;
       }
       dialog[open] .modal-footer {
         margin-top: 0;
