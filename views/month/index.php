@@ -574,79 +574,66 @@
 </section>
 
 <!-- Add transaction -->
-<section id="quick-add" class="mt-6 grid md:grid-cols-2 gap-6">
-  <div class="card md:col-span-2">
-    <h3 class="text-base font-semibold mb-3"><?= __('Quick Add') ?></h3>
-
-    <form
-      class="grid gap-4 md:grid-cols-12 md:items-end"
-      method="post"
-      action="/months/tx/add"
-      data-restore-focus="#quick-add-amount"
-      data-restore-focus-select="true"
+<section id="quick-add" class="mt-6 grid gap-6 md:grid-cols-2">
+  <div class="md:hidden space-y-3">
+    <button
+      type="button"
+      class="btn btn-primary w-full"
+      onclick="openTxModal('tx-add')"
     >
-      <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-      <input type="hidden" name="y" value="<?= $y ?>" />
-      <input type="hidden" name="m" value="<?= $m ?>" />
-
-      <!-- Type -->
-      <div class="field md:col-span-2">
-        <label class="label"><?= __('Type') ?></label>
-        <select name="kind" class="select">
-          <option value="income">Income</option>
-          <option value="spending" selected>Spending</option>
-        </select>
-      </div>
-
-      <!-- Category -->
-      <div class="field md:col-span-3">
-        <label class="label"><?= __('Category') ?></label>
-        <select name="category_id" class="select">
-          <option value="">— Category —</option>
-          <?php foreach($cats as $c): ?>
-            <option value="<?= $c['id'] ?>"><?= ucfirst($c['kind']) ?> · <?= htmlspecialchars($c['label']) ?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-
-      <!-- Amount + Currency -->
-      <div class="field md:col-span-4">
-        <label class="label"><?= __('Amount') ?></label>
-        <div class="grid grid-cols-5 gap-2">
-          <input id="quick-add-amount" name="amount" type="number" step="0.01" class="input col-span-3" placeholder="0.00" required />
-          <select name="currency" class="select col-span-2">
-            <?php foreach ($userCurrencies as $c): ?>
-              <option value="<?= htmlspecialchars($c['code']) ?>" <?= $c['is_main'] ? 'selected' : '' ?>>
-                <?= htmlspecialchars($c['code']) ?>
-              </option>
-            <?php endforeach; ?>
-            <?php if (!count($userCurrencies)): ?><option value="HUF">HUF</option><?php endif; ?>
-          </select>
-        </div>
-      </div>
-
-
-
-      <!-- Date -->
-      <div class="field md:col-span-2">
-        <label class="label"><?= __('Date') ?></label>
-        <!-- <input name="occurred_on" type="date" value="<?= $ym ?>-01" class="input" /> -->
-         <input name="occurred_on" type="date" value="<?= date('Y-m-d') ?>" class="input" />
-
-      </div>
-
-      <!-- Note -->
-      <div class="field md:col-span-8">
-        <label class="label"><?= __('Note') ?> <span class="help">(optional)</span></label>
-        <input name="note" class="input" placeholder="<?= __('Add a short note…') ?>" />
-      </div>
-
-      <!-- Submit -->
-      <div class="md:col-span-4 flex md:justify-end">
-        <button class="btn btn-primary w-full md:w-auto"><?= __('Add') ?></button>
-      </div>
-    </form>
+      <?= __('Add transaction') ?>
+    </button>
+    <p class="text-xs text-gray-500 text-center">
+      <?= __('Quick Add lets you choose kind, amount, currency, and category fast.') ?>
+    </p>
   </div>
+
+  <div class="card hidden md:block md:col-span-2">
+    <h3 class="text-base font-semibold mb-3"><?= __('Quick Add') ?></h3>
+    <?php
+      $quickAddConfig = [
+        'form_classes' => 'grid gap-4 md:grid-cols-12 md:items-end',
+        'amount_id' => 'quick-add-amount',
+        'button_wrapper_classes' => 'md:col-span-4 flex md:justify-end',
+        'button_classes' => 'btn btn-primary w-full md:w-auto',
+        'button_label' => __('Add'),
+        'data_restore_focus' => '#quick-add-amount',
+      ];
+      include __DIR__ . '/_quick_add_form.php';
+    ?>
+  </div>
+
+  <dialog id="tx-add" class="rounded-2xl p-0 w-[720px] max-w-[95vw] shadow-2xl">
+    <div class="modal-header px-5 py-4">
+      <div class="font-semibold"><?= __('Add transaction') ?></div>
+      <button type="button" class="icon-btn" onclick="closeTxModal('tx-add')" aria-label="<?= __('Close') ?>">
+        <i data-lucide="x" class="h-5 w-5"></i>
+      </button>
+    </div>
+
+    <div class="modal-body px-5 py-4">
+      <?php
+        $quickAddConfig = [
+          'form_classes' => 'grid gap-3',
+          'amount_id' => 'quick-add-modal-amount',
+          'button_wrapper_classes' => 'flex justify-end',
+          'button_classes' => 'btn btn-primary',
+          'button_label' => __('Add'),
+          'data_restore_focus' => '#quick-add-modal-amount',
+          'render_button' => false,
+          'form_id' => 'quick-add-modal-form',
+        ];
+        include __DIR__ . '/_quick_add_form.php';
+      ?>
+    </div>
+
+    <div class="modal-footer px-5 py-4">
+      <div class="flex flex-row flex-wrap gap-2 justify-end">
+        <button type="button" class="btn" onclick="closeTxModal('tx-add')"><?= __('Cancel') ?></button>
+        <button class="btn btn-primary" form="quick-add-modal-form"><?= __('Add') ?></button>
+      </div>
+    </div>
+  </dialog>
 </section>
 
 <!-- Transactions -->
@@ -914,17 +901,15 @@
 
                 <!-- Modal -->
                 <dialog id="tx<?= $row['id'] ?>" class="rounded-2xl p-0 w-[720px] max-w-[95vw] shadow-2xl">
-                  <form method="dialog" class="m-0">
-                    <div class="modal-header px-5 py-4">
-                      <div class="font-semibold"><?= __('Edit Transaction — :date', ['date' => htmlspecialchars($row['occurred_on'])]) ?></div>
-                      <button type="submit" class="icon-btn" value="close" aria-label="<?= __('Close') ?>">
-                        <i data-lucide="x" class="h-5 w-5"></i>
-                      </button>
-                    </div>
-                  </form>
+                  <div class="modal-header px-5 py-4">
+                    <div class="font-semibold"><?= __('Edit Transaction — :date', ['date' => htmlspecialchars($row['occurred_on'])]) ?></div>
+                    <button type="button" class="icon-btn" onclick="closeTxModal('tx<?= (int)$row['id'] ?>')" aria-label="<?= __('Close') ?>">
+                      <i data-lucide="x" class="h-5 w-5"></i>
+                    </button>
+                  </div>
 
-                  <div class="p-5">
-                    <form class="grid gap-3 md:grid-cols-12 items-end" method="post" action="/months/tx/edit">
+                  <div class="modal-body px-5 py-4">
+                    <form id="tx-form-<?= (int)$row['id'] ?>" class="grid gap-3 md:grid-cols-12 items-end" method="post" action="/months/tx/edit">
                       <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                       <input type="hidden" name="y" value="<?= $y ?>" />
                       <input type="hidden" name="m" value="<?= $m ?>" />
@@ -965,11 +950,14 @@
                         <label class="label"><?= __('Note') ?></label>
                         <input name="note" value="<?= htmlspecialchars($row['note'] ?? '') ?>" class="input" />
                       </div>
-
-                      <div class="md:col-span-12 flex justify-end gap-2">
-                        <button class="btn btn-primary"><?= __('Save') ?></button>
-                      </div>
                     </form>
+                  </div>
+
+                  <div class="modal-footer px-5 py-4">
+                    <div class="flex flex-row flex-wrap gap-2 justify-end">
+                      <button type="button" class="btn" onclick="closeTxModal('tx<?= (int)$row['id'] ?>')"><?= __('Cancel') ?></button>
+                      <button class="btn btn-primary" form="tx-form-<?= (int)$row['id'] ?>"><?= __('Save') ?></button>
+                    </div>
                   </div>
                 </dialog>
               <?php else: ?>
@@ -1025,10 +1013,25 @@
       dlg.setAttribute('open','');
     }
   }
+  function closeTxModal(id){
+    const dlg = document.getElementById(id);
+    if (!dlg) return;
+    if (typeof dlg.close === 'function') {
+      dlg.close();
+    } else {
+      dlg.removeAttribute('open');
+      if (dlg.__mmOverlayActive) {
+        dlg.__mmOverlayActive = false;
+        window.MyMoneyMapOverlay && window.MyMoneyMapOverlay.close();
+      }
+    }
+  }
   // Close on backdrop click
   document.addEventListener('click', (e)=>{
     const dlg = e.target.closest('dialog[open]');
-    if (dlg && e.target === dlg) dlg.close();
+    if (dlg && e.target === dlg) {
+      closeTxModal(dlg.id);
+    }
   });
 </script>
 

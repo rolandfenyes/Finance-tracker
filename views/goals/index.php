@@ -108,8 +108,12 @@
           </td>
 
           <td class="py-3 pr-0 align-middle" style="text-align:right;">
-            <button class="btn btn-primary !px-3"
-                    data-open="#goal-edit-<?= (int)$g['id'] ?>"><?= __('Edit / Add money') ?></button>
+            <div class="flex justify-end gap-2">
+              <button class="btn btn-primary !px-3"
+                      data-open="#goal-add-<?= (int)$g['id'] ?>"><?= __('Add money') ?></button>
+              <button class="btn !px-3"
+                      data-open="#goal-edit-<?= (int)$g['id'] ?>"><?= __('Edit') ?></button>
+            </div>
           </td>
         </tr>
       <?php endforeach; if(!count($rows)): ?>
@@ -162,6 +166,10 @@
             </div>
           <?php endif; ?>
         </div>
+
+        <div class="mt-3 flex flex-col gap-2">
+          <button class="btn btn-primary" data-open="#goal-add-<?= (int)$g['id'] ?>"><?= __('Add money') ?></button>
+        </div>
       </div>
     <?php endforeach; ?>
   </div>
@@ -181,7 +189,7 @@
     </div>
 
     <!-- Body -->
-    <div class="modal-body">
+    <div class="modal-body flex flex-col gap-6">
       <div class="grid gap-4 md:grid-cols-12">
         <form id="goal-form-<?= $goalId ?>" method="post" action="/goals/edit" class="col-span-6 grid gap-4 md:grid-cols-7">
           <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
@@ -392,53 +400,70 @@
         </div>
 
       </div>
+
+      <section class="rounded-2xl border border-rose-200/80 bg-rose-50/70 p-4 text-sm text-rose-600 dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-200">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div class="space-y-1">
+            <h4 class="text-base font-semibold"><?= __('Danger zone') ?></h4>
+            <p class="text-sm text-rose-500 dark:text-rose-200/80">
+              <?= __('Deleting a goal will remove its transactions.') ?>
+            </p>
+          </div>
+          <form
+            method="post"
+            action="/goals/delete"
+            onsubmit="return confirm('<?= __('Delete this goal?') ?>')"
+            class="sm:shrink-0"
+          >
+            <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+            <input type="hidden" name="id" value="<?= $goalId ?>" />
+            <button class="btn btn-danger w-full sm:w-auto">
+              <?= __('Delete') ?>
+            </button>
+          </form>
+        </div>
+      </section>
     </div>
 
-    <div class="px-6 pb-6">
-      <div class="mt-6 space-y-4">
-        <form
-          method="post"
-          action="/goals/tx/add"
-          class="grid gap-2 sm:grid-cols-3"
-        >
-          <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-          <input type="hidden" name="goal_id" value="<?= $goalId ?>" />
-          <input
-            name="occurred_on"
-            type="date"
-            value="<?= date('Y-m-d') ?>"
-            class="input sm:col-span-1"
-          >
-          <input
-            name="amount"
-            type="number"
-            step="0.01"
-            placeholder="<?= __('Amount') ?>"
-            class="input sm:col-span-1"
-            required
-          >
-          <button class="btn btn-emerald w-full sm:w-auto sm:col-span-1">
-            <?= __('Add money') ?>
-          </button>
-        </form>
+    <div class="modal-footer">
+      <div class="flex flex-row flex-wrap gap-2 justify-end">
+        <button class="btn" data-close><?= __('Cancel') ?></button>
+        <button class="btn btn-primary" form="goal-form-<?= $goalId ?>"><?= __('Save') ?></button>
+      </div>
+    </div>
+  </div>
+</div>
 
-        <form
-          method="post"
-          action="/goals/delete"
-          onsubmit="return confirm('<?= __('Delete this goal?') ?>')"
-          class="w-full"
-        >
-          <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-          <input type="hidden" name="id" value="<?= $goalId ?>" />
-          <button class="btn btn-danger w-full">
-            <?= __('Delete') ?>
-          </button>
-        </form>
+<div id="goal-add-<?= $goalId ?>" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="goal-add-title-<?= $goalId ?>">
+  <div class="modal-backdrop" data-close></div>
 
-        <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
-          <button class="btn" data-close><?= __('Cancel') ?></button>
-          <button class="btn btn-primary" form="goal-form-<?= $goalId ?>"><?= __('Save') ?></button>
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h3 id="goal-add-title-<?= $goalId ?>" class="font-semibold"><?= __('Add money') ?></h3>
+      <button type="button" class="icon-btn" aria-label="<?= __('Close') ?>" data-close>
+        <i data-lucide="x" class="h-5 w-5"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <form id="goal-add-form-<?= $goalId ?>" method="post" action="/goals/tx/add" class="grid gap-3 sm:grid-cols-12">
+        <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+        <input type="hidden" name="goal_id" value="<?= $goalId ?>" />
+        <div class="sm:col-span-5">
+          <label class="label"><?= __('Date') ?></label>
+          <input name="occurred_on" type="date" class="input" value="<?= date('Y-m-d') ?>" />
         </div>
+        <div class="sm:col-span-5">
+          <label class="label"><?= __('Amount (:currency)', ['currency' => htmlspecialchars($cur)]) ?></label>
+          <input name="amount" type="number" step="0.01" class="input" placeholder="0.00" required />
+        </div>
+      </form>
+    </div>
+
+    <div class="modal-footer">
+      <div class="flex flex-row flex-wrap gap-2 justify-end">
+        <button type="button" class="btn" data-close><?= __('Cancel') ?></button>
+        <button class="btn btn-primary" form="goal-add-form-<?= $goalId ?>"><?= __('Add money') ?></button>
       </div>
     </div>
   </div>
@@ -474,13 +499,6 @@
       });
     }
   });
-
-  // when opening goals edit modal
-  const sel = modal.querySelector('select[name="scheduled_payment_id"]');
-  if (sel) {
-    const linkedId = btn.getAttribute('data-sched_id') || '';
-    Array.from(sel.options).forEach(o => { o.selected = (String(o.value) === String(linkedId)); });
-  }
 
   // tabs
   document.querySelectorAll('.tab-btn').forEach(btn=>{

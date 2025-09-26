@@ -238,11 +238,18 @@
           </td>
 
           <td class="py-3 pr-3 text-right align-middle">
-            <button type="button"
-                    class="btn btn-primary !px-3"
-                    data-open="#loan-edit-<?= (int)$l['id'] ?>">
-              <?= __('Edit / Pay') ?>
-            </button>
+            <div class="flex justify-end gap-2">
+              <button type="button"
+                      class="btn btn-primary !px-3"
+                      data-open="#loan-pay-<?= (int)$l['id'] ?>">
+                <?= __('Record Payment') ?>
+              </button>
+              <button type="button"
+                      class="btn !px-3"
+                      data-open="#loan-edit-<?= (int)$l['id'] ?>">
+                <?= __('Edit') ?>
+              </button>
+            </div>
           </td>
         </tr>
       <?php endforeach; if (!count($rows)): ?>
@@ -309,12 +316,19 @@
             <div class="text-gray-500"><?= __('No schedule') ?></div>
           <?php endif; ?>
         </div>
+
+        <div class="mt-3 flex flex-col gap-2">
+          <button type="button" class="btn btn-primary" data-open="#loan-pay-<?= (int)$l['id'] ?>"><?= __('Record Payment') ?></button>
+        </div>
       </div>
     <?php endforeach; ?>
   </div>
 </section>
 
-<?php foreach($rows as $l): $curList = $userCurrencies ?? [['code'=>'HUF','is_main'=>true]]; ?>
+<?php foreach($rows as $l):
+  $curList = $userCurrencies ?? [['code'=>'HUF','is_main'=>true]];
+  $loanCurrency = $l['_currency'] ?: ($l['currency'] ?: 'HUF');
+?>
 <div id="loan-edit-<?= (int)$l['id'] ?>" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="loan-edit-title-<?= (int)$l['id'] ?>">
   <div class="modal-backdrop" data-close></div>
 
@@ -328,9 +342,10 @@
     </div>
 
     <!-- Body -->
-    <form method="post" action="/loans/edit" id="loan-form-<?= (int)$l['id'] ?>" class="modal-body grid gap-4 md:grid-cols-12">
-      <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-      <input type="hidden" name="id" value="<?= (int)$l['id'] ?>" />
+    <div class="modal-body flex flex-col gap-6">
+      <form method="post" action="/loans/edit" id="loan-form-<?= (int)$l['id'] ?>" class="grid gap-4 md:grid-cols-12">
+        <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+        <input type="hidden" name="id" value="<?= (int)$l['id'] ?>" />
 
       <!-- Left: details -->
       <div class="md:col-span-7 space-y-3">
@@ -540,40 +555,88 @@
 
       </div>
 
-    </form>
+      </form>
 
-    <div class="px-6 pb-6">
-      <div class="mt-6 space-y-4">
-        <form
-          class="grid gap-2 sm:grid-cols-2 lg:grid-cols-5"
-          method="post"
-          action="/loans/payment/add"
-        >
-          <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-          <input type="hidden" name="loan_id" value="<?= (int)$l['id'] ?>" />
+      <section class="rounded-2xl border border-rose-200/80 bg-rose-50/70 p-4 text-sm text-rose-600 dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-200">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div class="space-y-1">
+            <h4 class="text-base font-semibold"><?= __('Danger zone') ?></h4>
+            <p class="text-sm text-rose-500 dark:text-rose-200/80">
+              <?= __('Deleting this loan will remove its payment history.') ?>
+            </p>
+          </div>
+          <form
+            method="post"
+            action="/loans/delete"
+            onsubmit="return confirm('<?= __('Delete this loan?') ?>')"
+            class="sm:shrink-0"
+          >
+            <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+            <input type="hidden" name="id" value="<?= (int)$l['id'] ?>" />
+            <button class="btn btn-danger w-full sm:w-auto">
+              <?= __('Delete loan') ?>
+            </button>
+          </form>
+        </div>
+      </section>
+    </div>
+
+    <div class="modal-footer">
+      <div class="flex flex-row flex-wrap gap-2 justify-end">
+        <button class="btn" data-close><?= __('Cancel') ?></button>
+        <button class="btn btn-primary" form="loan-form-<?= (int)$l['id'] ?>"><?= __('Save') ?></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="loan-pay-<?= (int)$l['id'] ?>" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="loan-pay-title-<?= (int)$l['id'] ?>">
+  <div class="modal-backdrop" data-close></div>
+
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h3 id="loan-pay-title-<?= (int)$l['id'] ?>" class="font-semibold"><?= __('Record Payment') ?></h3>
+      <button type="button" class="icon-btn" aria-label="<?= __('Close') ?>" data-close>
+        <i data-lucide="x" class="h-5 w-5"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <form
+        id="loan-pay-form-<?= (int)$l['id'] ?>"
+        class="grid gap-3 sm:grid-cols-12"
+        method="post"
+        action="/loans/payment/add"
+      >
+        <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+        <input type="hidden" name="loan_id" value="<?= (int)$l['id'] ?>" />
+        <div class="sm:col-span-5">
+          <label class="label"><?= __('Date') ?></label>
           <input
             name="paid_on"
             type="date"
             value="<?= date('Y-m-d') ?>"
-            class="input sm:col-span-1 lg:col-span-2"
+            class="input"
           >
+        </div>
+        <div class="sm:col-span-5">
+          <label class="label"><?= __('Amount (:currency)', ['currency' => htmlspecialchars($loanCurrency)]) ?></label>
           <input
             name="amount"
             type="number"
             step="0.01"
             placeholder="<?= __('Payment amount') ?>"
-            class="input sm:col-span-1 lg:col-span-2"
+            class="input"
             required
           >
-          <button class="btn btn-emerald w-full sm:w-auto sm:col-span-2 lg:col-span-1">
-            <?= __('Record Payment') ?>
-          </button>
-        </form>
-
-        <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
-          <button class="btn" data-close><?= __('Cancel') ?></button>
-          <button class="btn btn-primary" form="loan-form-<?= (int)$l['id'] ?>"><?= __('Save') ?></button>
         </div>
+      </form>
+    </div>
+
+    <div class="modal-footer">
+      <div class="flex flex-row flex-wrap gap-2 justify-end">
+        <button type="button" class="btn" data-close><?= __('Cancel') ?></button>
+        <button class="btn btn-primary" form="loan-pay-form-<?= (int)$l['id'] ?>"><?= __('Record Payment') ?></button>
       </div>
     </div>
   </div>
