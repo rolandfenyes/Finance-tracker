@@ -50,7 +50,7 @@
 
       <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100"><?= __('Change password') ?></h2>
       <p class="text-sm text-slate-600 dark:text-slate-400">
-        <?= __('Update your password without affecting other profile details.') ?>
+        <?= __('Choose a strong password to keep your account secure.') ?>
       </p>
 
       <div class="grid md:grid-cols-2 gap-3">
@@ -65,7 +65,7 @@
       </div>
 
       <div class="flex justify-end">
-        <button class="btn btn-secondary"><?= __('Update password') ?></button>
+        <button class="btn btn-primary"><?= __('Update password') ?></button>
       </div>
     </form>
 

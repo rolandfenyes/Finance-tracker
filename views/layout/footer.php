@@ -1,5 +1,5 @@
 </main>
-  <footer class="mx-auto mt-10 w-full max-w-6xl px-4 pb-10 text-xs text-slate-500 dark:text-slate-400">
+  <footer class="mx-auto mt-auto w-full max-w-6xl px-4 pt-10 pb-10 text-xs text-slate-500 dark:text-slate-400">
     <?php $appMeta = app_config('app') ?? []; ?>
     <div class="flex flex-col gap-2 border-t border-white/50 pt-6 dark:border-slate-800/60 sm:flex-row sm:items-center sm:justify-between">
       <div>

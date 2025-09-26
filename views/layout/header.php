@@ -1051,7 +1051,7 @@
 <body
   x-data="themeState()"
   x-init="init()"
-  class="relative"
+  class="relative flex min-h-screen flex-col"
   data-rotate-message="<?= htmlspecialchars(__('Please rotate back to portrait for the best experience.'), ENT_QUOTES) ?>"
 >
   <div class="pointer-events-none fixed inset-0 -z-10 opacity-60 mix-blend-normal">
@@ -1195,4 +1195,4 @@
   </nav>
 <?php endif; ?>
   <?php $mainPadding = (is_logged_in() && !$hideMenus) ? 'pb-28 sm:pb-24 lg:pb-20' : 'pb-16'; ?>
-  <main class="relative z-10 mx-auto w-full max-w-6xl px-4 pt-8 <?= $mainPadding ?>">
+  <main class="relative z-10 mx-auto w-full max-w-6xl flex-1 px-4 pt-8 <?= $mainPadding ?>">
