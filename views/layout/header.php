@@ -549,6 +549,8 @@
         margin: 0;
         max-width: 52rem;
         width: calc(100% - 2rem);
+        max-height: calc(100dvh - 12rem);
+        min-height: 0;
         border-radius: 1.5rem;
         overflow: hidden;
         border: 1px solid var(--mm-modal-border);
@@ -560,6 +562,9 @@
         color: var(--mm-text-color);
       }
       .modal-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -569,14 +574,17 @@
         color: var(--mm-text-color);
       }
       .modal-body {
-        max-height: calc(80vh - 7rem);
+        flex: 1;
         overflow-y: auto;
+        min-height: 0;
         padding: 1.25rem 1.5rem;
         color: var(--mm-text-color);
       }
       .modal-footer {
         position: sticky;
         bottom: 0;
+        z-index: 10;
+        margin-top: auto;
         border-top: 1px solid var(--mm-list-border);
         background: var(--mm-list-item);
         padding: 1rem 1.5rem;
@@ -590,12 +598,13 @@
           max-width: none;
           width: 100%;
           min-height: 100%;
+          max-height: 100vh;
           border-radius: 0;
           border-left: none;
           border-right: none;
         }
         .modal-body {
-          max-height: calc(100dvh - 8rem);
+          max-height: none;
         }
       }
 
@@ -615,15 +624,19 @@
         padding: 0;
         display: flex;
         flex-direction: column;
+        max-height: calc(100dvh - 3rem);
         overflow: hidden;
         background: var(--mm-modal-surface);
         color: var(--mm-text-color);
         z-index: 60;
         backdrop-filter: blur(var(--mm-blur-xl));
       }
-      dialog[open] > :last-child {
+      dialog[open] .modal-body {
         flex: 1;
-        overflow-y: auto;
+        min-height: 0;
+      }
+      dialog[open] .modal-footer {
+        margin-top: 0;
       }
       @media (max-width: 640px) {
         dialog[open] {
@@ -631,6 +644,7 @@
           width: 100vw !important;
           max-width: none !important;
           height: 100dvh;
+          max-height: none;
           border-radius: 0 !important;
           border: none;
         }
@@ -721,8 +735,9 @@
         left: 0;
         right: 0;
         bottom: 0;
-        padding-top: max(0.5rem, env(safe-area-inset-bottom));
-        padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+        padding-top: 0.4rem;
+        padding-bottom: 0.6rem;
+        padding-bottom: calc(env(safe-area-inset-bottom) + 0.6rem);
         box-shadow: 0 -20px 36px -24px rgba(17, 36, 29, 0.45);
         transition: transform 0.3s ease, opacity 0.3s ease;
         transform: translateZ(0);

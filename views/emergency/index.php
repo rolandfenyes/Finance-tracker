@@ -83,7 +83,12 @@
     </div>
 
     <div class="panel md:col-span-6 space-y-5 p-5">
-      <form method="post" action="/emergency/add" class="grid gap-3 sm:grid-cols-12">
+      <div class="md:hidden flex flex-col gap-2">
+        <button type="button" class="btn btn-primary" data-open="#ef-add-modal"><?= __('Add money') ?></button>
+        <button type="button" class="btn btn-danger" data-open="#ef-withdraw-modal"><?= __('Withdraw') ?></button>
+      </div>
+
+      <form method="post" action="/emergency/add" class="hidden md:grid gap-3 sm:grid-cols-12">
         <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
         <div class="sm:col-span-5">
           <label class="label"><?= __('Date') ?></label>
@@ -104,7 +109,7 @@
         </div>
       </form>
 
-      <form method="post" action="/emergency/withdraw" class="grid gap-3 sm:grid-cols-12">
+      <form method="post" action="/emergency/withdraw" class="hidden md:grid gap-3 sm:grid-cols-12">
         <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
         <div class="sm:col-span-5">
           <label class="label"><?= __('Date') ?></label>
@@ -127,6 +132,82 @@
     </div>
   </div>
 </section>
+
+<div id="ef-add-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="ef-add-title">
+  <div class="modal-backdrop" data-close></div>
+
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h3 id="ef-add-title" class="font-semibold"><?= __('Add money') ?></h3>
+      <button type="button" class="icon-btn" aria-label="<?= __('Close') ?>" data-close>
+        <i data-lucide="x" class="h-5 w-5"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <form id="ef-add-form" method="post" action="/emergency/add" class="grid gap-3 sm:grid-cols-12">
+        <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+        <div class="sm:col-span-6">
+          <label class="label"><?= __('Date') ?></label>
+          <input name="occurred_on" type="date" class="input" value="<?= date('Y-m-d') ?>" />
+        </div>
+        <div class="sm:col-span-6">
+          <label class="label"><?= __('Add money (:currency)', ['currency' => htmlspecialchars($ef_cur)]) ?></label>
+          <input name="amount" type="number" step="0.01" class="input" placeholder="0.00" required />
+        </div>
+        <div class="sm:col-span-12">
+          <label class="label"><?= __('Note (optional)') ?></label>
+          <input name="note" class="input" placeholder="<?= __('e.g., paycheck buffer') ?>" />
+        </div>
+      </form>
+    </div>
+
+    <div class="modal-footer">
+      <div class="flex flex-row flex-wrap gap-2 justify-end">
+        <button type="button" class="btn" data-close><?= __('Cancel') ?></button>
+        <button class="btn btn-primary" form="ef-add-form"><?= __('Add') ?></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="ef-withdraw-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="ef-withdraw-title">
+  <div class="modal-backdrop" data-close></div>
+
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h3 id="ef-withdraw-title" class="font-semibold"><?= __('Withdraw') ?></h3>
+      <button type="button" class="icon-btn" aria-label="<?= __('Close') ?>" data-close>
+        <i data-lucide="x" class="h-5 w-5"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <form id="ef-withdraw-form" method="post" action="/emergency/withdraw" class="grid gap-3 sm:grid-cols-12">
+        <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+        <div class="sm:col-span-6">
+          <label class="label"><?= __('Date') ?></label>
+          <input name="occurred_on" type="date" class="input" value="<?= date('Y-m-d') ?>" />
+        </div>
+        <div class="sm:col-span-6">
+          <label class="label"><?= __('Withdrawal (:currency)', ['currency' => htmlspecialchars($ef_cur)]) ?></label>
+          <input name="amount" type="number" step="0.01" class="input" placeholder="0.00" required />
+        </div>
+        <div class="sm:col-span-12">
+          <label class="label"><?= __('Note (optional)') ?></label>
+          <input name="note" class="input" placeholder="<?= __('e.g., car repair') ?>" />
+        </div>
+      </form>
+    </div>
+
+    <div class="modal-footer">
+      <div class="flex flex-row flex-wrap gap-2 justify-end">
+        <button type="button" class="btn" data-close><?= __('Cancel') ?></button>
+        <button class="btn btn-danger" form="ef-withdraw-form"><?= __('Withdraw') ?></button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <section class="card mt-8">
   <div class="mb-4 flex items-center justify-between">
@@ -208,6 +289,26 @@
 
 <script>
   document.addEventListener('click', (e)=>{
+    const trigger = e.target.closest('[data-open]');
+    if (trigger) {
+      const modal = document.querySelector(trigger.getAttribute('data-open'));
+      if (modal) {
+        modal.classList.remove('hidden');
+        window.MyMoneyMapOverlay && window.MyMoneyMapOverlay.open();
+      }
+      return;
+    }
+
+    const closer = e.target.closest('[data-close]');
+    if (closer) {
+      const modal = closer.closest('.modal');
+      if (modal && !modal.classList.contains('hidden')) {
+        modal.classList.add('hidden');
+        window.MyMoneyMapOverlay && window.MyMoneyMapOverlay.close();
+      }
+      return;
+    }
+
     const b = e.target.closest('[data-suggest-amount]');
     if (!b) return;
     const amt = b.getAttribute('data-suggest-amount');
@@ -224,5 +325,14 @@
 
     b.classList.add('ring-2','ring-brand-300');
     setTimeout(()=> b.classList.remove('ring-2','ring-brand-300'), 600);
+  });
+
+  document.addEventListener('keydown', (e)=>{
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal:not(.hidden)')?.forEach(modal => {
+        modal.classList.add('hidden');
+        window.MyMoneyMapOverlay && window.MyMoneyMapOverlay.close();
+      });
+    }
   });
 </script>
