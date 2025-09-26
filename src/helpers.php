@@ -311,7 +311,11 @@ function theme_display_name(?string $slug): string
 
     $meta = theme_meta($slug);
 
-    return $meta['name'] ?? $slug;
+    if (isset($meta['name'])) {
+        return __($meta['name']);
+    }
+
+    return $slug;
 }
 
 function current_theme_slug(): string
