@@ -1218,5 +1218,5 @@
     </ul>
   </nav>
 <?php endif; ?>
-  <?php $mainPadding = (is_logged_in() && !$hideMenus) ? 'pb-28 sm:pb-24 lg:pb-20' : 'pb-16'; ?>
+  <?php $mainPadding = (is_logged_in() && !$hideMenus) ? 'pb-8' : 'pb-16'; ?>
   <main class="relative z-10 mx-auto w-full max-w-6xl flex-1 px-4 pt-8 <?= $mainPadding ?>">

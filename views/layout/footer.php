@@ -1,17 +1,19 @@
 </main>
-  <footer class="mx-auto mt-auto w-full max-w-6xl px-4 pt-10 pb-10 text-xs text-slate-500 dark:text-slate-400">
+  <footer class="mx-auto mt-auto w-full text-xs text-slate-500 dark:text-slate-400">
     <?php $appMeta = app_config('app') ?? []; ?>
-    <div class="flex flex-col gap-2 border-t border-white/50 pt-6 dark:border-slate-800/60 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <span>&copy; <?= date('Y') ?> <?= htmlspecialchars($appMeta['name'] ?? 'MyMoneyMap') ?></span>
-        <span class="mx-1">·</span>
-        <a href="/privacy" class="text-accent hover:underline"><?= __('Privacy Policy') ?></a>
-      </div>
-      <div class="flex flex-wrap items-center gap-3">
-        <?php if (is_logged_in()): ?>
-          <a href="/settings/privacy" class="text-accent hover:underline"><?= __('Data & Privacy controls') ?></a>
-        <?php endif; ?>
-        <span><?= __('Secure sessions & encrypted storage by default.') ?></span>
+    <div class="flex flex-col gap-2 border-t border-white/50 p-4 dark:border-slate-800/60 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between max-w-6xl mx-auto">
+        <div>
+          <span>&copy; <?= date('Y') ?> <?= htmlspecialchars($appMeta['name'] ?? 'MyMoneyMap') ?></span>
+          <span class="mx-1">·</span>
+          <a href="/privacy" class="text-accent hover:underline"><?= __('Privacy Policy') ?></a>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <?php if (is_logged_in()): ?>
+            <a href="/settings/privacy" class="text-accent hover:underline"><?= __('Data & Privacy controls') ?></a>
+          <?php endif; ?>
+          <span><?= __('Secure sessions & encrypted storage by default.') ?></span>
+        </div>
       </div>
     </div>
   </footer>
