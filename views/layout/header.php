@@ -549,7 +549,7 @@
         margin: 0;
         max-width: 52rem;
         width: calc(100% - 2rem);
-        max-height: calc(100dvh - 3rem);
+        max-height: calc(100dvh - 12rem);
         min-height: 0;
         border-radius: 1.5rem;
         overflow: hidden;
@@ -598,7 +598,7 @@
           max-width: none;
           width: 100%;
           min-height: 100%;
-          max-height: none;
+          max-height: 100vh;
           border-radius: 0;
           border-left: none;
           border-right: none;
