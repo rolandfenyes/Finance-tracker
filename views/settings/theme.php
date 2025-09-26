@@ -11,7 +11,7 @@ $currentMeta = $currentMeta ?? theme_meta($currentTheme) ?? [];
         <h1 class="text-2xl font-semibold mt-1"><?= __('Theme library') ?></h1>
         <?php if (!empty($currentMeta['name'])): ?>
           <p class="card-subtle mt-1">
-            <?= __('Current theme: :name', ['name' => htmlspecialchars($currentMeta['name'])]) ?>
+            <?= __('Current theme: :name', ['name' => htmlspecialchars(__($currentMeta['name']))]) ?>
           </p>
         <?php endif; ?>
         <p class="card-subtle mt-3 text-sm text-gray-500 dark:text-gray-300">
@@ -53,14 +53,16 @@ $currentMeta = $currentMeta ?? theme_meta($currentTheme) ?? [];
             $darkSwatch = $preview['dark'] ?? ($meta['deep'] ?? '#111827');
             $primary = $meta['base'] ?? '#4b966e';
             $accent = $meta['accent'] ?? $primary;
-            $description = trim($meta['description'] ?? '');
+            $name = __($meta['name'] ?? $slug);
+            $descriptionRaw = trim($meta['description'] ?? '');
+            $description = $descriptionRaw !== '' ? __($descriptionRaw) : '';
           ?>
           <label class="group relative block cursor-pointer rounded-3xl border transition-all duration-200 p-5 backdrop-blur hover:-translate-y-1 focus-within:outline focus-within:outline-2 focus-within:outline-brand-300 <?= $isActive ? 'border-brand-500 bg-white/85 shadow-brand-glow dark:bg-slate-900/70' : 'border-white/60 bg-white/60 hover:border-brand-200 hover:bg-brand-50/60 dark:border-slate-700 dark:bg-slate-900/40 dark:hover:bg-slate-800/80' ?>">
           <input type="radio" name="theme" value="<?= htmlspecialchars($slug) ?>" class="sr-only" <?= $isActive ? 'checked' : '' ?> data-theme-choice>
           <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
             <div class="min-w-0 space-y-2">
               <div class="text-xs font-semibold uppercase tracking-[0.28em] text-brand-700 dark:text-brand-200">#<?= str_pad(strtoupper(str_replace('-', '', $slug)), 6, '•') ?></div>
-              <div class="text-lg font-semibold text-gray-800 dark:text-gray-100 break-words"><?= htmlspecialchars($meta['name'] ?? $slug) ?></div>
+              <div class="text-lg font-semibold text-gray-800 dark:text-gray-100 break-words"><?= htmlspecialchars($name) ?></div>
               <?php if ($description !== ''): ?>
                 <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed"><?= htmlspecialchars($description) ?></p>
               <?php endif; ?>
