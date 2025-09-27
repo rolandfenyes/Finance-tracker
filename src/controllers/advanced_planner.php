@@ -24,6 +24,26 @@ function advanced_planner_show(PDO $pdo): void
     $averages = advanced_planner_average_spending($pdo, $userId, $mainCurrency, $startMonth, $spendingCategories, $averageMonths);
 
     $resources = advanced_planner_collect_resources($pdo, $userId, $mainCurrency);
+    $difficultyOptions = advanced_planner_difficulty_options();
+    $difficultyConfig = [];
+    foreach ($difficultyOptions as $key => $option) {
+        $difficultyConfig[$key] = [
+            'label' => $option['label'],
+            'description' => $option['description'],
+            'multiplier' => $option['multiplier'],
+        ];
+    }
+    $cashflowRules = advanced_planner_fetch_cashflow_rules($pdo, $userId);
+    $defaultDifficulty = 'medium';
+    $initialSuggestions = advanced_planner_calculate_category_suggestions(
+        $pdo,
+        $userId,
+        (float)($incomeData['total'] ?? 0),
+        (float)($incomeData['total'] ?? 0),
+        $averages,
+        $defaultDifficulty,
+        $cashflowRules
+    );
 
     $plansStmt = $pdo->prepare(
         'SELECT * FROM advanced_plans WHERE user_id = ? ORDER BY (status = \'active\') DESC, plan_start DESC, id DESC'
@@ -78,6 +98,11 @@ function advanced_planner_show(PDO $pdo): void
         'spendingCategories' => $spendingCategories,
         'averages' => $averages,
         'resources' => $resources,
+        'difficultyOptions' => $difficultyOptions,
+        'difficultyConfig' => $difficultyConfig,
+        'cashflowRules' => $cashflowRules,
+        'defaultDifficulty' => $defaultDifficulty,
+        'initialCategorySuggestions' => $initialSuggestions,
     ]);
 }
 
@@ -87,6 +112,12 @@ function advanced_planner_store(PDO $pdo): void
     require_login();
     $userId = uid();
     $mainCurrency = fx_user_main($pdo, $userId) ?: 'HUF';
+
+    $difficultyOptions = advanced_planner_difficulty_options();
+    $difficulty = strtolower(trim($_POST['difficulty_level'] ?? ''));
+    if (!array_key_exists($difficulty, $difficultyOptions)) {
+        $difficulty = 'medium';
+    }
 
     $title = trim($_POST['title'] ?? '');
     if ($title === '') {
@@ -227,23 +258,16 @@ function advanced_planner_store(PDO $pdo): void
 
     $monthlyDiscretionary = max(0.0, $monthlyIncome - $totalCommitments);
 
-    $categorySuggestions = [];
-    $totalAverage = 0.0;
-    foreach ($averages['categories'] as $cat) {
-        $totalAverage += (float)$cat['average'];
-    }
-    $scale = ($totalAverage > 0) ? ($monthlyDiscretionary / $totalAverage) : 0;
-    foreach ($averages['categories'] as $cat) {
-        $suggested = $totalAverage > 0
-            ? round($cat['average'] * min(max($scale, 0), 5), 2)
-            : (count($averages['categories']) ? round($monthlyDiscretionary / count($averages['categories']), 2) : 0.0);
-        $categorySuggestions[] = [
-            'category_id' => $cat['id'] ?? null,
-            'label' => $cat['label'],
-            'average' => round($cat['average'], 2),
-            'suggested' => $suggested,
-        ];
-    }
+    $cashflowRules = advanced_planner_fetch_cashflow_rules($pdo, $userId);
+    $categorySuggestions = advanced_planner_calculate_category_suggestions(
+        $pdo,
+        $userId,
+        $monthlyIncome,
+        $monthlyDiscretionary,
+        $averages,
+        $difficulty,
+        $cashflowRules
+    );
 
     $status = $activate ? 'active' : 'draft';
 
@@ -255,7 +279,7 @@ function advanced_planner_store(PDO $pdo): void
         }
 
         $planStmt = $pdo->prepare(
-            'INSERT INTO advanced_plans (user_id, title, horizon_months, plan_start, plan_end, main_currency, total_budget, monthly_income, monthly_commitments, monthly_discretionary, status, notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id'
+            'INSERT INTO advanced_plans (user_id, title, horizon_months, plan_start, plan_end, main_currency, total_budget, monthly_income, monthly_commitments, monthly_discretionary, difficulty_level, status, notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id'
         );
         $totalBudget = round($monthlyIncome * $horizon, 2);
         $planStmt->execute([
@@ -269,6 +293,7 @@ function advanced_planner_store(PDO $pdo): void
             $monthlyIncome,
             $totalCommitments,
             $monthlyDiscretionary,
+            $difficulty,
             $status,
             $notes,
         ]);
@@ -424,7 +449,7 @@ function advanced_planner_collect_incomes(PDO $pdo, int $userId, string $mainCur
 function advanced_planner_fetch_spending_categories(PDO $pdo, int $userId): array
 {
     $stmt = $pdo->prepare(
-        "SELECT id, label, COALESCE(NULLIF(color,''),'#6B7280') AS color FROM categories WHERE user_id = ? AND kind = 'spending' ORDER BY lower(label)"
+        "SELECT id, label, COALESCE(NULLIF(color,''),'#6B7280') AS color, cashflow_rule_id FROM categories WHERE user_id = ? AND kind = 'spending' ORDER BY lower(label)"
     );
     $stmt->execute([$userId]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
@@ -464,6 +489,9 @@ function advanced_planner_average_spending(
             'id' => $catId,
             'label' => $cat['label'],
             'color' => $cat['color'],
+            'cashflow_rule_id' => isset($cat['cashflow_rule_id']) && $cat['cashflow_rule_id'] !== null
+                ? (int)$cat['cashflow_rule_id']
+                : null,
             'total' => 0.0,
         ];
     }
@@ -511,6 +539,7 @@ function advanced_planner_average_spending(
                 'id' => null,
                 'label' => $label,
                 'color' => '#0EA5E9',
+                'cashflow_rule_id' => null,
                 'total' => 0.0,
             ];
         }
@@ -681,4 +710,201 @@ function advanced_planner_convert_to_main(
         return round($amount, 2);
     }
     return round($amount * $rate, 2);
+}
+
+function advanced_planner_fetch_cashflow_rules(PDO $pdo, int $userId): array
+{
+    $stmt = $pdo->prepare(
+        'SELECT id, label, percent FROM cashflow_rules WHERE user_id = ? ORDER BY id'
+    );
+    $stmt->execute([$userId]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+}
+
+function advanced_planner_difficulty_options(): array
+{
+    return [
+        'easy' => [
+            'label' => __('Easy'),
+            'description' => __('More relaxed limits (around +10% above rule targets).'),
+            'multiplier' => 1.1,
+        ],
+        'medium' => [
+            'label' => __('Medium'),
+            'description' => __('Balanced limits that follow your Cashflow Rules.'),
+            'multiplier' => 1.0,
+        ],
+        'hard' => [
+            'label' => __('Hard'),
+            'description' => __('Tighter limits (around −10% below rule targets).'),
+            'multiplier' => 0.9,
+        ],
+    ];
+}
+
+function advanced_planner_calculate_category_suggestions(
+    PDO $pdo,
+    int $userId,
+    float $monthlyIncome,
+    float $monthlyDiscretionary,
+    array $averages,
+    string $difficulty,
+    ?array $cashflowRules = null
+): array {
+    $monthlyIncome = max(0.0, $monthlyIncome);
+    $monthlyDiscretionary = max(0.0, $monthlyDiscretionary);
+    $difficultyOptions = advanced_planner_difficulty_options();
+    $multiplier = $difficultyOptions[$difficulty]['multiplier'] ?? 1.0;
+
+    $categories = $averages['categories'] ?? [];
+    if (!$categories) {
+        return [];
+    }
+
+    if ($cashflowRules === null) {
+        $cashflowRules = advanced_planner_fetch_cashflow_rules($pdo, $userId);
+    }
+
+    $ruleMap = [];
+    foreach ($cashflowRules as $rule) {
+        $ruleId = (int)$rule['id'];
+        $ruleMap[$ruleId] = [
+            'label' => (string)$rule['label'],
+            'percent' => max(0.0, (float)($rule['percent'] ?? 0)),
+        ];
+    }
+
+    $categoryData = [];
+    foreach ($categories as $cat) {
+        $catId = $cat['id'] !== null ? (int)$cat['id'] : null;
+        $avg = max(0.0, (float)($cat['average'] ?? 0));
+        $rawRuleId = isset($cat['cashflow_rule_id']) && $cat['cashflow_rule_id'] !== null
+            ? (int)$cat['cashflow_rule_id']
+            : null;
+        $ruleId = ($rawRuleId !== null && isset($ruleMap[$rawRuleId]) && $ruleMap[$rawRuleId]['percent'] > 0)
+            ? $rawRuleId
+            : null;
+
+        $categoryData[] = [
+            'category_id' => $catId,
+            'label' => $cat['label'],
+            'average' => $avg,
+            'rule_id' => $ruleId,
+        ];
+    }
+
+    $ruleGroups = [];
+    foreach ($categoryData as $idx => $cat) {
+        if ($cat['rule_id'] === null) {
+            continue;
+        }
+        $ruleId = $cat['rule_id'];
+        if (!isset($ruleGroups[$ruleId])) {
+            $ruleGroups[$ruleId] = [
+                'percent' => $ruleMap[$ruleId]['percent'],
+                'indexes' => [],
+            ];
+        }
+        $ruleGroups[$ruleId]['indexes'][] = $idx;
+    }
+
+    $totalRuleBudget = 0.0;
+    foreach ($ruleGroups as $ruleId => &$group) {
+        $baseBudget = ($group['percent'] / 100.0) * $monthlyIncome;
+        $group['base_budget'] = max(0.0, round($baseBudget, 2));
+        $totalRuleBudget += $group['base_budget'];
+    }
+    unset($group);
+
+    $allocatedToRules = $totalRuleBudget;
+    $scale = 1.0;
+    if ($totalRuleBudget > 0 && $monthlyDiscretionary < $totalRuleBudget) {
+        $scale = $monthlyDiscretionary / $totalRuleBudget;
+        $allocatedToRules = $monthlyDiscretionary;
+    }
+
+    $suggestions = [];
+    foreach ($ruleGroups as $group) {
+        $indexes = $group['indexes'];
+        if (!$indexes) {
+            continue;
+        }
+        $ruleBudget = $group['base_budget'] * $scale;
+        $totalAverage = 0.0;
+        foreach ($indexes as $idx) {
+            $totalAverage += $categoryData[$idx]['average'];
+        }
+        foreach ($indexes as $idx) {
+            if ($ruleBudget <= 0) {
+                $suggestions[$idx] = 0.0;
+                continue;
+            }
+            if ($totalAverage > 0) {
+                $weight = $categoryData[$idx]['average'] / $totalAverage;
+                $suggestions[$idx] = $ruleBudget * $weight;
+            } else {
+                $suggestions[$idx] = $ruleBudget / count($indexes);
+            }
+        }
+    }
+
+    $unruledIndexes = [];
+    foreach ($categoryData as $idx => $cat) {
+        if ($cat['rule_id'] === null) {
+            $unruledIndexes[] = $idx;
+        }
+        if (!isset($suggestions[$idx])) {
+            $suggestions[$idx] = 0.0;
+        }
+    }
+
+    $leftoverForUnruled = max(0.0, $monthlyDiscretionary - $allocatedToRules);
+    if ($totalRuleBudget <= 0) {
+        $leftoverForUnruled = $monthlyDiscretionary;
+    }
+
+    if ($unruledIndexes) {
+        $totalAverage = 0.0;
+        foreach ($unruledIndexes as $idx) {
+            $totalAverage += $categoryData[$idx]['average'];
+        }
+        foreach ($unruledIndexes as $idx) {
+            if ($leftoverForUnruled <= 0) {
+                $suggestions[$idx] = 0.0;
+                continue;
+            }
+            if ($totalAverage > 0) {
+                $weight = $categoryData[$idx]['average'] / $totalAverage;
+                $suggestions[$idx] = $leftoverForUnruled * $weight;
+            } else {
+                $suggestions[$idx] = $leftoverForUnruled / count($unruledIndexes);
+            }
+        }
+    }
+
+    foreach ($suggestions as &$value) {
+        $value = $value * $multiplier;
+    }
+    unset($value);
+
+    $totalSuggested = array_sum($suggestions);
+    if ($totalSuggested > $monthlyDiscretionary && $monthlyDiscretionary > 0) {
+        $ratio = $monthlyDiscretionary / $totalSuggested;
+        foreach ($suggestions as &$value) {
+            $value *= $ratio;
+        }
+        unset($value);
+    }
+
+    $result = [];
+    foreach ($categoryData as $idx => $cat) {
+        $result[] = [
+            'category_id' => $cat['category_id'],
+            'label' => $cat['label'],
+            'average' => round($cat['average'], 2),
+            'suggested' => round(max(0.0, $suggestions[$idx] ?? 0.0), 2),
+        ];
+    }
+
+    return $result;
 }

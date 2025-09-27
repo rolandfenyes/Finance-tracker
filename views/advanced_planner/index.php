@@ -14,6 +14,11 @@
 /** @var array $spendingCategories */
 /** @var array $averages */
 /** @var array $resources */
+/** @var array $difficultyOptions */
+/** @var array $difficultyConfig */
+/** @var array $cashflowRules */
+/** @var string $defaultDifficulty */
+/** @var array $initialCategorySuggestions */
 ?>
 
 <section class="card">
@@ -150,6 +155,19 @@
         </select>
       </label>
       <label class="block">
+        <span class="label"><?= __('Budget intensity') ?></span>
+        <select class="select" name="difficulty_level" data-difficulty-selector>
+          <?php foreach ($difficultyOptions as $key => $option): ?>
+            <option value="<?= htmlspecialchars($key, ENT_QUOTES) ?>" <?= $key === $defaultDifficulty ? 'selected' : '' ?>>
+              <?= htmlspecialchars($option['label'], ENT_QUOTES) ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" data-difficulty-description>
+          <?= htmlspecialchars($difficultyOptions[$defaultDifficulty]['description'] ?? '', ENT_QUOTES) ?>
+        </p>
+      </label>
+      <label class="block">
         <span class="label"><?= __('Notes (optional)') ?></span>
         <textarea class="textarea" name="notes" rows="3" placeholder="<?= __('Add context, assumptions, or reminders for future you.') ?>"></textarea>
       </label>
@@ -267,7 +285,7 @@
         <div>
           <h3 class="text-lg font-semibold text-slate-900 dark:text-white"><?= __('Category budget suggestions') ?></h3>
           <p class="text-sm text-slate-500 dark:text-slate-400">
-            <?= __('We scale your recent spending averages to fit the projected leftover cash once milestones are funded.') ?>
+            <?= __('We anchor suggestions to your Cashflow Rules, scaling them to the leftover cash and chosen intensity.') ?>
           </p>
         </div>
         <span class="rounded-full border border-white/70 bg-white/80 px-4 py-1 text-sm font-medium text-slate-600 shadow-sm dark:border-slate-800/60 dark:bg-slate-900/60 dark:text-slate-300" data-leftover-preview>
@@ -284,9 +302,17 @@
             </tr>
           </thead>
           <tbody data-category-suggestions>
-            <?php if (!empty($averages['categories'])): ?>
-              <?php foreach ($averages['categories'] as $cat): ?>
-                <tr class="border-b border-white/50 dark:border-slate-800/50">
+          <?php if (!empty($averages['categories'])): ?>
+            <?php foreach ($averages['categories'] as $idx => $cat): ?>
+              <?php
+                $ruleId = $cat['cashflow_rule_id'] ?? null;
+                $initialSuggestion = $initialCategorySuggestions[$idx]['suggested'] ?? ($cat['average'] ?? 0);
+              ?>
+              <tr
+                class="border-b border-white/50 dark:border-slate-800/50"
+                data-category-row
+                data-rule-id="<?= $ruleId ? (int)$ruleId : '' ?>"
+              >
                   <td class="py-2 pr-3">
                     <div class="flex items-center gap-2">
                       <span class="inline-flex h-2.5 w-2.5 rounded-full" style="background-color: <?= htmlspecialchars($cat['color'], ENT_QUOTES) ?>"></span>
@@ -295,13 +321,13 @@
                     <input type="hidden" name="category_id[]" value="<?= $cat['id'] !== null ? (int)$cat['id'] : '' ?>" />
                     <input type="hidden" name="category_label[]" value="<?= htmlspecialchars($cat['label'], ENT_QUOTES) ?>" />
                     <input type="hidden" name="category_average[]" value="<?= htmlspecialchars($cat['average'], ENT_QUOTES) ?>" data-category-average />
-                    <input type="hidden" name="category_suggested[]" value="<?= htmlspecialchars($cat['average'], ENT_QUOTES) ?>" data-category-suggested />
+                    <input type="hidden" name="category_suggested[]" value="<?= htmlspecialchars($initialSuggestion, ENT_QUOTES) ?>" data-category-suggested />
                   </td>
                   <td class="py-2 pr-3 text-slate-600 dark:text-slate-300" data-category-average-display>
                     <?= moneyfmt($cat['average'], $mainCurrency) ?>
                   </td>
                   <td class="py-2 pr-3 font-semibold text-slate-900 dark:text-white" data-category-suggested-display>
-                    <?= moneyfmt($cat['average'], $mainCurrency) ?>
+                    <?= moneyfmt($initialSuggestion, $mainCurrency) ?>
                   </td>
                 </tr>
               <?php endforeach; ?>
@@ -343,6 +369,12 @@
             'status' => ucfirst($currentPlan['status']),
             'months' => (int)$currentPlan['horizon_months'],
           ]) ?>
+          <?php if (!empty($currentPlan['difficulty_level'])):
+            $difficultyKey = $currentPlan['difficulty_level'];
+            $difficultyLabel = $difficultyOptions[$difficultyKey]['label'] ?? ucfirst($difficultyKey);
+          ?>
+            · <?= __('Approach: :level', ['level' => htmlspecialchars($difficultyLabel, ENT_QUOTES)]) ?>
+          <?php endif; ?>
         </p>
       </div>
       <div class="flex flex-wrap gap-2">
@@ -483,6 +515,12 @@
               <div class="text-sm font-semibold text-slate-800 dark:text-slate-100"><?= htmlspecialchars($plan['title'], ENT_QUOTES) ?></div>
               <div class="text-xs text-slate-500 dark:text-slate-400">
                 <?= __('Horizon: :months months', ['months' => (int)$plan['horizon_months']]) ?> · <?= __('Status: :status', ['status' => ucfirst($plan['status'])]) ?>
+                <?php if (!empty($plan['difficulty_level'])):
+                  $planDifficultyKey = $plan['difficulty_level'];
+                  $planDifficultyLabel = $difficultyOptions[$planDifficultyKey]['label'] ?? ucfirst($planDifficultyKey);
+                ?>
+                  · <?= __('Approach: :level', ['level' => htmlspecialchars($planDifficultyLabel, ENT_QUOTES)]) ?>
+                <?php endif; ?>
               </div>
             </div>
             <?php if ($plan['status'] === 'active'): ?>
@@ -555,6 +593,18 @@
   </div>
 </template>
 
+<?php
+$ruleDataForJs = array_map(
+  static function (array $rule): array {
+    return [
+      'id' => (int)($rule['id'] ?? 0),
+      'percent' => (float)($rule['percent'] ?? 0),
+    ];
+  },
+  $cashflowRules
+);
+?>
+
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     const container = document.querySelector('[data-items-container]');
@@ -566,6 +616,12 @@
     const leftoverPreview = document.querySelector('[data-leftover-preview]');
     const averageForm = document.querySelector('[data-average-form]');
     const averageSelect = document.querySelector('[data-average-select]');
+    const difficultySelect = document.querySelector('[data-difficulty-selector]');
+    const difficultyDescription = document.querySelector('[data-difficulty-description]');
+    const difficultyConfig = <?= json_encode($difficultyConfig, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+    const ruleData = <?= json_encode($ruleDataForJs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+    const monthlyIncome = <?= json_encode((float)($incomeData['total'] ?? 0)) ?>;
+    const defaultDifficulty = <?= json_encode($defaultDifficulty) ?>;
 
     averageSelect?.addEventListener('change', () => {
       if (averageForm) {
@@ -674,35 +730,151 @@
       return monthly;
     };
 
-    const recalcLeftover = () => {
+    const categoryRows = Array.from(document.querySelectorAll('[data-category-row]')).map((row) => ({
+      row,
+      ruleId: row.dataset.ruleId ? Number.parseInt(row.dataset.ruleId, 10) : null,
+      averageInput: row.querySelector('[data-category-average]'),
+      suggestedInput: row.querySelector('[data-category-suggested]'),
+      displayCell: row.querySelector('[data-category-suggested-display]'),
+    }));
+
+    const ruleMap = new Map(
+      (ruleData || []).map((rule) => [Number.parseInt(rule.id, 10), { percent: Number.parseFloat(rule.percent) || 0 }])
+    );
+
+    const getDifficultyKey = () => {
+      const key = difficultySelect?.value || defaultDifficulty || 'medium';
+      return Object.prototype.hasOwnProperty.call(difficultyConfig, key) ? key : 'medium';
+    };
+
+    const updateDifficultyDescription = () => {
+      if (!difficultyDescription) return;
+      const key = getDifficultyKey();
+      const info = difficultyConfig[key];
+      if (info && info.description) {
+        difficultyDescription.textContent = info.description;
+      }
+    };
+
+    const computeCategorySuggestions = (income, discretionary, difficultyKey) => {
+      const multiplier = difficultyConfig[difficultyKey]?.multiplier ?? 1;
+      const suggestions = new Array(categoryRows.length).fill(0);
+      const groups = new Map();
+
+      categoryRows.forEach((cat, idx) => {
+        const ruleId = cat.ruleId;
+        const rule = ruleId ? ruleMap.get(ruleId) : null;
+        if (rule && rule.percent > 0) {
+          if (!groups.has(ruleId)) {
+            groups.set(ruleId, { indexes: [], percent: rule.percent });
+          }
+          groups.get(ruleId).indexes.push(idx);
+        }
+      });
+
+      let totalRuleBudget = 0;
+      groups.forEach((group) => {
+        const base = Math.max(0, (group.percent / 100) * income);
+        group.base = base;
+        totalRuleBudget += base;
+      });
+
+      let allocatedToRules = totalRuleBudget;
+      let scale = 1;
+      if (totalRuleBudget > 0 && discretionary < totalRuleBudget) {
+        scale = discretionary / totalRuleBudget;
+        allocatedToRules = discretionary;
+      }
+
+      groups.forEach((group) => {
+        const ruleBudget = group.base * scale;
+        const totalAvg = group.indexes.reduce((sum, idx) => {
+          const avg = Number.parseFloat(categoryRows[idx].averageInput?.value || '0') || 0;
+          return sum + Math.max(0, avg);
+        }, 0);
+        group.indexes.forEach((idx) => {
+          let allocation = 0;
+          if (ruleBudget > 0) {
+            const avg = Number.parseFloat(categoryRows[idx].averageInput?.value || '0') || 0;
+            if (totalAvg > 0) {
+              allocation = ruleBudget * (Math.max(0, avg) / totalAvg);
+            } else {
+              allocation = ruleBudget / group.indexes.length;
+            }
+          }
+          suggestions[idx] = allocation;
+        });
+      });
+
+      const unruledIndexes = [];
+      categoryRows.forEach((cat, idx) => {
+        const ruleId = cat.ruleId;
+        const rule = ruleId ? ruleMap.get(ruleId) : null;
+        if (!rule || !(rule.percent > 0)) {
+          unruledIndexes.push(idx);
+        }
+        if (!Number.isFinite(suggestions[idx])) {
+          suggestions[idx] = 0;
+        }
+      });
+
+      let leftoverForUnruled = Math.max(0, discretionary - allocatedToRules);
+      if (totalRuleBudget <= 0) {
+        leftoverForUnruled = discretionary;
+      }
+
+      if (unruledIndexes.length > 0) {
+        const totalAvg = unruledIndexes.reduce((sum, idx) => {
+          const avg = Number.parseFloat(categoryRows[idx].averageInput?.value || '0') || 0;
+          return sum + Math.max(0, avg);
+        }, 0);
+        unruledIndexes.forEach((idx) => {
+          let allocation = 0;
+          if (leftoverForUnruled > 0) {
+            const avg = Number.parseFloat(categoryRows[idx].averageInput?.value || '0') || 0;
+            if (totalAvg > 0) {
+              allocation = leftoverForUnruled * (Math.max(0, avg) / totalAvg);
+            } else {
+              allocation = leftoverForUnruled / unruledIndexes.length;
+            }
+          }
+          suggestions[idx] = allocation;
+        });
+      }
+
+      const scaled = suggestions.map((value) => Math.max(0, value * multiplier));
+      const totalSuggested = scaled.reduce((sum, value) => sum + value, 0);
+      if (totalSuggested > discretionary && discretionary > 0) {
+        const ratio = discretionary / totalSuggested;
+        return scaled.map((value) => value * ratio);
+      }
+      return scaled;
+    };
+
+    const applyCategorySuggestions = (values) => {
+      categoryRows.forEach((cat, idx) => {
+        const value = Number.isFinite(values[idx]) ? values[idx] : 0;
+        if (cat.suggestedInput) {
+          cat.suggestedInput.value = value.toFixed(2);
+        }
+        if (cat.displayCell) {
+          cat.displayCell.textContent = fmt(value);
+        }
+      });
+    };
+
+    const recalcPlanEstimates = () => {
       let totalMonthly = 0;
       container?.querySelectorAll('[data-item]').forEach((panel) => {
         totalMonthly += computeMonthly(panel);
       });
-      const monthlyIncome = <?= json_encode((float)($incomeData['total'] ?? 0)) ?>;
-      const leftover = Math.max(0, monthlyIncome - totalMonthly);
+      const discretionary = Math.max(0, monthlyIncome - totalMonthly);
       if (leftoverPreview) {
-        leftoverPreview.textContent = <?= json_encode(__('Leftover estimate: :amount/month')) ?>.replace(':amount', fmt(leftover));
+        leftoverPreview.textContent = <?= json_encode(__('Leftover estimate: :amount/month')) ?>.replace(':amount', fmt(discretionary));
       }
-      const averages = Array.from(document.querySelectorAll('[data-category-average]'));
-      const suggestedInputs = Array.from(document.querySelectorAll('[data-category-suggested]'));
-      const totalAverage = averages.reduce((sum, input) => sum + (parseFloat(input.value || '0') || 0), 0);
-      const scale = totalAverage > 0 ? leftover / totalAverage : 0;
-      suggestedInputs.forEach((input, idx) => {
-        const avgInput = averages[idx];
-        const avg = parseFloat(avgInput?.value || '0') || 0;
-        let suggested = 0;
-        if (totalAverage > 0) {
-          suggested = Math.max(0, avg * scale);
-        } else {
-          suggested = averages.length ? leftover / averages.length : 0;
-        }
-        input.value = suggested.toFixed(2);
-      });
-      document.querySelectorAll('[data-category-suggested-display]').forEach((cell, idx) => {
-        const val = parseFloat(suggestedInputs[idx]?.value || '0') || 0;
-        cell.textContent = fmt(val);
-      });
+      const difficultyKey = getDifficultyKey();
+      const suggestionValues = computeCategorySuggestions(monthlyIncome, discretionary, difficultyKey);
+      applyCategorySuggestions(suggestionValues);
     };
 
     const attachListeners = (panel) => {
@@ -710,24 +882,24 @@
       inputs.forEach((input) => {
         input.addEventListener('input', () => {
           recalcPanel(panel);
-          recalcLeftover();
+          recalcPlanEstimates();
         });
       });
       const dueInput = panel.querySelector('[data-due-input]');
       dueInput?.addEventListener('change', () => {
         normalizeDueInputForPanel(panel);
         recalcPanel(panel);
-        recalcLeftover();
+        recalcPlanEstimates();
       });
       dueInput?.addEventListener('input', () => {
         recalcPanel(panel);
-        recalcLeftover();
+        recalcPlanEstimates();
       });
       const removeBtn = panel.querySelector('[data-remove-item]');
       removeBtn?.addEventListener('click', () => {
         panel.remove();
         updateEmptyState();
-        recalcLeftover();
+        recalcPlanEstimates();
       });
     };
 
@@ -755,7 +927,7 @@
       attachListeners(panel);
       normalizeDueInputForPanel(panel);
       recalcPanel(panel);
-      recalcLeftover();
+      recalcPlanEstimates();
       updateEmptyState();
     };
 
@@ -765,14 +937,14 @@
         normalizeDueInputForPanel(panel);
         recalcPanel(panel);
       });
-      recalcLeftover();
+      recalcPlanEstimates();
     });
     startInput?.addEventListener('change', () => {
       container?.querySelectorAll('[data-item]').forEach((panel) => {
         normalizeDueInputForPanel(panel);
         recalcPanel(panel);
       });
-      recalcLeftover();
+      recalcPlanEstimates();
     });
 
     document.querySelectorAll('[data-quick-add]').forEach((btn) => {
@@ -791,7 +963,13 @@
       });
     });
 
+    difficultySelect?.addEventListener('change', () => {
+      updateDifficultyDescription();
+      recalcPlanEstimates();
+    });
+
     updateEmptyState();
-    recalcLeftover();
+    updateDifficultyDescription();
+    recalcPlanEstimates();
   });
 </script>
