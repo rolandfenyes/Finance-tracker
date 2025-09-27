@@ -108,6 +108,7 @@ function advanced_planner_store(PDO $pdo): void
     $targets = $_POST['item_target'] ?? [];
     $currents = $_POST['item_current'] ?? [];
     $priorities = $_POST['item_priority'] ?? [];
+    $dueDates = $_POST['item_due'] ?? [];
     $references = $_POST['item_reference'] ?? [];
     $itemNotes = $_POST['item_notes'] ?? [];
 
@@ -126,7 +127,11 @@ function advanced_planner_store(PDO $pdo): void
         if ($label === '' && $required <= 0) {
             continue;
         }
-        $monthly = $horizon > 0 ? round($required / $horizon, 2) : 0.0;
+        $dueRaw = isset($dueDates[$idx]) ? trim((string)$dueDates[$idx]) : '';
+        $normalizedDue = advanced_planner_normalize_due_month($dueRaw, $startMonth, $horizon);
+        $fundingMonth = $normalizedDue ?? $startMonth->modify('+' . max(0, $horizon - 1) . ' months');
+        $monthsToFund = advanced_planner_months_between($startMonth, $fundingMonth);
+        $monthly = $monthsToFund > 0 ? round($required / $monthsToFund, 2) : 0.0;
 
         $priority = isset($priorities[$idx]) ? (int)$priorities[$idx] : ($sortIndex + 1);
         $referenceId = isset($references[$idx]) && $references[$idx] !== '' ? (int)$references[$idx] : null;
@@ -142,9 +147,61 @@ function advanced_planner_store(PDO $pdo): void
             'monthly' => $monthly,
             'priority' => $priority,
             'sort' => $sortIndex,
+            'has_due' => $normalizedDue !== null,
+            'due' => $normalizedDue ? $normalizedDue->format('Y-m-01') : null,
             'notes' => $note,
         ];
         $sortIndex++;
+    }
+
+    $hasDueDates = false;
+    foreach ($items as $item) {
+        if (!empty($item['has_due'])) {
+            $hasDueDates = true;
+            break;
+        }
+    }
+
+    if ($items) {
+        if ($hasDueDates) {
+            usort($items, static function (array $a, array $b): int {
+                if (!empty($a['has_due']) && !empty($b['has_due'])) {
+                    $comparison = strcmp((string)$a['due'], (string)$b['due']);
+                    if ($comparison !== 0) {
+                        return $comparison;
+                    }
+                }
+                if (!empty($a['has_due']) && empty($b['has_due'])) {
+                    return -1;
+                }
+                if (empty($a['has_due']) && !empty($b['has_due'])) {
+                    return 1;
+                }
+                $monthlyDiff = $a['monthly'] <=> $b['monthly'];
+                if ($monthlyDiff !== 0) {
+                    return $monthlyDiff;
+                }
+                return $a['sort'] <=> $b['sort'];
+            });
+        } else {
+            usort($items, static function (array $a, array $b): int {
+                $monthlyDiff = $a['monthly'] <=> $b['monthly'];
+                if ($monthlyDiff !== 0) {
+                    return $monthlyDiff;
+                }
+                $requiredDiff = $a['required'] <=> $b['required'];
+                if ($requiredDiff !== 0) {
+                    return $requiredDiff;
+                }
+                return $a['sort'] <=> $b['sort'];
+            });
+        }
+
+        foreach ($items as $idx => &$item) {
+            $item['priority'] = $idx + 1;
+            $item['sort'] = $idx;
+        }
+        unset($item);
     }
 
     $incomeData = advanced_planner_collect_incomes($pdo, $userId, $mainCurrency, $startMonth);
@@ -210,7 +267,7 @@ function advanced_planner_store(PDO $pdo): void
 
         if ($items) {
             $itemStmt = $pdo->prepare(
-                'INSERT INTO advanced_plan_items (plan_id, kind, reference_id, reference_label, target_amount, current_amount, required_amount, monthly_allocation, priority, sort_order, notes) VALUES (?,?,?,?,?,?,?,?,?,?,?)'
+                'INSERT INTO advanced_plan_items (plan_id, kind, reference_id, reference_label, target_amount, current_amount, required_amount, monthly_allocation, priority, sort_order, target_due_date, notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
             );
             foreach ($items as $item) {
                 $itemStmt->execute([
@@ -224,6 +281,7 @@ function advanced_planner_store(PDO $pdo): void
                     $item['monthly'],
                     $item['priority'],
                     $item['sort'],
+                    $item['due'],
                     $item['notes'],
                 ]);
             }
@@ -438,6 +496,43 @@ function advanced_planner_average_spending(
         'window_start' => $windowStart->format('Y-m-d'),
         'window_end' => $windowEnd->format('Y-m-d'),
     ];
+}
+
+function advanced_planner_normalize_due_month(string $rawDue, DateTimeImmutable $startMonth, int $horizon): ?DateTimeImmutable
+{
+    if ($rawDue === '') {
+        return null;
+    }
+
+    $due = DateTimeImmutable::createFromFormat('Y-m', $rawDue);
+    if (!$due) {
+        return null;
+    }
+
+    $due = $due->setDate((int)$due->format('Y'), (int)$due->format('n'), 1);
+    $planEndMonth = $startMonth->modify('+' . max(0, $horizon - 1) . ' months');
+
+    if ($due < $startMonth) {
+        $due = $startMonth;
+    }
+
+    if ($due > $planEndMonth) {
+        $due = $planEndMonth;
+    }
+
+    return $due;
+}
+
+function advanced_planner_months_between(DateTimeImmutable $start, DateTimeImmutable $end): int
+{
+    if ($end < $start) {
+        return 1;
+    }
+
+    $diff = $start->diff($end);
+    $months = ($diff->y * 12) + $diff->m + 1;
+
+    return max(1, $months);
 }
 
 function advanced_planner_collect_resources(PDO $pdo, int $userId, string $mainCurrency): array

@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS advanced_plan_items (
   monthly_allocation NUMERIC(18,2) NOT NULL,
   priority INT DEFAULT 1,
   sort_order INT DEFAULT 0,
+  target_due_date DATE,
   status TEXT NOT NULL DEFAULT 'planned' CHECK (status IN ('planned','active','done','skipped')),
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),

@@ -351,6 +351,7 @@
             <tr class="border-b border-white/60 text-left text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800/60 dark:text-slate-400">
               <th class="py-2 pr-3"><?= __('Priority') ?></th>
               <th class="py-2 pr-3"><?= __('Milestone') ?></th>
+              <th class="py-2 pr-3"><?= __('Due by') ?></th>
               <th class="py-2 pr-3"><?= __('Target') ?></th>
               <th class="py-2 pr-3"><?= __('Monthly allocation') ?></th>
             </tr>
@@ -365,12 +366,19 @@
                     <div class="text-xs text-slate-500 dark:text-slate-400"><?= nl2br(htmlspecialchars($item['notes'], ENT_QUOTES)) ?></div>
                   <?php endif; ?>
                 </td>
+                <td class="py-2 pr-3 text-slate-600 dark:text-slate-300">
+                  <?php if (!empty($item['target_due_date'])): ?>
+                    <?= date('M Y', strtotime($item['target_due_date'])) ?>
+                  <?php else: ?>
+                    <span class="text-slate-400 dark:text-slate-500"><?= __('Not set') ?></span>
+                  <?php endif; ?>
+                </td>
                 <td class="py-2 pr-3 text-slate-600 dark:text-slate-300"><?= moneyfmt($item['required_amount'], $currentPlan['main_currency']) ?></td>
                 <td class="py-2 pr-3 font-semibold text-slate-900 dark:text-white"><?= moneyfmt($item['monthly_allocation'], $currentPlan['main_currency']) ?></td>
               </tr>
             <?php endforeach; if (!$planItems): ?>
               <tr>
-                <td colspan="4" class="py-4 text-center text-slate-500 dark:text-slate-400"><?= __('No milestones were captured for this plan.') ?></td>
+                <td colspan="5" class="py-4 text-center text-slate-500 dark:text-slate-400"><?= __('No milestones were captured for this plan.') ?></td>
               </tr>
             <?php endif; ?>
           </tbody>
@@ -484,6 +492,10 @@
             <option value="custom" selected><?= __('Custom') ?></option>
           </select>
         </label>
+        <label class="md:col-span-3">
+          <span class="label"><?= __('Due by (optional)') ?></span>
+          <input class="input" type="month" name="item_due[]" data-due-input />
+        </label>
         <label class="md:col-span-2">
           <span class="label"><?= __('Target (main currency)') ?></span>
           <input class="input" type="number" step="0.01" min="0" name="item_target[]" value="0" data-target-input />
@@ -521,11 +533,50 @@
     const addBtn = document.querySelector('[data-add-item]');
     const emptyState = container ? container.querySelector('[data-empty-state]') : null;
     const horizonSelect = document.querySelector('[data-horizon-selector]');
+    const startInput = document.querySelector('input[name="start_month"]');
     const leftoverPreview = document.querySelector('[data-leftover-preview]');
 
     const fmt = (value) => {
       const num = Number.isFinite(value) ? value : 0;
       return new Intl.NumberFormat(undefined, { style: 'currency', currency: <?= json_encode($mainCurrency) ?> }).format(num);
+    };
+
+    const parseMonthValue = (value) => {
+      if (!value) return null;
+      const [yStr, mStr] = value.split('-');
+      const year = Number.parseInt(yStr, 10);
+      const month = Number.parseInt(mStr, 10);
+      if (!Number.isFinite(year) || !Number.isFinite(month)) return null;
+      return new Date(Date.UTC(year, month - 1, 1));
+    };
+
+    const formatMonthValue = (date) => {
+      if (!date) return '';
+      const year = date.getUTCFullYear();
+      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+      return `${year}-${month}`;
+    };
+
+    const getPlanEnd = (startDate, horizon) => {
+      if (!startDate) return null;
+      const months = Math.max(0, Math.floor(horizon) - 1);
+      return new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth() + months, 1));
+    };
+
+    const clampDueDate = (startDate, horizon, dueDate) => {
+      if (!startDate || !dueDate) return dueDate;
+      const planEnd = getPlanEnd(startDate, horizon);
+      if (!planEnd) return dueDate;
+      if (dueDate < startDate) return new Date(startDate.getTime());
+      if (dueDate > planEnd) return new Date(planEnd.getTime());
+      return dueDate;
+    };
+
+    const monthsBetweenInclusive = (startDate, endDate) => {
+      if (!startDate || !endDate) return null;
+      const years = endDate.getUTCFullYear() - startDate.getUTCFullYear();
+      const months = endDate.getUTCMonth() - startDate.getUTCMonth();
+      return Math.max(1, years * 12 + months + 1);
     };
 
     const updateEmptyState = () => {
@@ -536,14 +587,60 @@
       }
     };
 
+    const normalizeDueInputForPanel = (panel) => {
+      const dueInput = panel.querySelector('[data-due-input]');
+      if (!dueInput) return;
+      const dueValue = dueInput.value;
+      if (!dueValue) return;
+      const startMonthValue = startInput?.value || '';
+      const startDate = parseMonthValue(startMonthValue);
+      if (!startDate) return;
+      const dueDate = parseMonthValue(dueValue);
+      if (!dueDate) return;
+      const horizon = Math.max(1, parseFloat(horizonSelect?.value || '3') || 3);
+      const clamped = clampDueDate(startDate, horizon, dueDate);
+      if (!clamped) return;
+      const formatted = formatMonthValue(clamped);
+      if (formatted !== dueValue) {
+        dueInput.value = formatted;
+      }
+    };
+
+    const computeMonthly = (panel) => {
+      const horizon = Math.max(1, parseFloat(horizonSelect?.value || '3') || 3);
+      const target = parseFloat(panel.querySelector('[data-target-input]')?.value || '0');
+      const current = parseFloat(panel.querySelector('[data-current-input]')?.value || '0');
+      const required = Math.max(0, target - current);
+      let monthsToFund = horizon;
+      const startDate = parseMonthValue(startInput?.value || '');
+      const dueInput = panel.querySelector('[data-due-input]');
+      const dueDateRaw = dueInput ? parseMonthValue(dueInput.value) : null;
+      if (startDate) {
+        const planEnd = getPlanEnd(startDate, horizon) || startDate;
+        const clampedDue = clampDueDate(startDate, horizon, dueDateRaw);
+        const effectiveEnd = clampedDue || planEnd;
+        const span = monthsBetweenInclusive(startDate, effectiveEnd);
+        if (span) {
+          monthsToFund = span;
+        }
+      }
+      const monthly = monthsToFund > 0 ? required / monthsToFund : 0;
+      return monthly;
+    };
+
+    const recalcPanel = (panel) => {
+      const monthly = computeMonthly(panel);
+      const output = panel.querySelector('[data-monthly-output]');
+      if (output) {
+        output.textContent = fmt(monthly);
+      }
+      return monthly;
+    };
+
     const recalcLeftover = () => {
-      const horizon = parseFloat(horizonSelect?.value || '3') || 3;
       let totalMonthly = 0;
       container?.querySelectorAll('[data-item]').forEach((panel) => {
-        const target = parseFloat(panel.querySelector('[data-target-input]')?.value || '0');
-        const current = parseFloat(panel.querySelector('[data-current-input]')?.value || '0');
-        const required = Math.max(0, target - current);
-        totalMonthly += horizon > 0 ? required / horizon : 0;
+        totalMonthly += computeMonthly(panel);
       });
       const monthlyIncome = <?= json_encode((float)($incomeData['total'] ?? 0)) ?>;
       const leftover = Math.max(0, monthlyIncome - totalMonthly);
@@ -571,18 +668,6 @@
       });
     };
 
-    const recalcPanel = (panel) => {
-      const horizon = parseFloat(horizonSelect?.value || '3') || 3;
-      const target = parseFloat(panel.querySelector('[data-target-input]')?.value || '0');
-      const current = parseFloat(panel.querySelector('[data-current-input]')?.value || '0');
-      const required = Math.max(0, target - current);
-      const monthly = horizon > 0 ? required / horizon : 0;
-      const output = panel.querySelector('[data-monthly-output]');
-      if (output) {
-        output.textContent = fmt(monthly);
-      }
-    };
-
     const attachListeners = (panel) => {
       const inputs = panel.querySelectorAll('[data-target-input], [data-current-input]');
       inputs.forEach((input) => {
@@ -590,6 +675,16 @@
           recalcPanel(panel);
           recalcLeftover();
         });
+      });
+      const dueInput = panel.querySelector('[data-due-input]');
+      dueInput?.addEventListener('change', () => {
+        normalizeDueInputForPanel(panel);
+        recalcPanel(panel);
+        recalcLeftover();
+      });
+      dueInput?.addEventListener('input', () => {
+        recalcPanel(panel);
+        recalcLeftover();
       });
       const removeBtn = panel.querySelector('[data-remove-item]');
       removeBtn?.addEventListener('click', () => {
@@ -604,6 +699,7 @@
       const node = template.content.firstElementChild.cloneNode(true);
       const label = node.querySelector('input[name="item_label[]"]');
       const type = node.querySelector('select[name="item_type[]"]');
+      const due = node.querySelector('input[name="item_due[]"]');
       const target = node.querySelector('input[name="item_target[]"]');
       const current = node.querySelector('input[name="item_current[]"]');
       const priority = node.querySelector('input[name="item_priority[]"]');
@@ -611,6 +707,7 @@
       const notes = node.querySelector('textarea[name="item_notes[]"]');
       if (prefill.label) label.value = prefill.label;
       if (prefill.kind) type.value = prefill.kind;
+      if (prefill.due) due.value = prefill.due;
       if (prefill.target !== undefined) target.value = prefill.target;
       if (prefill.current !== undefined) current.value = prefill.current;
       if (prefill.priority) priority.value = prefill.priority;
@@ -619,6 +716,7 @@
       container.appendChild(node);
       const panel = container.lastElementChild;
       attachListeners(panel);
+      normalizeDueInputForPanel(panel);
       recalcPanel(panel);
       recalcLeftover();
       updateEmptyState();
@@ -626,7 +724,17 @@
 
     addBtn?.addEventListener('click', () => addItem());
     horizonSelect?.addEventListener('change', () => {
-      container?.querySelectorAll('[data-item]').forEach((panel) => recalcPanel(panel));
+      container?.querySelectorAll('[data-item]').forEach((panel) => {
+        normalizeDueInputForPanel(panel);
+        recalcPanel(panel);
+      });
+      recalcLeftover();
+    });
+    startInput?.addEventListener('change', () => {
+      container?.querySelectorAll('[data-item]').forEach((panel) => {
+        normalizeDueInputForPanel(panel);
+        recalcPanel(panel);
+      });
       recalcLeftover();
     });
 
@@ -639,7 +747,8 @@
           current: parseFloat(btn.dataset.current || '0') || 0,
           priority: (container?.querySelectorAll('[data-item]').length || 0) + 1,
           reference: btn.dataset.reference || '',
-          notes: btn.dataset.notes || ''
+          notes: btn.dataset.notes || '',
+          due: btn.dataset.due || ''
         };
         addItem(prefill);
       });
