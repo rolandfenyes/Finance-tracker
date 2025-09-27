@@ -472,6 +472,28 @@ switch ($path) {
         require __DIR__ . '/src/controllers/goals.php';
         goals_index($pdo);
         break;
+    case '/advanced-planner':
+        require_login();
+        require __DIR__ . '/src/controllers/advanced_planner.php';
+        if ($method === 'POST') {
+            advanced_planner_store($pdo);
+        }
+        advanced_planner_show($pdo);
+        break;
+    case '/advanced-planner/activate':
+        require_login();
+        require __DIR__ . '/src/controllers/advanced_planner.php';
+        if ($method === 'POST') {
+            advanced_planner_activate($pdo);
+        }
+        break;
+    case '/advanced-planner/delete':
+        require_login();
+        require __DIR__ . '/src/controllers/advanced_planner.php';
+        if ($method === 'POST') {
+            advanced_planner_delete($pdo);
+        }
+        break;
     case '/goals/add':
         require_login();
         require __DIR__ . '/src/controllers/goals.php';

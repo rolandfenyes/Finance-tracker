@@ -1093,6 +1093,7 @@
       ['href'=>'/',              'label'=>'Dashboard',        'match'=>'#^/$#',                    'icon' => 'layout-dashboard'],
       ['href'=>'/current-month', 'label'=>'Months',    'match'=>'#^/current-month$#',       'icon' => 'calendar'],
       ['href'=>'/goals',         'label'=>'Goals',            'match'=>'#^/goals(?:/.*)?$#',       'icon' => 'goal'],
+      ['href'=>'/advanced-planner','label'=>'Advanced planner','match'=>'#^/advanced-planner(?:/.*)?$#','icon' => 'route'],
       ['href'=>'/loans',         'label'=>'Loans',            'match'=>'#^/loans(?:/.*)?$#',       'icon' => 'landmark'],
       ['href'=>'/emergency',     'label'=>'Emergency Fund',   'match'=>'#^/emergency(?:/.*)?$#',   'icon' => 'life-buoy'],
       ['href'=>'/scheduled',     'label'=>'Scheduled',        'match'=>'#^/scheduled(?:/.*)?$#',   'icon' => 'calendar-clock'],

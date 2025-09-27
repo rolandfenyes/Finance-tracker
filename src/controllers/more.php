@@ -45,6 +45,12 @@ function more_show(PDO $pdo): void
                     'icon' => 'goal',
                 ],
                 [
+                    'label' => __('Advanced planner'),
+                    'description' => __('Map out milestones, budgets, and an order of attack for the months ahead.'),
+                    'href' => '/advanced-planner',
+                    'icon' => 'route',
+                ],
+                [
                     'label' => __('Loans'),
                     'description' => __('Manage debts, schedules, and payoff progress.'),
                     'href' => '/loans',
