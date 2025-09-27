@@ -5,7 +5,11 @@
 /** @var array $planCategoryLimits */
 /** @var string $mainCurrency */
 /** @var string $startSuggestion */
+/** @var string $startParam */
 /** @var int $defaultHorizon */
+/** @var int $averageMonths */
+/** @var array $averageMonthsOptions */
+/** @var int|null $selectedPlanId */
 /** @var array $incomeData */
 /** @var array $spendingCategories */
 /** @var array $averages */
@@ -70,14 +74,36 @@
       </ul>
     </div>
     <div class="rounded-3xl border border-white/60 bg-white/70 p-5 shadow-sm backdrop-blur-sm dark:border-slate-800/60 dark:bg-slate-900/60">
-      <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"><?= __('Recent spending averages') ?></h3>
-      <p class="text-sm text-slate-500 dark:text-slate-400">
-        <?= __('Based on :months months of history (:from → :to).', [
-          'months' => $averages['months'] ?? 0,
-          'from' => date('M Y', strtotime($averages['window_start'] ?? $startSuggestion . '-01')),
-          'to' => date('M Y', strtotime($averages['window_end'] ?? $startSuggestion . '-01')),
-        ]) ?>
-      </p>
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"><?= __('Recent spending averages') ?></h3>
+          <p class="text-sm text-slate-500 dark:text-slate-400">
+            <?= __('Based on :months months of history (:from → :to).', [
+              'months' => $averages['months'] ?? 0,
+              'from' => date('M Y', strtotime($averages['window_start'] ?? $startSuggestion . '-01')),
+              'to' => date('M Y', strtotime($averages['window_end'] ?? $startSuggestion . '-01')),
+            ]) ?>
+          </p>
+        </div>
+        <form method="get" class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300" data-average-form>
+          <?php if (!empty($selectedPlanId)): ?>
+            <input type="hidden" name="plan" value="<?= (int)$selectedPlanId ?>" />
+          <?php elseif (!empty($_GET['plan'])): ?>
+            <input type="hidden" name="plan" value="<?= (int)$_GET['plan'] ?>" />
+          <?php endif; ?>
+          <?php if (!empty($startParam)): ?>
+            <input type="hidden" name="start" value="<?= htmlspecialchars($startParam, ENT_QUOTES) ?>" />
+          <?php endif; ?>
+          <label for="avg-months" class="whitespace-nowrap"><?= __('Look back') ?></label>
+          <select id="avg-months" name="avg_months" class="select select-sm" data-average-select>
+            <?php foreach ($averageMonthsOptions as $option): ?>
+              <option value="<?= (int)$option ?>" <?= (int)$option === (int)$averageMonths ? 'selected' : '' ?>>
+                <?= (int)$option === 1 ? __('1 month') : __(':count months', ['count' => (int)$option]) ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+        </form>
+      </div>
       <div class="mt-4 grid gap-2 sm:grid-cols-2">
         <?php if (!empty($averages['categories'])): ?>
           <?php foreach ($averages['categories'] as $cat): ?>
@@ -105,6 +131,7 @@
   <h2 class="card-title"><?= __('Build your timeline') ?></h2>
   <form class="mt-6 space-y-6" method="post" action="/advanced-planner">
     <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+    <input type="hidden" name="avg_months" value="<?= (int)$averageMonths ?>" />
     <div class="grid gap-4 md:grid-cols-2">
       <label class="block">
         <span class="label"><?= __('Plan title') ?></span>
@@ -265,7 +292,7 @@
                       <span class="inline-flex h-2.5 w-2.5 rounded-full" style="background-color: <?= htmlspecialchars($cat['color'], ENT_QUOTES) ?>"></span>
                       <span class="font-medium text-slate-700 dark:text-slate-100"><?= htmlspecialchars($cat['label'], ENT_QUOTES) ?></span>
                     </div>
-                    <input type="hidden" name="category_id[]" value="<?= (int)$cat['id'] ?>" />
+                    <input type="hidden" name="category_id[]" value="<?= $cat['id'] !== null ? (int)$cat['id'] : '' ?>" />
                     <input type="hidden" name="category_label[]" value="<?= htmlspecialchars($cat['label'], ENT_QUOTES) ?>" />
                     <input type="hidden" name="category_average[]" value="<?= htmlspecialchars($cat['average'], ENT_QUOTES) ?>" data-category-average />
                     <input type="hidden" name="category_suggested[]" value="<?= htmlspecialchars($cat['average'], ENT_QUOTES) ?>" data-category-suggested />
@@ -423,6 +450,7 @@
           <form method="post" action="/advanced-planner/activate" class="inline">
             <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
             <input type="hidden" name="plan_id" value="<?= (int)$currentPlan['id'] ?>" />
+            <input type="hidden" name="avg_months" value="<?= (int)$averageMonths ?>" />
             <button type="submit" class="btn btn-primary">
               <i data-lucide="rocket" class="h-4 w-4"></i>
               <span><?= __('Make live') ?></span>
@@ -432,6 +460,7 @@
         <form method="post" action="/advanced-planner/delete" onsubmit="return confirm('<?= __('Delete this plan?') ?>');" class="inline">
           <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
           <input type="hidden" name="plan_id" value="<?= (int)$currentPlan['id'] ?>" />
+          <input type="hidden" name="avg_months" value="<?= (int)$averageMonths ?>" />
           <button type="submit" class="btn btn-muted">
             <i data-lucide="trash" class="h-4 w-4"></i>
             <span><?= __('Delete') ?></span>
@@ -448,7 +477,7 @@
     <h2 class="card-title"><?= __('Review or jump to an older plan') ?></h2>
     <div class="mt-4 grid gap-3 md:grid-cols-2">
       <?php foreach ($plans as $plan): ?>
-        <a href="<?= '/advanced-planner?plan=' . (int)$plan['id'] ?>" class="panel block p-4 transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:-translate-y-0.5 focus-visible:shadow-lg">
+        <a href="<?= '/advanced-planner?plan=' . (int)$plan['id'] . '&avg_months=' . (int)$averageMonths ?>" class="panel block p-4 transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:-translate-y-0.5 focus-visible:shadow-lg">
           <div class="flex items-center justify-between">
             <div>
               <div class="text-sm font-semibold text-slate-800 dark:text-slate-100"><?= htmlspecialchars($plan['title'], ENT_QUOTES) ?></div>
@@ -535,6 +564,14 @@
     const horizonSelect = document.querySelector('[data-horizon-selector]');
     const startInput = document.querySelector('input[name="start_month"]');
     const leftoverPreview = document.querySelector('[data-leftover-preview]');
+    const averageForm = document.querySelector('[data-average-form]');
+    const averageSelect = document.querySelector('[data-average-select]');
+
+    averageSelect?.addEventListener('change', () => {
+      if (averageForm) {
+        averageForm.submit();
+      }
+    });
 
     const fmt = (value) => {
       const num = Number.isFinite(value) ? value : 0;

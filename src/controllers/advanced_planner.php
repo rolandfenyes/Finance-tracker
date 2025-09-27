@@ -16,10 +16,12 @@ function advanced_planner_show(PDO $pdo): void
     $startMonth = $startMonth->setDate((int)$startMonth->format('Y'), (int)$startMonth->format('n'), 1);
 
     $defaultHorizon = 3;
+    $averageMonthsParam = isset($_GET['avg_months']) ? (int)$_GET['avg_months'] : 3;
+    $averageMonths = max(1, min(12, $averageMonthsParam));
 
     $incomeData = advanced_planner_collect_incomes($pdo, $userId, $mainCurrency, $startMonth);
     $spendingCategories = advanced_planner_fetch_spending_categories($pdo, $userId);
-    $averages = advanced_planner_average_spending($pdo, $userId, $mainCurrency, $startMonth, $spendingCategories, 3);
+    $averages = advanced_planner_average_spending($pdo, $userId, $mainCurrency, $startMonth, $spendingCategories, $averageMonths);
 
     $resources = advanced_planner_collect_resources($pdo, $userId, $mainCurrency);
 
@@ -67,7 +69,11 @@ function advanced_planner_show(PDO $pdo): void
         'planCategoryLimits' => $planCategoryLimits,
         'mainCurrency' => $mainCurrency,
         'startSuggestion' => $startMonth->format('Y-m'),
+        'startParam' => $startParam,
         'defaultHorizon' => $defaultHorizon,
+        'averageMonths' => $averageMonths,
+        'averageMonthsOptions' => range(1, 12),
+        'selectedPlanId' => $requestedPlanId,
         'incomeData' => $incomeData,
         'spendingCategories' => $spendingCategories,
         'averages' => $averages,
@@ -91,6 +97,9 @@ function advanced_planner_store(PDO $pdo): void
     if (!in_array($horizon, [3, 6, 12], true)) {
         $horizon = 3;
     }
+
+    $avgMonths = isset($_POST['avg_months']) ? (int)$_POST['avg_months'] : 3;
+    $avgMonths = max(1, min(12, $avgMonths));
 
     $startMonthRaw = trim($_POST['start_month'] ?? '');
     $startMonth = $startMonthRaw !== ''
@@ -208,7 +217,7 @@ function advanced_planner_store(PDO $pdo): void
     $monthlyIncome = (float)($incomeData['total'] ?? 0);
 
     $spendingCategories = advanced_planner_fetch_spending_categories($pdo, $userId);
-    $averages = advanced_planner_average_spending($pdo, $userId, $mainCurrency, $startMonth, $spendingCategories, 3);
+    $averages = advanced_planner_average_spending($pdo, $userId, $mainCurrency, $startMonth, $spendingCategories, $avgMonths);
 
     $totalCommitments = 0.0;
     foreach ($items as $item) {
@@ -229,7 +238,7 @@ function advanced_planner_store(PDO $pdo): void
             ? round($cat['average'] * min(max($scale, 0), 5), 2)
             : (count($averages['categories']) ? round($monthlyDiscretionary / count($averages['categories']), 2) : 0.0);
         $categorySuggestions[] = [
-            'category_id' => $cat['id'],
+            'category_id' => $cat['id'] ?? null,
             'label' => $cat['label'],
             'average' => round($cat['average'], 2),
             'suggested' => $suggested,
@@ -306,12 +315,16 @@ function advanced_planner_store(PDO $pdo): void
         $_SESSION['flash'] = $activate
             ? __('Advanced plan activated.')
             : __('Advanced plan saved as draft.');
-        redirect('/advanced-planner?plan=' . $planId);
+        $query = '/advanced-planner?plan=' . $planId;
+        if ($avgMonths) {
+            $query .= '&avg_months=' . $avgMonths;
+        }
+        redirect($query);
     } catch (Throwable $e) {
         $pdo->rollBack();
         error_log('Advanced planner save failed: ' . $e->getMessage());
         $_SESSION['flash'] = __('Could not save the advanced plan.');
-        redirect('/advanced-planner');
+        redirect('/advanced-planner' . ($avgMonths ? ('?avg_months=' . $avgMonths) : ''));
     }
 }
 
@@ -321,8 +334,10 @@ function advanced_planner_activate(PDO $pdo): void
     require_login();
     $userId = uid();
     $planId = (int)($_POST['plan_id'] ?? 0);
+    $avgMonths = isset($_POST['avg_months']) ? (int)$_POST['avg_months'] : 0;
+    $avgMonths = $avgMonths > 0 ? max(1, min(12, $avgMonths)) : 0;
     if ($planId <= 0) {
-        redirect('/advanced-planner');
+        redirect('/advanced-planner' . ($avgMonths ? ('?avg_months=' . $avgMonths) : ''));
     }
 
     $pdo->beginTransaction();
@@ -332,7 +347,8 @@ function advanced_planner_activate(PDO $pdo): void
         if (!$planCheck->fetch()) {
             $pdo->rollBack();
             $_SESSION['flash'] = __('Plan not found.');
-            redirect('/advanced-planner');
+            $fallback = '/advanced-planner' . ($avgMonths ? ('?avg_months=' . $avgMonths) : '');
+            redirect($fallback);
         }
 
         $pdo->prepare('UPDATE advanced_plans SET status = \'archived\', updated_at = NOW() WHERE user_id = ? AND status = \'active\'')
@@ -341,12 +357,16 @@ function advanced_planner_activate(PDO $pdo): void
             ->execute([$planId, $userId]);
         $pdo->commit();
         $_SESSION['flash'] = __('Advanced plan is now live.');
-        redirect('/advanced-planner?plan=' . $planId);
+        $query = '/advanced-planner?plan=' . $planId;
+        if ($avgMonths) {
+            $query .= '&avg_months=' . $avgMonths;
+        }
+        redirect($query);
     } catch (Throwable $e) {
         $pdo->rollBack();
         error_log('Advanced planner activate failed: ' . $e->getMessage());
         $_SESSION['flash'] = __('Could not activate the plan.');
-        redirect('/advanced-planner');
+        redirect('/advanced-planner' . ($avgMonths ? ('?avg_months=' . $avgMonths) : ''));
     }
 }
 
@@ -356,14 +376,16 @@ function advanced_planner_delete(PDO $pdo): void
     require_login();
     $userId = uid();
     $planId = (int)($_POST['plan_id'] ?? 0);
+    $avgMonths = isset($_POST['avg_months']) ? (int)$_POST['avg_months'] : 0;
+    $avgMonths = $avgMonths > 0 ? max(1, min(12, $avgMonths)) : 0;
     if ($planId <= 0) {
-        redirect('/advanced-planner');
+        redirect('/advanced-planner' . ($avgMonths ? ('?avg_months=' . $avgMonths) : ''));
     }
 
     $stmt = $pdo->prepare('DELETE FROM advanced_plans WHERE id = ? AND user_id = ?');
     $stmt->execute([$planId, $userId]);
     $_SESSION['flash'] = __('Plan deleted.');
-    redirect('/advanced-planner');
+    redirect('/advanced-planner' . ($avgMonths ? ('?avg_months=' . $avgMonths) : ''));
 }
 
 function advanced_planner_collect_incomes(PDO $pdo, int $userId, string $mainCurrency, DateTimeImmutable $startMonth): array
@@ -473,6 +495,35 @@ function advanced_planner_average_spending(
         $totals[$catId]['total'] += $amtMain;
     }
 
+    $loanTotals = [];
+    $loanStmt = $pdo->prepare(
+        "SELECT lp.loan_id, lp.paid_on, lp.amount, lp.currency, l.name AS loan_name, l.currency AS loan_currency
+           FROM loan_payments lp
+           JOIN loans l ON l.id = lp.loan_id
+          WHERE l.user_id = ? AND lp.paid_on BETWEEN ?::date AND ?::date"
+    );
+    $loanStmt->execute([$userId, $windowStart->format('Y-m-d'), $windowEnd->format('Y-m-d')]);
+    foreach ($loanStmt as $row) {
+        $loanId = (int)$row['loan_id'];
+        if (!isset($loanTotals[$loanId])) {
+            $label = $row['loan_name'] ? __('Loan payment: :name', ['name' => $row['loan_name']]) : __('Loan payment');
+            $loanTotals[$loanId] = [
+                'id' => null,
+                'label' => $label,
+                'color' => '#0EA5E9',
+                'total' => 0.0,
+            ];
+        }
+        $currency = strtoupper($row['currency'] ?: ($row['loan_currency'] ?: $mainCurrency));
+        $amount = (float)($row['amount'] ?? 0);
+        if ($amount === 0.0) {
+            continue;
+        }
+        $paidOn = $row['paid_on'];
+        $converted = advanced_planner_convert_to_main($pdo, $amount, $currency, $mainCurrency, $paidOn);
+        $loanTotals[$loanId]['total'] += $converted;
+    }
+
     $period = new DatePeriod(
         $windowStart,
         new DateInterval('P1M'),
@@ -490,8 +541,14 @@ function advanced_planner_average_spending(
     }
     unset($cat);
 
+    foreach ($loanTotals as &$loan) {
+        $loan['total'] = round($loan['total'], 2);
+        $loan['average'] = round($loan['total'] / $monthsCount, 2);
+    }
+    unset($loan);
+
     return [
-        'categories' => array_values($totals),
+        'categories' => array_merge(array_values($totals), array_values($loanTotals)),
         'months' => $monthsCount,
         'window_start' => $windowStart->format('Y-m-d'),
         'window_end' => $windowEnd->format('Y-m-d'),
