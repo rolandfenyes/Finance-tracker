@@ -3,6 +3,8 @@
 /** @var array|null $currentPlan */
 /** @var array $planItems */
 /** @var array $planCategoryLimits */
+/** @var float $planCategoryTotal */
+/** @var float $planFreeAfterLimits */
 /** @var string $mainCurrency */
 /** @var string $startSuggestion */
 /** @var string $startParam */
@@ -450,6 +452,27 @@
         <div class="mt-1 text-2xl font-semibold text-slate-900 dark:text-white"><?= moneyfmt($currentPlan['monthly_discretionary'], $currentPlan['main_currency']) ?></div>
       </div>
     </div>
+
+    <?php if ($currentPlan['status'] !== 'active'): ?>
+      <div class="mt-4 rounded-3xl border border-white/70 bg-white/70 p-4 shadow-sm backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/60">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div class="text-sm font-semibold text-slate-800 dark:text-slate-100"><?= __('Monthly cushion after planned spendings') ?></div>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              <?= __('This is what remains flexible each month once milestones and suggested category limits are funded.') ?>
+            </p>
+          </div>
+          <div class="text-xl font-semibold text-slate-900 dark:text-white">
+            <?= moneyfmt($planFreeAfterLimits, $currentPlan['main_currency']) ?>
+          </div>
+        </div>
+        <?php if ($planCategoryTotal > 0): ?>
+          <div class="mt-2 text-xs text-slate-500 dark:text-slate-400">
+            <?= __('Planned category spending totals :amount/month.', ['amount' => moneyfmt($planCategoryTotal, $currentPlan['main_currency'])]) ?>
+          </div>
+        <?php endif; ?>
+      </div>
+    <?php endif; ?>
 
     <div class="mt-6">
       <h3 class="text-lg font-semibold text-slate-900 dark:text-white"><?= __('Milestone order') ?></h3>

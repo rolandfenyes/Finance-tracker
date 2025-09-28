@@ -68,6 +68,8 @@ function advanced_planner_show(PDO $pdo): void
 
     $planItems = [];
     $planCategoryLimits = [];
+    $planCategoryTotal = 0.0;
+    $planFreeAfterLimits = 0.0;
     if ($currentPlan) {
         $itemStmt = $pdo->prepare(
             'SELECT * FROM advanced_plan_items WHERE plan_id = ? ORDER BY priority ASC, sort_order ASC, id ASC'
@@ -80,6 +82,15 @@ function advanced_planner_show(PDO $pdo): void
         );
         $limitStmt->execute([(int)$currentPlan['id']]);
         $planCategoryLimits = $limitStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($planCategoryLimits as $limit) {
+            $planCategoryTotal += (float)($limit['suggested_limit'] ?? 0);
+        }
+        $planCategoryTotal = round($planCategoryTotal, 2);
+        $planFreeAfterLimits = max(
+            0.0,
+            round((float)($currentPlan['monthly_discretionary'] ?? 0) - $planCategoryTotal, 2)
+        );
     }
 
     view('advanced_planner/index', [
@@ -87,6 +98,8 @@ function advanced_planner_show(PDO $pdo): void
         'currentPlan' => $currentPlan,
         'planItems' => $planItems,
         'planCategoryLimits' => $planCategoryLimits,
+        'planCategoryTotal' => $planCategoryTotal,
+        'planFreeAfterLimits' => $planFreeAfterLimits,
         'mainCurrency' => $mainCurrency,
         'startSuggestion' => $startMonth->format('Y-m'),
         'startParam' => $startParam,
