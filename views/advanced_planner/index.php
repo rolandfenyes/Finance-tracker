@@ -307,27 +307,76 @@
               <?php
                 $ruleId = $cat['cashflow_rule_id'] ?? null;
                 $initialSuggestion = $initialCategorySuggestions[$idx]['suggested'] ?? ($cat['average'] ?? 0);
+                $scheduledAmount = $initialCategorySuggestions[$idx]['scheduled'] ?? ($cat['scheduled_average'] ?? 0);
+                $lockedMin = $initialCategorySuggestions[$idx]['locked_min'] ?? 0;
+                $isLocked = !empty($initialCategorySuggestions[$idx]['locked']);
               ?>
               <tr
                 class="border-b border-white/50 dark:border-slate-800/50"
                 data-category-row
                 data-rule-id="<?= $ruleId ? (int)$ruleId : '' ?>"
+                data-locked-min="<?= htmlspecialchars(number_format((float)$lockedMin, 2, '.', ''), ENT_QUOTES) ?>"
+                data-scheduled="<?= htmlspecialchars(number_format((float)$scheduledAmount, 2, '.', ''), ENT_QUOTES) ?>"
               >
-                  <td class="py-2 pr-3">
-                    <div class="flex items-center gap-2">
-                      <span class="inline-flex h-2.5 w-2.5 rounded-full" style="background-color: <?= htmlspecialchars($cat['color'], ENT_QUOTES) ?>"></span>
-                      <span class="font-medium text-slate-700 dark:text-slate-100"><?= htmlspecialchars($cat['label'], ENT_QUOTES) ?></span>
+                  <td class="py-2 pr-3 align-top">
+                    <div class="flex items-start gap-2">
+                      <span class="mt-1 inline-flex h-2.5 w-2.5 flex-none rounded-full" style="background-color: <?= htmlspecialchars($cat['color'], ENT_QUOTES) ?>"></span>
+                      <div>
+                        <div class="font-medium text-slate-700 dark:text-slate-100"><?= htmlspecialchars($cat['label'], ENT_QUOTES) ?></div>
+                        <div class="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                          <?php if ($isLocked && $scheduledAmount > 0): ?>
+                            <span class="inline-flex items-center gap-1 rounded-full bg-slate-200/70 px-2 py-0.5 font-medium text-slate-600 dark:bg-slate-800/80 dark:text-slate-200">
+                              <i data-lucide="shield-check" class="h-3 w-3"></i>
+                              <?= __('Scheduled') ?>
+                            </span>
+                          <?php elseif ($isLocked): ?>
+                            <span class="inline-flex items-center gap-1 rounded-full bg-slate-200/70 px-2 py-0.5 font-medium text-slate-600 dark:bg-slate-800/80 dark:text-slate-200">
+                              <i data-lucide="shield-check" class="h-3 w-3"></i>
+                              <?= __('Protected') ?>
+                            </span>
+                          <?php endif; ?>
+                          <span class="hidden inline-flex items-center gap-1 rounded-full bg-brand-100/70 px-2 py-0.5 font-medium text-brand-700 dark:bg-brand-500/15 dark:text-brand-200" data-category-manual-tag>
+                            <i data-lucide="pencil" class="h-3 w-3"></i>
+                            <?= __('Adjusted') ?>
+                          </span>
+                        </div>
+                      </div>
                     </div>
                     <input type="hidden" name="category_id[]" value="<?= $cat['id'] !== null ? (int)$cat['id'] : '' ?>" />
                     <input type="hidden" name="category_label[]" value="<?= htmlspecialchars($cat['label'], ENT_QUOTES) ?>" />
                     <input type="hidden" name="category_average[]" value="<?= htmlspecialchars($cat['average'], ENT_QUOTES) ?>" data-category-average />
-                    <input type="hidden" name="category_suggested[]" value="<?= htmlspecialchars($initialSuggestion, ENT_QUOTES) ?>" data-category-suggested />
+                    <input type="hidden" name="category_locked_min[]" value="<?= htmlspecialchars(number_format((float)$lockedMin, 2, '.', ''), ENT_QUOTES) ?>" data-category-locked />
                   </td>
-                  <td class="py-2 pr-3 text-slate-600 dark:text-slate-300" data-category-average-display>
-                    <?= moneyfmt($cat['average'], $mainCurrency) ?>
+                  <td class="py-2 pr-3 align-top text-slate-600 dark:text-slate-300" data-category-average-display>
+                    <div><?= moneyfmt($cat['average'], $mainCurrency) ?></div>
+                    <?php if ($scheduledAmount > 0): ?>
+                      <div class="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                        <?= __('Protected minimum: :amount', ['amount' => moneyfmt($lockedMin > 0 ? $lockedMin : $scheduledAmount, $mainCurrency)]) ?>
+                      </div>
+                    <?php endif; ?>
                   </td>
-                  <td class="py-2 pr-3 font-semibold text-slate-900 dark:text-white" data-category-suggested-display>
-                    <?= moneyfmt($initialSuggestion, $mainCurrency) ?>
+                  <td class="py-2 pr-3 align-top text-slate-900 dark:text-white">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <div class="relative">
+                        <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 dark:text-slate-500"><?= htmlspecialchars($mainCurrency, ENT_QUOTES) ?></span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="<?= htmlspecialchars(number_format((float)$lockedMin, 2, '.', ''), ENT_QUOTES) ?>"
+                          class="input input-sm w-32 pl-14"
+                          name="category_suggested[]"
+                          value="<?= htmlspecialchars(number_format((float)$initialSuggestion, 2, '.', ''), ENT_QUOTES) ?>"
+                          data-category-suggested-input
+                        />
+                      </div>
+                      <button type="button" class="btn btn-xs btn-muted hidden" data-reset-suggestion>
+                        <i data-lucide="rotate-ccw" class="h-3 w-3"></i>
+                        <span><?= __('Reset') ?></span>
+                      </button>
+                    </div>
+                    <div class="mt-1 text-xs font-medium text-slate-600 dark:text-slate-300" data-category-suggested-display>
+                      <?= moneyfmt($initialSuggestion, $mainCurrency) ?>
+                    </div>
                   </td>
                 </tr>
               <?php endforeach; ?>
@@ -730,13 +779,45 @@ $ruleDataForJs = array_map(
       return monthly;
     };
 
-    const categoryRows = Array.from(document.querySelectorAll('[data-category-row]')).map((row) => ({
-      row,
-      ruleId: row.dataset.ruleId ? Number.parseInt(row.dataset.ruleId, 10) : null,
-      averageInput: row.querySelector('[data-category-average]'),
-      suggestedInput: row.querySelector('[data-category-suggested]'),
-      displayCell: row.querySelector('[data-category-suggested-display]'),
-    }));
+    const categoryRows = Array.from(document.querySelectorAll('[data-category-row]')).map((row) => {
+      const averageInput = row.querySelector('[data-category-average]');
+      const lockedInput = row.querySelector('[data-category-locked]');
+      const suggestedInput = row.querySelector('[data-category-suggested-input]');
+      const lockedFromDataset = Number.parseFloat(row.dataset.lockedMin || '0');
+      return {
+        row,
+        ruleId: row.dataset.ruleId ? Number.parseInt(row.dataset.ruleId, 10) : null,
+        averageInput,
+        suggestedInput,
+        displayCell: row.querySelector('[data-category-suggested-display]'),
+        lockedInput,
+        manualTag: row.querySelector('[data-category-manual-tag]'),
+        resetButton: row.querySelector('[data-reset-suggestion]'),
+        lockedMin: Number.isFinite(lockedFromDataset) && lockedFromDataset > 0
+          ? lockedFromDataset
+          : Number.parseFloat(lockedInput?.value || '0') || 0,
+        scheduled: Number.parseFloat(row.dataset.scheduled || '0') || 0,
+        manual: false,
+      };
+    });
+
+    const updateDisplay = (cat, value) => {
+      if (cat.displayCell) {
+        cat.displayCell.textContent = fmt(value);
+      }
+    };
+
+    const setManualState = (cat, manual) => {
+      cat.manual = Boolean(manual);
+      if (cat.resetButton) {
+        cat.resetButton.classList.toggle('hidden', !cat.manual);
+      }
+      if (cat.manualTag) {
+        cat.manualTag.classList.toggle('hidden', !cat.manual);
+      }
+    };
+
+    categoryRows.forEach((cat) => setManualState(cat, false));
 
     const ruleMap = new Map(
       (ruleData || []).map((rule) => [Number.parseInt(rule.id, 10), { percent: Number.parseFloat(rule.percent) || 0 }])
@@ -758,17 +839,41 @@ $ruleDataForJs = array_map(
 
     const computeCategorySuggestions = (income, discretionary, difficultyKey) => {
       const multiplier = difficultyConfig[difficultyKey]?.multiplier ?? 1;
-      const suggestions = new Array(categoryRows.length).fill(0);
+      const lockedAmounts = new Map();
+      let totalLocked = 0;
+
+      categoryRows.forEach((cat, idx) => {
+        const minValue = Number.isFinite(cat.lockedMin) ? Math.max(0, cat.lockedMin) : 0;
+        const manualValue = Number.parseFloat(cat.suggestedInput?.value || '0');
+        const effectiveManual = Number.isFinite(manualValue) ? manualValue : 0;
+        let lockedBase = 0;
+        if (cat.manual) {
+          lockedBase = Math.max(minValue, effectiveManual);
+        } else if (minValue > 0) {
+          lockedBase = minValue;
+        }
+        if (lockedBase > 0) {
+          lockedAmounts.set(idx, lockedBase);
+          totalLocked += lockedBase;
+        }
+      });
+
+      const availableDiscretionary = Math.max(0, discretionary - totalLocked);
       const groups = new Map();
 
       categoryRows.forEach((cat, idx) => {
         const ruleId = cat.ruleId;
-        const rule = ruleId ? ruleMap.get(ruleId) : null;
-        if (rule && rule.percent > 0) {
-          if (!groups.has(ruleId)) {
-            groups.set(ruleId, { indexes: [], percent: rule.percent });
-          }
-          groups.get(ruleId).indexes.push(idx);
+        if (!ruleId) return;
+        const rule = ruleMap.get(ruleId);
+        if (!rule || !(rule.percent > 0)) return;
+        if (!groups.has(ruleId)) {
+          groups.set(ruleId, { percent: rule.percent, locked: 0, adjustable: [] });
+        }
+        const group = groups.get(ruleId);
+        if (lockedAmounts.has(idx)) {
+          group.locked += lockedAmounts.get(idx);
+        } else {
+          group.adjustable.push(idx);
         }
       });
 
@@ -776,92 +881,157 @@ $ruleDataForJs = array_map(
       groups.forEach((group) => {
         const base = Math.max(0, (group.percent / 100) * income);
         group.base = base;
-        totalRuleBudget += base;
+        group.adjustableBudget = Math.max(0, base - group.locked);
+        totalRuleBudget += group.adjustableBudget;
       });
 
       let allocatedToRules = totalRuleBudget;
       let scale = 1;
-      if (totalRuleBudget > 0 && discretionary < totalRuleBudget) {
-        scale = discretionary / totalRuleBudget;
-        allocatedToRules = discretionary;
+      if (totalRuleBudget > 0 && availableDiscretionary < totalRuleBudget) {
+        scale = availableDiscretionary / totalRuleBudget;
+        allocatedToRules = availableDiscretionary;
       }
+
+      const adjustableValues = new Array(categoryRows.length).fill(0);
 
       groups.forEach((group) => {
-        const ruleBudget = group.base * scale;
-        const totalAvg = group.indexes.reduce((sum, idx) => {
+        if (!group.adjustable.length) {
+          return;
+        }
+        const ruleBudget = group.adjustableBudget * scale;
+        if (ruleBudget <= 0) {
+          return;
+        }
+        let totalAvg = 0;
+        group.adjustable.forEach((idx) => {
           const avg = Number.parseFloat(categoryRows[idx].averageInput?.value || '0') || 0;
-          return sum + Math.max(0, avg);
-        }, 0);
-        group.indexes.forEach((idx) => {
-          let allocation = 0;
-          if (ruleBudget > 0) {
-            const avg = Number.parseFloat(categoryRows[idx].averageInput?.value || '0') || 0;
-            if (totalAvg > 0) {
-              allocation = ruleBudget * (Math.max(0, avg) / totalAvg);
-            } else {
-              allocation = ruleBudget / group.indexes.length;
-            }
+          totalAvg += Math.max(0, avg);
+        });
+        group.adjustable.forEach((idx) => {
+          const avg = Number.parseFloat(categoryRows[idx].averageInput?.value || '0') || 0;
+          if (totalAvg > 0) {
+            adjustableValues[idx] = ruleBudget * (Math.max(0, avg) / totalAvg);
+          } else {
+            adjustableValues[idx] = ruleBudget / group.adjustable.length;
           }
-          suggestions[idx] = allocation;
         });
       });
 
-      const unruledIndexes = [];
+      const unruledAdjustable = [];
       categoryRows.forEach((cat, idx) => {
-        const ruleId = cat.ruleId;
-        const rule = ruleId ? ruleMap.get(ruleId) : null;
-        if (!rule || !(rule.percent > 0)) {
-          unruledIndexes.push(idx);
+        if (cat.ruleId) {
+          return;
         }
-        if (!Number.isFinite(suggestions[idx])) {
-          suggestions[idx] = 0;
+        if (lockedAmounts.has(idx)) {
+          return;
         }
+        unruledAdjustable.push(idx);
       });
 
-      let leftoverForUnruled = Math.max(0, discretionary - allocatedToRules);
+      let leftoverForUnruled = Math.max(0, availableDiscretionary - allocatedToRules);
       if (totalRuleBudget <= 0) {
-        leftoverForUnruled = discretionary;
+        leftoverForUnruled = availableDiscretionary;
       }
 
-      if (unruledIndexes.length > 0) {
-        const totalAvg = unruledIndexes.reduce((sum, idx) => {
+      if (unruledAdjustable.length > 0) {
+        let totalAvg = 0;
+        unruledAdjustable.forEach((idx) => {
           const avg = Number.parseFloat(categoryRows[idx].averageInput?.value || '0') || 0;
-          return sum + Math.max(0, avg);
-        }, 0);
-        unruledIndexes.forEach((idx) => {
-          let allocation = 0;
-          if (leftoverForUnruled > 0) {
-            const avg = Number.parseFloat(categoryRows[idx].averageInput?.value || '0') || 0;
-            if (totalAvg > 0) {
-              allocation = leftoverForUnruled * (Math.max(0, avg) / totalAvg);
-            } else {
-              allocation = leftoverForUnruled / unruledIndexes.length;
-            }
+          totalAvg += Math.max(0, avg);
+        });
+        unruledAdjustable.forEach((idx) => {
+          const avg = Number.parseFloat(categoryRows[idx].averageInput?.value || '0') || 0;
+          if (leftoverForUnruled <= 0) {
+            adjustableValues[idx] = 0;
+          } else if (totalAvg > 0) {
+            adjustableValues[idx] = leftoverForUnruled * (Math.max(0, avg) / totalAvg);
+          } else {
+            adjustableValues[idx] = leftoverForUnruled / unruledAdjustable.length;
           }
-          suggestions[idx] = allocation;
         });
       }
 
-      const scaled = suggestions.map((value) => Math.max(0, value * multiplier));
-      const totalSuggested = scaled.reduce((sum, value) => sum + value, 0);
-      if (totalSuggested > discretionary && discretionary > 0) {
-        const ratio = discretionary / totalSuggested;
-        return scaled.map((value) => value * ratio);
+      const multiplierValue = Number.isFinite(multiplier) ? multiplier : 1;
+      adjustableValues.forEach((value, idx) => {
+        if (lockedAmounts.has(idx)) {
+          return;
+        }
+        adjustableValues[idx] = Math.max(0, value * multiplierValue);
+      });
+
+      let totalAdjustable = 0;
+      adjustableValues.forEach((value, idx) => {
+        if (!lockedAmounts.has(idx)) {
+          totalAdjustable += value;
+        }
+      });
+      if (totalAdjustable > availableDiscretionary && availableDiscretionary > 0) {
+        const ratio = availableDiscretionary / totalAdjustable;
+        adjustableValues.forEach((value, idx) => {
+          if (!lockedAmounts.has(idx)) {
+            adjustableValues[idx] = value * ratio;
+          }
+        });
       }
-      return scaled;
+
+      const finalValues = new Array(categoryRows.length).fill(0);
+      categoryRows.forEach((cat, idx) => {
+        if (lockedAmounts.has(idx)) {
+          finalValues[idx] = lockedAmounts.get(idx);
+        } else {
+          finalValues[idx] = Math.max(0, adjustableValues[idx]);
+        }
+      });
+
+      return finalValues;
     };
 
     const applyCategorySuggestions = (values) => {
       categoryRows.forEach((cat, idx) => {
+        if (!cat.suggestedInput) {
+          return;
+        }
+        if (cat.manual) {
+          const raw = Number.parseFloat(cat.suggestedInput.value || '0');
+          const effective = Math.max(cat.lockedMin || 0, Number.isFinite(raw) ? raw : 0);
+          updateDisplay(cat, effective);
+          return;
+        }
         const value = Number.isFinite(values[idx]) ? values[idx] : 0;
-        if (cat.suggestedInput) {
-          cat.suggestedInput.value = value.toFixed(2);
-        }
-        if (cat.displayCell) {
-          cat.displayCell.textContent = fmt(value);
-        }
+        const minValue = cat.lockedMin || 0;
+        const finalValue = Math.max(minValue, value);
+        cat.suggestedInput.value = finalValue.toFixed(2);
+        updateDisplay(cat, finalValue);
       });
     };
+
+    categoryRows.forEach((cat) => {
+      const input = cat.suggestedInput;
+      if (!input) return;
+
+      input.addEventListener('input', () => {
+        const raw = Number.parseFloat(input.value || '0');
+        const effective = Math.max(cat.lockedMin || 0, Number.isFinite(raw) ? raw : 0);
+        setManualState(cat, true);
+        updateDisplay(cat, effective);
+        recalcPlanEstimates();
+      });
+
+      input.addEventListener('blur', () => {
+        const raw = Number.parseFloat(input.value || '0');
+        const effective = Math.max(cat.lockedMin || 0, Number.isFinite(raw) ? raw : 0);
+        input.value = effective.toFixed(2);
+        updateDisplay(cat, effective);
+      });
+
+      cat.resetButton?.addEventListener('click', () => {
+        setManualState(cat, false);
+        const baseValue = Math.max(cat.lockedMin || 0, 0);
+        input.value = baseValue > 0 ? baseValue.toFixed(2) : '';
+        updateDisplay(cat, baseValue);
+        recalcPlanEstimates();
+      });
+    });
 
     const recalcPlanEstimates = () => {
       let totalMonthly = 0;

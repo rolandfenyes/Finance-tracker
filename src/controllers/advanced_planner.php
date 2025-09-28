@@ -269,6 +269,37 @@ function advanced_planner_store(PDO $pdo): void
         $cashflowRules
     );
 
+    $categoryIdsInput = $_POST['category_id'] ?? [];
+    $categoryLabelsInput = $_POST['category_label'] ?? [];
+    $categoryAveragesInput = $_POST['category_average'] ?? [];
+    $categoryLockedInput = $_POST['category_locked_min'] ?? [];
+    $categorySuggestedInput = $_POST['category_suggested'] ?? [];
+
+    foreach ($categorySuggestions as $idx => &$cat) {
+        $cat['category_id'] = isset($categoryIdsInput[$idx]) && $categoryIdsInput[$idx] !== ''
+            ? (int)$categoryIdsInput[$idx]
+            : null;
+        if (isset($categoryLabelsInput[$idx])) {
+            $cat['label'] = (string)$categoryLabelsInput[$idx];
+        }
+        if (isset($categoryAveragesInput[$idx])) {
+            $cat['average'] = round(max(0.0, (float)$categoryAveragesInput[$idx]), 2);
+        } else {
+            $cat['average'] = round(max(0.0, (float)($cat['average'] ?? 0)), 2);
+        }
+        $lockedMin = isset($categoryLockedInput[$idx])
+            ? max(0.0, (float)$categoryLockedInput[$idx])
+            : (float)($cat['locked_min'] ?? 0);
+        $cat['locked_min'] = round($lockedMin, 2);
+
+        if (isset($categorySuggestedInput[$idx])) {
+            $cat['suggested'] = round(max($lockedMin, max(0.0, (float)$categorySuggestedInput[$idx])), 2);
+        } else {
+            $cat['suggested'] = round(max($lockedMin, (float)($cat['suggested'] ?? 0)), 2);
+        }
+    }
+    unset($cat);
+
     $status = $activate ? 'active' : 'draft';
 
     $pdo->beginTransaction();
@@ -553,6 +584,43 @@ function advanced_planner_average_spending(
         $loanTotals[$loanId]['total'] += $converted;
     }
 
+    $scheduledCategoryStmt = $pdo->prepare(
+        "SELECT sp.category_id, sp.amount, sp.currency, c.label AS cat_label,\n"
+        . "       COALESCE(NULLIF(c.color,''),'#6B7280') AS cat_color, c.cashflow_rule_id\n"
+        . "  FROM scheduled_payments sp\n"
+        . "  LEFT JOIN categories c ON c.id = sp.category_id AND c.user_id = sp.user_id\n"
+        . " WHERE sp.user_id = ? AND sp.category_id IS NOT NULL"
+    );
+    $scheduledCategoryStmt->execute([$userId]);
+    foreach ($scheduledCategoryStmt as $row) {
+        $catId = (int)$row['category_id'];
+        if (!isset($totals[$catId])) {
+            $label = $row['cat_label'] ?: __('Scheduled payment');
+            $totals[$catId] = [
+                'id' => $catId,
+                'label' => $label,
+                'color' => $row['cat_color'] ?: '#6B7280',
+                'cashflow_rule_id' => isset($row['cashflow_rule_id']) && $row['cashflow_rule_id'] !== null
+                    ? (int)$row['cashflow_rule_id']
+                    : null,
+                'total' => 0.0,
+            ];
+        }
+        $amount = max(0.0, (float)($row['amount'] ?? 0));
+        if ($amount <= 0) {
+            continue;
+        }
+        $currency = strtoupper($row['currency'] ?: $mainCurrency);
+        $converted = advanced_planner_convert_to_main(
+            $pdo,
+            $amount,
+            $currency,
+            $mainCurrency,
+            $windowEnd->format('Y-m-d')
+        );
+        $totals[$catId]['scheduled_average'] = ($totals[$catId]['scheduled_average'] ?? 0.0) + $converted;
+    }
+
     $scheduledLoanStmt = $pdo->prepare(
         "SELECT sp.loan_id, sp.amount, sp.currency, l.name AS loan_name, l.currency AS loan_currency\n"
         . "  FROM scheduled_payments sp\n"
@@ -602,20 +670,39 @@ function advanced_planner_average_spending(
     $monthsCount = max(1, $monthsCount);
 
     foreach ($totals as &$cat) {
-        $cat['total'] = round($cat['total'], 2);
-        $cat['average'] = round($cat['total'] / $monthsCount, 2);
+        $scheduledAvg = isset($cat['scheduled_average']) ? max(0.0, (float)$cat['scheduled_average']) : 0.0;
+        $catTotal = round((float)$cat['total'], 2);
+        if ($catTotal <= 0 && $scheduledAvg > 0) {
+            $catTotal = round($scheduledAvg * $monthsCount, 2);
+            $cat['average'] = round($scheduledAvg, 2);
+        } else {
+            $average = $monthsCount > 0 ? round($catTotal / $monthsCount, 2) : 0.0;
+            if ($scheduledAvg > 0) {
+                $average = max($average, round($scheduledAvg, 2));
+                $catTotal = round($average * $monthsCount, 2);
+            }
+            $cat['average'] = $average;
+        }
+        $cat['total'] = $catTotal;
+        if ($scheduledAvg > 0) {
+            $cat['scheduled_average'] = round($scheduledAvg, 2);
+        } else {
+            unset($cat['scheduled_average']);
+        }
     }
     unset($cat);
 
     foreach ($loanTotals as &$loan) {
         $scheduledAverage = isset($loan['scheduled_average']) ? (float)$loan['scheduled_average'] : null;
-        unset($loan['scheduled_average']);
         if (($loan['total'] ?? 0) <= 0 && $scheduledAverage !== null) {
             $loan['total'] = round($scheduledAverage * $monthsCount, 2);
             $loan['average'] = round($scheduledAverage, 2);
         } else {
             $loan['total'] = round($loan['total'], 2);
             $loan['average'] = round($loan['total'] / $monthsCount, 2);
+        }
+        if ($scheduledAverage !== null) {
+            $loan['scheduled_average'] = round(max(0.0, $scheduledAverage), 2);
         }
     }
     unset($loan);
@@ -822,6 +909,7 @@ function advanced_planner_calculate_category_suggestions(
     foreach ($categories as $cat) {
         $catId = $cat['id'] !== null ? (int)$cat['id'] : null;
         $avg = max(0.0, (float)($cat['average'] ?? 0));
+        $scheduled = max(0.0, (float)($cat['scheduled_average'] ?? 0));
         $rawRuleId = isset($cat['cashflow_rule_id']) && $cat['cashflow_rule_id'] !== null
             ? (int)$cat['cashflow_rule_id']
             : null;
@@ -834,8 +922,21 @@ function advanced_planner_calculate_category_suggestions(
             'label' => $cat['label'],
             'average' => $avg,
             'rule_id' => $ruleId,
+            'scheduled' => $scheduled,
         ];
     }
+
+    $lockedAmounts = [];
+    $totalLocked = 0.0;
+    foreach ($categoryData as $idx => $cat) {
+        if ($cat['scheduled'] > 0) {
+            $lockedAmount = max($cat['average'], $cat['scheduled']);
+            $lockedAmounts[$idx] = $lockedAmount;
+            $totalLocked += $lockedAmount;
+        }
+    }
+
+    $availableDiscretionary = max(0.0, $monthlyDiscretionary - $totalLocked);
 
     $ruleGroups = [];
     foreach ($categoryData as $idx => $cat) {
@@ -846,65 +947,72 @@ function advanced_planner_calculate_category_suggestions(
         if (!isset($ruleGroups[$ruleId])) {
             $ruleGroups[$ruleId] = [
                 'percent' => $ruleMap[$ruleId]['percent'],
-                'indexes' => [],
+                'adjustable_indexes' => [],
+                'locked_sum' => 0.0,
             ];
         }
-        $ruleGroups[$ruleId]['indexes'][] = $idx;
+        if (isset($lockedAmounts[$idx])) {
+            $ruleGroups[$ruleId]['locked_sum'] += $lockedAmounts[$idx];
+        } else {
+            $ruleGroups[$ruleId]['adjustable_indexes'][] = $idx;
+        }
     }
 
     $totalRuleBudget = 0.0;
     foreach ($ruleGroups as $ruleId => &$group) {
         $baseBudget = ($group['percent'] / 100.0) * $monthlyIncome;
         $group['base_budget'] = max(0.0, round($baseBudget, 2));
-        $totalRuleBudget += $group['base_budget'];
+        $group['adjustable_budget'] = max(0.0, $group['base_budget'] - $group['locked_sum']);
+        $totalRuleBudget += $group['adjustable_budget'];
     }
     unset($group);
 
     $allocatedToRules = $totalRuleBudget;
     $scale = 1.0;
-    if ($totalRuleBudget > 0 && $monthlyDiscretionary < $totalRuleBudget) {
-        $scale = $monthlyDiscretionary / $totalRuleBudget;
-        $allocatedToRules = $monthlyDiscretionary;
+    if ($totalRuleBudget > 0 && $availableDiscretionary < $totalRuleBudget) {
+        $scale = $availableDiscretionary / $totalRuleBudget;
+        $allocatedToRules = $availableDiscretionary;
     }
 
-    $suggestions = [];
+    $adjustableValues = array_fill(0, count($categoryData), 0.0);
+
     foreach ($ruleGroups as $group) {
-        $indexes = $group['indexes'];
+        $indexes = $group['adjustable_indexes'];
         if (!$indexes) {
             continue;
         }
-        $ruleBudget = $group['base_budget'] * $scale;
+        $ruleBudget = $group['adjustable_budget'] * $scale;
+        if ($ruleBudget <= 0) {
+            continue;
+        }
         $totalAverage = 0.0;
         foreach ($indexes as $idx) {
             $totalAverage += $categoryData[$idx]['average'];
         }
         foreach ($indexes as $idx) {
-            if ($ruleBudget <= 0) {
-                $suggestions[$idx] = 0.0;
-                continue;
-            }
             if ($totalAverage > 0) {
                 $weight = $categoryData[$idx]['average'] / $totalAverage;
-                $suggestions[$idx] = $ruleBudget * $weight;
+                $adjustableValues[$idx] = $ruleBudget * $weight;
             } else {
-                $suggestions[$idx] = $ruleBudget / count($indexes);
+                $adjustableValues[$idx] = $ruleBudget / count($indexes);
             }
         }
     }
 
     $unruledIndexes = [];
     foreach ($categoryData as $idx => $cat) {
-        if ($cat['rule_id'] === null) {
-            $unruledIndexes[] = $idx;
+        if ($cat['rule_id'] !== null) {
+            continue;
         }
-        if (!isset($suggestions[$idx])) {
-            $suggestions[$idx] = 0.0;
+        if (isset($lockedAmounts[$idx])) {
+            continue;
         }
+        $unruledIndexes[] = $idx;
     }
 
-    $leftoverForUnruled = max(0.0, $monthlyDiscretionary - $allocatedToRules);
+    $leftoverForUnruled = max(0.0, $availableDiscretionary - $allocatedToRules);
     if ($totalRuleBudget <= 0) {
-        $leftoverForUnruled = $monthlyDiscretionary;
+        $leftoverForUnruled = $availableDiscretionary;
     }
 
     if ($unruledIndexes) {
@@ -914,39 +1022,54 @@ function advanced_planner_calculate_category_suggestions(
         }
         foreach ($unruledIndexes as $idx) {
             if ($leftoverForUnruled <= 0) {
-                $suggestions[$idx] = 0.0;
+                $adjustableValues[$idx] = 0.0;
                 continue;
             }
             if ($totalAverage > 0) {
                 $weight = $categoryData[$idx]['average'] / $totalAverage;
-                $suggestions[$idx] = $leftoverForUnruled * $weight;
+                $adjustableValues[$idx] = $leftoverForUnruled * $weight;
             } else {
-                $suggestions[$idx] = $leftoverForUnruled / count($unruledIndexes);
+                $adjustableValues[$idx] = $leftoverForUnruled / count($unruledIndexes);
             }
         }
     }
 
-    foreach ($suggestions as &$value) {
-        $value = $value * $multiplier;
+    foreach ($adjustableValues as $idx => &$value) {
+        if (isset($lockedAmounts[$idx])) {
+            continue;
+        }
+        $value *= $multiplier;
     }
     unset($value);
 
-    $totalSuggested = array_sum($suggestions);
-    if ($totalSuggested > $monthlyDiscretionary && $monthlyDiscretionary > 0) {
-        $ratio = $monthlyDiscretionary / $totalSuggested;
-        foreach ($suggestions as &$value) {
-            $value *= $ratio;
+    $totalAdjustable = 0.0;
+    foreach ($adjustableValues as $idx => $value) {
+        if (!isset($lockedAmounts[$idx])) {
+            $totalAdjustable += $value;
+        }
+    }
+    if ($totalAdjustable > $availableDiscretionary && $availableDiscretionary > 0) {
+        $ratio = $availableDiscretionary / $totalAdjustable;
+        foreach ($adjustableValues as $idx => &$value) {
+            if (!isset($lockedAmounts[$idx])) {
+                $value *= $ratio;
+            }
         }
         unset($value);
     }
 
     $result = [];
     foreach ($categoryData as $idx => $cat) {
+        $lockedMin = isset($lockedAmounts[$idx]) ? $lockedAmounts[$idx] : 0.0;
+        $value = isset($lockedAmounts[$idx]) ? $lockedMin : $adjustableValues[$idx];
         $result[] = [
             'category_id' => $cat['category_id'],
             'label' => $cat['label'],
             'average' => round($cat['average'], 2),
-            'suggested' => round(max(0.0, $suggestions[$idx] ?? 0.0), 2),
+            'suggested' => round(max(0.0, $value), 2),
+            'scheduled' => round(max(0.0, $cat['scheduled']), 2),
+            'locked' => isset($lockedAmounts[$idx]),
+            'locked_min' => round(max(0.0, $lockedMin), 2),
         ];
     }
 
