@@ -553,6 +553,43 @@ function advanced_planner_average_spending(
         $loanTotals[$loanId]['total'] += $converted;
     }
 
+    $scheduledLoanStmt = $pdo->prepare(
+        "SELECT sp.loan_id, sp.amount, sp.currency, l.name AS loan_name, l.currency AS loan_currency\n"
+        . "  FROM scheduled_payments sp\n"
+        . "  JOIN loans l ON l.id = sp.loan_id\n"
+        . " WHERE sp.user_id = ? AND sp.loan_id IS NOT NULL"
+    );
+    $scheduledLoanStmt->execute([$userId]);
+    foreach ($scheduledLoanStmt as $row) {
+        $loanId = (int)$row['loan_id'];
+        $scheduledAmount = max(0.0, (float)($row['amount'] ?? 0));
+        if ($scheduledAmount <= 0) {
+            continue;
+        }
+        if (!isset($loanTotals[$loanId])) {
+            $label = $row['loan_name'] ? __('Loan payment: :name', ['name' => $row['loan_name']]) : __('Loan payment');
+            $loanTotals[$loanId] = [
+                'id' => null,
+                'label' => $label,
+                'color' => '#0EA5E9',
+                'cashflow_rule_id' => null,
+                'total' => 0.0,
+            ];
+        }
+        if (($loanTotals[$loanId]['total'] ?? 0) > 0) {
+            continue;
+        }
+        $currency = strtoupper($row['currency'] ?: ($row['loan_currency'] ?: $mainCurrency));
+        $converted = advanced_planner_convert_to_main(
+            $pdo,
+            $scheduledAmount,
+            $currency,
+            $mainCurrency,
+            $windowEnd->format('Y-m-d')
+        );
+        $loanTotals[$loanId]['scheduled_average'] = max(0.0, $converted);
+    }
+
     $period = new DatePeriod(
         $windowStart,
         new DateInterval('P1M'),
@@ -571,8 +608,15 @@ function advanced_planner_average_spending(
     unset($cat);
 
     foreach ($loanTotals as &$loan) {
-        $loan['total'] = round($loan['total'], 2);
-        $loan['average'] = round($loan['total'] / $monthsCount, 2);
+        $scheduledAverage = isset($loan['scheduled_average']) ? (float)$loan['scheduled_average'] : null;
+        unset($loan['scheduled_average']);
+        if (($loan['total'] ?? 0) <= 0 && $scheduledAverage !== null) {
+            $loan['total'] = round($scheduledAverage * $monthsCount, 2);
+            $loan['average'] = round($scheduledAverage, 2);
+        } else {
+            $loan['total'] = round($loan['total'], 2);
+            $loan['average'] = round($loan['total'] / $monthsCount, 2);
+        }
     }
     unset($loan);
 
