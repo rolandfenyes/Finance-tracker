@@ -57,7 +57,10 @@ function trade_buy(PDO $pdo){
 
   if ($price <= 0 || $amount <= 0 || !$symbol) { return; }
 
-  $quantity = $price > 0 ? round($amount / $price, 6) : 0;
+  $netAmount = $amount - $fee;
+  if ($netAmount <= 0) { return; }
+
+  $quantity = $price > 0 ? round($netAmount / $price, 6) : 0;
   if ($quantity <= 0) { return; }
 
   $stmt=$pdo->prepare('INSERT INTO stock_trades(user_id,symbol,trade_on,side,quantity,price,amount,fee,currency) VALUES(?,?,?,?,?,?,?,?,?)');
@@ -87,7 +90,10 @@ function trade_sell(PDO $pdo){
 
   if ($price <= 0 || $amount <= 0 || !$symbol) { return; }
 
-  $qty = $price > 0 ? round($amount / $price, 6) : 0;
+  $netAmount = $amount - $fee;
+  if ($netAmount <= 0) { return; }
+
+  $qty = $price > 0 ? round($netAmount / $price, 6) : 0;
   if ($qty <= 0) { return; }
 
   $q=$pdo->prepare('SELECT qty FROM v_stock_positions WHERE user_id=? AND symbol=?');
@@ -98,7 +104,7 @@ function trade_sell(PDO $pdo){
   }
   if ($qty <= 0) { return; }
 
-  $amount = round($qty * $price, 4);
+  $amount = round($qty * $price + $fee, 4);
 
   $pdo->prepare('INSERT INTO stock_trades(user_id,symbol,trade_on,side,quantity,price,amount,fee,currency) VALUES(?,?,?,?,?,?,?,?,?)')
       ->execute([$u, $symbol, $tradeOn, 'sell', $qty, $price, $amount, $fee, $currency]);

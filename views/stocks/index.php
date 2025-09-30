@@ -301,10 +301,13 @@
       const update = () => {
         const price = parseFloat(priceInput ? priceInput.value : '');
         const amount = parseFloat(amountInput ? amountInput.value : '');
+        const fee = parseFloat(feeInput ? feeInput.value : '');
         let quantity = 0;
 
-        if (Number.isFinite(price) && price > 0 && Number.isFinite(amount) && amount > 0) {
-          quantity = amount / price;
+        const netAmount = (Number.isFinite(amount) ? amount : NaN) - (Number.isFinite(fee) ? Math.max(fee, 0) : 0);
+
+        if (Number.isFinite(price) && price > 0 && Number.isFinite(netAmount) && netAmount > 0) {
+          quantity = netAmount / price;
         }
 
         if (quantityInput) {
