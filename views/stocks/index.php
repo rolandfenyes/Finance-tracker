@@ -398,8 +398,49 @@
         return 1;
       };
 
+      const cssEscape = (value) => {
+        if (window.CSS && typeof window.CSS.escape === 'function') {
+          return window.CSS.escape(value);
+        }
+        const string = String(value);
+        const length = string.length;
+        let index = -1;
+        let codeUnit;
+        let result = '';
+        const firstCodeUnit = length > 0 ? string.charCodeAt(0) : 0;
+        while (++index < length) {
+          codeUnit = string.charCodeAt(index);
+          if (codeUnit === 0x0000) {
+            result += '\uFFFD';
+            continue;
+          }
+          if (
+            (codeUnit >= 0x0001 && codeUnit <= 0x001F) ||
+            codeUnit === 0x007F ||
+            (index === 0 && codeUnit >= 0x0030 && codeUnit <= 0x0039) ||
+            (index === 1 && codeUnit >= 0x0030 && codeUnit <= 0x0039 && firstCodeUnit === 0x002D)
+          ) {
+            result += '\\' + codeUnit.toString(16) + ' ';
+            continue;
+          }
+          if (
+            codeUnit >= 0x0080 ||
+            codeUnit === 0x002D ||
+            codeUnit === 0x005F ||
+            (codeUnit >= 0x0030 && codeUnit <= 0x0039) ||
+            (codeUnit >= 0x0041 && codeUnit <= 0x005A) ||
+            (codeUnit >= 0x0061 && codeUnit <= 0x007A)
+          ) {
+            result += string.charAt(index);
+            continue;
+          }
+          result += '\\' + string.charAt(index);
+        }
+        return result;
+      };
+
       const updateRow = (symbol, snapshot) => {
-        const row = document.querySelector(`[data-stock-row][data-symbol="${CSS.escape(symbol)}"]`);
+        const row = document.querySelector(`[data-stock-row][data-symbol="${cssEscape(symbol)}"]`);
         if (!row) return;
 
         const priceEl = row.querySelector('[data-stock-price]');

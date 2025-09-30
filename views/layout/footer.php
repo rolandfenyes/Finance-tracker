@@ -333,7 +333,7 @@
   <script>
     (function () {
       const CHUNK_SIZE = 8;
-      const QUOTE_ENDPOINT = 'https://query1.finance.yahoo.com/v7/finance/quote?symbols=';
+      const QUOTE_ENDPOINT = 'https://query1.finance.yahoo.com/v7/finance/quote';
       const CHART_ENDPOINT = 'https://query1.finance.yahoo.com/v8/finance/chart/';
 
       const chunk = (array, size) => {
@@ -385,9 +385,14 @@
 
         const results = {};
         for (const subset of chunk(unique, CHUNK_SIZE)) {
-          const url = `${QUOTE_ENDPOINT}${encodeURIComponent(subset.join(','))}`;
+          const url = new URL(QUOTE_ENDPOINT);
+          url.searchParams.set('symbols', subset.join(','));
+          url.searchParams.set('lang', 'en-US');
+          url.searchParams.set('region', 'US');
+          url.searchParams.set('corsDomain', 'finance.yahoo.com');
+          url.searchParams.set('formatted', 'false');
           try {
-            const response = await fetch(url);
+            const response = await fetch(url.toString(), { mode: 'cors', credentials: 'omit' });
             if (!response.ok) continue;
             const data = await response.json();
             const items = data && data.quoteResponse && Array.isArray(data.quoteResponse.result)
@@ -410,9 +415,16 @@
         const sym = String(symbol || '').trim();
         if (!sym) return null;
 
-        const url = `${CHART_ENDPOINT}${encodeURIComponent(sym)}?range=${encodeURIComponent(range)}&interval=${encodeURIComponent(interval)}&includePrePost=false`;
+        const url = new URL(`${CHART_ENDPOINT}${encodeURIComponent(sym)}`);
+        url.searchParams.set('range', range);
+        url.searchParams.set('interval', interval);
+        url.searchParams.set('includePrePost', 'false');
+        url.searchParams.set('lang', 'en-US');
+        url.searchParams.set('region', 'US');
+        url.searchParams.set('corsDomain', 'finance.yahoo.com');
+        url.searchParams.set('formatted', 'false');
         try {
-          const response = await fetch(url);
+          const response = await fetch(url.toString(), { mode: 'cors', credentials: 'omit' });
           if (!response.ok) return null;
           const payload = await response.json();
           const result = payload && payload.chart && Array.isArray(payload.chart.result)
