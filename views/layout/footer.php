@@ -292,6 +292,177 @@
     };
   </script>
 
+  <script>
+    (function () {
+      const CHUNK_SIZE = 8;
+      const QUOTE_ENDPOINT = 'https://query1.finance.yahoo.com/v7/finance/quote?symbols=';
+      const CHART_ENDPOINT = 'https://query1.finance.yahoo.com/v8/finance/chart/';
+
+      const chunk = (array, size) => {
+        const result = [];
+        for (let i = 0; i < array.length; i += size) {
+          result.push(array.slice(i, i + size));
+        }
+        return result;
+      };
+
+      const formatCurrency = (amount, currency, options = {}) => {
+        if (typeof amount !== 'number' || Number.isNaN(amount)) {
+          return '—';
+        }
+        const safeCurrency = currency && typeof currency === 'string' ? currency.toUpperCase() : 'USD';
+        let formatted;
+        try {
+          formatted = new Intl.NumberFormat(undefined, {
+            style: 'currency',
+            currency: safeCurrency,
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }).format(amount);
+        } catch (err) {
+          formatted = amount.toFixed(2);
+        }
+
+        if (options.showCode) {
+          return `${formatted} ${safeCurrency}`;
+        }
+
+        return `${formatted} ${options.hideCode ? '' : safeCurrency}`.trim();
+      };
+
+      const formatPercent = (value) => {
+        if (typeof value !== 'number' || Number.isNaN(value)) {
+          return '—';
+        }
+        const sign = value > 0 ? '+' : '';
+        return `${sign}${value.toFixed(2)}%`;
+      };
+
+      const fetchQuotes = async (symbols) => {
+        const list = Array.isArray(symbols) ? symbols : [];
+        const unique = Array.from(new Set(list.map((s) => String(s || '').trim().toUpperCase()).filter(Boolean)));
+        if (!unique.length) {
+          return {};
+        }
+
+        const results = {};
+        for (const subset of chunk(unique, CHUNK_SIZE)) {
+          const url = `${QUOTE_ENDPOINT}${encodeURIComponent(subset.join(','))}`;
+          try {
+            const response = await fetch(url);
+            if (!response.ok) continue;
+            const data = await response.json();
+            const items = data && data.quoteResponse && Array.isArray(data.quoteResponse.result)
+              ? data.quoteResponse.result
+              : [];
+            items.forEach((item) => {
+              if (!item || !item.symbol) return;
+              const key = String(item.symbol).toUpperCase();
+              results[key] = item;
+            });
+          } catch (err) {
+            console.error('Quote fetch failed', err);
+          }
+        }
+
+        return results;
+      };
+
+      const fetchHistory = async (symbol, range = '1mo', interval = '1d') => {
+        const sym = String(symbol || '').trim();
+        if (!sym) return null;
+
+        const url = `${CHART_ENDPOINT}${encodeURIComponent(sym)}?range=${encodeURIComponent(range)}&interval=${encodeURIComponent(interval)}&includePrePost=false`;
+        try {
+          const response = await fetch(url);
+          if (!response.ok) return null;
+          const payload = await response.json();
+          const result = payload && payload.chart && Array.isArray(payload.chart.result)
+            ? payload.chart.result[0]
+            : null;
+          if (!result || !Array.isArray(result.timestamp)) {
+            return null;
+          }
+          const quote = result.indicators && result.indicators.quote && result.indicators.quote[0]
+            ? result.indicators.quote[0]
+            : null;
+          if (!quote || !Array.isArray(quote.close)) {
+            return null;
+          }
+          return {
+            symbol: sym.toUpperCase(),
+            timestamps: result.timestamp,
+            closes: quote.close,
+          };
+        } catch (err) {
+          console.error('History fetch failed', err);
+          return null;
+        }
+      };
+
+      const buildPortfolioHistory = (positions, histories, currencyRates, baseCurrency) => {
+        const labelsMap = new Map();
+        const base = (baseCurrency || 'USD').toUpperCase();
+        const rateFor = (currency, fallbackRate) => {
+          const key = currency ? String(currency).toUpperCase() : '';
+          if (key && currencyRates && typeof currencyRates[key] !== 'undefined') {
+            return Number(currencyRates[key]);
+          }
+          if (typeof fallbackRate === 'number' && !Number.isNaN(fallbackRate)) {
+            return fallbackRate;
+          }
+          return 1;
+        };
+
+        (Array.isArray(positions) ? positions : []).forEach((pos, idx) => {
+          const history = Array.isArray(histories) ? histories[idx] : null;
+          if (!history || !Array.isArray(history.timestamps) || !Array.isArray(history.closes)) {
+            return;
+          }
+          const qty = Number(pos && pos.qty ? pos.qty : 0);
+          if (!qty) {
+            return;
+          }
+          const currency = pos && pos.currency ? pos.currency : base;
+          const fallbackRate = pos && typeof pos.rate_to_main !== 'undefined' ? Number(pos.rate_to_main) : 1;
+          const rate = rateFor(currency, fallbackRate);
+
+          history.timestamps.forEach((ts, index) => {
+            const close = history.closes[index];
+            if (typeof close !== 'number' || Number.isNaN(close)) {
+              return;
+            }
+            const date = new Date(ts * 1000);
+            if (!Number.isFinite(date.getTime())) {
+              return;
+            }
+            const label = date.toISOString().slice(0, 10);
+            const value = close * qty * rate;
+            labelsMap.set(label, (labelsMap.get(label) || 0) + value);
+          });
+        });
+
+        const labels = Array.from(labelsMap.keys()).sort();
+        const values = labels.map((label) => labelsMap.get(label) || 0);
+        return { labels, values };
+      };
+
+      window.MyMoneyMapStocksToolkit = {
+        formatCurrency,
+        formatPercent,
+        fetchQuotes,
+        fetchHistory,
+        buildPortfolioHistory,
+      };
+
+      try {
+        window.dispatchEvent(new Event('stocks-toolkit-ready'));
+      } catch (err) {
+        // ignore event dispatch issues
+      }
+    })();
+  </script>
+
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>
     lucide.createIcons();

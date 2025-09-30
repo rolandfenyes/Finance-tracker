@@ -1,19 +1,27 @@
 <?php
 require_once __DIR__ . '/../helpers.php';
+require_once __DIR__ . '/../fx.php';
 
 function stocks_index(PDO $pdo){ require_login(); $u=uid();
-  // Open positions & cost basis (from view)
-  $pos=$pdo->prepare('SELECT symbol, qty, avg_buy_price FROM v_stock_positions WHERE user_id=? ORDER BY symbol');
-  $pos->execute([$u]); $positions=$pos->fetchAll();
+  $base_currency = fx_user_main($pdo, $u);
+  $as_of = date('Y-m-d');
 
-  // Portfolio cost basis value (qty * avg_buy_price for qty>0)
-  $portfolio_value = 0.0; foreach($positions as $p){ if((float)$p['qty']>0){ $portfolio_value += (float)$p['qty'] * (float)$p['avg_buy_price']; } }
+  $positions = stocks_positions_summary($pdo, $u, $base_currency, $as_of);
+  $portfolio_cost_basis_main = array_sum(array_map(fn($p)=>$p['cost_main'], $positions));
+
+  $currency_rates = [];
+  foreach ($positions as $p) {
+    $currency_rates[$p['currency']] = $p['rate_to_main'];
+  }
 
   // Recent trades
   $t=$pdo->prepare('SELECT * FROM stock_trades WHERE user_id=? ORDER BY trade_on DESC, id DESC LIMIT 100');
   $t->execute([$u]); $trades=$t->fetchAll();
 
-  view('stocks/index', compact('positions','portfolio_value','trades'));
+  $positions_payload = json_encode($positions, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+  $currency_rates_payload = json_encode($currency_rates, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+
+  view('stocks/index', compact('positions','portfolio_cost_basis_main','trades','base_currency','as_of','positions_payload','currency_rates_payload'));
 }
 
 function trade_buy(PDO $pdo){ verify_csrf(); require_login(); $u=uid();

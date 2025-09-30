@@ -284,6 +284,15 @@ $babyPct   = round($doneCount / count($steps) * 100);
 
 /* ---------------- TOTAL NET LIQUID WORTH ---------------- */
 $totalNetLiquid = $efTotalMain + $goalsCurrentMain + $netThisMonth + $leftoverPrev;
+
+$stockPositions = stocks_positions_summary($pdo, $u, $main, $today);
+$stockCostBasis = array_sum(array_map(fn($p) => $p['cost_main'], $stockPositions));
+$stockCurrencyRates = [];
+foreach ($stockPositions as $sp) {
+  $stockCurrencyRates[$sp['currency']] = $sp['rate_to_main'];
+}
+$stockPositionsPayload = json_encode($stockPositions, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+$stockCurrencyRatesPayload = json_encode($stockCurrencyRates, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
 ?>
 
 <section class="grid gap-6 lg:grid-cols-4">
@@ -359,6 +368,37 @@ $totalNetLiquid = $efTotalMain + $goalsCurrentMain + $netThisMonth + $leftoverPr
     <?php endif; ?>
   </div>
 
+  <!-- Stocks snapshot -->
+  <div class="card">
+    <div class="card-kicker"><?= __('Investments') ?></div>
+    <h3 class="card-title mt-1"><?= __('Stocks Snapshot') ?></h3>
+    <?php if ($stockPositions): ?>
+      <p class="mt-3 text-2xl font-semibold text-slate-900 dark:text-white" data-dashboard-stocks-value>—</p>
+      <p class="card-subtle mt-2 text-xs">
+        <?= __('Cost basis: :amount', ['amount' => moneyfmt($stockCostBasis, $main)]) ?>
+      </p>
+      <p class="card-subtle mt-2 text-xs" data-dashboard-stocks-total>—</p>
+      <p class="card-subtle mt-1 text-xs" data-dashboard-stocks-change>—</p>
+      <ul class="mt-4 space-y-2 text-xs" data-dashboard-stocks-holdings></ul>
+      <a href="/stocks" class="mt-4 inline-flex items-center text-sm font-semibold text-brand-700 hover:text-brand-600 dark:text-brand-200">
+        <?= __('View portfolio') ?>
+        <svg class="ml-1 h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+      </a>
+    <?php else: ?>
+      <p class="mt-3 text-sm text-slate-500 dark:text-slate-300">
+        <?= __('Log your stock trades to see live portfolio metrics right on the dashboard.') ?>
+      </p>
+      <a href="/stocks" class="mt-4 inline-flex items-center text-sm font-semibold text-brand-700 hover:text-brand-600 dark:text-brand-200">
+        <?= __('Start tracking') ?>
+        <svg class="ml-1 h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+      </a>
+    <?php endif; ?>
+  </div>
+
   <!-- Loans summary -->
   <div class="card">
     <div class="card-kicker"><?= __('Loans') ?></div>
@@ -393,3 +433,137 @@ $totalNetLiquid = $efTotalMain + $goalsCurrentMain + $netThisMonth + $leftoverPr
     <?php endforeach; ?>
   </ol>
 </section> -->
+
+<?php if ($stockPositions): ?>
+  <script>
+    (function () {
+      const dataset = {
+        positions: <?= $stockPositionsPayload ?>,
+        baseCurrency: <?= json_encode($main, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>,
+        currencyRates: <?= $stockCurrencyRatesPayload ?>,
+        costBasis: <?= json_encode($stockCostBasis, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>,
+      };
+
+      const boot = () => {
+        const toolkit = window.MyMoneyMapStocksToolkit || {};
+        if (!toolkit || typeof toolkit.fetchQuotes !== 'function') {
+          return;
+        }
+
+        const valueEl = document.querySelector('[data-dashboard-stocks-value]');
+        const totalEl = document.querySelector('[data-dashboard-stocks-total]');
+        const changeEl = document.querySelector('[data-dashboard-stocks-change]');
+        const listEl = document.querySelector('[data-dashboard-stocks-holdings]');
+        if (!valueEl || !totalEl || !changeEl || !listEl) {
+          return;
+        }
+
+        const positions = Array.isArray(dataset.positions) ? dataset.positions : [];
+        const currencyRates = dataset.currencyRates || {};
+        const baseCurrency = dataset.baseCurrency || 'USD';
+        const costBasis = Number(dataset.costBasis || 0);
+
+        valueEl.textContent = toolkit.formatCurrency(costBasis, baseCurrency);
+        totalEl.textContent = '—';
+        changeEl.textContent = '—';
+
+        const rateFor = (currency, fallback) => {
+          const key = currency ? String(currency).toUpperCase() : '';
+          if (key && typeof currencyRates[key] !== 'undefined') {
+            return Number(currencyRates[key]);
+          }
+          if (typeof fallback === 'number' && !Number.isNaN(fallback)) {
+            return fallback;
+          }
+          return 1;
+        };
+
+        toolkit.fetchQuotes(positions.map((p) => p.symbol)).then((quotes) => {
+          const holdings = [];
+          let totalValue = 0;
+          let totalDay = 0;
+
+          positions.forEach((pos) => {
+            const symbol = String(pos.symbol || '').toUpperCase();
+            const qty = Number(pos.qty || 0);
+            const cost = Number(pos.cost_main || 0);
+            const quote = quotes && quotes[symbol] ? quotes[symbol] : null;
+            const currency = quote && quote.currency ? quote.currency : (pos.currency || baseCurrency);
+            const rate = rateFor(currency, Number(pos.rate_to_main || 1));
+            const price = quote && typeof quote.regularMarketPrice === 'number' ? quote.regularMarketPrice : null;
+            const change = quote && typeof quote.regularMarketChange === 'number' ? quote.regularMarketChange : 0;
+            const value = price !== null ? price * qty * rate : cost;
+            const day = price !== null ? change * qty * rate : 0;
+            totalValue += value;
+            totalDay += day;
+            holdings.push({
+              symbol,
+              name: quote && (quote.shortName || quote.longName) ? (quote.shortName || quote.longName) : symbol,
+              value,
+              allocation: 0,
+              day,
+            });
+          });
+
+          const totalGain = totalValue - costBasis;
+          const previousValue = totalValue - totalDay;
+          const dayPct = previousValue > 0 ? (totalDay / previousValue) * 100 : 0;
+          const totalPct = costBasis > 0 ? (totalGain / costBasis) * 100 : 0;
+
+          valueEl.textContent = toolkit.formatCurrency(totalValue, baseCurrency);
+          totalEl.textContent = "<?= __('Unrealized P/L:') ?> " + toolkit.formatCurrency(totalGain, baseCurrency) + ' (' + toolkit.formatPercent(totalPct) + ')';
+          changeEl.textContent = "<?= __('Today:') ?> " + toolkit.formatCurrency(totalDay, baseCurrency) + ' (' + toolkit.formatPercent(dayPct) + ')';
+
+          totalEl.classList.toggle('text-emerald-600', totalGain > 0);
+          totalEl.classList.toggle('text-rose-600', totalGain < 0);
+          changeEl.classList.toggle('text-emerald-600', totalDay > 0);
+          changeEl.classList.toggle('text-rose-600', totalDay < 0);
+
+          holdings.sort((a, b) => b.value - a.value);
+          holdings.forEach((h) => {
+            h.allocation = totalValue > 0 ? (h.value / totalValue) * 100 : 0;
+          });
+
+          listEl.innerHTML = '';
+          holdings.slice(0, 3).forEach((h) => {
+            const li = document.createElement('li');
+            li.className = 'flex items-center justify-between rounded-2xl border border-white/60 px-3 py-2 shadow-sm backdrop-blur dark:border-slate-800/60';
+            const left = document.createElement('div');
+            left.className = 'flex flex-col';
+            const sym = document.createElement('span');
+            sym.className = 'font-semibold text-slate-900 dark:text-white';
+            sym.textContent = h.symbol;
+            const name = document.createElement('span');
+            name.className = 'text-[11px] text-slate-500 dark:text-slate-300';
+            name.textContent = h.name;
+            left.appendChild(sym);
+            left.appendChild(name);
+
+            const right = document.createElement('div');
+            right.className = 'text-right';
+            const val = document.createElement('div');
+            val.className = 'text-sm font-semibold text-brand-700 dark:text-brand-200';
+            val.textContent = toolkit.formatCurrency(h.value, baseCurrency);
+            const pct = document.createElement('div');
+            pct.className = 'text-[11px] text-slate-500 dark:text-slate-300';
+            pct.textContent = toolkit.formatPercent(h.allocation);
+            right.appendChild(val);
+            right.appendChild(pct);
+
+            li.appendChild(left);
+            li.appendChild(right);
+            listEl.appendChild(li);
+          });
+        }).catch((err) => {
+          console.error('Dashboard stocks widget error', err);
+        });
+      };
+
+      if (window.MyMoneyMapStocksToolkit && typeof window.MyMoneyMapStocksToolkit.fetchQuotes === 'function') {
+        boot();
+      } else {
+        window.addEventListener('stocks-toolkit-ready', boot, { once: true });
+      }
+    })();
+  </script>
+<?php endif; ?>

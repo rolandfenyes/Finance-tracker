@@ -524,3 +524,82 @@ function format_month_year(?string $date = null): string
 
     return month_name($month) . ' ' . $year;
 }
+
+/**
+ * Aggregate open stock positions for the given user.
+ *
+ * Returns an array of associative arrays with keys:
+ * - symbol, qty, avg_buy_price, currency, cost_local, cost_main,
+ *   rate_to_main, last_trade_on
+ */
+function stocks_positions_summary(PDO $pdo, int $userId, ?string $baseCurrency = null, ?string $asOfDate = null): array
+{
+    require_once __DIR__ . '/fx.php';
+
+    $base = strtoupper($baseCurrency ?: fx_user_main($pdo, $userId));
+    $asOf = $asOfDate ?: date('Y-m-d');
+
+    $sql = "
+        SELECT
+          st.symbol,
+          SUM(CASE WHEN st.side = 'buy' THEN st.quantity ELSE -st.quantity END) AS qty,
+          CASE
+            WHEN SUM(CASE WHEN st.side = 'buy' THEN st.quantity ELSE -st.quantity END) <> 0
+              THEN SUM(CASE WHEN st.side = 'buy' THEN st.quantity * st.price ELSE 0 END)
+                   / NULLIF(SUM(CASE WHEN st.side = 'buy' THEN st.quantity ELSE 0 END), 0)
+          END AS avg_buy_price,
+          (
+            SELECT st2.currency
+            FROM stock_trades st2
+            WHERE st2.user_id = st.user_id AND st2.symbol = st.symbol AND st2.side = 'buy'
+            ORDER BY st2.trade_on DESC, st2.id DESC
+            LIMIT 1
+          ) AS currency,
+          (
+            SELECT st3.trade_on
+            FROM stock_trades st3
+            WHERE st3.user_id = st.user_id AND st3.symbol = st.symbol
+            ORDER BY st3.trade_on DESC, st3.id DESC
+            LIMIT 1
+          ) AS last_trade_on
+        FROM stock_trades st
+        WHERE st.user_id = ?
+        GROUP BY st.symbol, st.user_id
+        HAVING SUM(CASE WHEN st.side = 'buy' THEN st.quantity ELSE -st.quantity END) <> 0
+        ORDER BY st.symbol
+    ";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$userId]);
+
+    $positions = [];
+
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $qty = (float)($row['qty'] ?? 0);
+        if (abs($qty) < 1e-9) {
+            continue;
+        }
+
+        $avgBuy = (float)($row['avg_buy_price'] ?? 0.0);
+        $currency = strtoupper($row['currency'] ?: $base);
+        $costLocal = $qty * $avgBuy;
+
+        $rate = fx_rate_from_to($pdo, $currency, $base, $asOf);
+        if ($rate === null) {
+            $rate = 1.0;
+        }
+
+        $positions[] = [
+            'symbol'        => strtoupper($row['symbol']),
+            'qty'           => $qty,
+            'avg_buy_price' => $avgBuy,
+            'currency'      => $currency,
+            'cost_local'    => $costLocal,
+            'cost_main'     => $costLocal * $rate,
+            'rate_to_main'  => $rate,
+            'last_trade_on' => $row['last_trade_on'] ?? null,
+        ];
+    }
+
+    return $positions;
+}
