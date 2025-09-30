@@ -224,6 +224,41 @@
       return chart;
     };
 
+    function mmApplyDoughnutTheme(chart, palette, values) {
+      if (!chart || !palette) return;
+
+      const datasetValues = Array.isArray(values) ? values : [];
+      const dataset = chart.data && Array.isArray(chart.data.datasets)
+        ? chart.data.datasets[0]
+        : null;
+      const segments = (pal) => {
+        const base = (pal && pal.doughnutSegments) || [];
+        return datasetValues.map((_, idx) => base[idx % base.length] || '#4b966e');
+      };
+
+      if (dataset) {
+        dataset.data = datasetValues.slice();
+        dataset.backgroundColor = segments(palette);
+        dataset.borderColor = palette.doughnutBorder || '#4b966e33';
+        dataset.borderWidth = 2;
+      }
+
+      chart.options = chart.options || {};
+      chart.options.plugins = chart.options.plugins || {};
+
+      const legend = chart.options.plugins.legend || (chart.options.plugins.legend = {});
+      legend.position = 'bottom';
+      legend.labels = legend.labels || {};
+      legend.labels.color = palette.axis || '#2f443a';
+
+      const tooltip = chart.options.plugins.tooltip || (chart.options.plugins.tooltip = {});
+      tooltip.backgroundColor = palette.tooltipBg || 'rgba(255,255,255,0.96)';
+      tooltip.borderColor = palette.tooltipBorder || 'rgba(75,150,110,0.35)';
+      tooltip.borderWidth = 1;
+      tooltip.titleColor = palette.tooltipText || '#233d30';
+      tooltip.bodyColor = palette.tooltipText || '#233d30';
+    }
+
     function mmBuildDoughnutChart(id, labels, values) {
       const canvas = document.getElementById(id);
       if (!canvas || typeof Chart === 'undefined') {
@@ -231,27 +266,37 @@
         return false;
       }
 
+      window.updateChartGlobals && window.updateChartGlobals();
+      const palette = window.getChartPalette ? window.getChartPalette() : {};
+      const valuesArray = Array.isArray(values) ? values : [];
       const existing = mmChartStore.get(id);
+
+      if (existing && existing.chart && existing.chart.config && existing.chart.config.type === 'doughnut') {
+        existing.chart.data.labels = labels;
+        if (!Array.isArray(existing.chart.data.datasets)) {
+          existing.chart.data.datasets = [];
+        }
+        if (!existing.chart.data.datasets.length) {
+          existing.chart.data.datasets.push({ data: [] });
+        }
+        mmApplyDoughnutTheme(existing.chart, palette, valuesArray);
+        existing.chart.update();
+        existing.labels = labels;
+        existing.dataset = valuesArray;
+        mmChartStore.set(id, existing);
+        return existing.chart;
+      }
+
       if (existing && existing.chart) {
         existing.chart.destroy();
       }
-
-      window.updateChartGlobals && window.updateChartGlobals();
-      const palette = window.getChartPalette ? window.getChartPalette() : {};
-      const segments = (pal) => {
-        const base = (pal && pal.doughnutSegments) || [];
-        return values.map((_, idx) => base[idx % base.length] || '#4b966e');
-      };
 
       const chart = new Chart(canvas, {
         type: 'doughnut',
         data: {
           labels,
           datasets: [{
-            data: values,
-            backgroundColor: segments(palette),
-            borderColor: palette.doughnutBorder || '#4b966e33',
-            borderWidth: 2
+            data: valuesArray.slice(),
           }]
         },
         options: {
@@ -259,22 +304,15 @@
           maintainAspectRatio: false,
           cutout: '58%',
           plugins: {
-            legend: {
-              position: 'bottom',
-              labels: { color: palette.axis || '#2f443a' }
-            },
-            tooltip: {
-              backgroundColor: palette.tooltipBg || 'rgba(255,255,255,0.96)',
-              borderColor: palette.tooltipBorder || 'rgba(75,150,110,0.35)',
-              borderWidth: 1,
-              titleColor: palette.tooltipText || '#233d30',
-              bodyColor: palette.tooltipText || '#233d30'
-            }
+            legend: {},
+            tooltip: {}
           }
         }
       });
 
-      mmChartStore.set(id, { chart, type: 'doughnut', labels, dataset: values });
+      mmApplyDoughnutTheme(chart, palette, valuesArray);
+
+      mmChartStore.set(id, { chart, type: 'doughnut', labels, dataset: valuesArray });
       return chart;
     }
 
