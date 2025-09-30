@@ -92,6 +92,9 @@ CREATE TABLE IF NOT EXISTS user_settings_stocks (
   target_allocations JSONB
 );
 
+-- Drop dependent legacy view before mutating stock_trades columns.
+DROP VIEW IF EXISTS v_stock_positions;
+
 ALTER TABLE stock_trades RENAME COLUMN quantity TO qty_old;
 ALTER TABLE stock_trades ADD COLUMN qty NUMERIC(18,6);
 UPDATE stock_trades SET qty = qty_old;
@@ -131,8 +134,6 @@ UPDATE stock_trades SET side = UPPER(side);
 
 ALTER TABLE stock_trades ADD CONSTRAINT stock_trades_side_check CHECK (side IN ('BUY','SELL'));
 ALTER TABLE stock_trades ADD CONSTRAINT stock_trades_stock_fk FOREIGN KEY (stock_id) REFERENCES stocks(id) ON DELETE CASCADE;
-
-DROP VIEW IF EXISTS v_stock_positions;
 
 CREATE INDEX IF NOT EXISTS idx_stock_positions_user ON stock_positions(user_id);
 CREATE INDEX IF NOT EXISTS idx_stock_lots_position ON stock_lots(position_id);
