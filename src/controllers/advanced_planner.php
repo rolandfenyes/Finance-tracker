@@ -720,8 +720,44 @@ function advanced_planner_average_spending(
     }
     unset($loan);
 
+    $loanAggregate = null;
+    foreach ($loanTotals as $loan) {
+        $total = isset($loan['total']) ? (float)$loan['total'] : 0.0;
+        $average = isset($loan['average']) ? (float)$loan['average'] : 0.0;
+        $scheduledAverage = isset($loan['scheduled_average']) ? (float)$loan['scheduled_average'] : 0.0;
+        if ($total <= 0 && $average <= 0 && $scheduledAverage <= 0) {
+            continue;
+        }
+        if ($loanAggregate === null) {
+            $loanAggregate = [
+                'id' => null,
+                'label' => __('Loan payments'),
+                'color' => '#0EA5E9',
+                'cashflow_rule_id' => null,
+                'total' => 0.0,
+                'average' => 0.0,
+            ];
+        }
+        $loanAggregate['total'] += $total;
+        $loanAggregate['average'] += $average;
+        if ($scheduledAverage > 0) {
+            $loanAggregate['scheduled_average'] = ($loanAggregate['scheduled_average'] ?? 0.0) + $scheduledAverage;
+        }
+    }
+
+    if ($loanAggregate !== null) {
+        $loanAggregate['total'] = round($loanAggregate['total'], 2);
+        $loanAggregate['average'] = round($loanAggregate['average'], 2);
+        if (isset($loanAggregate['scheduled_average'])) {
+            $loanAggregate['scheduled_average'] = round($loanAggregate['scheduled_average'], 2);
+        }
+        $loanTotals = [$loanAggregate];
+    } else {
+        $loanTotals = [];
+    }
+
     return [
-        'categories' => array_merge(array_values($totals), array_values($loanTotals)),
+        'categories' => array_merge(array_values($totals), $loanTotals),
         'months' => $monthsCount,
         'window_start' => $windowStart->format('Y-m-d'),
         'window_end' => $windowEnd->format('Y-m-d'),
