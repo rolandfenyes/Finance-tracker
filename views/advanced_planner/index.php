@@ -811,6 +811,7 @@ $ruleDataForJs = array_map(
         row,
         ruleId: row.dataset.ruleId ? Number.parseInt(row.dataset.ruleId, 10) : null,
         averageInput,
+        average: Number.parseFloat(averageInput?.value || '0') || 0,
         suggestedInput,
         displayCell: row.querySelector('[data-category-suggested-display]'),
         lockedInput,
@@ -863,22 +864,28 @@ $ruleDataForJs = array_map(
     const computeCategorySuggestions = (income, discretionary, difficultyKey) => {
       const multiplier = difficultyConfig[difficultyKey]?.multiplier ?? 1;
       const lockedAmounts = new Map();
+      const adjustableBases = new Map();
       let totalLocked = 0;
 
       categoryRows.forEach((cat, idx) => {
         const minValue = Number.isFinite(cat.lockedMin) ? Math.max(0, cat.lockedMin) : 0;
+        const averageValue = Number.isFinite(cat.average) ? cat.average : Number.parseFloat(cat.averageInput?.value || '0') || 0;
         const manualValue = Number.parseFloat(cat.suggestedInput?.value || '0');
         const effectiveManual = Number.isFinite(manualValue) ? manualValue : 0;
         let lockedBase = 0;
+        let adjustableBase = 0;
         if (cat.manual) {
           lockedBase = Math.max(minValue, effectiveManual);
-        } else if (minValue > 0) {
-          lockedBase = minValue;
+          adjustableBase = 0;
+        } else {
+          lockedBase = minValue > 0 ? minValue : 0;
+          adjustableBase = Math.max(0, averageValue - lockedBase);
         }
         if (lockedBase > 0) {
           lockedAmounts.set(idx, lockedBase);
           totalLocked += lockedBase;
         }
+        adjustableBases.set(idx, adjustableBase);
       });
 
       const availableDiscretionary = Math.max(0, discretionary - totalLocked);
@@ -895,7 +902,9 @@ $ruleDataForJs = array_map(
         const group = groups.get(ruleId);
         if (lockedAmounts.has(idx)) {
           group.locked += lockedAmounts.get(idx);
-        } else {
+        }
+        const adjustableBase = adjustableBases.get(idx) || 0;
+        if (adjustableBase > 0) {
           group.adjustable.push(idx);
         }
       });
@@ -927,13 +936,13 @@ $ruleDataForJs = array_map(
         }
         let totalAvg = 0;
         group.adjustable.forEach((idx) => {
-          const avg = Number.parseFloat(categoryRows[idx].averageInput?.value || '0') || 0;
-          totalAvg += Math.max(0, avg);
+          const base = adjustableBases.get(idx) || 0;
+          totalAvg += Math.max(0, base);
         });
         group.adjustable.forEach((idx) => {
-          const avg = Number.parseFloat(categoryRows[idx].averageInput?.value || '0') || 0;
+          const base = adjustableBases.get(idx) || 0;
           if (totalAvg > 0) {
-            adjustableValues[idx] = ruleBudget * (Math.max(0, avg) / totalAvg);
+            adjustableValues[idx] = ruleBudget * (Math.max(0, base) / totalAvg);
           } else {
             adjustableValues[idx] = ruleBudget / group.adjustable.length;
           }
@@ -945,7 +954,8 @@ $ruleDataForJs = array_map(
         if (cat.ruleId) {
           return;
         }
-        if (lockedAmounts.has(idx)) {
+        const base = adjustableBases.get(idx) || 0;
+        if (base <= 0) {
           return;
         }
         unruledAdjustable.push(idx);
@@ -959,15 +969,15 @@ $ruleDataForJs = array_map(
       if (unruledAdjustable.length > 0) {
         let totalAvg = 0;
         unruledAdjustable.forEach((idx) => {
-          const avg = Number.parseFloat(categoryRows[idx].averageInput?.value || '0') || 0;
-          totalAvg += Math.max(0, avg);
+          const base = adjustableBases.get(idx) || 0;
+          totalAvg += Math.max(0, base);
         });
         unruledAdjustable.forEach((idx) => {
-          const avg = Number.parseFloat(categoryRows[idx].averageInput?.value || '0') || 0;
+          const base = adjustableBases.get(idx) || 0;
           if (leftoverForUnruled <= 0) {
             adjustableValues[idx] = 0;
           } else if (totalAvg > 0) {
-            adjustableValues[idx] = leftoverForUnruled * (Math.max(0, avg) / totalAvg);
+            adjustableValues[idx] = leftoverForUnruled * (Math.max(0, base) / totalAvg);
           } else {
             adjustableValues[idx] = leftoverForUnruled / unruledAdjustable.length;
           }
@@ -976,7 +986,8 @@ $ruleDataForJs = array_map(
 
       const multiplierValue = Number.isFinite(multiplier) ? multiplier : 1;
       adjustableValues.forEach((value, idx) => {
-        if (lockedAmounts.has(idx)) {
+        const base = adjustableBases.get(idx) || 0;
+        if (base <= 0) {
           return;
         }
         adjustableValues[idx] = Math.max(0, value * multiplierValue);
@@ -984,14 +995,16 @@ $ruleDataForJs = array_map(
 
       let totalAdjustable = 0;
       adjustableValues.forEach((value, idx) => {
-        if (!lockedAmounts.has(idx)) {
+        const base = adjustableBases.get(idx) || 0;
+        if (base > 0) {
           totalAdjustable += value;
         }
       });
       if (totalAdjustable > availableDiscretionary && availableDiscretionary > 0) {
         const ratio = availableDiscretionary / totalAdjustable;
         adjustableValues.forEach((value, idx) => {
-          if (!lockedAmounts.has(idx)) {
+          const base = adjustableBases.get(idx) || 0;
+          if (base > 0) {
             adjustableValues[idx] = value * ratio;
           }
         });
@@ -999,11 +1012,10 @@ $ruleDataForJs = array_map(
 
       const finalValues = new Array(categoryRows.length).fill(0);
       categoryRows.forEach((cat, idx) => {
-        if (lockedAmounts.has(idx)) {
-          finalValues[idx] = lockedAmounts.get(idx);
-        } else {
-          finalValues[idx] = Math.max(0, adjustableValues[idx]);
-        }
+        const lockedBase = lockedAmounts.get(idx) || 0;
+        const base = adjustableBases.get(idx) || 0;
+        const adjustableValue = base > 0 ? Math.max(0, adjustableValues[idx]) : 0;
+        finalValues[idx] = lockedBase + adjustableValue;
       });
 
       return finalValues;

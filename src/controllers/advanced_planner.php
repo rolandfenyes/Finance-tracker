@@ -966,20 +966,25 @@ function advanced_planner_calculate_category_suggestions(
             ? $rawRuleId
             : null;
 
+        $lockedBase = $scheduled > 0 ? $scheduled : 0.0;
+        $adjustableBase = max(0.0, $avg - $lockedBase);
+
         $categoryData[] = [
             'category_id' => $catId,
             'label' => $cat['label'],
             'average' => $avg,
             'rule_id' => $ruleId,
             'scheduled' => $scheduled,
+            'locked_base' => $lockedBase,
+            'adjustable_base' => $adjustableBase,
         ];
     }
 
     $lockedAmounts = [];
     $totalLocked = 0.0;
     foreach ($categoryData as $idx => $cat) {
-        if ($cat['scheduled'] > 0) {
-            $lockedAmount = max($cat['average'], $cat['scheduled']);
+        if ($cat['locked_base'] > 0) {
+            $lockedAmount = $cat['locked_base'];
             $lockedAmounts[$idx] = $lockedAmount;
             $totalLocked += $lockedAmount;
         }
@@ -1002,7 +1007,8 @@ function advanced_planner_calculate_category_suggestions(
         }
         if (isset($lockedAmounts[$idx])) {
             $ruleGroups[$ruleId]['locked_sum'] += $lockedAmounts[$idx];
-        } else {
+        }
+        if ($categoryData[$idx]['adjustable_base'] > 0) {
             $ruleGroups[$ruleId]['adjustable_indexes'][] = $idx;
         }
     }
@@ -1036,11 +1042,12 @@ function advanced_planner_calculate_category_suggestions(
         }
         $totalAverage = 0.0;
         foreach ($indexes as $idx) {
-            $totalAverage += $categoryData[$idx]['average'];
+            $totalAverage += $categoryData[$idx]['adjustable_base'];
         }
         foreach ($indexes as $idx) {
+            $adjustableBase = $categoryData[$idx]['adjustable_base'];
             if ($totalAverage > 0) {
-                $weight = $categoryData[$idx]['average'] / $totalAverage;
+                $weight = $adjustableBase / $totalAverage;
                 $adjustableValues[$idx] = $ruleBudget * $weight;
             } else {
                 $adjustableValues[$idx] = $ruleBudget / count($indexes);
@@ -1053,7 +1060,7 @@ function advanced_planner_calculate_category_suggestions(
         if ($cat['rule_id'] !== null) {
             continue;
         }
-        if (isset($lockedAmounts[$idx])) {
+        if ($categoryData[$idx]['adjustable_base'] <= 0) {
             continue;
         }
         $unruledIndexes[] = $idx;
@@ -1067,15 +1074,16 @@ function advanced_planner_calculate_category_suggestions(
     if ($unruledIndexes) {
         $totalAverage = 0.0;
         foreach ($unruledIndexes as $idx) {
-            $totalAverage += $categoryData[$idx]['average'];
+            $totalAverage += $categoryData[$idx]['adjustable_base'];
         }
         foreach ($unruledIndexes as $idx) {
+            $adjustableBase = $categoryData[$idx]['adjustable_base'];
             if ($leftoverForUnruled <= 0) {
                 $adjustableValues[$idx] = 0.0;
                 continue;
             }
             if ($totalAverage > 0) {
-                $weight = $categoryData[$idx]['average'] / $totalAverage;
+                $weight = $adjustableBase / $totalAverage;
                 $adjustableValues[$idx] = $leftoverForUnruled * $weight;
             } else {
                 $adjustableValues[$idx] = $leftoverForUnruled / count($unruledIndexes);
@@ -1084,7 +1092,7 @@ function advanced_planner_calculate_category_suggestions(
     }
 
     foreach ($adjustableValues as $idx => &$value) {
-        if (isset($lockedAmounts[$idx])) {
+        if ($categoryData[$idx]['adjustable_base'] <= 0) {
             continue;
         }
         $value *= $multiplier;
@@ -1093,14 +1101,14 @@ function advanced_planner_calculate_category_suggestions(
 
     $totalAdjustable = 0.0;
     foreach ($adjustableValues as $idx => $value) {
-        if (!isset($lockedAmounts[$idx])) {
+        if ($categoryData[$idx]['adjustable_base'] > 0) {
             $totalAdjustable += $value;
         }
     }
     if ($totalAdjustable > $availableDiscretionary && $availableDiscretionary > 0) {
         $ratio = $availableDiscretionary / $totalAdjustable;
         foreach ($adjustableValues as $idx => &$value) {
-            if (!isset($lockedAmounts[$idx])) {
+            if ($categoryData[$idx]['adjustable_base'] > 0) {
                 $value *= $ratio;
             }
         }
@@ -1110,14 +1118,15 @@ function advanced_planner_calculate_category_suggestions(
     $result = [];
     foreach ($categoryData as $idx => $cat) {
         $lockedMin = isset($lockedAmounts[$idx]) ? $lockedAmounts[$idx] : 0.0;
-        $value = isset($lockedAmounts[$idx]) ? $lockedMin : $adjustableValues[$idx];
+        $adjustablePortion = $cat['adjustable_base'] > 0 ? $adjustableValues[$idx] : 0.0;
+        $value = $lockedMin + $adjustablePortion;
         $result[] = [
             'category_id' => $cat['category_id'],
             'label' => $cat['label'],
             'average' => round($cat['average'], 2),
             'suggested' => round(max(0.0, $value), 2),
             'scheduled' => round(max(0.0, $cat['scheduled']), 2),
-            'locked' => isset($lockedAmounts[$idx]),
+            'locked' => $lockedMin > 0,
             'locked_min' => round(max(0.0, $lockedMin), 2),
         ];
     }
