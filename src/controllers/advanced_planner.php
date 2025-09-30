@@ -23,6 +23,10 @@ function advanced_planner_show(PDO $pdo): void
     $spendingCategories = advanced_planner_fetch_spending_categories($pdo, $userId);
     $averages = advanced_planner_average_spending($pdo, $userId, $mainCurrency, $startMonth, $spendingCategories, $averageMonths);
 
+    $previewIncome = (float)($incomeData['total'] ?? 0);
+    $reservedFreePreview = advanced_planner_reserved_free_amount($previewIncome);
+    $planningCapacityPreview = max(0.0, $previewIncome - $reservedFreePreview);
+
     $resources = advanced_planner_collect_resources($pdo, $userId, $mainCurrency);
     $difficultyOptions = advanced_planner_difficulty_options();
     $difficultyConfig = [];
@@ -38,8 +42,8 @@ function advanced_planner_show(PDO $pdo): void
     $initialSuggestions = advanced_planner_calculate_category_suggestions(
         $pdo,
         $userId,
-        (float)($incomeData['total'] ?? 0),
-        (float)($incomeData['total'] ?? 0),
+        $previewIncome,
+        $planningCapacityPreview,
         $averages,
         $defaultDifficulty,
         $cashflowRules
@@ -70,6 +74,8 @@ function advanced_planner_show(PDO $pdo): void
     $planCategoryLimits = [];
     $planCategoryTotal = 0.0;
     $planFreeAfterLimits = 0.0;
+    $planMonthlyBreakdown = [];
+    $planReservedFree = 0.0;
     if ($currentPlan) {
         $itemStmt = $pdo->prepare(
             'SELECT * FROM advanced_plan_items WHERE plan_id = ? ORDER BY priority ASC, sort_order ASC, id ASC'
@@ -91,6 +97,14 @@ function advanced_planner_show(PDO $pdo): void
             0.0,
             round((float)($currentPlan['monthly_discretionary'] ?? 0) - $planCategoryTotal, 2)
         );
+
+        $planReservedFree = advanced_planner_reserved_free_amount((float)($currentPlan['monthly_income'] ?? 0));
+        $planMonthlyBreakdown = advanced_planner_plan_monthly_breakdown(
+            $currentPlan,
+            $planItems,
+            $planCategoryLimits,
+            $planReservedFree
+        );
     }
 
     view('advanced_planner/index', [
@@ -100,6 +114,8 @@ function advanced_planner_show(PDO $pdo): void
         'planCategoryLimits' => $planCategoryLimits,
         'planCategoryTotal' => $planCategoryTotal,
         'planFreeAfterLimits' => $planFreeAfterLimits,
+        'planReservedFree' => $planReservedFree,
+        'planMonthlyBreakdown' => $planMonthlyBreakdown,
         'mainCurrency' => $mainCurrency,
         'startSuggestion' => $startMonth->format('Y-m'),
         'startParam' => $startParam,
@@ -116,6 +132,7 @@ function advanced_planner_show(PDO $pdo): void
         'cashflowRules' => $cashflowRules,
         'defaultDifficulty' => $defaultDifficulty,
         'initialCategorySuggestions' => $initialSuggestions,
+        'reservedFreePreview' => $reservedFreePreview,
     ]);
 }
 
@@ -263,13 +280,12 @@ function advanced_planner_store(PDO $pdo): void
     $spendingCategories = advanced_planner_fetch_spending_categories($pdo, $userId);
     $averages = advanced_planner_average_spending($pdo, $userId, $mainCurrency, $startMonth, $spendingCategories, $avgMonths);
 
-    $totalCommitments = 0.0;
-    foreach ($items as $item) {
-        $totalCommitments += $item['monthly'];
-    }
-    $totalCommitments = round($totalCommitments, 2);
+    $reservedFree = advanced_planner_reserved_free_amount($monthlyIncome);
+    $schedule = advanced_planner_schedule_milestones($items, $startMonth, $horizon, $monthlyIncome, $reservedFree);
+    $items = $schedule['items'];
 
-    $monthlyDiscretionary = max(0.0, $monthlyIncome - $totalCommitments);
+    $totalCommitments = round($schedule['average_load'] ?? 0.0, 2);
+    $monthlyDiscretionary = round(max(0.0, $schedule['min_available'] ?? 0.0), 2);
 
     $cashflowRules = advanced_planner_fetch_cashflow_rules($pdo, $userId);
     $categorySuggestions = advanced_planner_calculate_category_suggestions(
@@ -1179,4 +1195,325 @@ function advanced_planner_calculate_category_suggestions(
     }
 
     return $result;
+}
+
+function advanced_planner_reserved_free_amount(float $monthlyIncome): float
+{
+    if ($monthlyIncome <= 0) {
+        return 0.0;
+    }
+
+    return round(max(0.0, $monthlyIncome * 0.10), 2);
+}
+
+function advanced_planner_month_index(
+    DateTimeImmutable $startMonth,
+    ?DateTimeImmutable $target,
+    int $horizon
+): int {
+    if ($horizon <= 0) {
+        return 0;
+    }
+
+    if ($target === null) {
+        return max(0, $horizon - 1);
+    }
+
+    if ($target < $startMonth) {
+        return 0;
+    }
+
+    $diff = $startMonth->diff($target);
+    $index = ($diff->y * 12) + $diff->m;
+    $index = max(0, $index);
+
+    return min($index, max(0, $horizon - 1));
+}
+
+function advanced_planner_schedule_milestones(
+    array $items,
+    DateTimeImmutable $startMonth,
+    int $horizon,
+    float $monthlyIncome,
+    float $reservedFree
+): array {
+    $horizon = max(1, $horizon);
+    $capacity = max(0.0, $monthlyIncome - max(0.0, $reservedFree));
+
+    $months = [];
+    for ($i = 0; $i < $horizon; $i++) {
+        $months[] = [
+            'index' => $i,
+            'date' => $startMonth->modify('+' . $i . ' months'),
+            'load' => 0.0,
+        ];
+    }
+
+    $entries = [];
+    foreach ($items as $idx => $item) {
+        $required = isset($item['required'])
+            ? (float)$item['required']
+            : (float)($item['required_amount'] ?? 0.0);
+        $required = max(0.0, $required);
+
+        $dueRaw = $item['due'] ?? $item['target_due_date'] ?? null;
+        $hasDue = $dueRaw !== null && $dueRaw !== '';
+        $due = null;
+        if ($hasDue) {
+            $due = DateTimeImmutable::createFromFormat('Y-m-d', (string)$dueRaw)
+                ?: DateTimeImmutable::createFromFormat('Y-m', (string)$dueRaw);
+            if ($due instanceof DateTimeImmutable) {
+                $due = $due->setDate((int)$due->format('Y'), (int)$due->format('n'), 1);
+            } else {
+                $due = null;
+                $hasDue = false;
+            }
+        }
+
+        $dueIndex = advanced_planner_month_index($startMonth, $due, $horizon);
+
+        $entries[] = [
+            'key' => $idx,
+            'item' => $item,
+            'required' => $required,
+            'due_index' => $dueIndex,
+            'has_due' => $hasDue,
+        ];
+    }
+
+    $dueEntries = array_filter($entries, static fn(array $entry): bool => !empty($entry['has_due']));
+    $flexEntries = array_filter($entries, static fn(array $entry): bool => empty($entry['has_due']));
+
+    usort($dueEntries, static function (array $a, array $b): int {
+        $dueComparison = $a['due_index'] <=> $b['due_index'];
+        if ($dueComparison !== 0) {
+            return $dueComparison;
+        }
+
+        return $b['required'] <=> $a['required'];
+    });
+
+    usort($flexEntries, static function (array $a, array $b): int {
+        $requiredDiff = $b['required'] <=> $a['required'];
+        if ($requiredDiff !== 0) {
+            return $requiredDiff;
+        }
+
+        return $a['key'] <=> $b['key'];
+    });
+
+    $orderedEntries = array_merge($dueEntries, $flexEntries);
+
+    $allocations = [];
+    $monthCount = count($months);
+
+    foreach ($orderedEntries as $entry) {
+        $key = $entry['key'];
+        $required = $entry['required'];
+        $dueIndex = min($entry['due_index'], max(0, $monthCount - 1));
+
+        if ($required <= 0) {
+            $allocations[$key] = [
+                'start' => $dueIndex,
+                'end' => $dueIndex,
+                'length' => 0,
+                'monthly' => 0.0,
+                'schedule' => [],
+            ];
+            continue;
+        }
+
+        $bestStart = 0;
+        $bestMonthly = $required / max(1, $dueIndex + 1);
+        $bestLength = max(1, $dueIndex + 1);
+        $bestOverflow = PHP_FLOAT_MAX;
+
+        for ($start = $dueIndex; $start >= 0; $start--) {
+            $length = $dueIndex - $start + 1;
+            if ($length <= 0) {
+                continue;
+            }
+            $monthlyShare = $required / $length;
+            $fits = true;
+            $overflow = 0.0;
+
+            for ($i = $start; $i <= $dueIndex; $i++) {
+                if (!isset($months[$i])) {
+                    continue;
+                }
+                $projected = $months[$i]['load'] + $monthlyShare;
+                if ($projected - $capacity > 1e-6) {
+                    $fits = false;
+                    $overflow = max($overflow, $projected - $capacity);
+                }
+            }
+
+            if ($fits) {
+                $bestStart = $start;
+                $bestMonthly = $monthlyShare;
+                $bestLength = $length;
+                $bestOverflow = -1.0;
+                break;
+            }
+
+            if ($overflow < $bestOverflow) {
+                $bestOverflow = $overflow;
+                $bestStart = $start;
+                $bestMonthly = $monthlyShare;
+                $bestLength = $length;
+            }
+        }
+
+        $schedule = [];
+        for ($i = $bestStart; $i <= $dueIndex; $i++) {
+            if (!isset($months[$i])) {
+                continue;
+            }
+            $months[$i]['load'] += $bestMonthly;
+            $schedule[] = [
+                'month_index' => $i,
+                'amount' => $bestMonthly,
+            ];
+        }
+
+        $allocations[$key] = [
+            'start' => $bestStart,
+            'end' => $dueIndex,
+            'length' => $bestLength,
+            'monthly' => $bestMonthly,
+            'schedule' => $schedule,
+        ];
+    }
+
+    $scheduledItems = [];
+    foreach ($entries as $entry) {
+        $key = $entry['key'];
+        $item = $entry['item'];
+        $allocation = $allocations[$key] ?? [
+            'start' => $entry['due_index'],
+            'end' => $entry['due_index'],
+            'length' => 0,
+            'monthly' => 0.0,
+            'schedule' => [],
+        ];
+
+        $item['monthly'] = round($allocation['monthly'], 2);
+        $item['start_offset'] = $allocation['start'];
+        $item['end_offset'] = $allocation['end'];
+        $item['active_months'] = max(0, $allocation['length']);
+        $item['monthly_schedule'] = array_map(
+            static function (array $slot): array {
+                return [
+                    'month_index' => $slot['month_index'],
+                    'amount' => round($slot['amount'], 2),
+                ];
+            },
+            $allocation['schedule']
+        );
+
+        $scheduledItems[] = $item;
+    }
+
+    $monthlyTotals = [];
+    $minAvailable = $capacity;
+    $totalLoad = 0.0;
+    $peakLoad = 0.0;
+
+    foreach ($months as &$month) {
+        $load = $month['load'];
+        $monthlyTotals[] = $load;
+        $totalLoad += $load;
+        $peakLoad = max($peakLoad, $load);
+        $available = max(0.0, $capacity - $load);
+        $month['available'] = $available;
+        $minAvailable = min($minAvailable, $available);
+    }
+    unset($month);
+
+    $averageLoad = $monthlyTotals ? ($totalLoad / count($monthlyTotals)) : 0.0;
+
+    $monthPayload = array_map(
+        static function (array $month): array {
+            /** @var DateTimeImmutable $date */
+            $date = $month['date'];
+            return [
+                'date' => $date->format('Y-m-01'),
+                'load' => round($month['load'], 2),
+                'available' => round($month['available'], 2),
+            ];
+        },
+        $months
+    );
+
+    return [
+        'items' => $scheduledItems,
+        'months' => $monthPayload,
+        'capacity' => round($capacity, 2),
+        'reserved_free' => round(max(0.0, $reservedFree), 2),
+        'average_load' => $averageLoad,
+        'peak_load' => $peakLoad,
+        'min_available' => $minAvailable,
+    ];
+}
+
+function advanced_planner_plan_monthly_breakdown(
+    array $plan,
+    array $planItems,
+    array $planCategoryLimits,
+    float $reservedFree
+): array {
+    $horizon = max(1, (int)($plan['horizon_months'] ?? 1));
+    $startRaw = $plan['plan_start'] ?? null;
+    $startMonth = DateTimeImmutable::createFromFormat('Y-m-d', (string)$startRaw) ?: new DateTimeImmutable('first day of this month');
+    $startMonth = $startMonth->setDate((int)$startMonth->format('Y'), (int)$startMonth->format('n'), 1);
+    $monthlyIncome = (float)($plan['monthly_income'] ?? 0);
+
+    $items = [];
+    foreach ($planItems as $item) {
+        $items[] = [
+            'label' => $item['reference_label'] ?? '',
+            'required' => (float)($item['required_amount'] ?? 0),
+            'due' => $item['target_due_date'] ?? null,
+        ];
+    }
+
+    $schedule = advanced_planner_schedule_milestones($items, $startMonth, $horizon, $monthlyIncome, $reservedFree);
+
+    $categoryTotal = 0.0;
+    foreach ($planCategoryLimits as $limit) {
+        $categoryTotal += (float)($limit['suggested_limit'] ?? 0);
+    }
+    $categoryTotal = round($categoryTotal, 2);
+
+    $capacity = $schedule['capacity'] ?? max(0.0, $monthlyIncome - $reservedFree);
+    $reserved = round(max(0.0, $reservedFree), 2);
+    $months = [];
+
+    foreach ($schedule['months'] as $month) {
+        $dateString = $month['date'];
+        $milestones = (float)$month['load'];
+        $available = (float)$month['available'];
+        $freeCushion = $monthlyIncome - $reserved - $categoryTotal - $milestones;
+
+        $months[] = [
+            'date' => $dateString,
+            'milestones' => round($milestones, 2),
+            'categories' => $categoryTotal,
+            'reserved' => $reserved,
+            'free' => round($freeCushion, 2),
+            'total_planned' => round($milestones + $categoryTotal + $reserved, 2),
+            'capacity' => round($capacity, 2),
+            'available_for_categories' => round($available, 2),
+        ];
+    }
+
+    return [
+        'months' => $months,
+        'category_total' => $categoryTotal,
+        'reserved_free' => $reserved,
+        'capacity' => round($capacity, 2),
+        'monthly_income' => round($monthlyIncome, 2),
+        'peak_milestones' => round($schedule['peak_load'] ?? 0.0, 2),
+        'average_milestones' => round($schedule['average_load'] ?? 0.0, 2),
+    ];
 }

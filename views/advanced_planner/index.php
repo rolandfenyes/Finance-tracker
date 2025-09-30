@@ -5,6 +5,8 @@
 /** @var array $planCategoryLimits */
 /** @var float $planCategoryTotal */
 /** @var float $planFreeAfterLimits */
+/** @var float $planReservedFree */
+/** @var array $planMonthlyBreakdown */
 /** @var string $mainCurrency */
 /** @var string $startSuggestion */
 /** @var string $startParam */
@@ -21,6 +23,7 @@
 /** @var array $cashflowRules */
 /** @var string $defaultDifficulty */
 /** @var array $initialCategorySuggestions */
+/** @var float $reservedFreePreview */
 ?>
 
 <section class="card">
@@ -297,7 +300,7 @@
           <span class="font-medium" data-budget-progress-label>
             <?= __('Allocated :spent of :available', [
               'spent' => moneyfmt(0, $mainCurrency),
-              'available' => moneyfmt($incomeData['total'] ?? 0, $mainCurrency),
+              'available' => moneyfmt(max(0, ($incomeData['total'] ?? 0) - $reservedFreePreview), $mainCurrency),
             ]) ?>
           </span>
           <div class="flex h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
@@ -307,8 +310,13 @@
             ></div>
           </div>
           <span class="text-xs" data-leftover-preview>
-            <?= __('Free to allocate: :amount/month', [
-              'amount' => moneyfmt($incomeData['total'] ?? 0, $mainCurrency),
+            <?= __('Free to allocate after cushion: :amount/month', [
+              'amount' => moneyfmt(max(0, ($incomeData['total'] ?? 0) - $reservedFreePreview), $mainCurrency),
+            ]) ?>
+          </span>
+          <span class="text-xs text-slate-500 dark:text-slate-400" data-reserved-preview>
+            <?= __('Reserved safety cushion (10%): :amount/month', [
+              'amount' => moneyfmt($reservedFreePreview, $mainCurrency),
             ]) ?>
           </span>
         </div>
@@ -413,6 +421,36 @@
       </div>
     </div>
 
+    <div class="rounded-3xl border border-white/70 bg-white/70 p-4 shadow-sm backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/60">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white"><?= __('Monthly spending preview') ?></h3>
+          <p class="text-sm text-slate-500 dark:text-slate-400">
+            <?= __('We always keep at least 10% of income free. Flexible milestones slide later automatically to stay within the liveable budget.') ?>
+          </p>
+        </div>
+      </div>
+      <div class="mt-3 overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead>
+            <tr class="border-b border-white/60 text-left text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800/60 dark:text-slate-400">
+              <th class="py-2 pr-3"><?= __('Month') ?></th>
+              <th class="py-2 pr-3"><?= __('Milestones') ?></th>
+              <th class="py-2 pr-3"><?= __('Categories') ?></th>
+              <th class="py-2 pr-3"><?= __('Reserved 10%') ?></th>
+              <th class="py-2 pr-3"><?= __('Unallocated') ?></th>
+              <th class="py-2 pr-3"><?= __('Total planned') ?></th>
+            </tr>
+          </thead>
+          <tbody data-monthly-preview-body>
+          </tbody>
+        </table>
+      </div>
+      <p class="mt-3 text-xs text-slate-500 dark:text-slate-400" data-monthly-preview-empty>
+        <?= __('Add milestones or adjust category limits to see a month-by-month breakdown.') ?>
+      </p>
+    </div>
+
     <div class="flex flex-col gap-3 rounded-3xl border border-white/70 bg-white/80 px-4 py-4 shadow-sm backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/60 sm:flex-row sm:items-center sm:justify-between">
       <label class="inline-flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
         <input type="checkbox" name="activate" value="1" class="checkbox" />
@@ -457,17 +495,21 @@
       </div>
     </div>
 
-    <div class="mt-6 grid gap-4 sm:grid-cols-3">
+    <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <div class="panel p-4 text-sm">
         <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400"><?= __('Monthly income') ?></div>
         <div class="mt-1 text-2xl font-semibold text-slate-900 dark:text-white"><?= moneyfmt($currentPlan['monthly_income'], $currentPlan['main_currency']) ?></div>
       </div>
       <div class="panel p-4 text-sm">
-        <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400"><?= __('Milestone funding') ?></div>
+        <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400"><?= __('Reserved safety cushion (10%)') ?></div>
+        <div class="mt-1 text-2xl font-semibold text-slate-900 dark:text-white"><?= moneyfmt($planReservedFree, $currentPlan['main_currency']) ?></div>
+      </div>
+      <div class="panel p-4 text-sm">
+        <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400"><?= __('Avg. milestone funding') ?></div>
         <div class="mt-1 text-2xl font-semibold text-slate-900 dark:text-white"><?= moneyfmt($currentPlan['monthly_commitments'], $currentPlan['main_currency']) ?></div>
       </div>
       <div class="panel p-4 text-sm">
-        <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400"><?= __('Leftover for spending') ?></div>
+        <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400"><?= __('Available for categories') ?></div>
         <div class="mt-1 text-2xl font-semibold text-slate-900 dark:text-white"><?= moneyfmt($currentPlan['monthly_discretionary'], $currentPlan['main_currency']) ?></div>
       </div>
     </div>
@@ -476,9 +518,9 @@
       <div class="mt-4 rounded-3xl border border-white/70 bg-white/70 p-4 shadow-sm backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/60">
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div class="text-sm font-semibold text-slate-800 dark:text-slate-100"><?= __('Monthly cushion after planned spendings') ?></div>
+            <div class="text-sm font-semibold text-slate-800 dark:text-slate-100"><?= __('Monthly cushion after planned spendings (excludes 10% reserve)') ?></div>
             <p class="text-xs text-slate-500 dark:text-slate-400">
-              <?= __('This is what remains flexible each month once milestones and suggested category limits are funded.') ?>
+              <?= __('This is the flex left after milestones and suggested limits are funded. A 10% income cushion stays untouched each month.') ?>
             </p>
           </div>
           <div class="text-xl font-semibold text-slate-900 dark:text-white">
@@ -490,6 +532,45 @@
             <?= __('Planned category spending totals :amount/month.', ['amount' => moneyfmt($planCategoryTotal, $currentPlan['main_currency'])]) ?>
           </div>
         <?php endif; ?>
+      </div>
+    <?php endif; ?>
+
+    <?php if (!empty($planMonthlyBreakdown['months'])): ?>
+      <div class="mt-6">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-white"><?= __('Monthly spending outlook') ?></h3>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          <?= __('Milestones without deadlines start later automatically so each month stays within the 90% spending capacity.') ?>
+        </p>
+        <div class="mt-3 overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead>
+              <tr class="border-b border-white/60 text-left text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800/60 dark:text-slate-400">
+                <th class="py-2 pr-3"><?= __('Month') ?></th>
+                <th class="py-2 pr-3"><?= __('Milestones') ?></th>
+                <th class="py-2 pr-3"><?= __('Categories') ?></th>
+                <th class="py-2 pr-3"><?= __('Reserved 10%') ?></th>
+                <th class="py-2 pr-3"><?= __('Unallocated') ?></th>
+                <th class="py-2 pr-3"><?= __('Total planned') ?></th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($planMonthlyBreakdown['months'] as $month): ?>
+                <?php
+                  $free = (float)($month['free'] ?? 0);
+                  $freeClass = $free < -0.01 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-600 dark:text-slate-300';
+                ?>
+                <tr class="border-b border-white/50 dark:border-slate-800/50">
+                  <td class="py-2 pr-3 text-slate-600 dark:text-slate-300"><?= date('M Y', strtotime($month['date'])) ?></td>
+                  <td class="py-2 pr-3 font-medium text-slate-700 dark:text-slate-100"><?= moneyfmt($month['milestones'], $currentPlan['main_currency']) ?></td>
+                  <td class="py-2 pr-3 text-slate-600 dark:text-slate-300"><?= moneyfmt($month['categories'], $currentPlan['main_currency']) ?></td>
+                  <td class="py-2 pr-3 text-slate-600 dark:text-slate-300"><?= moneyfmt($month['reserved'], $currentPlan['main_currency']) ?></td>
+                  <td class="py-2 pr-3 font-medium <?= $freeClass ?>"><?= moneyfmt($free, $currentPlan['main_currency']) ?></td>
+                  <td class="py-2 pr-3 text-slate-600 dark:text-slate-300"><?= moneyfmt($month['total_planned'], $currentPlan['main_currency']) ?></td>
+                </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
       </div>
     <?php endif; ?>
 
@@ -705,6 +786,8 @@ $ruleDataForJs = array_map(
     const horizonSelect = document.querySelector('[data-horizon-selector]');
     const startInput = document.querySelector('input[name="start_month"]');
     const leftoverPreview = document.querySelector('[data-leftover-preview]');
+    const monthlyPreviewBody = document.querySelector('[data-monthly-preview-body]');
+    const monthlyPreviewEmpty = document.querySelector('[data-monthly-preview-empty]');
     const progressWrapper = document.querySelector('[data-budget-progress-wrapper]');
     const progressBar = document.querySelector('[data-budget-progress-bar]');
     const progressLabel = document.querySelector('[data-budget-progress-label]');
@@ -715,10 +798,12 @@ $ruleDataForJs = array_map(
     const difficultyConfig = <?= json_encode($difficultyConfig, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     const ruleData = <?= json_encode($ruleDataForJs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     const monthlyIncome = <?= json_encode((float)($incomeData['total'] ?? 0)) ?>;
+    const reservedFree = <?= json_encode($reservedFreePreview) ?>;
+    const planningCapacity = Math.max(0, monthlyIncome - reservedFree);
     const defaultDifficulty = <?= json_encode($defaultDifficulty) ?>;
     const progressLabelTemplate = <?= json_encode(__('Allocated :spent of :available')) ?>;
-    const leftoverFreeTemplate = <?= json_encode(__('Free to allocate: :amount/month')) ?>;
-    const leftoverOverTemplate = <?= json_encode(__('Overallocated by :amount/month')) ?>;
+    const leftoverFreeTemplate = <?= json_encode(__('Free to allocate after cushion: :amount/month')) ?>;
+    const leftoverOverTemplate = <?= json_encode(__('Overallocated past cushion by :amount/month')) ?>;
     const leftoverFullText = <?= json_encode(__('Fully allocated for the month')) ?>;
 
     averageSelect?.addEventListener('change', () => {
@@ -879,6 +964,180 @@ $ruleDataForJs = array_map(
     const parseNumeric = (value, fallback = 0) => {
       const num = Number.parseFloat(value);
       return Number.isFinite(num) ? num : fallback;
+    };
+
+    const buildMilestoneSchedule = () => {
+      const horizonValue = Number.parseInt(horizonSelect?.value || '3', 10);
+      const horizon = Number.isFinite(horizonValue) && horizonValue > 0 ? horizonValue : 1;
+      const months = Array.from({ length: horizon }, (_, index) => ({ index, load: 0, available: planningCapacity }));
+      const startDate = parseMonthValue(startInput?.value || '');
+
+      const dueEntries = [];
+      const flexEntries = [];
+
+      const panels = container?.querySelectorAll('[data-item]') || [];
+      panels.forEach((panel, idx) => {
+        const targetInput = panel.querySelector('[data-target-input]');
+        const currentInput = panel.querySelector('[data-current-input]');
+        const dueInput = panel.querySelector('[data-due-input]');
+        const target = parseNumeric(targetInput?.value || '0', 0);
+        const current = parseNumeric(currentInput?.value || '0', 0);
+        const required = Math.max(0, target - current);
+        let dueIndex = Math.max(0, horizon - 1);
+        let hasDue = false;
+        if (dueInput?.value) {
+          const dueDateRaw = parseMonthValue(dueInput.value);
+          if (dueDateRaw) {
+            hasDue = true;
+            if (startDate) {
+              const clampedDue = clampDueDate(startDate, horizon, dueDateRaw);
+              const span = monthsBetweenInclusive(startDate, clampedDue) || horizon;
+              dueIndex = Math.min(horizon - 1, Math.max(0, span - 1));
+            } else {
+              dueIndex = Math.max(0, horizon - 1);
+            }
+          }
+        }
+
+        const entry = { key: idx, required, dueIndex, hasDue };
+        if (hasDue) {
+          dueEntries.push(entry);
+        } else {
+          flexEntries.push(entry);
+        }
+      });
+
+      dueEntries.sort((a, b) => {
+        if (a.dueIndex !== b.dueIndex) {
+          return a.dueIndex - b.dueIndex;
+        }
+        return b.required - a.required;
+      });
+
+      flexEntries.sort((a, b) => {
+        if (b.required !== a.required) {
+          return b.required - a.required;
+        }
+        return a.key - b.key;
+      });
+
+      const orderedEntries = [...dueEntries, ...flexEntries];
+
+      orderedEntries.forEach((entry) => {
+        const { key, required } = entry;
+        let dueIndex = Math.min(Math.max(entry.dueIndex, 0), months.length - 1);
+        if (required <= 0) {
+          return;
+        }
+
+        let bestStart = 0;
+        let bestMonthly = required / Math.max(1, dueIndex + 1);
+        let bestLength = Math.max(1, dueIndex + 1);
+        let bestOverflow = Number.POSITIVE_INFINITY;
+
+        for (let start = dueIndex; start >= 0; start -= 1) {
+          const length = dueIndex - start + 1;
+          if (length <= 0) continue;
+          const share = required / length;
+          let fits = true;
+          let overflow = 0;
+          for (let i = start; i <= dueIndex; i += 1) {
+            const projected = months[i].load + share;
+            if (projected - planningCapacity > 1e-6) {
+              fits = false;
+              overflow = Math.max(overflow, projected - planningCapacity);
+            }
+          }
+          if (fits) {
+            bestStart = start;
+            bestMonthly = share;
+            bestLength = length;
+            bestOverflow = -1;
+            break;
+          }
+          if (overflow < bestOverflow) {
+            bestOverflow = overflow;
+            bestStart = start;
+            bestMonthly = share;
+            bestLength = length;
+          }
+        }
+
+        for (let i = bestStart; i <= dueIndex; i += 1) {
+          months[i].load += bestMonthly;
+        }
+      });
+
+      let minAvailable = planningCapacity;
+      months.forEach((month) => {
+        month.available = Math.max(0, planningCapacity - month.load);
+        minAvailable = Math.min(minAvailable, month.available);
+      });
+
+      return {
+        months,
+        minAvailable,
+        horizon,
+        startDate,
+      };
+    };
+
+    const updateMonthlyPreview = (schedule, categoriesTotal) => {
+      if (!monthlyPreviewBody) {
+        return;
+      }
+
+      const months = schedule?.months || [];
+      monthlyPreviewBody.innerHTML = '';
+
+      if (!months.length) {
+        if (monthlyPreviewEmpty) {
+          monthlyPreviewEmpty.classList.remove('hidden');
+        }
+        return;
+      }
+
+      const startDate = schedule.startDate;
+
+      months.forEach((month) => {
+        const offsetDate = startDate
+          ? new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth() + month.index, 1))
+          : null;
+        const label = offsetDate
+          ? offsetDate.toLocaleString(undefined, { month: 'short', year: 'numeric' })
+          : `M${month.index + 1}`;
+        const milestones = month.load;
+        const free = monthlyIncome - reservedFree - categoriesTotal - milestones;
+        const totalPlanned = milestones + categoriesTotal + reservedFree;
+
+        const row = document.createElement('tr');
+        row.className = 'border-b border-white/50 dark:border-slate-800/50';
+
+        const cells = [
+          { text: label, className: 'py-2 pr-3 text-slate-600 dark:text-slate-300' },
+          { text: fmt(milestones), className: 'py-2 pr-3 font-medium text-slate-700 dark:text-slate-100' },
+          { text: fmt(categoriesTotal), className: 'py-2 pr-3 text-slate-600 dark:text-slate-300' },
+          { text: fmt(reservedFree), className: 'py-2 pr-3 text-slate-600 dark:text-slate-300' },
+          {
+            text: fmt(free),
+            className: `py-2 pr-3 font-medium ${free < -0.01 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-600 dark:text-slate-300'}`,
+          },
+          { text: fmt(totalPlanned), className: 'py-2 pr-3 text-slate-600 dark:text-slate-300' },
+        ];
+
+        cells.forEach((cell) => {
+          const td = document.createElement('td');
+          td.className = cell.className;
+          td.textContent = cell.text;
+          row.appendChild(td);
+        });
+
+        monthlyPreviewBody.appendChild(row);
+      });
+
+      if (monthlyPreviewEmpty) {
+        monthlyPreviewEmpty.classList.toggle('hidden', months.length > 0);
+      }
     };
 
     const enforceManualLimits = (discretionary) => {
@@ -1239,19 +1498,20 @@ $ruleDataForJs = array_map(
         return;
       }
       isRecalculating = true;
-      let totalMonthly = 0;
-      container?.querySelectorAll('[data-item]').forEach((panel) => {
-        totalMonthly += computeMonthly(panel);
-      });
-      const availableForCategories = monthlyIncome - totalMonthly;
-      const discretionary = Math.max(0, availableForCategories);
+      const schedule = buildMilestoneSchedule();
+      const rawAvailable = schedule && Number.isFinite(schedule.minAvailable)
+        ? schedule.minAvailable
+        : planningCapacity;
+      const discretionary = Math.max(0, rawAvailable);
       enforceManualLimits(discretionary);
       const difficultyKey = getDifficultyKey();
       const suggestionValues = computeCategorySuggestions(monthlyIncome, discretionary, difficultyKey);
       applyCategorySuggestions(suggestionValues);
       const totals = calculateCategoryTotals();
-      const freeAmount = availableForCategories - totals.total;
-      updateProgress(discretionary, totals.total, freeAmount);
+      const categoryTotal = Number.isFinite(totals.total) ? totals.total : 0;
+      const freeAmount = rawAvailable - categoryTotal;
+      updateProgress(discretionary, categoryTotal, freeAmount);
+      updateMonthlyPreview(schedule, categoryTotal);
       isRecalculating = false;
     };
 
