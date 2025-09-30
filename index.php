@@ -31,6 +31,18 @@ require $root . '/src/auth.php';
 require $root . '/src/webauthn.php';
 require $root . '/src/fx.php';
 
+spl_autoload_register(function (string $class): void {
+    $prefix = 'MyMoneyMap\';
+    if (!str_starts_with($class, $prefix)) {
+        return;
+    }
+    $relative = substr($class, strlen($prefix));
+    $file = $root . '/src/' . str_replace('\', '/', $relative) . '.php';
+    if (is_file($file)) {
+        require $file;
+    }
+});
+
 if (isset($pdo) && $pdo instanceof PDO) {
     attempt_remembered_login($pdo);
 }
@@ -51,6 +63,20 @@ if ($method === 'POST' && !empty($_POST['_method'])) {
     if (in_array($override, ['PUT', 'PATCH', 'DELETE'], true)) {
         $method = $override;
     }
+}
+
+// Dynamic routes for stocks
+if (preg_match('#^/api/stocks/([A-Za-z0-9\.:-]+)/history$#', $path, $m)) {
+    require_login();
+    require __DIR__ . '/src/controllers/stocks.php';
+    stocks_history($pdo, strtoupper($m[1]));
+    exit;
+}
+if (preg_match('#^/stocks/([A-Za-z0-9\.:-]+)$#', $path, $m)) {
+    require_login();
+    require __DIR__ . '/src/controllers/stocks.php';
+    stocks_show($pdo, strtoupper($m[1]));
+    exit;
 }
 
 // Simple routing
@@ -561,6 +587,17 @@ switch ($path) {
         require_login();
         require __DIR__ . '/src/controllers/stocks.php';
         stocks_index($pdo);
+        break;
+    case '/stocks/watch':
+        require_login();
+        require __DIR__ . '/src/controllers/stocks.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { stocks_watch($pdo, (int)($_POST['stock_id'] ?? 0)); }
+        redirect('/stocks');
+        break;
+    case '/api/stocks/live':
+        require_login();
+        require __DIR__ . '/src/controllers/stocks.php';
+        stocks_live($pdo);
         break;
     case '/stocks/buy':
         require_login();

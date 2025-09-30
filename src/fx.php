@@ -7,6 +7,16 @@ function fx_user_main(PDO $pdo, int $userId): string {
   return $q->fetchColumn() ?: 'HUF';
 }
 
+function _fx_driver(PDO $pdo): string {
+  static $cache = [];
+  $id = spl_object_id($pdo);
+  if (!isset($cache[$id])) {
+    $driver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+    $cache[$id] = $driver ? strtolower((string)$driver) : 'pgsql';
+  }
+  return $cache[$id];
+}
+
 /* ---------- tiny HTTP helper (curl with fallback) ---------- */
 /* ---------- tiny HTTP helper (uses cURL if present, else fopen) ---------- */
 function _fx_http_get(string $url, ?int &$httpCode = null, ?string &$err = null): ?string {
@@ -47,12 +57,21 @@ function fx_get_eur_to(PDO $pdo, string $code, string $date): ?float {
   if ($code === 'EUR') return 1.0;
 
   // 0) try cache (latest <= date)
-  $q=$pdo->prepare("
-    SELECT rate FROM fx_rates
-     WHERE base_code='EUR' AND code=? AND rate_date<=?::date
-     ORDER BY rate_date DESC LIMIT 1
-  ");
-  $q->execute([$code, $date]);
+  if (_fx_driver($pdo) === 'sqlite') {
+    $q=$pdo->prepare('
+      SELECT rate FROM fx_rates
+       WHERE base_code = "EUR" AND code = ? AND rate_date <= DATE(?)
+       ORDER BY rate_date DESC LIMIT 1
+    ');
+    $q->execute([$code, $date]);
+  } else {
+    $q=$pdo->prepare("
+      SELECT rate FROM fx_rates
+       WHERE base_code='EUR' AND code=? AND rate_date<=?::date
+       ORDER BY rate_date DESC LIMIT 1
+    ");
+    $q->execute([$code, $date]);
+  }
   $rate = $q->fetchColumn();
   if ($rate) return (float)$rate;
 
@@ -110,6 +129,15 @@ function fx_get_eur_to(PDO $pdo, string $code, string $date): ?float {
 
 /* ---------- store a rate row idempotently ---------- */
 function _fx_store(PDO $pdo, string $date, string $code, float $rate): void {
+  if (_fx_driver($pdo) === 'sqlite') {
+    $stmt=$pdo->prepare(
+      "INSERT INTO fx_rates(rate_date,base_code,code,rate) VALUES (DATE(?),'EUR',?,?) " .
+      "ON CONFLICT(rate_date,base_code,code) DO UPDATE SET rate=excluded.rate"
+    );
+    $stmt->execute([$date, strtoupper($code), $rate]);
+    return;
+  }
+
   $stmt=$pdo->prepare("
     INSERT INTO fx_rates(rate_date,base_code,code,rate)
     VALUES (?::date,'EUR',?,?)

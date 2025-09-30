@@ -1,36 +1,95 @@
 <?php
-require_once __DIR__ . '/../helpers.php';
 
-function stocks_index(PDO $pdo){ require_login(); $u=uid();
-  // Open positions & cost basis (from view)
-  $pos=$pdo->prepare('SELECT symbol, qty, avg_buy_price FROM v_stock_positions WHERE user_id=? ORDER BY symbol');
-  $pos->execute([$u]); $positions=$pos->fetchAll();
+declare(strict_types=1);
 
-  // Portfolio cost basis value (qty * avg_buy_price for qty>0)
-  $portfolio_value = 0.0; foreach($positions as $p){ if((float)$p['qty']>0){ $portfolio_value += (float)$p['qty'] * (float)$p['avg_buy_price']; } }
+use MyMoneyMap\Stocks\Adapters\FinnhubAdapter;
+use MyMoneyMap\Stocks\Adapters\NullAdapter;
+use MyMoneyMap\Stocks\Controllers\StocksController;
+use MyMoneyMap\Stocks\Repositories\PriceRepository;
+use MyMoneyMap\Stocks\Repositories\SettingsRepository;
+use MyMoneyMap\Stocks\Repositories\StockRepository;
+use MyMoneyMap\Stocks\Repositories\TradeRepository;
+use MyMoneyMap\Stocks\Services\ChartsService;
+use MyMoneyMap\Stocks\Services\PortfolioService;
+use MyMoneyMap\Stocks\Services\PriceDataService;
+use MyMoneyMap\Stocks\Services\SignalsService;
+use MyMoneyMap\Stocks\Services\TradeService;
 
-  // Recent trades
-  $t=$pdo->prepare('SELECT * FROM stock_trades WHERE user_id=? ORDER BY trade_on DESC, id DESC LIMIT 100');
-  $t->execute([$u]); $trades=$t->fetchAll();
+function stocks_controller(PDO $pdo): StocksController
+{
+    static $controller;
+    if ($controller instanceof StocksController) {
+        return $controller;
+    }
 
-  view('stocks/index', compact('positions','portfolio_value','trades'));
+    $provider = strtolower(getenv('STOCKS_PROVIDER') ?: 'null');
+    $adapter = match ($provider) {
+        'finnhub' => new FinnhubAdapter(getenv('FINNHUB_API_KEY') ?: ''),
+        default => new NullAdapter(),
+    };
+
+    $priceRepo = new PriceRepository($pdo);
+    $stockRepo = new StockRepository($pdo);
+    $tradeRepo = new TradeRepository($pdo);
+    $settingsRepo = new SettingsRepository($pdo);
+
+    $priceService = new PriceDataService($priceRepo, $adapter);
+    $signals = new SignalsService($pdo, $priceService, $settingsRepo);
+    $portfolio = new PortfolioService($pdo, $tradeRepo, $stockRepo, $settingsRepo, $priceService, $signals);
+    $tradeService = new TradeService($pdo, $stockRepo, $tradeRepo, $settingsRepo);
+    $charts = new ChartsService($pdo, $tradeRepo, $priceService);
+
+    $controller = new StocksController(
+        $pdo,
+        $portfolio,
+        $tradeService,
+        $charts,
+        $priceService,
+        $stockRepo,
+        $settingsRepo,
+        $signals,
+        $tradeRepo
+    );
+
+    return $controller;
 }
 
-function trade_buy(PDO $pdo){ verify_csrf(); require_login(); $u=uid();
-  $stmt=$pdo->prepare('INSERT INTO stock_trades(user_id,symbol,trade_on,side,quantity,price,currency) VALUES(?,?,?,?,?,?,?)');
-  $stmt->execute([$u, strtoupper(trim($_POST['symbol'])), $_POST['trade_on'] ?: date('Y-m-d'), 'buy', (float)$_POST['quantity'], (float)$_POST['price'], $_POST['currency'] ?: 'USD']);
+function stocks_index(PDO $pdo): void
+{
+    stocks_controller($pdo)->index();
 }
 
-function trade_sell(PDO $pdo){ verify_csrf(); require_login(); $u=uid();
-  // Optional naive check: prevent selling more than held (best-effort; DB view handles net qty anyway)
-  $symbol = strtoupper(trim($_POST['symbol'])); $qty=(float)$_POST['quantity'];
-  $q=$pdo->prepare('SELECT qty FROM v_stock_positions WHERE user_id=? AND symbol=?'); $q->execute([$u,$symbol]); $held=(float)($q->fetchColumn() ?: 0);
-  if ($qty > $held) { $qty = $held; }
-  if ($qty <= 0) { return; }
-  $pdo->prepare('INSERT INTO stock_trades(user_id,symbol,trade_on,side,quantity,price,currency) VALUES(?,?,?,?,?,?,?)')
-      ->execute([$u, $symbol, $_POST['trade_on'] ?: date('Y-m-d'), 'sell', $qty, (float)$_POST['price'], $_POST['currency'] ?: 'USD']);
+function stocks_show(PDO $pdo, string $symbol): void
+{
+    stocks_controller($pdo)->show($symbol);
 }
 
-function trade_delete(PDO $pdo){ verify_csrf(); require_login(); $u=uid();
-  $pdo->prepare('DELETE FROM stock_trades WHERE id=? AND user_id=?')->execute([(int)$_POST['id'],$u]);
+function trade_buy(PDO $pdo): void
+{
+    stocks_controller($pdo)->recordTrade('buy');
+}
+
+function trade_sell(PDO $pdo): void
+{
+    stocks_controller($pdo)->recordTrade('sell');
+}
+
+function trade_delete(PDO $pdo): void
+{
+    stocks_controller($pdo)->deleteTrade();
+}
+
+function stocks_watch(PDO $pdo, int $stockId): void
+{
+    stocks_controller($pdo)->toggleWatch($stockId);
+}
+
+function stocks_live(PDO $pdo): void
+{
+    stocks_controller($pdo)->liveQuotes();
+}
+
+function stocks_history(PDO $pdo, string $symbol): void
+{
+    stocks_controller($pdo)->history($symbol);
 }
