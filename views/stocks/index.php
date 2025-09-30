@@ -178,11 +178,12 @@
     <div class="mt-4 space-y-6">
       <div>
         <h4 class="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300"><?= __('Buy') ?></h4>
-        <form class="mt-3 grid gap-2 sm:grid-cols-6" method="post" action="/stocks/buy">
+        <form class="mt-3 grid gap-2 sm:grid-cols-6" method="post" action="/stocks/buy" data-trade-form data-trade-side="buy">
           <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
           <input name="symbol" class="input sm:col-span-2" placeholder="AAPL" required>
-          <input name="quantity" type="number" step="0.000001" class="input sm:col-span-2" placeholder="<?= __('Quantity') ?>" required>
-          <input name="price" type="number" step="0.0001" class="input sm:col-span-2" placeholder="<?= __('Price') ?>" required>
+          <input name="price" type="number" step="0.0001" min="0" class="input sm:col-span-2" placeholder="<?= __('Price') ?>" required data-trade-price>
+          <input name="amount" type="number" step="0.0001" min="0" class="input sm:col-span-2" placeholder="<?= __('Amount') ?>" required data-trade-amount>
+          <input name="fee" type="number" step="0.0001" min="0" class="input sm:col-span-2" placeholder="<?= __('Fee') ?>" data-trade-fee>
           <select name="currency" class="select sm:col-span-2">
             <?php foreach ($currencyOptions as $option): ?>
               <?php $code = strtoupper($option['code']); ?>
@@ -192,17 +193,22 @@
             <?php endforeach; ?>
           </select>
           <input name="trade_on" type="date" value="<?= date('Y-m-d') ?>" class="input sm:col-span-2">
+          <input type="hidden" name="quantity" value="" data-trade-quantity-input>
+          <div class="sm:col-span-6 text-xs text-slate-500 dark:text-slate-300">
+            <?= __('Calculated quantity:') ?> <span data-trade-quantity-display>—</span>
+          </div>
           <button class="btn btn-primary sm:col-span-2"><?= __('Buy') ?></button>
         </form>
       </div>
 
       <div>
         <h4 class="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300"><?= __('Sell') ?></h4>
-        <form class="mt-3 grid gap-2 sm:grid-cols-6" method="post" action="/stocks/sell">
+        <form class="mt-3 grid gap-2 sm:grid-cols-6" method="post" action="/stocks/sell" data-trade-form data-trade-side="sell">
           <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
           <input name="symbol" class="input sm:col-span-2" placeholder="AAPL" required>
-          <input name="quantity" type="number" step="0.000001" class="input sm:col-span-2" placeholder="<?= __('Quantity') ?>" required>
-          <input name="price" type="number" step="0.0001" class="input sm:col-span-2" placeholder="<?= __('Price') ?>" required>
+          <input name="price" type="number" step="0.0001" min="0" class="input sm:col-span-2" placeholder="<?= __('Price') ?>" required data-trade-price>
+          <input name="amount" type="number" step="0.0001" min="0" class="input sm:col-span-2" placeholder="<?= __('Amount') ?>" required data-trade-amount>
+          <input name="fee" type="number" step="0.0001" min="0" class="input sm:col-span-2" placeholder="<?= __('Fee') ?>" data-trade-fee>
           <select name="currency" class="select sm:col-span-2">
             <?php foreach ($currencyOptions as $option): ?>
               <?php $code = strtoupper($option['code']); ?>
@@ -212,6 +218,10 @@
             <?php endforeach; ?>
           </select>
           <input name="trade_on" type="date" value="<?= date('Y-m-d') ?>" class="input sm:col-span-2">
+          <input type="hidden" name="quantity" value="" data-trade-quantity-input>
+          <div class="sm:col-span-6 text-xs text-slate-500 dark:text-slate-300">
+            <?= __('Calculated quantity:') ?> <span data-trade-quantity-display>—</span>
+          </div>
           <button class="btn btn-danger sm:col-span-2"><?= __('Sell') ?></button>
         </form>
       </div>
@@ -230,6 +240,8 @@
           <th class="py-2 pr-3"><?= __('Symbol') ?></th>
           <th class="py-2 pr-3"><?= __('Quantity') ?></th>
           <th class="py-2 pr-3"><?= __('Price') ?></th>
+          <th class="py-2 pr-3"><?= __('Amount') ?></th>
+          <th class="py-2 pr-3"><?= __('Fee') ?></th>
           <th class="py-2 pr-3"><?= __('Currency') ?></th>
           <th class="py-2 pr-3"><?= __('Actions') ?></th>
         </tr>
@@ -242,6 +254,8 @@
             <td class="py-2 pr-3 font-medium text-slate-900 dark:text-white"><?= htmlspecialchars($trade['symbol']) ?></td>
             <td class="py-2 pr-3"><?= number_format((float)$trade['quantity'], 6, '.', '') ?></td>
             <td class="py-2 pr-3"><?= moneyfmt($trade['price'], $trade['currency']) ?></td>
+            <td class="py-2 pr-3"><?= moneyfmt($trade['amount'], $trade['currency']) ?></td>
+            <td class="py-2 pr-3"><?= moneyfmt($trade['fee'], $trade['currency']) ?></td>
             <td class="py-2 pr-3"><?= htmlspecialchars($trade['currency']) ?></td>
             <td class="py-2 pr-3">
               <form method="post" action="/stocks/trade/delete" onsubmit="return confirm('<?= __('Delete trade?') ?>')">
@@ -263,6 +277,57 @@
     </div>
   <?php endif; ?>
 </section>
+
+<script>
+  (function () {
+    const forms = document.querySelectorAll('[data-trade-form]');
+    if (!forms.length) return;
+
+    const formatQuantity = (qty) => {
+      if (!Number.isFinite(qty) || qty <= 0) {
+        return '—';
+      }
+      const fixed = qty.toFixed(6);
+      return fixed.replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
+    };
+
+    forms.forEach((form) => {
+      const priceInput = form.querySelector('[data-trade-price]');
+      const amountInput = form.querySelector('[data-trade-amount]');
+      const feeInput = form.querySelector('[data-trade-fee]');
+      const quantityInput = form.querySelector('[data-trade-quantity-input]');
+      const quantityDisplay = form.querySelector('[data-trade-quantity-display]');
+
+      const update = () => {
+        const price = parseFloat(priceInput ? priceInput.value : '');
+        const amount = parseFloat(amountInput ? amountInput.value : '');
+        let quantity = 0;
+
+        if (Number.isFinite(price) && price > 0 && Number.isFinite(amount) && amount > 0) {
+          quantity = amount / price;
+        }
+
+        if (quantityInput) {
+          quantityInput.value = quantity > 0 ? quantity.toFixed(6) : '';
+        }
+        if (quantityDisplay) {
+          quantityDisplay.textContent = formatQuantity(quantity);
+        }
+      };
+
+      [priceInput, amountInput, feeInput].forEach((input) => {
+        if (input) {
+          input.addEventListener('input', update);
+          input.addEventListener('blur', update);
+        }
+      });
+
+      form.addEventListener('submit', update);
+
+      update();
+    });
+  })();
+</script>
 
 <script>
   window.MyMoneyMapStocksPage = {

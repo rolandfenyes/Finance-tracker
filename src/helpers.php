@@ -545,7 +545,7 @@ function stocks_positions_summary(PDO $pdo, int $userId, ?string $baseCurrency =
           SUM(CASE WHEN st.side = 'buy' THEN st.quantity ELSE -st.quantity END) AS qty,
           CASE
             WHEN SUM(CASE WHEN st.side = 'buy' THEN st.quantity ELSE -st.quantity END) <> 0
-              THEN SUM(CASE WHEN st.side = 'buy' THEN st.quantity * st.price ELSE 0 END)
+              THEN SUM(CASE WHEN st.side = 'buy' THEN st.amount + st.fee ELSE 0 END)
                    / NULLIF(SUM(CASE WHEN st.side = 'buy' THEN st.quantity ELSE 0 END), 0)
           END AS avg_buy_price,
           (

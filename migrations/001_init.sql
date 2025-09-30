@@ -113,6 +113,8 @@ CREATE TABLE IF NOT EXISTS stock_trades (
   side TEXT CHECK (side IN ('buy','sell')) NOT NULL,
   quantity NUMERIC(18,6) NOT NULL,
   price NUMERIC(18,4) NOT NULL,
+  amount NUMERIC(18,4) NOT NULL DEFAULT 0,
+  fee NUMERIC(18,4) NOT NULL DEFAULT 0,
   currency TEXT REFERENCES currencies(code)
 );
 
@@ -120,7 +122,7 @@ CREATE OR REPLACE VIEW v_stock_positions AS
 SELECT user_id, symbol,
   SUM(CASE WHEN side='buy' THEN quantity ELSE -quantity END) AS qty,
   CASE WHEN SUM(CASE WHEN side='buy' THEN quantity ELSE -quantity END) <> 0
-       THEN SUM(CASE WHEN side='buy' THEN quantity*price ELSE 0 END)
+       THEN SUM(CASE WHEN side='buy' THEN amount + fee ELSE 0 END)
             / NULLIF(SUM(CASE WHEN side='buy' THEN quantity ELSE 0 END),0)
   END AS avg_buy_price
 FROM stock_trades

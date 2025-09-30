@@ -156,7 +156,7 @@ function build_user_data_export(PDO $pdo, int $userId): array
         'emergency_fund_tx' => 'SELECT id, occurred_on, kind, amount_native, currency_native, amount_main, main_currency, rate_used, note FROM emergency_fund_tx WHERE user_id = ? ORDER BY occurred_on',
         'emergency_transactions' => 'SELECT id, occurred_on, amount, kind, note FROM emergency_transactions WHERE user_id = ? ORDER BY occurred_on',
         'baby_steps' => 'SELECT step, status, note FROM baby_steps WHERE user_id = ? ORDER BY step',
-        'stock_trades' => 'SELECT id, symbol, trade_on, side, quantity, price, currency FROM stock_trades WHERE user_id = ? ORDER BY trade_on',
+        'stock_trades' => 'SELECT id, symbol, trade_on, side, quantity, price, amount, fee, currency FROM stock_trades WHERE user_id = ? ORDER BY trade_on',
         'feedback' => 'SELECT id, kind, title, message, severity, status, created_at, updated_at FROM feedback WHERE user_id = ? ORDER BY created_at',
         'user_remember_tokens' => 'SELECT selector, token_hash, expires_at, created_at FROM user_remember_tokens WHERE user_id = ? ORDER BY created_at',
         'user_passkeys' => 'SELECT id, credential_id, label, sign_count, created_at, last_used FROM user_passkeys WHERE user_id = ? ORDER BY created_at',

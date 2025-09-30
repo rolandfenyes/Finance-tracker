@@ -44,19 +44,64 @@ function stocks_index(PDO $pdo){ require_login(); $u=uid();
   view('stocks/index', compact('positions','portfolio_cost_basis_main','trades','base_currency','as_of','positions_payload','currency_rates_payload','currencies'));
 }
 
-function trade_buy(PDO $pdo){ verify_csrf(); require_login(); $u=uid();
-  $stmt=$pdo->prepare('INSERT INTO stock_trades(user_id,symbol,trade_on,side,quantity,price,currency) VALUES(?,?,?,?,?,?,?)');
-  $stmt->execute([$u, strtoupper(trim($_POST['symbol'])), $_POST['trade_on'] ?: date('Y-m-d'), 'buy', (float)$_POST['quantity'], (float)$_POST['price'], $_POST['currency'] ?: 'USD']);
+function trade_buy(PDO $pdo){
+  verify_csrf(); require_login(); $u=uid();
+
+  $symbol = strtoupper(trim($_POST['symbol'] ?? ''));
+  $price = round((float)($_POST['price'] ?? 0), 4);
+  $amount = round(max(0, (float)($_POST['amount'] ?? 0)), 4);
+  $fee = round(max(0, isset($_POST['fee']) ? (float)$_POST['fee'] : 0), 4);
+  $currency = strtoupper(trim($_POST['currency'] ?? 'USD'));
+  if (!preg_match('/^[A-Z]{3}$/', $currency)) { $currency = 'USD'; }
+  $tradeOn = !empty($_POST['trade_on']) ? $_POST['trade_on'] : date('Y-m-d');
+
+  if ($price <= 0 || $amount <= 0 || !$symbol) { return; }
+
+  $quantity = $price > 0 ? round($amount / $price, 6) : 0;
+  if ($quantity <= 0) { return; }
+
+  $stmt=$pdo->prepare('INSERT INTO stock_trades(user_id,symbol,trade_on,side,quantity,price,amount,fee,currency) VALUES(?,?,?,?,?,?,?,?,?)');
+  $stmt->execute([
+    $u,
+    $symbol,
+    $tradeOn,
+    'buy',
+    $quantity,
+    $price,
+    $amount,
+    $fee,
+    $currency
+  ]);
 }
 
-function trade_sell(PDO $pdo){ verify_csrf(); require_login(); $u=uid();
+function trade_sell(PDO $pdo){
+  verify_csrf(); require_login(); $u=uid();
   // Optional naive check: prevent selling more than held (best-effort; DB view handles net qty anyway)
-  $symbol = strtoupper(trim($_POST['symbol'])); $qty=(float)$_POST['quantity'];
-  $q=$pdo->prepare('SELECT qty FROM v_stock_positions WHERE user_id=? AND symbol=?'); $q->execute([$u,$symbol]); $held=(float)($q->fetchColumn() ?: 0);
-  if ($qty > $held) { $qty = $held; }
+  $symbol = strtoupper(trim($_POST['symbol'] ?? ''));
+  $price = round((float)($_POST['price'] ?? 0), 4);
+  $amount = round(max(0, (float)($_POST['amount'] ?? 0)), 4);
+  $fee = round(max(0, isset($_POST['fee']) ? (float)$_POST['fee'] : 0), 4);
+  $currency = strtoupper(trim($_POST['currency'] ?? 'USD'));
+  if (!preg_match('/^[A-Z]{3}$/', $currency)) { $currency = 'USD'; }
+  $tradeOn = !empty($_POST['trade_on']) ? $_POST['trade_on'] : date('Y-m-d');
+
+  if ($price <= 0 || $amount <= 0 || !$symbol) { return; }
+
+  $qty = $price > 0 ? round($amount / $price, 6) : 0;
   if ($qty <= 0) { return; }
-  $pdo->prepare('INSERT INTO stock_trades(user_id,symbol,trade_on,side,quantity,price,currency) VALUES(?,?,?,?,?,?,?)')
-      ->execute([$u, $symbol, $_POST['trade_on'] ?: date('Y-m-d'), 'sell', $qty, (float)$_POST['price'], $_POST['currency'] ?: 'USD']);
+
+  $q=$pdo->prepare('SELECT qty FROM v_stock_positions WHERE user_id=? AND symbol=?');
+  $q->execute([$u,$symbol]);
+  $held=(float)($q->fetchColumn() ?: 0);
+  if ($qty > $held) {
+    $qty = $held;
+  }
+  if ($qty <= 0) { return; }
+
+  $amount = round($qty * $price, 4);
+
+  $pdo->prepare('INSERT INTO stock_trades(user_id,symbol,trade_on,side,quantity,price,amount,fee,currency) VALUES(?,?,?,?,?,?,?,?,?)')
+      ->execute([$u, $symbol, $tradeOn, 'sell', $qty, $price, $amount, $fee, $currency]);
 }
 
 function trade_delete(PDO $pdo){ verify_csrf(); require_login(); $u=uid();
