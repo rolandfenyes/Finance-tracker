@@ -268,21 +268,45 @@
 
       window.updateChartGlobals && window.updateChartGlobals();
       const palette = window.getChartPalette ? window.getChartPalette() : {};
-      const valuesArray = Array.isArray(values) ? values : [];
+      const labelsArray = Array.isArray(labels)
+        ? labels.map((label) => String(label))
+        : [];
+      const valuesArray = Array.isArray(values)
+        ? values.map((value) => {
+            const num = Number(value);
+            return Number.isFinite(num) ? num : 0;
+          })
+        : [];
       const existing = mmChartStore.get(id);
 
       if (existing && existing.chart && existing.chart.config && existing.chart.config.type === 'doughnut') {
-        existing.chart.data.labels = labels;
-        if (!Array.isArray(existing.chart.data.datasets)) {
-          existing.chart.data.datasets = [];
+        if (Array.isArray(existing.chart.data.labels)) {
+          existing.chart.data.labels.length = 0;
+          labelsArray.forEach((label) => existing.chart.data.labels.push(label));
+        } else {
+          existing.chart.data.labels = labelsArray.slice();
         }
-        if (!existing.chart.data.datasets.length) {
-          existing.chart.data.datasets.push({ data: [] });
+
+        const datasets = Array.isArray(existing.chart.data.datasets)
+          ? existing.chart.data.datasets
+          : [];
+
+        if (!datasets.length) {
+          datasets.push({ data: [] });
         }
+
+        const dataset = datasets[0];
+        if (dataset && Array.isArray(dataset.data)) {
+          dataset.data.length = 0;
+          valuesArray.forEach((value) => dataset.data.push(value));
+        } else if (dataset) {
+          dataset.data = valuesArray.slice();
+        }
+
         mmApplyDoughnutTheme(existing.chart, palette, valuesArray);
         existing.chart.update();
-        existing.labels = labels;
-        existing.dataset = valuesArray;
+        existing.labels = labelsArray.slice();
+        existing.dataset = valuesArray.slice();
         mmChartStore.set(id, existing);
         return existing.chart;
       }
@@ -294,7 +318,7 @@
       const chart = new Chart(canvas, {
         type: 'doughnut',
         data: {
-          labels,
+          labels: labelsArray.slice(),
           datasets: [{
             data: valuesArray.slice(),
           }]
@@ -312,7 +336,12 @@
 
       mmApplyDoughnutTheme(chart, palette, valuesArray);
 
-      mmChartStore.set(id, { chart, type: 'doughnut', labels, dataset: valuesArray });
+      mmChartStore.set(id, {
+        chart,
+        type: 'doughnut',
+        labels: labelsArray.slice(),
+        dataset: valuesArray.slice(),
+      });
       return chart;
     }
 
