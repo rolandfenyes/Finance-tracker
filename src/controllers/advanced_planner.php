@@ -597,8 +597,10 @@ function advanced_planner_average_spending(
         $loanTotals[$loanId]['total'] += $converted;
     }
 
+    $loanCategoryMap = [];
+
     $scheduledCategoryStmt = $pdo->prepare(
-        "SELECT sp.category_id, sp.amount, sp.currency, c.label AS cat_label,\n"
+        "SELECT sp.category_id, sp.loan_id, sp.amount, sp.currency, c.label AS cat_label,\n"
         . "       COALESCE(NULLIF(c.color,''),'#6B7280') AS cat_color, c.cashflow_rule_id\n"
         . "  FROM scheduled_payments sp\n"
         . "  LEFT JOIN categories c ON c.id = sp.category_id AND c.user_id = sp.user_id\n"
@@ -622,6 +624,9 @@ function advanced_planner_average_spending(
         $amount = max(0.0, (float)($row['amount'] ?? 0));
         if ($amount <= 0) {
             continue;
+        }
+        if (!empty($row['loan_id'])) {
+            $loanCategoryMap[(int)$row['loan_id']] = $catId;
         }
         $currency = strtoupper($row['currency'] ?: $mainCurrency);
         $converted = advanced_planner_convert_to_main(
@@ -719,6 +724,29 @@ function advanced_planner_average_spending(
         }
     }
     unset($loan);
+
+    foreach ($loanTotals as $loanId => $loan) {
+        $loanCategoryId = $loanCategoryMap[$loanId] ?? null;
+        if ($loanCategoryId === null || !isset($totals[$loanCategoryId])) {
+            continue;
+        }
+
+        $cat =& $totals[$loanCategoryId];
+        $loanAverage = isset($loan['average']) ? (float)$loan['average'] : 0.0;
+        $catAverage = isset($cat['average']) ? (float)$cat['average'] : 0.0;
+        $newAverage = max($catAverage, $loanAverage);
+        $cat['average'] = round($newAverage, 2);
+        $cat['total'] = round(max((float)$cat['total'], $newAverage * $monthsCount), 2);
+
+        if (isset($loan['scheduled_average'])) {
+            $cat['scheduled_average'] = round(
+                max((float)($cat['scheduled_average'] ?? 0.0), (float)$loan['scheduled_average']),
+                2
+            );
+        }
+
+        unset($loanTotals[$loanId]);
+    }
 
     $loanAggregate = null;
     foreach ($loanTotals as $loan) {
