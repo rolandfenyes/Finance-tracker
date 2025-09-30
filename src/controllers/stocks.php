@@ -151,7 +151,7 @@ function stocks_api_quotes(PDO $pdo){
       'region' => 'US',
       'corsDomain' => 'finance.yahoo.com',
       'formatted' => 'false',
-    ]);
+    ], 30);
 
     if (!is_array($response)) {
       continue;
@@ -213,7 +213,7 @@ function stocks_api_history(PDO $pdo){
     'region' => 'US',
     'corsDomain' => 'finance.yahoo.com',
     'formatted' => 'false',
-  ]);
+  ], 900);
 
   if (!is_array($response) || empty($response['chart']['result'])) {
     json_error(__('Price history is unavailable right now.'), 502);
@@ -257,8 +257,16 @@ function stocks_api_history(PDO $pdo){
   ]);
 }
 
-function stocks_yahoo_request(string $path, array $params = []): ?array {
+function stocks_yahoo_request(string $path, array $params = [], int $ttlSeconds = 45): ?array {
   $query = http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+  $cacheKey = sha1($path . '?' . $query);
+  $cached = stocks_yahoo_cache_fetch($cacheKey);
+  $now = time();
+
+  if ($cached && isset($cached['data'], $cached['expires_at']) && $cached['expires_at'] >= $now) {
+    return $cached['data'];
+  }
+
   $endpoints = [
     'https://query1.finance.yahoo.com' . $path,
     'https://query2.finance.yahoo.com' . $path,
@@ -268,11 +276,76 @@ function stocks_yahoo_request(string $path, array $params = []): ?array {
     $url = $endpoint . ($query ? ('?' . $query) : '');
     $response = stocks_http_get_json($url);
     if (is_array($response)) {
+      stocks_yahoo_cache_store($cacheKey, $response, $ttlSeconds);
       return $response;
     }
   }
 
+  if ($cached && isset($cached['data'])) {
+    return $cached['data'];
+  }
+
   return null;
+}
+
+function stocks_yahoo_cache_dir(): ?string {
+  static $dir = null;
+  if ($dir !== null) {
+    return $dir;
+  }
+
+  $candidate = __DIR__ . '/../storage/cache/yahoo';
+  if (!is_dir($candidate)) {
+    @mkdir($candidate, 0775, true);
+  }
+
+  if (!is_dir($candidate) || !is_writable($candidate)) {
+    $dir = null;
+  } else {
+    $resolved = realpath($candidate);
+    $dir = $resolved !== false ? $resolved : $candidate;
+  }
+
+  return $dir;
+}
+
+function stocks_yahoo_cache_fetch(string $key): ?array {
+  $dir = stocks_yahoo_cache_dir();
+  if ($dir === null) {
+    return null;
+  }
+
+  $file = $dir . '/' . $key . '.json';
+  if (!is_file($file)) {
+    return null;
+  }
+
+  $raw = @file_get_contents($file);
+  if (!is_string($raw) || $raw === '') {
+    return null;
+  }
+
+  $decoded = json_decode($raw, true);
+  return is_array($decoded) ? $decoded : null;
+}
+
+function stocks_yahoo_cache_store(string $key, array $data, int $ttlSeconds): void {
+  $dir = stocks_yahoo_cache_dir();
+  if ($dir === null) {
+    return;
+  }
+
+  $payload = [
+    'stored_at' => time(),
+    'expires_at' => time() + max(0, (int)$ttlSeconds),
+    'data' => $data,
+  ];
+
+  @file_put_contents(
+    $dir . '/' . $key . '.json',
+    json_encode($payload, JSON_UNESCAPED_SLASHES),
+    LOCK_EX
+  );
 }
 
 function stocks_http_get_json(string $url): ?array {
