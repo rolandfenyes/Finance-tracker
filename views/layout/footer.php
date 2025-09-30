@@ -403,10 +403,13 @@
         const list = Array.isArray(symbols) ? symbols : [];
         const unique = Array.from(new Set(list.map((s) => String(s || '').trim().toUpperCase()).filter(Boolean)));
         if (!unique.length) {
-          return {};
+          const empty = {};
+          Object.defineProperty(empty, '__meta', { value: { stale: false, messages: [] }, enumerable: false });
+          return empty;
         }
 
         const results = {};
+        const meta = { stale: false, messages: [] };
         for (const subset of chunk(unique, CHUNK_SIZE)) {
           const url = buildApiUrl(QUOTE_PATH, { symbols: subset.join(',') });
           try {
@@ -415,6 +418,19 @@
             const data = await response.json();
             if (data && data.success === false) {
               throw new Error(data.error || 'Quote request failed');
+            }
+            if (data && data.meta) {
+              if (data.meta.stale) {
+                meta.stale = true;
+              }
+              const messages = Array.isArray(data.meta.messages)
+                ? data.meta.messages
+                : (data.meta.message ? [data.meta.message] : []);
+              messages.forEach((msg) => {
+                if (msg) {
+                  meta.messages.push(String(msg));
+                }
+              });
             }
             const items = data && data.quotes && typeof data.quotes === 'object'
               ? data.quotes
@@ -428,6 +444,12 @@
             console.error('Quote fetch failed', err);
           }
         }
+
+        const uniqueMessages = Array.from(new Set(meta.messages.filter(Boolean)));
+        Object.defineProperty(results, '__meta', {
+          value: { stale: Boolean(meta.stale), messages: uniqueMessages },
+          enumerable: false,
+        });
 
         return results;
       };

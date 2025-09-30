@@ -166,6 +166,8 @@ function trade_delete(PDO $pdo){ verify_csrf(); require_login(); $u=uid();
 function stocks_api_quotes(PDO $pdo){
   require_login();
 
+  $userId = uid();
+
   $symbolsParam = $_GET['symbols'] ?? '';
   $rawSymbols = [];
   if (is_array($symbolsParam)) {
@@ -186,12 +188,17 @@ function stocks_api_quotes(PDO $pdo){
   $symbols = array_values(array_unique($symbols));
 
   if (empty($symbols)) {
-    json_response(['success' => true, 'quotes' => new stdClass()]);
+    json_response([
+      'success' => true,
+      'quotes' => new stdClass(),
+      'meta' => (object) ['stale' => false, 'messages' => []],
+    ]);
   }
 
   $chunks = array_chunk($symbols, 8);
   $results = [];
   $hadSuccess = false;
+  $missing = array_fill_keys($symbols, true);
 
   foreach ($chunks as $group) {
     $response = stocks_yahoo_request('/v7/finance/quote', [
@@ -218,6 +225,24 @@ function stocks_api_quotes(PDO $pdo){
       }
       $key = strtoupper((string)$item['symbol']);
       $results[$key] = $item;
+      unset($missing[$key]);
+    }
+  }
+
+  $meta = [
+    'stale' => false,
+    'messages' => [],
+  ];
+
+  if (!empty($missing)) {
+    $fallback = stocks_local_quote_fallbacks($pdo, $userId, array_keys($missing));
+    if (!empty($fallback)) {
+      foreach ($fallback as $symbol => $quote) {
+        $results[$symbol] = $quote;
+        unset($missing[$symbol]);
+      }
+      $meta['stale'] = true;
+      $meta['messages'][] = __('Live prices are temporarily unavailable. Showing your most recent trade values.');
     }
   }
 
@@ -225,10 +250,97 @@ function stocks_api_quotes(PDO $pdo){
     json_error(__('Live quote service is unavailable right now.'), 502);
   }
 
+  if (!empty($missing)) {
+    $meta['stale'] = true;
+    $meta['messages'][] = __('Some symbols are missing live prices. Showing available data.');
+  }
+
+  $meta['messages'] = array_values(array_unique(array_filter(array_map('strval', $meta['messages']))));
+
   json_response([
     'success' => true,
     'quotes' => $results,
+    'meta' => $meta,
   ]);
+}
+
+function stocks_local_quote_fallbacks(PDO $pdo, int $userId, array $symbols): array
+{
+  $filtered = [];
+  foreach ($symbols as $symbol) {
+    $code = strtoupper(trim((string)$symbol));
+    if ($code === '' || !preg_match('/^[A-Z0-9\.\-]{1,15}$/', $code)) {
+      continue;
+    }
+    $filtered[$code] = true;
+  }
+
+  if (empty($filtered)) {
+    return [];
+  }
+
+  $placeholders = implode(',', array_fill(0, count($filtered), '?'));
+  $params = array_merge([$userId], array_keys($filtered));
+
+  $sql = "
+    SELECT st.symbol, st.price, st.amount, st.fee, st.currency, st.trade_on, st.quantity
+    FROM stock_trades st
+    WHERE st.user_id = ? AND st.symbol IN ($placeholders)
+    ORDER BY st.trade_on DESC, st.id DESC
+  ";
+
+  $stmt = $pdo->prepare($sql);
+  $stmt->execute($params);
+
+  $latest = [];
+  while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    $symbol = strtoupper((string)($row['symbol'] ?? ''));
+    if ($symbol === '' || isset($latest[$symbol])) {
+      continue;
+    }
+
+    $price = isset($row['price']) && is_numeric($row['price']) ? (float)$row['price'] : null;
+    if ($price === null || !is_finite($price) || $price <= 0) {
+      $amount = isset($row['amount']) && is_numeric($row['amount']) ? (float)$row['amount'] : null;
+      $fee = isset($row['fee']) && is_numeric($row['fee']) ? (float)$row['fee'] : 0.0;
+      $quantity = isset($row['quantity']) && is_numeric($row['quantity']) ? (float)$row['quantity'] : null;
+      if ($amount !== null && is_finite($amount) && $amount > 0 && $quantity !== null && is_finite($quantity) && $quantity > 0) {
+        $price = ($amount - max(0.0, $fee)) / $quantity;
+      }
+    }
+
+    if ($price === null || !is_finite($price) || $price <= 0) {
+      continue;
+    }
+
+    $currencyCode = strtoupper((string)($row['currency'] ?? ''));
+    $currency = preg_match('/^[A-Z]{3}$/', $currencyCode) ? $currencyCode : 'USD';
+
+    $tradeOn = $row['trade_on'] ?? null;
+    $timestamp = null;
+    if (is_string($tradeOn) && $tradeOn !== '') {
+      $ts = strtotime($tradeOn . ' 21:00:00');
+      if ($ts !== false) {
+        $timestamp = (int) floor($ts);
+      }
+    }
+
+    $latest[$symbol] = [
+      'symbol' => $symbol,
+      'currency' => $currency,
+      'financialCurrency' => $currency,
+      'regularMarketPrice' => $price,
+      'regularMarketPreviousClose' => $price,
+      'regularMarketChange' => 0.0,
+      'regularMarketChangePercent' => 0.0,
+      'regularMarketTime' => $timestamp,
+      'shortName' => $symbol,
+      'longName' => $symbol,
+      'source' => 'portfolio',
+    ];
+  }
+
+  return $latest;
 }
 
 function stocks_api_history(PDO $pdo){

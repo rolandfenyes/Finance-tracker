@@ -503,6 +503,17 @@ $stockCurrencyRatesPayload = json_encode($stockCurrencyRates, JSON_HEX_TAG | JSO
         };
 
         toolkit.fetchQuotes(positions.map((p) => p.symbol)).then((quotes) => {
+          const meta = quotes && quotes.__meta ? quotes.__meta : { stale: false, messages: [] };
+          if (errorEl) {
+            if (meta && Array.isArray(meta.messages) && meta.messages.length) {
+              errorEl.textContent = meta.messages[0];
+              errorEl.classList.remove('hidden');
+            } else {
+              errorEl.classList.add('hidden');
+              errorEl.textContent = '';
+            }
+          }
+
           const holdings = [];
           let totalValue = 0;
           let totalDay = 0;
@@ -580,10 +591,6 @@ $stockCurrencyRatesPayload = json_encode($stockCurrencyRates, JSON_HEX_TAG | JSO
             li.appendChild(right);
             listEl.appendChild(li);
           });
-          if (errorEl) {
-            errorEl.classList.add('hidden');
-            errorEl.textContent = '';
-          }
         }).catch((err) => {
           console.error('Dashboard stocks widget error', err);
           if (errorEl) {

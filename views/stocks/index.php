@@ -821,6 +821,16 @@
         setInsightsError('');
         try {
           const quotes = await toolkit.fetchQuotes(positions.map((p) => p.symbol));
+          const meta = quotes && quotes.__meta ? quotes.__meta : { stale: false, messages: [] };
+          if (meta && Array.isArray(meta.messages) && meta.messages.length) {
+            if (errorEl) {
+              errorEl.textContent = meta.messages[0];
+              errorEl.classList.remove('hidden');
+            }
+            if (meta.stale) {
+              setInsightsError(meta.messages[0] || defaultInsightsErrorMessage);
+            }
+          }
           return quotes || {};
         } catch (err) {
           console.error(err);
@@ -886,11 +896,19 @@
           const histories = await Promise.all(positions.map((pos) => toolkit.fetchHistory(pos.symbol)));
           const aggregate = toolkit.buildPortfolioHistory(positions, histories, currencyRates, baseCurrency);
           if (aggregate.labels.length && typeof window.renderLineChart === 'function') {
-            window.renderLineChart(
-              'portfolio-history-chart',
-              aggregate.labels,
-              aggregate.values.map((v) => Number(v.toFixed(2)))
-            );
+            const sanitized = aggregate.values.map((value) => {
+              const num = Number(value);
+              return Number.isFinite(num) ? Number(num.toFixed(2)) : 0;
+            });
+            try {
+              window.renderLineChart(
+                'portfolio-history-chart',
+                aggregate.labels,
+                sanitized
+              );
+            } catch (chartError) {
+              console.error('History chart render failed', chartError);
+            }
           }
         } catch (err) {
           console.error(err);
@@ -944,8 +962,15 @@
 
         if (typeof window.renderDoughnut === 'function' && document.getElementById('portfolio-allocation-chart')) {
           const labels = portfolio.holdings.map((h) => h.symbol);
-          const values = portfolio.holdings.map((h) => Number(h.value.toFixed(2)));
-          window.renderDoughnut('portfolio-allocation-chart', labels, values);
+          const values = portfolio.holdings.map((h) => {
+            const num = Number(h.value);
+            return Number.isFinite(num) ? Number(num.toFixed(2)) : 0;
+          });
+          try {
+            window.renderDoughnut('portfolio-allocation-chart', labels, values);
+          } catch (chartError) {
+            console.error('Allocation chart render failed', chartError);
+          }
         }
 
         renderAllocation(portfolio.holdings);
