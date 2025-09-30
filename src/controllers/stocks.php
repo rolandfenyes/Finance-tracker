@@ -31,17 +31,66 @@ function stocks_index(PDO $pdo){ require_login(); $u=uid();
 
   $currency_rates = [];
   foreach ($positions as $p) {
-    $currency_rates[$p['currency']] = $p['rate_to_main'];
+    $code = strtoupper((string)($p['currency'] ?? ''));
+    if (!preg_match('/^[A-Z]{3}$/', $code)) {
+      continue;
+    }
+    $rate = isset($p['rate_to_main']) ? (float)$p['rate_to_main'] : 1.0;
+    if (!is_finite($rate) || $rate <= 0) {
+      $rate = 1.0;
+    }
+    $currency_rates[$code] = $rate;
   }
 
   // Recent trades
   $t=$pdo->prepare('SELECT * FROM stock_trades WHERE user_id=? ORDER BY trade_on DESC, id DESC LIMIT 100');
   $t->execute([$u]); $trades=$t->fetchAll();
 
-  $positions_payload = json_encode($positions, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
-  $currency_rates_payload = json_encode($currency_rates, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+  $positions_payload = stocks_json_payload($positions, '[]');
+  $currency_rates_payload = stocks_json_payload($currency_rates, '{}');
 
   view('stocks/index', compact('positions','portfolio_cost_basis_main','trades','base_currency','as_of','positions_payload','currency_rates_payload','currencies'));
+}
+
+function stocks_json_payload($value, string $fallback)
+{
+  $options = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR;
+
+  if (is_array($value)) {
+    $value = stocks_sanitize_for_json($value);
+  }
+
+  $json = json_encode($value, $options);
+  if ($json === false) {
+    return $fallback;
+  }
+
+  return $json;
+}
+
+function stocks_sanitize_for_json($value)
+{
+  if (is_array($value)) {
+    $sanitized = [];
+    foreach ($value as $key => $item) {
+      $sanitized[$key] = stocks_sanitize_for_json($item);
+    }
+    return $sanitized;
+  }
+
+  if (is_object($value)) {
+    return stocks_sanitize_for_json(get_object_vars($value));
+  }
+
+  if (is_float($value)) {
+    return is_finite($value) ? $value : null;
+  }
+
+  if (is_int($value) || is_string($value) || is_bool($value) || $value === null) {
+    return $value;
+  }
+
+  return null;
 }
 
 function trade_buy(PDO $pdo){

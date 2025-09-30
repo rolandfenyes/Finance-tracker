@@ -576,17 +576,36 @@ function stocks_positions_summary(PDO $pdo, int $userId, ?string $baseCurrency =
 
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
         $qty = (float)($row['qty'] ?? 0);
-        if (abs($qty) < 1e-9) {
+        if (!is_finite($qty) || abs($qty) < 1e-9) {
             continue;
         }
 
-        $avgBuy = (float)($row['avg_buy_price'] ?? 0.0);
-        $currency = strtoupper($row['currency'] ?: $base);
+        $avgBuyRaw = $row['avg_buy_price'] ?? 0.0;
+        $avgBuy = is_numeric($avgBuyRaw) ? (float)$avgBuyRaw : 0.0;
+        if (!is_finite($avgBuy) || $avgBuy < 0) {
+            $avgBuy = 0.0;
+        }
+
+        $currencyCode = strtoupper((string)($row['currency'] ?? ''));
+        $currency = preg_match('/^[A-Z]{3}$/', $currencyCode) ? $currencyCode : $base;
+
         $costLocal = $qty * $avgBuy;
+        if (!is_finite($costLocal)) {
+            $costLocal = 0.0;
+        }
 
         $rate = fx_rate_from_to($pdo, $currency, $base, $asOf);
         if ($rate === null) {
             $rate = 1.0;
+        }
+
+        if (!is_finite($rate) || $rate <= 0) {
+            $rate = 1.0;
+        }
+
+        $costMain = $costLocal * $rate;
+        if (!is_finite($costMain)) {
+            $costMain = 0.0;
         }
 
         $positions[] = [
@@ -595,7 +614,7 @@ function stocks_positions_summary(PDO $pdo, int $userId, ?string $baseCurrency =
             'avg_buy_price' => $avgBuy,
             'currency'      => $currency,
             'cost_local'    => $costLocal,
-            'cost_main'     => $costLocal * $rate,
+            'cost_main'     => $costMain,
             'rate_to_main'  => $rate,
             'last_trade_on' => $row['last_trade_on'] ?? null,
         ];
