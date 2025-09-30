@@ -536,7 +536,7 @@
             (index === 0 && codeUnit >= 0x0030 && codeUnit <= 0x0039) ||
             (index === 1 && codeUnit >= 0x0030 && codeUnit <= 0x0039 && firstCodeUnit === 0x002D)
           ) {
-            result += '\' + codeUnit.toString(16) + ' ';
+            result += '\\' + codeUnit.toString(16) + ' ';
             continue;
           }
           if (
@@ -550,7 +550,7 @@
             result += string.charAt(index);
             continue;
           }
-          result += '\' + string.charAt(index);
+          result += '\\' + string.charAt(index);
         }
         return result;
       };
