@@ -373,13 +373,15 @@ $stockCurrencyRatesPayload = json_encode($stockCurrencyRates, JSON_HEX_TAG | JSO
     <div class="card-kicker"><?= __('Investments') ?></div>
     <h3 class="card-title mt-1"><?= __('Stocks Snapshot') ?></h3>
     <?php if ($stockPositions): ?>
-      <p class="mt-3 text-2xl font-semibold text-slate-900 dark:text-white" data-dashboard-stocks-value>—</p>
+      <p class="mt-3 text-2xl font-semibold text-slate-900 dark:text-white" data-dashboard-stocks-value><?= __('Loading…') ?></p>
       <p class="card-subtle mt-2 text-xs">
         <?= __('Cost basis: :amount', ['amount' => moneyfmt($stockCostBasis, $main)]) ?>
       </p>
-      <p class="card-subtle mt-2 text-xs" data-dashboard-stocks-total>—</p>
-      <p class="card-subtle mt-1 text-xs" data-dashboard-stocks-change>—</p>
+      <p class="card-subtle mt-2 text-xs" data-dashboard-stocks-total><?= __('Loading…') ?></p>
+      <p class="card-subtle mt-1 text-xs" data-dashboard-stocks-change><?= __('Loading…') ?></p>
+      <span class="chip mt-2 inline-flex" data-dashboard-stocks-loading><?= __('Loading quotes…') ?></span>
       <ul class="mt-4 space-y-2 text-xs" data-dashboard-stocks-holdings></ul>
+      <p class="mt-3 hidden text-xs text-rose-500" data-dashboard-stocks-error></p>
       <a href="/stocks" class="mt-4 inline-flex items-center text-sm font-semibold text-brand-700 hover:text-brand-600 dark:text-brand-200">
         <?= __('View portfolio') ?>
         <svg class="ml-1 h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -454,9 +456,16 @@ $stockCurrencyRatesPayload = json_encode($stockCurrencyRates, JSON_HEX_TAG | JSO
         const totalEl = document.querySelector('[data-dashboard-stocks-total]');
         const changeEl = document.querySelector('[data-dashboard-stocks-change]');
         const listEl = document.querySelector('[data-dashboard-stocks-holdings]');
+        const loadingBadge = document.querySelector('[data-dashboard-stocks-loading]');
+        const errorEl = document.querySelector('[data-dashboard-stocks-error]');
         if (!valueEl || !totalEl || !changeEl || !listEl) {
           return;
         }
+
+        const setLoading = (isLoading) => {
+          if (!loadingBadge) return;
+          loadingBadge.classList.toggle('hidden', !isLoading);
+        };
 
         const positions = Array.isArray(dataset.positions) ? dataset.positions : [];
         const currencyRates = dataset.currencyRates || {};
@@ -464,8 +473,23 @@ $stockCurrencyRatesPayload = json_encode($stockCurrencyRates, JSON_HEX_TAG | JSO
         const costBasis = Number(dataset.costBasis || 0);
 
         valueEl.textContent = toolkit.formatCurrency(costBasis, baseCurrency);
-        totalEl.textContent = '—';
-        changeEl.textContent = '—';
+        totalEl.textContent = "<?= __('Loading…') ?>";
+        changeEl.textContent = "<?= __('Loading…') ?>";
+        listEl.innerHTML = '';
+
+        if (errorEl) {
+          errorEl.classList.add('hidden');
+          errorEl.textContent = '';
+        }
+
+        setLoading(true);
+
+        if (!positions.length) {
+          setLoading(false);
+          totalEl.textContent = '—';
+          changeEl.textContent = '—';
+          return;
+        }
 
         const rateFor = (currency, fallback) => {
           const key = currency ? String(currency).toUpperCase() : '';
@@ -554,8 +578,20 @@ $stockCurrencyRatesPayload = json_encode($stockCurrencyRates, JSON_HEX_TAG | JSO
             li.appendChild(right);
             listEl.appendChild(li);
           });
+          if (errorEl) {
+            errorEl.classList.add('hidden');
+            errorEl.textContent = '';
+          }
         }).catch((err) => {
           console.error('Dashboard stocks widget error', err);
+          if (errorEl) {
+            errorEl.textContent = "<?= __('Unable to fetch live quotes right now. Please try again later.') ?>";
+            errorEl.classList.remove('hidden');
+          }
+          totalEl.textContent = '—';
+          changeEl.textContent = '—';
+        }).finally(() => {
+          setLoading(false);
         });
       };
 

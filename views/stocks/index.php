@@ -28,7 +28,7 @@
     <div class="card-kicker"><?= __('Portfolio') ?></div>
     <h2 class="card-title mt-1"><?= __('Market Value') ?></h2>
     <p class="mt-3 text-3xl font-semibold text-slate-900 dark:text-white" data-portfolio-value>
-      <?= $hasPositions ? '—' : moneyfmt(0, $base_currency) ?>
+      <?= $hasPositions ? __('Loading…') : moneyfmt(0, $base_currency) ?>
     </p>
     <p class="card-subtle mt-2 flex items-center gap-2 text-xs">
       <span><?= __('Real-time quotes from Yahoo Finance.') ?></span>
@@ -51,15 +51,19 @@
   <div class="card">
     <div class="card-kicker"><?= __('Performance') ?></div>
     <h3 class="card-title mt-1"><?= __('Unrealized P/L') ?></h3>
-    <p class="mt-3 text-2xl font-semibold text-slate-900 dark:text-white" data-portfolio-gain>—</p>
-    <p class="card-subtle mt-2 text-xs" data-portfolio-gain-pct>—</p>
+    <p class="mt-3 text-2xl font-semibold text-slate-900 dark:text-white" data-portfolio-gain>
+      <?= $hasPositions ? __('Loading…') : '—' ?>
+    </p>
+    <p class="card-subtle mt-2 text-xs" data-portfolio-gain-pct><?= $hasPositions ? __('Loading…') : '—' ?></p>
   </div>
 
   <div class="card">
     <div class="card-kicker"><?= __('Today') ?></div>
     <h3 class="card-title mt-1"><?= __('Day Change') ?></h3>
-    <p class="mt-3 text-2xl font-semibold text-slate-900 dark:text-white" data-portfolio-day>—</p>
-    <p class="card-subtle mt-2 text-xs" data-portfolio-day-pct>—</p>
+    <p class="mt-3 text-2xl font-semibold text-slate-900 dark:text-white" data-portfolio-day>
+      <?= $hasPositions ? __('Loading…') : '—' ?>
+    </p>
+    <p class="card-subtle mt-2 text-xs" data-portfolio-day-pct><?= $hasPositions ? __('Loading…') : '—' ?></p>
   </div>
 </section>
 
@@ -105,8 +109,11 @@
   <div class="card lg:col-span-2 overflow-x-auto">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <h3 class="text-lg font-semibold text-slate-900 dark:text-white"><?= __('Open Positions') ?></h3>
-      <div class="text-xs text-slate-500 dark:text-slate-300">
-        <?= __('Totals shown in :currency.', ['currency' => strtoupper($base_currency)]) ?>
+      <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-300">
+        <span><?= __('Totals shown in :currency.', ['currency' => strtoupper($base_currency)]) ?></span>
+        <?php if ($hasPositions): ?>
+          <span class="chip" data-stocks-loading><?= __('Loading quotes…') ?></span>
+        <?php endif; ?>
       </div>
     </div>
     <?php if ($hasPositions): ?>
@@ -369,6 +376,12 @@
       const allocationList = document.querySelector('[data-allocation-list]');
       const allocationTotal = document.querySelector('[data-allocation-total]');
       const historyChip = document.querySelector('[data-portfolio-history-loading]');
+      const loadingBadge = document.querySelector('[data-stocks-loading]');
+
+      const setLoading = (isLoading) => {
+        if (!loadingBadge) return;
+        loadingBadge.classList.toggle('hidden', !isLoading);
+      };
 
       if (costEl) {
         costEl.textContent = toolkit.formatCurrency(costBasis, baseCurrency);
@@ -384,6 +397,7 @@
         if (dayPctEl) dayPctEl.textContent = '—';
         if (allocationTotal) allocationTotal.textContent = '—';
         if (historyChip) historyChip.classList.add('hidden');
+        setLoading(false);
         return;
       }
 
@@ -554,17 +568,20 @@
       };
 
       const loadQuotes = async () => {
+        setLoading(true);
         try {
           const quotes = await toolkit.fetchQuotes(positions.map((p) => p.symbol));
           return quotes || {};
         } catch (err) {
           if (errorEl) {
-          errorEl.textContent = '<?= __('Unable to fetch live quotes right now. Please try again later.') ?>';
-          errorEl.classList.remove('hidden');
+            errorEl.textContent = '<?= __('Unable to fetch live quotes right now. Please try again later.') ?>';
+            errorEl.classList.remove('hidden');
+          }
+          console.error(err);
+          return {};
+        } finally {
+          setLoading(false);
         }
-        console.error(err);
-        return {};
-      }
       };
 
       const renderAllocation = (holdings) => {
@@ -573,39 +590,39 @@
         holdings.slice(0, 6).forEach((h) => {
           const li = document.createElement('li');
           li.className = 'flex items-center justify-between rounded-2xl border border-white/50 px-3 py-2 shadow-sm backdrop-blur dark:border-slate-800/60';
-        const left = document.createElement('div');
-        left.className = 'flex flex-col';
-        const sym = document.createElement('span');
-        sym.className = 'font-semibold text-slate-900 dark:text-white';
-        sym.textContent = h.symbol;
-        const name = document.createElement('span');
-        name.className = 'text-xs text-slate-500 dark:text-slate-300';
-        name.textContent = h.name;
-        left.appendChild(sym);
-        left.appendChild(name);
+          const left = document.createElement('div');
+          left.className = 'flex flex-col';
+          const sym = document.createElement('span');
+          sym.className = 'font-semibold text-slate-900 dark:text-white';
+          sym.textContent = h.symbol;
+          const name = document.createElement('span');
+          name.className = 'text-xs text-slate-500 dark:text-slate-300';
+          name.textContent = h.name;
+          left.appendChild(sym);
+          left.appendChild(name);
 
-        const right = document.createElement('div');
-        right.className = 'text-right';
-        const val = document.createElement('div');
-        val.className = 'text-sm font-semibold text-brand-700 dark:text-brand-200';
-        val.textContent = toolkit.formatCurrency(h.value, baseCurrency);
-        const pct = document.createElement('div');
-        pct.className = 'text-xs text-slate-500 dark:text-slate-300';
-        pct.textContent = toolkit.formatPercent(h.allocation);
-        right.appendChild(val);
-        right.appendChild(pct);
+          const right = document.createElement('div');
+          right.className = 'text-right';
+          const val = document.createElement('div');
+          val.className = 'text-sm font-semibold text-brand-700 dark:text-brand-200';
+          val.textContent = toolkit.formatCurrency(h.value, baseCurrency);
+          const pct = document.createElement('div');
+          pct.className = 'text-xs text-slate-500 dark:text-slate-300';
+          pct.textContent = toolkit.formatPercent(h.allocation);
+          right.appendChild(val);
+          right.appendChild(pct);
 
-        li.appendChild(left);
-        li.appendChild(right);
-        allocationList.appendChild(li);
-      });
+          li.appendChild(left);
+          li.appendChild(right);
+          allocationList.appendChild(li);
+        });
 
-      if (allocationTotal) {
-        allocationTotal.textContent = toolkit.formatCurrency(
-          holdings.reduce((acc, h) => acc + h.value, 0),
-          baseCurrency
-        );
-      }
+        if (allocationTotal) {
+          allocationTotal.textContent = toolkit.formatCurrency(
+            holdings.reduce((acc, h) => acc + h.value, 0),
+            baseCurrency
+          );
+        }
       };
 
       const renderHistory = async (holdings) => {
@@ -614,17 +631,21 @@
           return;
         }
 
-      try {
-        const histories = await Promise.all(positions.map((pos) => toolkit.fetchHistory(pos.symbol)));
-        const aggregate = toolkit.buildPortfolioHistory(positions, histories, currencyRates, baseCurrency);
-        if (aggregate.labels.length && typeof window.renderLineChart === 'function') {
-          window.renderLineChart('portfolio-history-chart', aggregate.labels, aggregate.values.map((v) => Number(v.toFixed(2))));
+        try {
+          const histories = await Promise.all(positions.map((pos) => toolkit.fetchHistory(pos.symbol)));
+          const aggregate = toolkit.buildPortfolioHistory(positions, histories, currencyRates, baseCurrency);
+          if (aggregate.labels.length && typeof window.renderLineChart === 'function') {
+            window.renderLineChart(
+              'portfolio-history-chart',
+              aggregate.labels,
+              aggregate.values.map((v) => Number(v.toFixed(2)))
+            );
+          }
+        } catch (err) {
+          console.error(err);
+        } finally {
+          if (historyChip) historyChip.classList.add('hidden');
         }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        if (historyChip) historyChip.classList.add('hidden');
-      }
       };
 
       const init = async () => {
@@ -633,47 +654,47 @@
 
         if (valueEl) {
           valueEl.textContent = toolkit.formatCurrency(portfolio.totalValue, baseCurrency);
-      }
+        }
 
-      if (gainEl) {
-        gainEl.textContent = toolkit.formatCurrency(portfolio.totalGain, baseCurrency);
-        gainEl.classList.toggle('text-emerald-600', portfolio.totalGain > 0);
-        gainEl.classList.toggle('text-rose-600', portfolio.totalGain < 0);
-      }
+        if (gainEl) {
+          gainEl.textContent = toolkit.formatCurrency(portfolio.totalGain, baseCurrency);
+          gainEl.classList.toggle('text-emerald-600', portfolio.totalGain > 0);
+          gainEl.classList.toggle('text-rose-600', portfolio.totalGain < 0);
+        }
 
-      if (gainPctEl) {
-        gainPctEl.textContent = toolkit.formatPercent(portfolio.totalGainPct);
-        gainPctEl.classList.toggle('text-emerald-600', portfolio.totalGain > 0);
-        gainPctEl.classList.toggle('text-rose-600', portfolio.totalGain < 0);
-      }
+        if (gainPctEl) {
+          gainPctEl.textContent = toolkit.formatPercent(portfolio.totalGainPct);
+          gainPctEl.classList.toggle('text-emerald-600', portfolio.totalGain > 0);
+          gainPctEl.classList.toggle('text-rose-600', portfolio.totalGain < 0);
+        }
 
-      if (dayEl) {
-        dayEl.textContent = toolkit.formatCurrency(portfolio.totalDayChange, baseCurrency);
-        dayEl.classList.toggle('text-emerald-600', portfolio.totalDayChange > 0);
-        dayEl.classList.toggle('text-rose-600', portfolio.totalDayChange < 0);
-      }
+        if (dayEl) {
+          dayEl.textContent = toolkit.formatCurrency(portfolio.totalDayChange, baseCurrency);
+          dayEl.classList.toggle('text-emerald-600', portfolio.totalDayChange > 0);
+          dayEl.classList.toggle('text-rose-600', portfolio.totalDayChange < 0);
+        }
 
-      if (dayPctEl) {
-        dayPctEl.textContent = toolkit.formatPercent(portfolio.totalDayPct);
-        dayPctEl.classList.toggle('text-emerald-600', portfolio.totalDayChange > 0);
-        dayPctEl.classList.toggle('text-rose-600', portfolio.totalDayChange < 0);
-      }
+        if (dayPctEl) {
+          dayPctEl.textContent = toolkit.formatPercent(portfolio.totalDayPct);
+          dayPctEl.classList.toggle('text-emerald-600', portfolio.totalDayChange > 0);
+          dayPctEl.classList.toggle('text-rose-600', portfolio.totalDayChange < 0);
+        }
 
-      if (portfolio.updatedAt && updatedWrap && updatedText) {
-        updatedWrap.classList.remove('hidden');
-        updatedText.textContent = new Date(portfolio.updatedAt).toLocaleString();
-      }
+        if (portfolio.updatedAt && updatedWrap && updatedText) {
+          updatedWrap.classList.remove('hidden');
+          updatedText.textContent = new Date(portfolio.updatedAt).toLocaleString();
+        }
 
-      portfolio.holdings.forEach((h) => updateRow(h.symbol, h));
+        portfolio.holdings.forEach((h) => updateRow(h.symbol, h));
 
-      if (typeof window.renderDoughnut === 'function' && document.getElementById('portfolio-allocation-chart')) {
-        const labels = portfolio.holdings.map((h) => h.symbol);
-        const values = portfolio.holdings.map((h) => Number(h.value.toFixed(2)));
-        window.renderDoughnut('portfolio-allocation-chart', labels, values);
-      }
+        if (typeof window.renderDoughnut === 'function' && document.getElementById('portfolio-allocation-chart')) {
+          const labels = portfolio.holdings.map((h) => h.symbol);
+          const values = portfolio.holdings.map((h) => Number(h.value.toFixed(2)));
+          window.renderDoughnut('portfolio-allocation-chart', labels, values);
+        }
 
-      renderAllocation(portfolio.holdings);
-      renderHistory(portfolio.holdings);
+        renderAllocation(portfolio.holdings);
+        renderHistory(portfolio.holdings);
       };
 
       init();
