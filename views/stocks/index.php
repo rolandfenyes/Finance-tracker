@@ -1,4 +1,27 @@
 <?php $hasPositions = !empty($positions); ?>
+<?php $displayCurrency = strtoupper($base_currency); ?>
+<?php $currencyOptions = array_values(array_filter($currencies ?? [], fn($c) => !empty($c['code']))); ?>
+<?php if (empty($currencyOptions)) { $currencyOptions = [['code' => $displayCurrency]]; } ?>
+
+<?php if (!empty($currencyOptions)): ?>
+  <form method="get" class="mb-4 flex flex-wrap items-center justify-end gap-2">
+    <?php foreach ($_GET as $paramKey => $paramValue): ?>
+      <?php if ($paramKey === 'currency' || !is_scalar($paramValue)) continue; ?>
+      <input type="hidden" name="<?= htmlspecialchars($paramKey) ?>" value="<?= htmlspecialchars($paramValue) ?>">
+    <?php endforeach; ?>
+    <label for="stocks-display-currency" class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
+      <?= __('Display currency') ?>
+    </label>
+    <select id="stocks-display-currency" name="currency" class="select" onchange="this.form.submit()">
+      <?php foreach ($currencyOptions as $option): ?>
+        <?php $code = strtoupper($option['code']); ?>
+        <option value="<?= htmlspecialchars($code) ?>" <?= $code === $displayCurrency ? 'selected' : '' ?>>
+          <?= htmlspecialchars($code) ?>
+        </option>
+      <?php endforeach; ?>
+    </select>
+  </form>
+<?php endif; ?>
 
 <section class="grid gap-4 lg:grid-cols-4">
   <div class="card">
@@ -65,12 +88,12 @@
       <h3 class="text-lg font-semibold text-slate-900 dark:text-white"><?= __('Allocation') ?></h3>
       <span class="chip" data-allocation-total>—</span>
     </div>
-    <div class="mt-5 min-h-[16rem]">
+    <div class="mt-5 min-h-[12rem]">
       <?php if ($hasPositions): ?>
-        <canvas id="portfolio-allocation-chart" class="h-64 w-full"></canvas>
+        <canvas id="portfolio-allocation-chart" class="h-48 w-full"></canvas>
         <ul class="mt-5 space-y-2 text-sm" data-allocation-list></ul>
       <?php else: ?>
-        <div class="flex h-64 items-center justify-center text-sm text-slate-500 dark:text-slate-300">
+        <div class="flex h-48 items-center justify-center text-sm text-slate-500 dark:text-slate-300">
           <?= __('Your positions will appear here once you record trades.') ?>
         </div>
       <?php endif; ?>
@@ -160,7 +183,14 @@
           <input name="symbol" class="input sm:col-span-2" placeholder="AAPL" required>
           <input name="quantity" type="number" step="0.000001" class="input sm:col-span-2" placeholder="<?= __('Quantity') ?>" required>
           <input name="price" type="number" step="0.0001" class="input sm:col-span-2" placeholder="<?= __('Price') ?>" required>
-          <input name="currency" class="input sm:col-span-2" value="<?= htmlspecialchars(strtoupper($base_currency)) ?>">
+          <select name="currency" class="select sm:col-span-2">
+            <?php foreach ($currencyOptions as $option): ?>
+              <?php $code = strtoupper($option['code']); ?>
+              <option value="<?= htmlspecialchars($code) ?>" <?= $code === $displayCurrency ? 'selected' : '' ?>>
+                <?= htmlspecialchars($code) ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
           <input name="trade_on" type="date" value="<?= date('Y-m-d') ?>" class="input sm:col-span-2">
           <button class="btn btn-primary sm:col-span-2"><?= __('Buy') ?></button>
         </form>
@@ -173,7 +203,14 @@
           <input name="symbol" class="input sm:col-span-2" placeholder="AAPL" required>
           <input name="quantity" type="number" step="0.000001" class="input sm:col-span-2" placeholder="<?= __('Quantity') ?>" required>
           <input name="price" type="number" step="0.0001" class="input sm:col-span-2" placeholder="<?= __('Price') ?>" required>
-          <input name="currency" class="input sm:col-span-2" value="<?= htmlspecialchars(strtoupper($base_currency)) ?>">
+          <select name="currency" class="select sm:col-span-2">
+            <?php foreach ($currencyOptions as $option): ?>
+              <?php $code = strtoupper($option['code']); ?>
+              <option value="<?= htmlspecialchars($code) ?>" <?= $code === $displayCurrency ? 'selected' : '' ?>>
+                <?= htmlspecialchars($code) ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
           <input name="trade_on" type="date" value="<?= date('Y-m-d') ?>" class="input sm:col-span-2">
           <button class="btn btn-danger sm:col-span-2"><?= __('Sell') ?></button>
         </form>
