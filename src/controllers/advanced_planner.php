@@ -288,30 +288,49 @@ function advanced_planner_store(PDO $pdo): void
     $categoryLockedInput = $_POST['category_locked_min'] ?? [];
     $categorySuggestedInput = $_POST['category_suggested'] ?? [];
 
-    foreach ($categorySuggestions as $idx => &$cat) {
-        $cat['category_id'] = isset($categoryIdsInput[$idx]) && $categoryIdsInput[$idx] !== ''
+    $preparedCategories = [];
+    $totalLockedMinimum = 0.0;
+    foreach ($categorySuggestions as $idx => $cat) {
+        $categoryId = isset($categoryIdsInput[$idx]) && $categoryIdsInput[$idx] !== ''
             ? (int)$categoryIdsInput[$idx]
             : null;
-        if (isset($categoryLabelsInput[$idx])) {
-            $cat['label'] = (string)$categoryLabelsInput[$idx];
-        }
-        if (isset($categoryAveragesInput[$idx])) {
-            $cat['average'] = round(max(0.0, (float)$categoryAveragesInput[$idx]), 2);
-        } else {
-            $cat['average'] = round(max(0.0, (float)($cat['average'] ?? 0)), 2);
-        }
+        $label = isset($categoryLabelsInput[$idx])
+            ? (string)$categoryLabelsInput[$idx]
+            : (string)($cat['label'] ?? '');
+        $average = isset($categoryAveragesInput[$idx])
+            ? round(max(0.0, (float)$categoryAveragesInput[$idx]), 2)
+            : round(max(0.0, (float)($cat['average'] ?? 0)), 2);
         $lockedMin = isset($categoryLockedInput[$idx])
             ? max(0.0, (float)$categoryLockedInput[$idx])
-            : (float)($cat['locked_min'] ?? 0);
-        $cat['locked_min'] = round($lockedMin, 2);
+            : max(0.0, (float)($cat['locked_min'] ?? 0));
+        $lockedMin = round($lockedMin, 2);
+        $suggestedBase = isset($categorySuggestedInput[$idx])
+            ? max($lockedMin, max(0.0, (float)$categorySuggestedInput[$idx]))
+            : max($lockedMin, (float)($cat['suggested'] ?? 0));
 
-        if (isset($categorySuggestedInput[$idx])) {
-            $cat['suggested'] = round(max($lockedMin, max(0.0, (float)$categorySuggestedInput[$idx])), 2);
-        } else {
-            $cat['suggested'] = round(max($lockedMin, (float)($cat['suggested'] ?? 0)), 2);
-        }
+        $preparedCategories[] = [
+            'category_id' => $categoryId,
+            'label' => $label,
+            'average' => $average,
+            'locked_min' => $lockedMin,
+            'raw_suggested' => $suggestedBase,
+        ];
+        $totalLockedMinimum += $lockedMin;
+    }
+
+    $availableExtras = max(0.0, $monthlyDiscretionary - $totalLockedMinimum);
+    foreach ($preparedCategories as &$cat) {
+        $lockedMin = (float)$cat['locked_min'];
+        $rawSuggested = isset($cat['raw_suggested']) ? (float)$cat['raw_suggested'] : $lockedMin;
+        $extra = max(0.0, $rawSuggested - $lockedMin);
+        $usableExtra = min($extra, $availableExtras);
+        $cat['suggested'] = round($lockedMin + $usableExtra, 2);
+        $availableExtras = max(0.0, $availableExtras - $usableExtra);
+        unset($cat['raw_suggested']);
     }
     unset($cat);
+
+    $categorySuggestions = $preparedCategories;
 
     $status = $activate ? 'active' : 'draft';
 

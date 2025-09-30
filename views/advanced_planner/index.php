@@ -290,9 +290,28 @@
             <?= __('We anchor suggestions to your Cashflow Rules, scaling them to the leftover cash and chosen intensity.') ?>
           </p>
         </div>
-        <span class="rounded-full border border-white/70 bg-white/80 px-4 py-1 text-sm font-medium text-slate-600 shadow-sm dark:border-slate-800/60 dark:bg-slate-900/60 dark:text-slate-300" data-leftover-preview>
-          <?= __('Leftover estimate: :amount/month', ['amount' => moneyfmt(0, $mainCurrency)]) ?>
-        </span>
+        <div
+          class="flex w-full max-w-xs flex-col items-end gap-1 text-right text-sm"
+          data-budget-progress-wrapper
+        >
+          <span class="font-medium" data-budget-progress-label>
+            <?= __('Allocated :spent of :available', [
+              'spent' => moneyfmt(0, $mainCurrency),
+              'available' => moneyfmt($incomeData['total'] ?? 0, $mainCurrency),
+            ]) ?>
+          </span>
+          <div class="flex h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+            <div
+              class="h-full w-0 rounded-full bg-brand-500 transition-all duration-300 dark:bg-brand-400"
+              data-budget-progress-bar
+            ></div>
+          </div>
+          <span class="text-xs" data-leftover-preview>
+            <?= __('Free to allocate: :amount/month', [
+              'amount' => moneyfmt($incomeData['total'] ?? 0, $mainCurrency),
+            ]) ?>
+          </span>
+        </div>
       </div>
       <div class="mt-4 overflow-x-auto">
         <table class="min-w-full text-sm">
@@ -686,6 +705,9 @@ $ruleDataForJs = array_map(
     const horizonSelect = document.querySelector('[data-horizon-selector]');
     const startInput = document.querySelector('input[name="start_month"]');
     const leftoverPreview = document.querySelector('[data-leftover-preview]');
+    const progressWrapper = document.querySelector('[data-budget-progress-wrapper]');
+    const progressBar = document.querySelector('[data-budget-progress-bar]');
+    const progressLabel = document.querySelector('[data-budget-progress-label]');
     const averageForm = document.querySelector('[data-average-form]');
     const averageSelect = document.querySelector('[data-average-select]');
     const difficultySelect = document.querySelector('[data-difficulty-selector]');
@@ -694,6 +716,10 @@ $ruleDataForJs = array_map(
     const ruleData = <?= json_encode($ruleDataForJs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     const monthlyIncome = <?= json_encode((float)($incomeData['total'] ?? 0)) ?>;
     const defaultDifficulty = <?= json_encode($defaultDifficulty) ?>;
+    const progressLabelTemplate = <?= json_encode(__('Allocated :spent of :available')) ?>;
+    const leftoverFreeTemplate = <?= json_encode(__('Free to allocate: :amount/month')) ?>;
+    const leftoverOverTemplate = <?= json_encode(__('Overallocated by :amount/month')) ?>;
+    const leftoverFullText = <?= json_encode(__('Fully allocated for the month')) ?>;
 
     averageSelect?.addEventListener('change', () => {
       if (averageForm) {
@@ -825,6 +851,9 @@ $ruleDataForJs = array_map(
       };
     });
 
+    let lastEditedCategory = null;
+    let isRecalculating = false;
+
     const updateDisplay = (cat, value) => {
       if (cat.displayCell) {
         cat.displayCell.textContent = fmt(value);
@@ -846,6 +875,141 @@ $ruleDataForJs = array_map(
     const ruleMap = new Map(
       (ruleData || []).map((rule) => [Number.parseInt(rule.id, 10), { percent: Number.parseFloat(rule.percent) || 0 }])
     );
+
+    const parseNumeric = (value, fallback = 0) => {
+      const num = Number.parseFloat(value);
+      return Number.isFinite(num) ? num : fallback;
+    };
+
+    const enforceManualLimits = (discretionary) => {
+      const manualCats = categoryRows.filter((cat) => cat.manual && cat.suggestedInput);
+      if (!manualCats.length) {
+        return;
+      }
+
+      let nonManualLocked = 0;
+      categoryRows.forEach((cat) => {
+        if (cat.manual) {
+          return;
+        }
+        nonManualLocked += Math.max(0, cat.lockedMin || 0);
+      });
+
+      const allowance = discretionary - nonManualLocked;
+      const manualLockedSum = manualCats.reduce((sum, cat) => sum + Math.max(0, cat.lockedMin || 0), 0);
+      if (allowance <= manualLockedSum + 0.0001) {
+        manualCats.forEach((cat) => {
+          const minValue = Math.max(0, cat.lockedMin || 0);
+          if (cat.suggestedInput) {
+            cat.suggestedInput.value = minValue.toFixed(2);
+          }
+          updateDisplay(cat, minValue);
+        });
+        return;
+      }
+
+      const availableExtras = Math.max(0, allowance - manualLockedSum);
+      const manualData = manualCats.map((cat) => {
+        const minValue = Math.max(0, cat.lockedMin || 0);
+        const currentValue = Math.max(minValue, parseNumeric(cat.suggestedInput?.value || '0', minValue));
+        const extra = Math.max(0, currentValue - minValue);
+        return { cat, minValue, extra, currentValue };
+      });
+
+      let totalExtras = 0;
+      manualData.forEach((item) => {
+        totalExtras += item.extra;
+      });
+
+      if (totalExtras <= availableExtras + 0.0001) {
+        manualData.forEach((item) => {
+          if (item.cat.suggestedInput) {
+            item.cat.suggestedInput.value = item.currentValue.toFixed(2);
+          }
+          updateDisplay(item.cat, item.currentValue);
+        });
+        return;
+      }
+
+      const ordered = [...manualData];
+      if (lastEditedCategory) {
+        ordered.sort((a, b) => {
+          if (a.cat === lastEditedCategory) return 1;
+          if (b.cat === lastEditedCategory) return -1;
+          return 0;
+        });
+      }
+
+      let remainingExtras = availableExtras;
+      ordered.forEach((item) => {
+        const allowedExtra = Math.max(0, Math.min(item.extra, remainingExtras));
+        const finalValue = item.minValue + allowedExtra;
+        if (item.cat.suggestedInput) {
+          item.cat.suggestedInput.value = finalValue.toFixed(2);
+        }
+        updateDisplay(item.cat, finalValue);
+        remainingExtras = Math.max(0, remainingExtras - allowedExtra);
+      });
+    };
+
+    const calculateCategoryTotals = () => {
+      let total = 0;
+      let lockedTotal = 0;
+      categoryRows.forEach((cat) => {
+        const minValue = Math.max(0, cat.lockedMin || 0);
+        const raw = cat.suggestedInput ? parseNumeric(cat.suggestedInput.value || '0', minValue) : minValue;
+        const effective = Math.max(minValue, raw);
+        total += effective;
+        lockedTotal += minValue;
+      });
+      return { total, lockedTotal };
+    };
+
+    const updateProgress = (discretionary, allocated, freeAmount) => {
+      const overspent = freeAmount < -0.01;
+      const hasCapacity = discretionary > 0;
+      if (progressLabel) {
+        const label = progressLabelTemplate
+          .replace(':spent', fmt(Math.max(0, allocated)))
+          .replace(':available', fmt(Math.max(0, discretionary)));
+        progressLabel.textContent = label;
+      }
+      if (progressWrapper) {
+        progressWrapper.classList.toggle('text-rose-600', overspent);
+        progressWrapper.classList.toggle('dark:text-rose-400', overspent);
+        progressWrapper.classList.toggle('text-slate-600', !overspent);
+        progressWrapper.classList.toggle('dark:text-slate-300', !overspent);
+      }
+      if (progressBar) {
+        let ratio = 0;
+        if (hasCapacity) {
+          ratio = Math.min(1, allocated / discretionary);
+        } else {
+          ratio = allocated > 0 ? 1 : 0;
+        }
+        const percent = Math.max(0, Math.min(100, ratio * 100));
+        progressBar.style.width = `${percent}%`;
+        progressBar.classList.toggle('bg-rose-500', overspent);
+        progressBar.classList.toggle('dark:bg-rose-400', overspent);
+        progressBar.classList.toggle('bg-brand-500', !overspent);
+        progressBar.classList.toggle('dark:bg-brand-400', !overspent);
+      }
+      if (leftoverPreview) {
+        let text;
+        if (freeAmount > 0.01) {
+          text = leftoverFreeTemplate.replace(':amount', fmt(freeAmount));
+        } else if (freeAmount < -0.01) {
+          text = leftoverOverTemplate.replace(':amount', fmt(Math.abs(freeAmount)));
+        } else {
+          text = leftoverFullText;
+        }
+        leftoverPreview.textContent = text;
+        leftoverPreview.classList.toggle('text-rose-600', overspent);
+        leftoverPreview.classList.toggle('dark:text-rose-400', overspent);
+        leftoverPreview.classList.toggle('text-slate-500', !overspent);
+        leftoverPreview.classList.toggle('dark:text-slate-400', !overspent);
+      }
+    };
 
     const getDifficultyKey = () => {
       const key = difficultySelect?.value || defaultDifficulty || 'medium';
@@ -1048,6 +1212,7 @@ $ruleDataForJs = array_map(
         const raw = Number.parseFloat(input.value || '0');
         const effective = Math.max(cat.lockedMin || 0, Number.isFinite(raw) ? raw : 0);
         setManualState(cat, true);
+        lastEditedCategory = cat;
         updateDisplay(cat, effective);
         recalcPlanEstimates();
       });
@@ -1064,22 +1229,30 @@ $ruleDataForJs = array_map(
         const baseValue = Math.max(cat.lockedMin || 0, 0);
         input.value = baseValue > 0 ? baseValue.toFixed(2) : '';
         updateDisplay(cat, baseValue);
+        lastEditedCategory = cat;
         recalcPlanEstimates();
       });
     });
 
     const recalcPlanEstimates = () => {
+      if (isRecalculating) {
+        return;
+      }
+      isRecalculating = true;
       let totalMonthly = 0;
       container?.querySelectorAll('[data-item]').forEach((panel) => {
         totalMonthly += computeMonthly(panel);
       });
-      const discretionary = Math.max(0, monthlyIncome - totalMonthly);
-      if (leftoverPreview) {
-        leftoverPreview.textContent = <?= json_encode(__('Leftover estimate: :amount/month')) ?>.replace(':amount', fmt(discretionary));
-      }
+      const availableForCategories = monthlyIncome - totalMonthly;
+      const discretionary = Math.max(0, availableForCategories);
+      enforceManualLimits(discretionary);
       const difficultyKey = getDifficultyKey();
       const suggestionValues = computeCategorySuggestions(monthlyIncome, discretionary, difficultyKey);
       applyCategorySuggestions(suggestionValues);
+      const totals = calculateCategoryTotals();
+      const freeAmount = availableForCategories - totals.total;
+      updateProgress(discretionary, totals.total, freeAmount);
+      isRecalculating = false;
     };
 
     const attachListeners = (panel) => {
