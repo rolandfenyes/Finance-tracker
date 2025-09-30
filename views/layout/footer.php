@@ -333,8 +333,19 @@
   <script>
     (function () {
       const CHUNK_SIZE = 8;
-      const QUOTE_ENDPOINT = 'https://query1.finance.yahoo.com/v7/finance/quote';
-      const CHART_ENDPOINT = 'https://query1.finance.yahoo.com/v8/finance/chart/';
+      const QUOTE_PATH = 'api/stocks/quotes';
+      const HISTORY_PATH = 'api/stocks/history';
+
+      const buildApiUrl = (path, params = {}) => {
+        const base = new URL(path, window.location.origin + window.location.pathname);
+        Object.entries(params).forEach(([key, value]) => {
+          if (value === undefined || value === null || value === '') {
+            return;
+          }
+          base.searchParams.set(key, value);
+        });
+        return base;
+      };
 
       const chunk = (array, size) => {
         const result = [];
@@ -385,23 +396,21 @@
 
         const results = {};
         for (const subset of chunk(unique, CHUNK_SIZE)) {
-          const url = new URL(QUOTE_ENDPOINT);
-          url.searchParams.set('symbols', subset.join(','));
-          url.searchParams.set('lang', 'en-US');
-          url.searchParams.set('region', 'US');
-          url.searchParams.set('corsDomain', 'finance.yahoo.com');
-          url.searchParams.set('formatted', 'false');
+          const url = buildApiUrl(QUOTE_PATH, { symbols: subset.join(',') });
           try {
-            const response = await fetch(url.toString(), { mode: 'cors', credentials: 'omit' });
+            const response = await fetch(url.toString(), { credentials: 'same-origin' });
             if (!response.ok) continue;
             const data = await response.json();
-            const items = data && data.quoteResponse && Array.isArray(data.quoteResponse.result)
-              ? data.quoteResponse.result
-              : [];
-            items.forEach((item) => {
-              if (!item || !item.symbol) return;
-              const key = String(item.symbol).toUpperCase();
-              results[key] = item;
+            if (data && data.success === false) {
+              throw new Error(data.error || 'Quote request failed');
+            }
+            const items = data && data.quotes && typeof data.quotes === 'object'
+              ? data.quotes
+              : {};
+            Object.entries(items).forEach(([symbol, payload]) => {
+              if (!symbol) return;
+              const key = String(symbol).toUpperCase();
+              results[key] = payload;
             });
           } catch (err) {
             console.error('Quote fetch failed', err);
@@ -415,35 +424,23 @@
         const sym = String(symbol || '').trim();
         if (!sym) return null;
 
-        const url = new URL(`${CHART_ENDPOINT}${encodeURIComponent(sym)}`);
-        url.searchParams.set('range', range);
-        url.searchParams.set('interval', interval);
-        url.searchParams.set('includePrePost', 'false');
-        url.searchParams.set('lang', 'en-US');
-        url.searchParams.set('region', 'US');
-        url.searchParams.set('corsDomain', 'finance.yahoo.com');
-        url.searchParams.set('formatted', 'false');
+        const url = buildApiUrl(HISTORY_PATH, {
+          symbol: sym,
+          range,
+          interval,
+        });
         try {
-          const response = await fetch(url.toString(), { mode: 'cors', credentials: 'omit' });
+          const response = await fetch(url.toString(), { credentials: 'same-origin' });
           if (!response.ok) return null;
           const payload = await response.json();
-          const result = payload && payload.chart && Array.isArray(payload.chart.result)
-            ? payload.chart.result[0]
-            : null;
-          if (!result || !Array.isArray(result.timestamp)) {
+          if (payload && payload.success === false) {
+            throw new Error(payload.error || 'History request failed');
+          }
+          const history = payload && payload.history ? payload.history : null;
+          if (!history || !Array.isArray(history.timestamps) || !Array.isArray(history.closes)) {
             return null;
           }
-          const quote = result.indicators && result.indicators.quote && result.indicators.quote[0]
-            ? result.indicators.quote[0]
-            : null;
-          if (!quote || !Array.isArray(quote.close)) {
-            return null;
-          }
-          return {
-            symbol: sym.toUpperCase(),
-            timestamps: result.timestamp,
-            closes: quote.close,
-          };
+          return history;
         } catch (err) {
           console.error('History fetch failed', err);
           return null;

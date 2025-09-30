@@ -113,3 +113,207 @@ function trade_sell(PDO $pdo){
 function trade_delete(PDO $pdo){ verify_csrf(); require_login(); $u=uid();
   $pdo->prepare('DELETE FROM stock_trades WHERE id=? AND user_id=?')->execute([(int)$_POST['id'],$u]);
 }
+
+function stocks_api_quotes(PDO $pdo){
+  require_login();
+
+  $symbolsParam = $_GET['symbols'] ?? '';
+  $rawSymbols = [];
+  if (is_array($symbolsParam)) {
+    $rawSymbols = $symbolsParam;
+  } elseif (is_string($symbolsParam)) {
+    $rawSymbols = preg_split('/[\s,]+/', $symbolsParam) ?: [];
+  }
+
+  $symbols = [];
+  foreach ($rawSymbols as $raw) {
+    $symbol = strtoupper(trim((string)$raw));
+    if ($symbol === '' || !preg_match('/^[A-Z0-9\.\-]{1,15}$/', $symbol)) {
+      continue;
+    }
+    $symbols[] = $symbol;
+  }
+
+  $symbols = array_values(array_unique($symbols));
+
+  if (empty($symbols)) {
+    json_response(['success' => true, 'quotes' => new stdClass()]);
+  }
+
+  $chunks = array_chunk($symbols, 8);
+  $results = [];
+  $hadSuccess = false;
+
+  foreach ($chunks as $group) {
+    $response = stocks_yahoo_request('/v7/finance/quote', [
+      'symbols' => implode(',', $group),
+      'lang' => 'en-US',
+      'region' => 'US',
+      'corsDomain' => 'finance.yahoo.com',
+      'formatted' => 'false',
+    ]);
+
+    if (!is_array($response)) {
+      continue;
+    }
+
+    $hadSuccess = true;
+    $items = $response['quoteResponse']['result'] ?? [];
+    if (!is_array($items)) {
+      continue;
+    }
+
+    foreach ($items as $item) {
+      if (!is_array($item) || empty($item['symbol'])) {
+        continue;
+      }
+      $key = strtoupper((string)$item['symbol']);
+      $results[$key] = $item;
+    }
+  }
+
+  if (!$hadSuccess && empty($results)) {
+    json_error(__('Live quote service is unavailable right now.'), 502);
+  }
+
+  json_response([
+    'success' => true,
+    'quotes' => $results,
+  ]);
+}
+
+function stocks_api_history(PDO $pdo){
+  require_login();
+
+  $symbol = strtoupper(trim((string)($_GET['symbol'] ?? '')));
+  if ($symbol === '' || !preg_match('/^[A-Z0-9\.\-]{1,15}$/', $symbol)) {
+    json_error(__('Please provide a valid stock symbol.'), 422);
+  }
+
+  $range = strtolower(trim((string)($_GET['range'] ?? '1mo')));
+  $interval = strtolower(trim((string)($_GET['interval'] ?? '1d')));
+
+  $allowedRanges = ['1d','5d','1mo','3mo','6mo','1y','2y','5y','10y','ytd','max'];
+  $allowedIntervals = ['1m','2m','5m','15m','30m','60m','90m','1h','1d','5d','1wk','1mo','3mo'];
+
+  if (!in_array($range, $allowedRanges, true)) {
+    $range = '1mo';
+  }
+
+  if (!in_array($interval, $allowedIntervals, true)) {
+    $interval = '1d';
+  }
+
+  $response = stocks_yahoo_request('/v8/finance/chart/' . rawurlencode($symbol), [
+    'range' => $range,
+    'interval' => $interval,
+    'includePrePost' => 'false',
+    'events' => 'div,splits',
+    'lang' => 'en-US',
+    'region' => 'US',
+    'corsDomain' => 'finance.yahoo.com',
+    'formatted' => 'false',
+  ]);
+
+  if (!is_array($response) || empty($response['chart']['result'])) {
+    json_error(__('Price history is unavailable right now.'), 502);
+  }
+
+  $result = $response['chart']['result'][0] ?? null;
+  if (!is_array($result)) {
+    json_response(['success' => true, 'history' => null]);
+  }
+
+  $timestamps = $result['timestamp'] ?? [];
+  $quoteSets = $result['indicators']['quote'][0] ?? [];
+  $closesRaw = isset($quoteSets['close']) && is_array($quoteSets['close']) ? $quoteSets['close'] : [];
+
+  $filteredTimestamps = [];
+  $filteredCloses = [];
+
+  foreach ($timestamps as $index => $ts) {
+    $close = $closesRaw[$index] ?? null;
+    if (!is_numeric($ts) || !is_numeric($close)) {
+      continue;
+    }
+    $filteredTimestamps[] = (int)$ts;
+    $filteredCloses[] = (float)$close;
+  }
+
+  if (empty($filteredTimestamps) || empty($filteredCloses)) {
+    json_response(['success' => true, 'history' => null]);
+  }
+
+  $meta = isset($result['meta']) && is_array($result['meta']) ? $result['meta'] : [];
+
+  json_response([
+    'success' => true,
+    'history' => [
+      'symbol' => $symbol,
+      'currency' => isset($meta['currency']) ? (string)$meta['currency'] : null,
+      'timestamps' => $filteredTimestamps,
+      'closes' => $filteredCloses,
+    ],
+  ]);
+}
+
+function stocks_yahoo_request(string $path, array $params = []): ?array {
+  $query = http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+  $endpoints = [
+    'https://query1.finance.yahoo.com' . $path,
+    'https://query2.finance.yahoo.com' . $path,
+  ];
+
+  foreach ($endpoints as $endpoint) {
+    $url = $endpoint . ($query ? ('?' . $query) : '');
+    $response = stocks_http_get_json($url);
+    if (is_array($response)) {
+      return $response;
+    }
+  }
+
+  return null;
+}
+
+function stocks_http_get_json(string $url): ?array {
+  $headers = [
+    'Accept: application/json',
+    'User-Agent: MyMoneyMap/1.0 (+https://mymoneymap.app)'
+  ];
+
+  if (function_exists('curl_init')) {
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    $body = curl_exec($ch);
+    $status = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    $error = curl_errno($ch);
+    curl_close($ch);
+
+    if ($body === false || $error !== 0 || $status >= 400) {
+      return null;
+    }
+
+    $decoded = json_decode($body, true);
+    return is_array($decoded) ? $decoded : null;
+  }
+
+  $context = stream_context_create([
+    'http' => [
+      'method' => 'GET',
+      'header' => implode("\r\n", $headers),
+      'timeout' => 10,
+    ],
+  ]);
+
+  $body = @file_get_contents($url, false, $context);
+  if ($body === false) {
+    return null;
+  }
+
+  $decoded = json_decode($body, true);
+  return is_array($decoded) ? $decoded : null;
+}

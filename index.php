@@ -557,6 +557,16 @@ switch ($path) {
         break;
 
     // Stocks
+    case '/api/stocks/quotes':
+        require_login();
+        require __DIR__ . '/src/controllers/stocks.php';
+        stocks_api_quotes($pdo);
+        break;
+    case '/api/stocks/history':
+        require_login();
+        require __DIR__ . '/src/controllers/stocks.php';
+        stocks_api_history($pdo);
+        break;
     case '/stocks':
         require_login();
         require __DIR__ . '/src/controllers/stocks.php';
