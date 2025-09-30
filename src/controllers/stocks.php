@@ -278,6 +278,7 @@ function stocks_yahoo_request(string $path, array $params = []): ?array {
 function stocks_http_get_json(string $url): ?array {
   $headers = [
     'Accept: application/json',
+    'Accept-Encoding: gzip, deflate',
     'User-Agent: MyMoneyMap/1.0 (+https://mymoneymap.app)'
   ];
 
@@ -288,6 +289,7 @@ function stocks_http_get_json(string $url): ?array {
     curl_setopt($ch, CURLOPT_TIMEOUT, 10);
     curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    curl_setopt($ch, CURLOPT_ENCODING, '');
     $body = curl_exec($ch);
     $status = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
     $error = curl_errno($ch);
@@ -309,11 +311,66 @@ function stocks_http_get_json(string $url): ?array {
     ],
   ]);
 
-  $body = @file_get_contents($url, false, $context);
-  if ($body === false) {
+  $handle = @fopen($url, 'rb', false, $context);
+  if (!$handle) {
     return null;
+  }
+
+  $metadata = stream_get_meta_data($handle);
+  $wrapper = isset($metadata['wrapper_data']) && is_array($metadata['wrapper_data'])
+    ? $metadata['wrapper_data']
+    : [];
+  $status = 0;
+  $encoding = '';
+  foreach ($wrapper as $headerLine) {
+    if (preg_match('/^HTTP\/\S+\s+(\d+)/i', $headerLine, $matches)) {
+      $status = (int)$matches[1];
+    }
+    if (stripos($headerLine, 'Content-Encoding:') === 0) {
+      $parts = explode(',', substr($headerLine, strlen('Content-Encoding:')));
+      $encoding = strtolower(trim($parts[0] ?? ''));
+    }
+  }
+
+  $body = stream_get_contents($handle);
+  fclose($handle);
+
+  if ($body === false || $status >= 400) {
+    return null;
+  }
+
+  if ($encoding) {
+    $decodedBody = stocks_decode_body($body, $encoding);
+    if ($decodedBody !== null) {
+      $body = $decodedBody;
+    }
   }
 
   $decoded = json_decode($body, true);
   return is_array($decoded) ? $decoded : null;
+}
+
+function stocks_decode_body(string $body, string $encoding): ?string {
+  $normalized = strtolower(trim($encoding));
+
+  if ($normalized === 'gzip') {
+    $decoded = @gzdecode($body);
+    return $decoded === false ? null : $decoded;
+  }
+
+  if ($normalized === 'deflate') {
+    $decoded = @gzinflate($body);
+    if ($decoded !== false) {
+      return $decoded;
+    }
+    $decoded = @gzuncompress($body);
+    return $decoded === false ? null : $decoded;
+  }
+
+  if ($normalized === 'br' && function_exists('brotli_uncompress')) {
+    $decoded = @brotli_uncompress($body);
+    return $decoded === false ? null : $decoded;
+  }
+
+  return $body;
 }

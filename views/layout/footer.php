@@ -356,7 +356,7 @@
       };
 
       const formatCurrency = (amount, currency, options = {}) => {
-        if (typeof amount !== 'number' || Number.isNaN(amount)) {
+        if (typeof amount !== 'number' || Number.isNaN(amount) || !Number.isFinite(amount)) {
           return '—';
         }
         const safeCurrency = currency && typeof currency === 'string' ? currency.toUpperCase() : 'USD';
@@ -380,7 +380,7 @@
       };
 
       const formatPercent = (value) => {
-        if (typeof value !== 'number' || Number.isNaN(value)) {
+        if (typeof value !== 'number' || Number.isNaN(value) || !Number.isFinite(value)) {
           return '—';
         }
         const sign = value > 0 ? '+' : '';
