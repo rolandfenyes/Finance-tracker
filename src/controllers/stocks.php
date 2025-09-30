@@ -272,12 +272,59 @@ function stocks_yahoo_request(string $path, array $params = [], int $ttlSeconds 
     'https://query2.finance.yahoo.com' . $path,
   ];
 
-  foreach ($endpoints as $endpoint) {
-    $url = $endpoint . ($query ? ('?' . $query) : '');
-    $response = stocks_http_get_json($url);
-    if (is_array($response)) {
-      stocks_yahoo_cache_store($cacheKey, $response, $ttlSeconds);
-      return $response;
+  $sessionCandidates = [];
+  $initialSession = stocks_yahoo_get_session(false);
+  if ($initialSession) {
+    $sessionCandidates[] = $initialSession;
+  }
+
+  $sessionCandidates[] = '__refresh__';
+  $sessionCandidates[] = null; // final attempt without crumb/cookie
+
+  foreach ($sessionCandidates as $candidate) {
+    $session = $candidate;
+    if ($candidate === '__refresh__') {
+      $session = stocks_yahoo_get_session(true);
+      if (!$session) {
+        continue;
+      }
+    }
+
+    if ($session === null && empty($endpoints)) {
+      continue;
+    }
+
+    $queryParams = $params;
+    $headers = [];
+
+    if (is_array($session) && !empty($session['crumb'])) {
+      $queryParams['crumb'] = $session['crumb'];
+    }
+
+    if (is_array($session) && !empty($session['cookie'])) {
+      $headers[] = 'Cookie: ' . $session['cookie'];
+    }
+
+    $queryString = http_build_query($queryParams, '', '&', PHP_QUERY_RFC3986);
+
+    foreach ($endpoints as $endpoint) {
+      $url = $endpoint . ($queryString ? ('?' . $queryString) : '');
+      $status = null;
+      $response = stocks_http_get_json($url, ['headers' => $headers], $status);
+      if (is_array($response)) {
+        if ($candidate === '__refresh__' && $session && isset($session['crumb'])) {
+          stocks_yahoo_session_store($session);
+        }
+        stocks_yahoo_cache_store($cacheKey, $response, $ttlSeconds);
+        return $response;
+      }
+
+      if (in_array($status, [401, 403], true)) {
+        if ($session) {
+          stocks_yahoo_session_forget();
+        }
+        break; // move to next session candidate
+      }
     }
   }
 
@@ -348,12 +395,97 @@ function stocks_yahoo_cache_store(string $key, array $data, int $ttlSeconds): vo
   );
 }
 
-function stocks_http_get_json(string $url): ?array {
+function stocks_yahoo_session_path(): ?string {
+  $dir = stocks_yahoo_cache_dir();
+  if ($dir === null) {
+    return null;
+  }
+
+  return $dir . '/session.json';
+}
+
+function stocks_yahoo_session_load(): ?array {
+  $path = stocks_yahoo_session_path();
+  if ($path === null || !is_file($path)) {
+    return null;
+  }
+
+  $raw = @file_get_contents($path);
+  if (!is_string($raw) || $raw === '') {
+    return null;
+  }
+
+  $decoded = json_decode($raw, true);
+  if (!is_array($decoded)) {
+    return null;
+  }
+
+  $expiresAt = isset($decoded['expires_at']) ? (int)$decoded['expires_at'] : 0;
+  if ($expiresAt !== 0 && $expiresAt <= time()) {
+    stocks_yahoo_session_forget();
+    return null;
+  }
+
+  return $decoded;
+}
+
+function stocks_yahoo_session_store(array $session): void {
+  $path = stocks_yahoo_session_path();
+  if ($path === null) {
+    return;
+  }
+
+  $payload = [
+    'cookie' => (string)($session['cookie'] ?? ''),
+    'crumb' => (string)($session['crumb'] ?? ''),
+    'fetched_at' => time(),
+    'expires_at' => time() + 3600,
+  ];
+
+  if ($payload['cookie'] === '' || $payload['crumb'] === '') {
+    return;
+  }
+
+  @file_put_contents($path, json_encode($payload, JSON_UNESCAPED_SLASHES), LOCK_EX);
+}
+
+function stocks_yahoo_session_forget(): void {
+  $path = stocks_yahoo_session_path();
+  if ($path === null || !is_file($path)) {
+    return;
+  }
+
+  @unlink($path);
+}
+
+function stocks_yahoo_get_session(bool $forceRefresh = false): ?array {
+  if (!$forceRefresh) {
+    $cached = stocks_yahoo_session_load();
+    if ($cached) {
+      return $cached;
+    }
+  }
+
+  $fresh = stocks_yahoo_refresh_session();
+  if ($fresh) {
+    stocks_yahoo_session_store($fresh);
+    return $fresh;
+  }
+
+  return null;
+}
+
+function stocks_yahoo_refresh_session(): ?array {
+  $url = 'https://query1.finance.yahoo.com/v1/test/getcrumb';
   $headers = [
-    'Accept: application/json',
-    'Accept-Encoding: gzip, deflate',
+    'Accept: text/plain',
+    'Accept-Encoding: gzip, deflate, br',
     'User-Agent: MyMoneyMap/1.0 (+https://mymoneymap.app)'
   ];
+
+  $cookie = '';
+  $crumb = '';
+  $status = null;
 
   if (function_exists('curl_init')) {
     $ch = curl_init($url);
@@ -361,6 +493,125 @@ function stocks_http_get_json(string $url): ?array {
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
     curl_setopt($ch, CURLOPT_TIMEOUT, 10);
     curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    curl_setopt($ch, CURLOPT_HEADER, true);
+    curl_setopt($ch, CURLOPT_ENCODING, '');
+    $response = curl_exec($ch);
+    $status = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    $headerSize = (int)curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+    $error = curl_errno($ch);
+    curl_close($ch);
+
+    if ($response === false || $error !== 0 || $status >= 400) {
+      return null;
+    }
+
+    $rawHeaders = substr($response, 0, $headerSize);
+    $body = substr($response, $headerSize);
+    $cookie = stocks_yahoo_parse_cookies($rawHeaders);
+    $crumb = trim($body);
+  } else {
+    $context = stream_context_create([
+      'http' => [
+        'method' => 'GET',
+        'header' => implode("\r\n", $headers),
+        'timeout' => 10,
+        'ignore_errors' => true,
+      ],
+    ]);
+
+    $handle = @fopen($url, 'rb', false, $context);
+    if ($handle === false) {
+      return null;
+    }
+
+    $metadata = stream_get_meta_data($handle);
+    $wrapper = isset($metadata['wrapper_data']) && is_array($metadata['wrapper_data']) ? $metadata['wrapper_data'] : [];
+    foreach ($wrapper as $headerLine) {
+      if (preg_match('/^HTTP\/\S+\s+(\d+)/i', $headerLine, $matches)) {
+        $status = (int)$matches[1];
+      }
+    }
+
+    $body = stream_get_contents($handle);
+    fclose($handle);
+
+    if ($body === false || ($status !== null && $status >= 400)) {
+      return null;
+    }
+
+    $cookie = stocks_yahoo_parse_cookies($wrapper);
+    $crumb = trim($body);
+  }
+
+  if ($cookie === '' || $crumb === '') {
+    return null;
+  }
+
+  return [
+    'cookie' => $cookie,
+    'crumb' => $crumb,
+  ];
+}
+
+function stocks_yahoo_parse_cookies($headers): string {
+  $lines = [];
+  if (is_string($headers)) {
+    $lines = preg_split('/\r?\n/', $headers) ?: [];
+  } elseif (is_array($headers)) {
+    $lines = $headers;
+  }
+
+  $cookies = [];
+  foreach ($lines as $line) {
+    if (!is_string($line)) {
+      continue;
+    }
+    if (stripos($line, 'Set-Cookie:') !== 0) {
+      continue;
+    }
+    $parts = explode(':', $line, 2);
+    if (count($parts) < 2) {
+      continue;
+    }
+    $cookiePart = trim($parts[1]);
+    $segments = explode(';', $cookiePart);
+    $cookieValue = trim($segments[0] ?? '');
+    if ($cookieValue !== '') {
+      $cookies[] = $cookieValue;
+    }
+  }
+
+  return implode('; ', $cookies);
+}
+
+function stocks_http_get_json(string $url, array $options = [], ?int &$status = null): ?array {
+  $status = null;
+  $baseHeaders = [
+    'Accept: application/json',
+    'Accept-Encoding: gzip, deflate, br',
+    'User-Agent: MyMoneyMap/1.0 (+https://mymoneymap.app)'
+  ];
+
+  $extraHeaders = [];
+  if (!empty($options['headers']) && is_array($options['headers'])) {
+    foreach ($options['headers'] as $header) {
+      if (is_string($header) && $header !== '') {
+        $extraHeaders[] = $header;
+      }
+    }
+  }
+
+  $headers = array_merge($baseHeaders, $extraHeaders);
+  $timeout = isset($options['timeout']) ? max(1, (int)$options['timeout']) : 10;
+  $connectTimeout = isset($options['connect_timeout']) ? max(1, (int)$options['connect_timeout']) : 5;
+
+  if (function_exists('curl_init')) {
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $connectTimeout);
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
     curl_setopt($ch, CURLOPT_ENCODING, '');
     $body = curl_exec($ch);
@@ -380,7 +631,8 @@ function stocks_http_get_json(string $url): ?array {
     'http' => [
       'method' => 'GET',
       'header' => implode("\r\n", $headers),
-      'timeout' => 10,
+      'timeout' => $timeout,
+      'ignore_errors' => true,
     ],
   ]);
 
@@ -393,7 +645,6 @@ function stocks_http_get_json(string $url): ?array {
   $wrapper = isset($metadata['wrapper_data']) && is_array($metadata['wrapper_data'])
     ? $metadata['wrapper_data']
     : [];
-  $status = 0;
   $encoding = '';
   foreach ($wrapper as $headerLine) {
     if (preg_match('/^HTTP\/\S+\s+(\d+)/i', $headerLine, $matches)) {
@@ -408,7 +659,7 @@ function stocks_http_get_json(string $url): ?array {
   $body = stream_get_contents($handle);
   fclose($handle);
 
-  if ($body === false || $status >= 400) {
+  if ($body === false || ($status !== null && $status >= 400)) {
     return null;
   }
 

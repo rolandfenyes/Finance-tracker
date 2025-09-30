@@ -512,7 +512,9 @@ $stockCurrencyRatesPayload = json_encode($stockCurrencyRates, JSON_HEX_TAG | JSO
             const qty = Number(pos.qty || 0);
             const cost = Number(pos.cost_main || 0);
             const quote = quotes && quotes[symbol] ? quotes[symbol] : null;
-            const currency = quote && quote.currency ? quote.currency : (pos.currency || baseCurrency);
+            const currency = quote && (quote.currency || quote.financialCurrency)
+              ? (quote.currency || quote.financialCurrency)
+              : (pos.currency || baseCurrency);
             const rate = rateFor(currency, Number(pos.rate_to_main || 1));
             const price = quote && typeof quote.regularMarketPrice === 'number' ? quote.regularMarketPrice : null;
             const change = quote && typeof quote.regularMarketChange === 'number' ? quote.regularMarketChange : 0;

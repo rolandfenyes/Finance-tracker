@@ -31,7 +31,7 @@
       <?= $hasPositions ? __('Loading…') : moneyfmt(0, $base_currency) ?>
     </p>
     <p class="card-subtle mt-2 flex items-center gap-2 text-xs">
-      <span><?= __('Real-time quotes from Yahoo Finance.') ?></span>
+      <span><?= __('Live market data from Yahoo Finance.') ?></span>
       <span class="hidden items-center gap-1 text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400" data-portfolio-updated>
         <i data-lucide="clock-3" class="h-3.5 w-3.5"></i>
         <span data-portfolio-updated-text>—</span>
@@ -178,59 +178,120 @@
     <p class="mt-3 hidden text-xs text-rose-500" data-stocks-error></p>
   </div>
 
-  <div class="card">
-    <h3 class="text-lg font-semibold text-slate-900 dark:text-white"><?= __('Record a trade') ?></h3>
-    <p class="card-subtle mt-2 text-sm"><?= __('Keep your holdings up-to-date by logging buys and sells as they happen.') ?></p>
-
-    <div class="mt-4 space-y-6">
-      <div>
-        <h4 class="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300"><?= __('Buy') ?></h4>
-        <form class="mt-3 grid gap-2 sm:grid-cols-6" method="post" action="/stocks/buy" data-trade-form data-trade-side="buy">
-          <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-          <input name="symbol" class="input sm:col-span-2" placeholder="AAPL" required>
-          <input name="price" type="number" step="0.0001" min="0" class="input sm:col-span-2" placeholder="<?= __('Price') ?>" required data-trade-price>
-          <input name="amount" type="number" step="0.0001" min="0" class="input sm:col-span-2" placeholder="<?= __('Amount') ?>" required data-trade-amount>
-          <input name="fee" type="number" step="0.0001" min="0" class="input sm:col-span-2" placeholder="<?= __('Fee') ?>" data-trade-fee>
-          <select name="currency" class="select sm:col-span-2">
-            <?php foreach ($currencyOptions as $option): ?>
-              <?php $code = strtoupper($option['code']); ?>
-              <option value="<?= htmlspecialchars($code) ?>" <?= $code === $displayCurrency ? 'selected' : '' ?>>
-                <?= htmlspecialchars($code) ?>
-              </option>
-            <?php endforeach; ?>
-          </select>
-          <input name="trade_on" type="date" value="<?= date('Y-m-d') ?>" class="input sm:col-span-2">
-          <input type="hidden" name="quantity" value="" data-trade-quantity-input>
-          <div class="sm:col-span-6 text-xs text-slate-500 dark:text-slate-300">
-            <?= __('Calculated quantity:') ?> <span data-trade-quantity-display>—</span>
-          </div>
-          <button class="btn btn-primary sm:col-span-2"><?= __('Buy') ?></button>
-        </form>
+  <div class="flex flex-col gap-6">
+    <div class="card" data-stock-insights>
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white"><?= __('Market Snapshot') ?></h3>
+          <p class="card-subtle text-xs"><?= __('Live market data from Yahoo Finance.') ?></p>
+        </div>
+        <?php if ($hasPositions): ?>
+          <span class="chip" data-stock-insights-loading><?= __('Loading…') ?></span>
+        <?php endif; ?>
       </div>
-
-      <div>
-        <h4 class="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300"><?= __('Sell') ?></h4>
-        <form class="mt-3 grid gap-2 sm:grid-cols-6" method="post" action="/stocks/sell" data-trade-form data-trade-side="sell">
-          <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-          <input name="symbol" class="input sm:col-span-2" placeholder="AAPL" required>
-          <input name="price" type="number" step="0.0001" min="0" class="input sm:col-span-2" placeholder="<?= __('Price') ?>" required data-trade-price>
-          <input name="amount" type="number" step="0.0001" min="0" class="input sm:col-span-2" placeholder="<?= __('Amount') ?>" required data-trade-amount>
-          <input name="fee" type="number" step="0.0001" min="0" class="input sm:col-span-2" placeholder="<?= __('Fee') ?>" data-trade-fee>
-          <select name="currency" class="select sm:col-span-2">
-            <?php foreach ($currencyOptions as $option): ?>
-              <?php $code = strtoupper($option['code']); ?>
-              <option value="<?= htmlspecialchars($code) ?>" <?= $code === $displayCurrency ? 'selected' : '' ?>>
-                <?= htmlspecialchars($code) ?>
-              </option>
-            <?php endforeach; ?>
-          </select>
-          <input name="trade_on" type="date" value="<?= date('Y-m-d') ?>" class="input sm:col-span-2">
-          <input type="hidden" name="quantity" value="" data-trade-quantity-input>
-          <div class="sm:col-span-6 text-xs text-slate-500 dark:text-slate-300">
-            <?= __('Calculated quantity:') ?> <span data-trade-quantity-display>—</span>
+      <?php if ($hasPositions): ?>
+        <label for="stock-insights-symbol" class="mt-4 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300"><?= __('Symbol') ?></label>
+        <select id="stock-insights-symbol" class="select mt-1" data-stock-insights-symbol></select>
+        <dl class="mt-4 grid gap-4 text-sm sm:grid-cols-2" data-stock-insights-content>
+          <div>
+            <dt class="card-subtle text-xs uppercase tracking-wide"><?= __('Last price') ?></dt>
+            <dd class="mt-1 font-semibold text-slate-900 dark:text-white" data-stock-insight="price">—</dd>
+            <dd class="text-xs" data-stock-insight="change">—</dd>
           </div>
-          <button class="btn btn-danger sm:col-span-2"><?= __('Sell') ?></button>
-        </form>
+          <div>
+            <dt class="card-subtle text-xs uppercase tracking-wide"><?= __('Previous close') ?></dt>
+            <dd class="mt-1" data-stock-insight="previousClose">—</dd>
+          </div>
+          <div>
+            <dt class="card-subtle text-xs uppercase tracking-wide"><?= __('Open') ?></dt>
+            <dd class="mt-1" data-stock-insight="open">—</dd>
+          </div>
+          <div>
+            <dt class="card-subtle text-xs uppercase tracking-wide"><?= __('Day range') ?></dt>
+            <dd class="mt-1" data-stock-insight="dayRange">—</dd>
+          </div>
+          <div>
+            <dt class="card-subtle text-xs uppercase tracking-wide"><?= __('52-week range') ?></dt>
+            <dd class="mt-1" data-stock-insight="fiftyTwoWeekRange">—</dd>
+          </div>
+          <div>
+            <dt class="card-subtle text-xs uppercase tracking-wide"><?= __('Volume') ?></dt>
+            <dd class="mt-1" data-stock-insight="volume">—</dd>
+          </div>
+          <div>
+            <dt class="card-subtle text-xs uppercase tracking-wide"><?= __('Market cap') ?></dt>
+            <dd class="mt-1" data-stock-insight="marketCap">—</dd>
+          </div>
+          <div>
+            <dt class="card-subtle text-xs uppercase tracking-wide"><?= __('Exchange') ?></dt>
+            <dd class="mt-1" data-stock-insight="exchange">—</dd>
+          </div>
+        </dl>
+        <p class="mt-4 text-xs text-slate-500 dark:text-slate-300">
+          <?= __('Last updated:') ?> <span data-stock-insights-updated>—</span>
+        </p>
+        <p class="mt-4 hidden text-xs text-rose-500" data-stock-insights-error data-default-message="<?= htmlspecialchars(__('No live data available for this symbol right now.'), ENT_QUOTES) ?>">
+          <?= __('No live data available for this symbol right now.') ?>
+        </p>
+      <?php else: ?>
+        <p class="mt-4 text-sm text-slate-500 dark:text-slate-300"><?= __('Add a trade to see live market details.') ?></p>
+      <?php endif; ?>
+    </div>
+
+    <div class="card">
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white"><?= __('Record a trade') ?></h3>
+      <p class="card-subtle mt-2 text-sm"><?= __('Keep your holdings up-to-date by logging buys and sells as they happen.') ?></p>
+
+      <div class="mt-4 space-y-6">
+        <div>
+          <h4 class="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300"><?= __('Buy') ?></h4>
+          <form class="mt-3 grid gap-2 sm:grid-cols-6" method="post" action="/stocks/buy" data-trade-form data-trade-side="buy">
+            <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+            <input name="symbol" class="input sm:col-span-2" placeholder="AAPL" required>
+            <input name="price" type="number" step="0.0001" min="0" class="input sm:col-span-2" placeholder="<?= __('Price') ?>" required data-trade-price>
+            <input name="amount" type="number" step="0.0001" min="0" class="input sm:col-span-2" placeholder="<?= __('Amount') ?>" required data-trade-amount>
+            <input name="fee" type="number" step="0.0001" min="0" class="input sm:col-span-2" placeholder="<?= __('Fee') ?>" data-trade-fee>
+            <select name="currency" class="select sm:col-span-2">
+              <?php foreach ($currencyOptions as $option): ?>
+                <?php $code = strtoupper($option['code']); ?>
+                <option value="<?= htmlspecialchars($code) ?>" <?= $code === $displayCurrency ? 'selected' : '' ?>>
+                  <?= htmlspecialchars($code) ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+            <input name="trade_on" type="date" value="<?= date('Y-m-d') ?>" class="input sm:col-span-2">
+            <input type="hidden" name="quantity" value="" data-trade-quantity-input>
+            <div class="sm:col-span-6 text-xs text-slate-500 dark:text-slate-300">
+              <?= __('Calculated quantity:') ?> <span data-trade-quantity-display>—</span>
+            </div>
+            <button class="btn btn-primary sm:col-span-2"><?= __('Buy') ?></button>
+          </form>
+        </div>
+
+        <div>
+          <h4 class="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300"><?= __('Sell') ?></h4>
+          <form class="mt-3 grid gap-2 sm:grid-cols-6" method="post" action="/stocks/sell" data-trade-form data-trade-side="sell">
+            <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+            <input name="symbol" class="input sm:col-span-2" placeholder="AAPL" required>
+            <input name="price" type="number" step="0.0001" min="0" class="input sm:col-span-2" placeholder="<?= __('Price') ?>" required data-trade-price>
+            <input name="amount" type="number" step="0.0001" min="0" class="input sm:col-span-2" placeholder="<?= __('Amount') ?>" required data-trade-amount>
+            <input name="fee" type="number" step="0.0001" min="0" class="input sm:col-span-2" placeholder="<?= __('Fee') ?>" data-trade-fee>
+            <select name="currency" class="select sm:col-span-2">
+              <?php foreach ($currencyOptions as $option): ?>
+                <?php $code = strtoupper($option['code']); ?>
+                <option value="<?= htmlspecialchars($code) ?>" <?= $code === $displayCurrency ? 'selected' : '' ?>>
+                  <?= htmlspecialchars($code) ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+            <input name="trade_on" type="date" value="<?= date('Y-m-d') ?>" class="input sm:col-span-2">
+            <input type="hidden" name="quantity" value="" data-trade-quantity-input>
+            <div class="sm:col-span-6 text-xs text-slate-500 dark:text-slate-300">
+              <?= __('Calculated quantity:') ?> <span data-trade-quantity-display>—</span>
+            </div>
+            <button class="btn btn-danger sm:col-span-2"><?= __('Sell') ?></button>
+          </form>
+        </div>
       </div>
     </div>
   </div>
@@ -377,10 +438,50 @@
       const allocationTotal = document.querySelector('[data-allocation-total]');
       const historyChip = document.querySelector('[data-portfolio-history-loading]');
       const loadingBadge = document.querySelector('[data-stocks-loading]');
+      const insightsCard = document.querySelector('[data-stock-insights]');
+      const insightsSelect = insightsCard ? insightsCard.querySelector('[data-stock-insights-symbol]') : null;
+      const insightsLoading = insightsCard ? insightsCard.querySelector('[data-stock-insights-loading]') : null;
+      const insightsError = insightsCard ? insightsCard.querySelector('[data-stock-insights-error]') : null;
+      const insightsUpdated = insightsCard ? insightsCard.querySelector('[data-stock-insights-updated]') : null;
 
-      const setLoading = (isLoading) => {
-        if (!loadingBadge) return;
-        loadingBadge.classList.toggle('hidden', !isLoading);
+      const insightsFields = {};
+      if (insightsCard) {
+        insightsCard.querySelectorAll('[data-stock-insight]').forEach((el) => {
+          const key = el.getAttribute('data-stock-insight');
+          if (key) {
+            insightsFields[key] = el;
+          }
+        });
+      }
+
+      const quotesErrorMessage = "<?= __('Unable to fetch live quotes right now. Please try again later.') ?>";
+      const insightsNoDataMessage = "<?= __('No live data available for this symbol right now.') ?>";
+      const defaultInsightsErrorMessage = insightsError ? (insightsError.dataset.defaultMessage || insightsNoDataMessage) : insightsNoDataMessage;
+
+      const setInsightsLoading = (isLoading) => {
+        if (!insightsLoading) return;
+        insightsLoading.classList.toggle('hidden', !isLoading);
+      };
+
+      const setInsightsError = (message) => {
+        if (!insightsError) return;
+        if (message) {
+          insightsError.textContent = message;
+          insightsError.classList.remove('hidden');
+        } else {
+          insightsError.textContent = defaultInsightsErrorMessage;
+          insightsError.classList.add('hidden');
+        }
+      };
+
+      let latestQuotes = {};
+      let latestHoldings = [];
+
+      const setQuotesLoading = (isLoading) => {
+        if (loadingBadge) {
+          loadingBadge.classList.toggle('hidden', !isLoading);
+        }
+        setInsightsLoading(isLoading);
       };
 
       if (costEl) {
@@ -397,7 +498,8 @@
         if (dayPctEl) dayPctEl.textContent = '—';
         if (allocationTotal) allocationTotal.textContent = '—';
         if (historyChip) historyChip.classList.add('hidden');
-        setLoading(false);
+        setQuotesLoading(false);
+        setInsightsError('');
         return;
       }
 
@@ -434,7 +536,7 @@
             (index === 0 && codeUnit >= 0x0030 && codeUnit <= 0x0039) ||
             (index === 1 && codeUnit >= 0x0030 && codeUnit <= 0x0039 && firstCodeUnit === 0x002D)
           ) {
-            result += '\\' + codeUnit.toString(16) + ' ';
+            result += '\' + codeUnit.toString(16) + ' ';
             continue;
           }
           if (
@@ -448,7 +550,7 @@
             result += string.charAt(index);
             continue;
           }
-          result += '\\' + string.charAt(index);
+          result += '\' + string.charAt(index);
         }
         return result;
       };
@@ -459,43 +561,43 @@
 
         const priceEl = row.querySelector('[data-stock-price]');
         const valueCell = row.querySelector('[data-stock-value]');
-      const gainAmountEl = row.querySelector('[data-stock-gain-amount]');
-      const gainPctCell = row.querySelector('[data-stock-gain-pct]');
-      const dayAmountEl = row.querySelector('[data-stock-day-amount]');
-      const dayPctEl = row.querySelector('[data-stock-day-pct]');
+        const gainAmountEl = row.querySelector('[data-stock-gain-amount]');
+        const gainPctCell = row.querySelector('[data-stock-gain-pct]');
+        const dayAmountEl = row.querySelector('[data-stock-day-amount]');
+        const dayPctEl = row.querySelector('[data-stock-day-pct]');
 
-      if (priceEl) {
-        priceEl.textContent = snapshot.price !== null
-          ? toolkit.formatCurrency(snapshot.price, snapshot.quoteCurrency, { showCode: true })
-          : '—';
-      }
+        if (priceEl) {
+          priceEl.textContent = snapshot.price !== null
+            ? toolkit.formatCurrency(snapshot.price, snapshot.quoteCurrency, { showCode: true })
+            : '—';
+        }
 
-      if (valueCell) {
-        valueCell.textContent = toolkit.formatCurrency(snapshot.value, baseCurrency);
-        valueCell.classList.toggle('text-emerald-600', snapshot.value >= snapshot.cost);
-      }
+        if (valueCell) {
+          valueCell.textContent = toolkit.formatCurrency(snapshot.value, baseCurrency);
+          valueCell.classList.toggle('text-emerald-600', snapshot.value >= snapshot.cost);
+        }
 
-      if (gainAmountEl && gainPctCell) {
-        gainAmountEl.textContent = toolkit.formatCurrency(snapshot.gain, baseCurrency);
-        gainPctCell.textContent = toolkit.formatPercent(snapshot.gainPct);
-        const positive = snapshot.gain > 0;
-        const negative = snapshot.gain < 0;
-        gainAmountEl.classList.toggle('text-emerald-600', positive);
-        gainAmountEl.classList.toggle('text-rose-600', negative);
-        gainPctCell.classList.toggle('text-emerald-600', positive);
-        gainPctCell.classList.toggle('text-rose-600', negative);
-      }
+        if (gainAmountEl && gainPctCell) {
+          gainAmountEl.textContent = toolkit.formatCurrency(snapshot.gain, baseCurrency);
+          gainPctCell.textContent = toolkit.formatPercent(snapshot.gainPct);
+          const positive = snapshot.gain > 0;
+          const negative = snapshot.gain < 0;
+          gainAmountEl.classList.toggle('text-emerald-600', positive);
+          gainAmountEl.classList.toggle('text-rose-600', negative);
+          gainPctCell.classList.toggle('text-emerald-600', positive);
+          gainPctCell.classList.toggle('text-rose-600', negative);
+        }
 
-      if (dayAmountEl && dayPctEl) {
-        dayAmountEl.textContent = toolkit.formatCurrency(snapshot.dayChange, baseCurrency);
-        dayPctEl.textContent = toolkit.formatPercent(snapshot.dayChangePct);
-        const positive = snapshot.dayChange > 0;
-        const negative = snapshot.dayChange < 0;
-        dayAmountEl.classList.toggle('text-emerald-600', positive);
-        dayAmountEl.classList.toggle('text-rose-600', negative);
-        dayPctEl.classList.toggle('text-emerald-600', positive);
-        dayPctEl.classList.toggle('text-rose-600', negative);
-      }
+        if (dayAmountEl && dayPctEl) {
+          dayAmountEl.textContent = toolkit.formatCurrency(snapshot.dayChange, baseCurrency);
+          dayPctEl.textContent = toolkit.formatPercent(snapshot.dayChangePct);
+          const positive = snapshot.dayChange > 0;
+          const negative = snapshot.dayChange < 0;
+          dayAmountEl.classList.toggle('text-emerald-600', positive);
+          dayAmountEl.classList.toggle('text-rose-600', negative);
+          dayPctEl.classList.toggle('text-emerald-600', positive);
+          dayPctEl.classList.toggle('text-rose-600', negative);
+        }
       };
 
       const computeSnapshots = (quotes) => {
@@ -505,82 +607,231 @@
         let latestTs = 0;
         const holdings = [];
 
-      positions.forEach((pos) => {
-        const symbol = String(pos.symbol || '').toUpperCase();
-        const qty = Number(pos.qty || 0);
-        const cost = Number(pos.cost_main || 0);
-        const rateFallback = pos.currency ? String(pos.currency).toUpperCase() : undefined;
-        totalCost += cost;
+        positions.forEach((pos) => {
+          const symbol = String(pos.symbol || '').toUpperCase();
+          const qty = Number(pos.qty || 0);
+          const cost = Number(pos.cost_main || 0);
+          const rateFallback = pos.currency ? String(pos.currency).toUpperCase() : undefined;
+          totalCost += cost;
 
-        const quote = quotes[symbol] || null;
-        const quoteCurrency = quote && quote.currency ? quote.currency : (quote && quote.financialCurrency ? quote.financialCurrency : rateFallback);
-        const rate = rateFor(quoteCurrency, rateFallback);
-        const price = quote && typeof quote.regularMarketPrice === 'number' ? quote.regularMarketPrice : null;
-        const change = quote && typeof quote.regularMarketChange === 'number' ? quote.regularMarketChange : 0;
-        const priceValue = price !== null ? price * qty : null;
-        const value = priceValue !== null ? priceValue * rate : cost;
-        const dayChange = price !== null ? change * qty * rate : 0;
-        const prevValue = value - dayChange;
-        const dayChangePct = prevValue > 0 ? (dayChange / prevValue) * 100 : 0;
-        const gain = value - cost;
-        const gainPct = cost > 0 ? (gain / cost) * 100 : 0;
+          const quote = quotes[symbol] || null;
+          const quoteCurrency = quote && (quote.currency || quote.financialCurrency)
+            ? (quote.currency || quote.financialCurrency)
+            : rateFallback;
+          const rate = rateFor(quoteCurrency, rateFallback);
+          const price = quote && typeof quote.regularMarketPrice === 'number' ? quote.regularMarketPrice : null;
+          const change = quote && typeof quote.regularMarketChange === 'number' ? quote.regularMarketChange : 0;
+          const priceValue = price !== null ? price * qty : null;
+          const value = priceValue !== null ? priceValue * rate : cost;
+          const dayChange = price !== null ? change * qty * rate : 0;
+          const prevValue = value - dayChange;
+          const dayChangePct = prevValue > 0 ? (dayChange / prevValue) * 100 : 0;
+          const gain = value - cost;
+          const gainPct = cost > 0 ? (gain / cost) * 100 : 0;
 
-        if (quote && quote.regularMarketTime) {
-          latestTs = Math.max(latestTs, Number(quote.regularMarketTime) * 1000);
+          if (quote && quote.regularMarketTime) {
+            latestTs = Math.max(latestTs, Number(quote.regularMarketTime) * 1000);
+          }
+
+          totalValue += value;
+          totalDayChange += dayChange;
+
+          holdings.push({
+            symbol,
+            qty,
+            name: quote && (quote.shortName || quote.longName) ? (quote.shortName || quote.longName) : symbol,
+            quoteCurrency: quoteCurrency || rateFallback || baseCurrency,
+            currency: pos.currency || baseCurrency,
+            price,
+            cost,
+            value,
+            gain,
+            gainPct,
+            dayChange,
+            dayChangePct,
+          });
+        });
+
+        const totalGain = totalValue - totalCost;
+        const previousTotal = totalValue - totalDayChange;
+
+        holdings.sort((a, b) => b.value - a.value);
+        holdings.forEach((h) => {
+          h.allocation = totalValue > 0 ? (h.value / totalValue) * 100 : 0;
+        });
+
+        return {
+          holdings,
+          totalValue,
+          totalCost,
+          totalGain,
+          totalGainPct: totalCost > 0 ? (totalGain / totalCost) * 100 : 0,
+          totalDayChange,
+          totalDayPct: previousTotal > 0 ? (totalDayChange / previousTotal) * 100 : 0,
+          updatedAt: latestTs || null,
+        };
+      };
+
+      const populateInsightsOptions = (holdings) => {
+        if (!insightsSelect) return;
+        const entries = Array.isArray(holdings) ? holdings : [];
+        const previous = insightsSelect.value;
+        insightsSelect.innerHTML = '';
+        entries.forEach((h) => {
+          const option = document.createElement('option');
+          option.value = h.symbol;
+          option.textContent = h.name && h.name !== h.symbol ? `${h.symbol} – ${h.name}` : h.symbol;
+          insightsSelect.appendChild(option);
+        });
+        if (!entries.length) {
+          insightsSelect.disabled = true;
+          return;
+        }
+        insightsSelect.disabled = false;
+        const symbols = entries.map((h) => h.symbol);
+        const nextValue = previous && symbols.includes(previous) ? previous : symbols[0];
+        insightsSelect.value = nextValue;
+      };
+
+      const renderInsights = () => {
+        if (!insightsCard || !insightsSelect) {
+          return;
         }
 
-        totalValue += value;
-        totalDayChange += dayChange;
+        if (!latestHoldings.length) {
+          Object.values(insightsFields).forEach((el) => {
+            if (!el) return;
+            el.textContent = '—';
+            el.classList.remove('text-emerald-600', 'text-rose-600');
+          });
+          if (insightsUpdated) {
+            insightsUpdated.textContent = '—';
+          }
+          setInsightsError('');
+          return;
+        }
 
-        holdings.push({
-          symbol,
-          qty,
-          name: quote && (quote.shortName || quote.longName) ? (quote.shortName || quote.longName) : symbol,
-          quoteCurrency: quoteCurrency || rateFallback || baseCurrency,
-          price,
-          cost,
-          value,
-          gain,
-          gainPct,
-          dayChange,
-          dayChangePct,
+        const selected = insightsSelect.value || latestHoldings[0].symbol;
+        if (insightsSelect.value !== selected) {
+          insightsSelect.value = selected;
+        }
+
+        const holding = latestHoldings.find((h) => h.symbol === selected) || latestHoldings[0];
+        const quote = latestQuotes[selected] || null;
+
+        if (!quote) {
+          Object.values(insightsFields).forEach((el) => {
+            if (!el) return;
+            el.textContent = '—';
+            el.classList.remove('text-emerald-600', 'text-rose-600');
+          });
+          if (insightsUpdated) {
+            insightsUpdated.textContent = '—';
+          }
+          setInsightsError(insightsNoDataMessage);
+          return;
+        }
+
+        const fallbackCurrency = holding ? (holding.quoteCurrency || holding.currency || baseCurrency) : baseCurrency;
+        const currency = quote.currency || quote.financialCurrency || fallbackCurrency;
+
+        const price = typeof quote.regularMarketPrice === 'number' ? quote.regularMarketPrice : null;
+        if (insightsFields.price) {
+          insightsFields.price.textContent = price !== null ? toolkit.formatCurrency(price, currency, { showCode: true }) : '—';
+        }
+
+        const change = typeof quote.regularMarketChange === 'number' ? quote.regularMarketChange : null;
+        const changePct = typeof quote.regularMarketChangePercent === 'number' ? quote.regularMarketChangePercent : null;
+        if (insightsFields.change) {
+          if (change !== null && changePct !== null) {
+            insightsFields.change.textContent = `${toolkit.formatCurrency(change, currency)} (${toolkit.formatPercent(changePct)})`;
+            insightsFields.change.classList.toggle('text-emerald-600', change > 0);
+            insightsFields.change.classList.toggle('text-rose-600', change < 0);
+          } else {
+            insightsFields.change.textContent = '—';
+            insightsFields.change.classList.remove('text-emerald-600', 'text-rose-600');
+          }
+        }
+
+        const previousClose = typeof quote.regularMarketPreviousClose === 'number' ? quote.regularMarketPreviousClose : null;
+        if (insightsFields.previousClose) {
+          insightsFields.previousClose.textContent = previousClose !== null ? toolkit.formatCurrency(previousClose, currency, { showCode: true }) : '—';
+        }
+
+        const openPrice = typeof quote.regularMarketOpen === 'number' ? quote.regularMarketOpen : null;
+        if (insightsFields.open) {
+          insightsFields.open.textContent = openPrice !== null ? toolkit.formatCurrency(openPrice, currency, { showCode: true }) : '—';
+        }
+
+        const dayLow = typeof quote.regularMarketDayLow === 'number' ? quote.regularMarketDayLow : null;
+        const dayHigh = typeof quote.regularMarketDayHigh === 'number' ? quote.regularMarketDayHigh : null;
+        if (insightsFields.dayRange) {
+          insightsFields.dayRange.textContent = dayLow !== null && dayHigh !== null
+            ? `${toolkit.formatCurrency(dayLow, currency, { hideCode: true })} – ${toolkit.formatCurrency(dayHigh, currency, { hideCode: true })}`
+            : '—';
+        }
+
+        const low52 = typeof quote.fiftyTwoWeekLow === 'number' ? quote.fiftyTwoWeekLow : null;
+        const high52 = typeof quote.fiftyTwoWeekHigh === 'number' ? quote.fiftyTwoWeekHigh : null;
+        if (insightsFields.fiftyTwoWeekRange) {
+          insightsFields.fiftyTwoWeekRange.textContent = low52 !== null && high52 !== null
+            ? `${toolkit.formatCurrency(low52, currency, { hideCode: true })} – ${toolkit.formatCurrency(high52, currency, { hideCode: true })}`
+            : '—';
+        }
+
+        const volume = typeof quote.regularMarketVolume === 'number' ? quote.regularMarketVolume : null;
+        if (insightsFields.volume) {
+          insightsFields.volume.textContent = volume !== null ? toolkit.formatNumber(volume) : '—';
+        }
+
+        const marketCap = typeof quote.marketCap === 'number' ? quote.marketCap : null;
+        if (insightsFields.marketCap) {
+          insightsFields.marketCap.textContent = marketCap !== null ? toolkit.formatCurrency(marketCap, currency, { showCode: true }) : '—';
+        }
+
+        const exchange = quote.fullExchangeName || quote.exchangeName || quote.exchange || quote.market || '';
+        if (insightsFields.exchange) {
+          insightsFields.exchange.textContent = exchange || '—';
+        }
+
+        if (insightsUpdated) {
+          if (quote.regularMarketTime) {
+            const updatedDate = new Date(Number(quote.regularMarketTime) * 1000);
+            insightsUpdated.textContent = Number.isFinite(updatedDate.getTime()) ? updatedDate.toLocaleString() : '—';
+          } else {
+            insightsUpdated.textContent = '—';
+          }
+        }
+
+        setInsightsError('');
+      };
+
+      if (insightsSelect) {
+        insightsSelect.addEventListener('change', () => {
+          renderInsights();
         });
-      });
-
-      const totalGain = totalValue - totalCost;
-      const previousTotal = totalValue - totalDayChange;
-
-      holdings.sort((a, b) => b.value - a.value);
-      holdings.forEach((h) => {
-        h.allocation = totalValue > 0 ? (h.value / totalValue) * 100 : 0;
-      });
-
-      return {
-        holdings,
-        totalValue,
-        totalCost,
-        totalGain,
-        totalGainPct: totalCost > 0 ? (totalGain / totalCost) * 100 : 0,
-        totalDayChange,
-        totalDayPct: previousTotal > 0 ? (totalDayChange / previousTotal) * 100 : 0,
-        updatedAt: latestTs || null,
-      };
-      };
+      }
 
       const loadQuotes = async () => {
-        setLoading(true);
+        setQuotesLoading(true);
+        if (errorEl) {
+          errorEl.classList.add('hidden');
+          errorEl.textContent = '';
+        }
+        setInsightsError('');
         try {
           const quotes = await toolkit.fetchQuotes(positions.map((p) => p.symbol));
           return quotes || {};
         } catch (err) {
+          console.error(err);
           if (errorEl) {
-            errorEl.textContent = '<?= __('Unable to fetch live quotes right now. Please try again later.') ?>';
+            errorEl.textContent = quotesErrorMessage;
             errorEl.classList.remove('hidden');
           }
-          console.error(err);
+          setInsightsError(quotesErrorMessage);
           return {};
         } finally {
-          setLoading(false);
+          setQuotesLoading(false);
         }
       };
 
@@ -650,7 +901,11 @@
 
       const init = async () => {
         const quotes = await loadQuotes();
+        latestQuotes = quotes;
         const portfolio = computeSnapshots(quotes);
+        latestHoldings = portfolio.holdings;
+        populateInsightsOptions(portfolio.holdings);
+        renderInsights();
 
         if (valueEl) {
           valueEl.textContent = toolkit.formatCurrency(portfolio.totalValue, baseCurrency);

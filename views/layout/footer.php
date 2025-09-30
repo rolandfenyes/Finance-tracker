@@ -387,6 +387,18 @@
         return `${sign}${value.toFixed(2)}%`;
       };
 
+      const formatNumber = (value, options = {}) => {
+        if (typeof value !== 'number' || Number.isNaN(value) || !Number.isFinite(value)) {
+          return '—';
+        }
+
+        try {
+          return new Intl.NumberFormat(undefined, options).format(value);
+        } catch (err) {
+          return value.toString();
+        }
+      };
+
       const fetchQuotes = async (symbols) => {
         const list = Array.isArray(symbols) ? symbols : [];
         const unique = Array.from(new Set(list.map((s) => String(s || '').trim().toUpperCase()).filter(Boolean)));
@@ -497,6 +509,7 @@
       window.MyMoneyMapStocksToolkit = {
         formatCurrency,
         formatPercent,
+        formatNumber,
         fetchQuotes,
         fetchHistory,
         buildPortfolioHistory,
