@@ -33,11 +33,15 @@ require $root . '/src/fx.php';
 
 spl_autoload_register(function (string $class): void {
     $prefix = 'MyMoneyMap\';
+    $root = __DIR__;
+
     if (!str_starts_with($class, $prefix)) {
         return;
     }
+
     $relative = substr($class, strlen($prefix));
     $file = $root . '/src/' . str_replace('\', '/', $relative) . '.php';
+
     if (is_file($file)) {
         require $file;
     }
