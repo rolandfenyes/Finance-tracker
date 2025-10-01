@@ -11,13 +11,13 @@ require_once __DIR__ . '/../stocks/TradeService.php';
 require_once __DIR__ . '/../stocks/SignalsService.php';
 require_once __DIR__ . '/../stocks/ChartsService.php';
 
-use Stocks\\Adapters\\FinnhubAdapter;
-use Stocks\\Adapters\\NullPriceProvider;
-use Stocks\\ChartsService;
-use Stocks\\PortfolioService;
-use Stocks\\PriceDataService;
-use Stocks\\SignalsService;
-use Stocks\\TradeService;
+use Stocks\Adapters\FinnhubAdapter;
+use Stocks\Adapters\NullPriceProvider;
+use Stocks\ChartsService;
+use Stocks\PortfolioService;
+use Stocks\PriceDataService;
+use Stocks\SignalsService;
+use Stocks\TradeService;
 
 function stocks_index(PDO $pdo): void
 {
@@ -97,7 +97,7 @@ function stocks_detail(PDO $pdo, string $symbol): void
 
     $positionSeries = $chartsService->positionValueSeries($userId, $symbol, $historyRange);
 
-    $realizedStmt = $pdo->prepare('SELECT COALESCE(SUM(realized_pl_base),0) FROM stock_realized_pl WHERE user_id=? AND stock_id=? AND DATE_TRUNC(''year'', closed_at)=DATE_TRUNC(''year'', CURRENT_DATE)');
+    $realizedStmt = $pdo->prepare('SELECT COALESCE(SUM(realized_pl_base),0) FROM stock_realized_pl WHERE user_id=? AND stock_id=? AND DATE_TRUNC(\'year\', closed_at)=DATE_TRUNC(\'year\', CURRENT_DATE)');
     $realizedStmt->execute([$userId, $stockRow['id']]);
     $realizedYtd = (float)$realizedStmt->fetchColumn();
 
