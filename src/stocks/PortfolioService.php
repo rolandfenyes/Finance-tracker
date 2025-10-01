@@ -11,6 +11,13 @@ class PortfolioService
     private PDO $pdo;
     private PriceDataService $priceDataService;
 
+    /**
+     * Cached table existence lookups to avoid repeated information_schema hits.
+     *
+     * @var array<string,bool>
+     */
+    private array $schemaCache = [];
+
     public function __construct(PDO $pdo, PriceDataService $priceDataService)
     {
         $this->pdo = $pdo;
@@ -123,12 +130,28 @@ class PortfolioService
      */
     private function loadPositions(int $userId, array $filters): array
     {
+        if ($this->tableExists('stock_positions') && $this->tableExists('stocks')) {
+            return $this->loadPositionsFromSnapshots($userId, $filters);
+        }
+
+        return $this->loadPositionsLegacy($userId, $filters);
+    }
+
+    /**
+     * @param array<string,mixed> $filters
+     * @return array<int,array<string,mixed>>
+     */
+    private function loadPositionsFromSnapshots(int $userId, array $filters): array
+    {
         $sql = 'SELECT sp.qty, sp.avg_cost_ccy, sp.avg_cost_currency, sp.cash_impact_ccy, s.symbol, s.name, s.currency, s.sector, s.industry
             FROM stock_positions sp
             JOIN stocks s ON s.id = sp.stock_id';
         $params = [$userId];
-        if (!empty($filters['watchlist_only'])) {
+        $watchlistOnly = !empty($filters['watchlist_only']);
+        if ($watchlistOnly && $this->tableExists('watchlist')) {
             $sql .= ' JOIN watchlist w ON w.stock_id = sp.stock_id AND w.user_id = sp.user_id';
+        } elseif ($watchlistOnly) {
+            return [];
         }
         $sql .= ' WHERE sp.user_id = ? AND sp.qty <> 0';
         if (!empty($filters['sector'])) {
@@ -149,6 +172,89 @@ class PortfolioService
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * @param array<string,mixed> $filters
+     * @return array<int,array<string,mixed>>
+     */
+    private function loadPositionsLegacy(int $userId, array $filters): array
+    {
+        $hasStocksTable = $this->tableExists('stocks');
+        $watchlistOnly = !empty($filters['watchlist_only']);
+        $hasWatchlist = $this->tableExists('watchlist');
+        if ($watchlistOnly && (!$hasStocksTable || !$hasWatchlist)) {
+            return [];
+        }
+
+        $select = 'SELECT agg.qty, agg.avg_cost_ccy, agg.currency AS avg_cost_currency, agg.cash_impact_ccy, agg.symbol';
+        if ($hasStocksTable) {
+            $select .= ', COALESCE(s.name, agg.symbol) AS name, COALESCE(s.currency, agg.currency) AS currency, s.sector, s.industry';
+        } else {
+            $select .= ', agg.symbol AS name, agg.currency AS currency, NULL AS sector, NULL AS industry';
+        }
+
+        $sql = $select . " FROM (
+            SELECT
+                UPPER(symbol) AS symbol,
+                SUM(CASE WHEN LOWER(side) = 'buy' THEN quantity ELSE -quantity END) AS qty,
+                CASE
+                    WHEN SUM(CASE WHEN LOWER(side) = 'buy' THEN quantity ELSE -quantity END) <> 0
+                        THEN SUM(CASE WHEN LOWER(side) = 'buy' THEN quantity * price ELSE 0 END)
+                            / NULLIF(SUM(CASE WHEN LOWER(side) = 'buy' THEN quantity ELSE 0 END), 0)
+                    ELSE 0
+                END AS avg_cost_ccy,
+                COALESCE(MAX(currency), 'USD') AS currency,
+                SUM(CASE WHEN LOWER(side) = 'buy' THEN -(quantity * price) ELSE (quantity * price) END) AS cash_impact_ccy
+            FROM stock_trades
+            WHERE user_id = ?
+            GROUP BY UPPER(symbol)
+        ) agg";
+
+        $params = [$userId];
+        if ($hasStocksTable) {
+            $sql .= ' LEFT JOIN stocks s ON UPPER(s.symbol) = agg.symbol';
+        }
+        if ($watchlistOnly && $hasWatchlist) {
+            $sql .= ' JOIN watchlist w ON w.stock_id = s.id AND w.user_id = ?';
+            $params[] = $userId;
+        }
+
+        $conditions = ['agg.qty <> 0'];
+        if (!empty($filters['sector']) && $hasStocksTable) {
+            $conditions[] = 's.sector = ?';
+            $params[] = $filters['sector'];
+        }
+        if (!empty($filters['currency'])) {
+            $conditions[] = ($hasStocksTable ? 'COALESCE(s.currency, agg.currency)' : 'agg.currency') . ' = ?';
+            $params[] = strtoupper($filters['currency']);
+        }
+        if (!empty($filters['search'])) {
+            $conditions[] = '(agg.symbol LIKE ?' . ($hasStocksTable ? ' OR UPPER(COALESCE(s.name, \'\')) LIKE ?' : '') . ')';
+            $needle = '%' . strtoupper($filters['search']) . '%';
+            $params[] = $needle;
+            if ($hasStocksTable) {
+                $params[] = $needle;
+            }
+        }
+        if ($conditions) {
+            $sql .= ' WHERE ' . implode(' AND ', $conditions);
+        }
+        $sql .= ' ORDER BY agg.symbol ASC';
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (!$hasStocksTable) {
+            foreach ($rows as &$row) {
+                $row['sector'] = $row['sector'] ?? null;
+                $row['industry'] = $row['industry'] ?? null;
+            }
+            unset($row);
+        }
+
+        return $rows;
     }
 
     /**
@@ -197,6 +303,9 @@ class PortfolioService
 
     private function sumRealized(int $userId, string $from, string $to): float
     {
+        if (!$this->tableExists('stock_realized_pl')) {
+            return 0.0;
+        }
         $stmt = $this->pdo->prepare('SELECT COALESCE(SUM(realized_pl_base),0) FROM stock_realized_pl WHERE user_id=? AND closed_at BETWEEN ?::timestamptz AND ?::timestamptz');
         $stmt->execute([$userId, $from . ' 00:00:00', $to . ' 23:59:59']);
         return (float)$stmt->fetchColumn();
@@ -248,6 +357,9 @@ class PortfolioService
 
     private function buildWatchlist(int $userId, string $baseCurrency, string $today): array
     {
+        if (!$this->tableExists('watchlist') || !$this->tableExists('stocks')) {
+            return [];
+        }
         $stmt = $this->pdo->prepare('SELECT w.stock_id, s.symbol, s.name, s.currency FROM watchlist w JOIN stocks s ON s.id = w.stock_id WHERE w.user_id=? ORDER BY s.symbol');
         $stmt->execute([$userId]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -279,5 +391,18 @@ class PortfolioService
             ];
         }
         return $watchlist;
+    }
+
+    private function tableExists(string $table): bool
+    {
+        $key = strtolower($table);
+        if (array_key_exists($key, $this->schemaCache)) {
+            return $this->schemaCache[$key];
+        }
+        $stmt = $this->pdo->prepare('SELECT 1 FROM information_schema.tables WHERE table_name = ? LIMIT 1');
+        $stmt->execute([$key]);
+        $exists = (bool)$stmt->fetchColumn();
+        $this->schemaCache[$key] = $exists;
+        return $exists;
     }
 }
