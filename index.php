@@ -42,8 +42,19 @@ if ($base !== '' && str_starts_with($rawPath, $base)) {
 }
 $path = rtrim($rawPath, '/') ?: '/';
 
+// Normalize request info for the router
+$method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');           // "GET", "POST", etc.
+
+// (optional) honor method override from forms like _method=DELETE
+if ($method === 'POST' && !empty($_POST['_method'])) {
+    $override = strtoupper(trim($_POST['_method']));
+    if (in_array($override, ['PUT', 'PATCH', 'DELETE'], true)) {
+        $method = $override;
+    }
+}
+
 // Dynamic routes for stocks module
-if (preg_match('#^/stocks/([A-Za-z0-9\.-:]+)$#', $path, $m)) {
+if ($method === 'GET' && preg_match('#^/stocks/([A-Za-z0-9\.-:]+)$#', $path, $m)) {
     require_login();
     require __DIR__ . '/src/controllers/stocks.php';
     stocks_detail($pdo, $m[1]);
@@ -66,17 +77,6 @@ if (preg_match('#^/api/stocks/([A-Za-z0-9\.-:]+)/history$#', $path, $m)) {
     require __DIR__ . '/src/controllers/stocks.php';
     stocks_history_api($pdo, $m[1]);
     return;
-}
-
-// Normalize request info for the router
-$method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');           // "GET", "POST", etc.
-
-// (optional) honor method override from forms like _method=DELETE
-if ($method === 'POST' && !empty($_POST['_method'])) {
-    $override = strtoupper(trim($_POST['_method']));
-    if (in_array($override, ['PUT', 'PATCH', 'DELETE'], true)) {
-        $method = $override;
-    }
 }
 
 // Simple routing
