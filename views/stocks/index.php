@@ -4,6 +4,7 @@
 /** @var array $portfolioChart */
 /** @var array $filters */
 /** @var int $refreshSeconds */
+/** @var array $userCurrencies */
 
 $totals = $overview['totals'];
 $holdings = $overview['holdings'];
@@ -160,11 +161,26 @@ $baseCurrency = $totals['base_currency'];
       </select>
       <input name="quantity" type="number" step="0.0001" placeholder="Qty" class="input" required />
       <input name="price" type="number" step="0.0001" placeholder="Price" class="input" required />
-      <input name="currency" placeholder="USD" class="input" />
+      <select name="currency" class="input">
+        <?php if (!empty($userCurrencies)): ?>
+          <?php $hasSelected = false; ?>
+          <?php foreach ($userCurrencies as $index => $c): ?>
+            <?php
+              $code = strtoupper($c['code']);
+              $isSelected = !empty($c['is_main']) || (!$hasSelected && $index === 0);
+              if ($isSelected) { $hasSelected = true; }
+            ?>
+            <option value="<?= htmlspecialchars($code) ?>" <?= $isSelected ? 'selected' : '' ?>>
+              <?= htmlspecialchars($code) ?>
+            </option>
+          <?php endforeach; ?>
+        <?php else: ?>
+          <option value="USD" selected>USD</option>
+        <?php endif; ?>
+      </select>
       <input name="fee" type="number" step="0.01" placeholder="Fee" class="input" />
       <input name="trade_date" type="date" value="<?= date('Y-m-d') ?>" class="input" />
       <input name="trade_time" type="time" value="<?= date('H:i') ?>" class="input" />
-      <input name="market" placeholder="NASDAQ" class="input" />
       <input name="note" placeholder="Note" class="input sm:col-span-2" />
       <button class="btn btn-primary sm:col-span-2">Submit trade</button>
     </form>

@@ -10,11 +10,36 @@
 /** @var bool $isWatched */
 /** @var string $historyRange */
 /** @var string $baseCurrency */
+/** @var array $userCurrencies */
 
 $rangeOptions = ['1D', '5D', '1M', '6M', '1Y', '5Y'];
 
 $symbol = $stock['symbol'];
 $currency = $stock['currency'] ?? 'USD';
+$preferredCurrency = strtoupper($currency);
+$hasPreferredCurrency = false;
+foreach ($userCurrencies as $c) {
+  if (strtoupper($c['code']) === $preferredCurrency) {
+    $hasPreferredCurrency = true;
+    break;
+  }
+}
+$selectedCurrencyCode = $preferredCurrency;
+if (!$hasPreferredCurrency) {
+  $selectedCurrencyCode = null;
+  foreach ($userCurrencies as $c) {
+    if (!empty($c['is_main'])) {
+      $selectedCurrencyCode = strtoupper($c['code']);
+      break;
+    }
+  }
+  if ($selectedCurrencyCode === null && !empty($userCurrencies)) {
+    $selectedCurrencyCode = strtoupper($userCurrencies[0]['code']);
+  }
+  if ($selectedCurrencyCode === null) {
+    $selectedCurrencyCode = $preferredCurrency;
+  }
+}
 $lastPrice = $quote['last'] ?? null;
 $prevClose = $quote['prev_close'] ?? null;
 $change = ($lastPrice !== null && $prevClose !== null) ? $lastPrice - $prevClose : null;
@@ -154,7 +179,18 @@ $signals = $insights['signals'] ?? [];
       </select>
       <input name="quantity" type="number" step="0.0001" placeholder="Qty" class="input" required />
       <input name="price" type="number" step="0.0001" value="<?= $lastPrice !== null ? htmlspecialchars($lastPrice) : '' ?>" placeholder="Price" class="input" required />
-      <input name="currency" value="<?= htmlspecialchars($currency) ?>" class="input" />
+      <select name="currency" class="input">
+        <?php if (!empty($userCurrencies)): ?>
+          <?php foreach ($userCurrencies as $c): ?>
+            <?php $code = strtoupper($c['code']); ?>
+            <option value="<?= htmlspecialchars($code) ?>" <?= $code === $selectedCurrencyCode ? 'selected' : '' ?>>
+              <?= htmlspecialchars($code) ?>
+            </option>
+          <?php endforeach; ?>
+        <?php else: ?>
+          <option value="<?= htmlspecialchars($selectedCurrencyCode) ?>" selected><?= htmlspecialchars($selectedCurrencyCode) ?></option>
+        <?php endif; ?>
+      </select>
       <input name="fee" type="number" step="0.01" placeholder="Fee" class="input" />
       <input name="trade_date" type="date" value="<?= date('Y-m-d') ?>" class="input" />
       <input name="trade_time" type="time" value="<?= date('H:i') ?>" class="input" />

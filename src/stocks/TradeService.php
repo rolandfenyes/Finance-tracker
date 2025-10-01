@@ -188,6 +188,11 @@ class TradeService
 
     private function ensureStockExists(string $symbol, ?string $market, string $currency): int
     {
+        if ($market !== null && $market !== '') {
+            $market = strtoupper($market);
+        } else {
+            $market = null;
+        }
         $stmt = $this->pdo->prepare('SELECT id FROM stocks WHERE UPPER(symbol)=? LIMIT 1');
         $stmt->execute([$symbol]);
         $id = $stmt->fetchColumn();
@@ -196,8 +201,9 @@ class TradeService
                 ->execute([$market, $currency, $id]);
             return (int)$id;
         }
+        $insertMarket = $market ?: 'NASDAQ';
         $stmt = $this->pdo->prepare('INSERT INTO stocks(symbol, market, currency, created_at, updated_at) VALUES(UPPER(?), ?, ?, NOW(), NOW()) RETURNING id');
-        $stmt->execute([$symbol, $market, $currency]);
+        $stmt->execute([$symbol, $insertMarket, $currency]);
         return (int)$stmt->fetchColumn();
     }
 

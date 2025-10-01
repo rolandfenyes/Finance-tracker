@@ -47,12 +47,15 @@ function stocks_index(PDO $pdo): void
     $portfolioChart = $chartsService->portfolioValueSeries($userId, $_GET['chartRange'] ?? '6M');
     $refreshSeconds = stocks_refresh_seconds($userId, $pdo);
 
+    $userCurrencies = stocks_user_currencies($pdo, $userId);
+
     view('stocks/index', [
         'overview' => $overview,
         'insights' => $insights,
         'portfolioChart' => $portfolioChart,
         'filters' => $filters,
         'refreshSeconds' => $refreshSeconds,
+        'userCurrencies' => $userCurrencies,
     ]);
 }
 
@@ -104,6 +107,8 @@ function stocks_detail(PDO $pdo, string $symbol): void
     $settings = stocks_settings($pdo, $userId);
     $isWatched = stocks_is_watched($pdo, $userId, (int)$stockRow['id']);
 
+    $userCurrencies = stocks_user_currencies($pdo, $userId);
+
     view('stocks/show', [
         'stock' => $stockRow,
         'position' => $position,
@@ -116,6 +121,7 @@ function stocks_detail(PDO $pdo, string $symbol): void
         'isWatched' => $isWatched,
         'historyRange' => $historyRange,
         'baseCurrency' => $baseCurrency,
+        'userCurrencies' => $userCurrencies,
     ]);
 }
 
@@ -134,7 +140,11 @@ function stocks_trade(PDO $pdo): void
     $date = $_POST['trade_date'] ?? date('Y-m-d');
     $time = $_POST['trade_time'] ?? '15:30:00';
     $note = $_POST['note'] ?? null;
-    $market = $_POST['market'] ?? null;
+    $marketInput = $_POST['market'] ?? null;
+    $market = $marketInput !== null ? strtoupper(trim((string)$marketInput)) : null;
+    if ($market === '') {
+        $market = null;
+    }
     $executedAt = trim($date . ' ' . $time);
 
     $payload = [
@@ -191,6 +201,26 @@ function stocks_toggle_watch(PDO $pdo, string $symbol): void
         $pdo->prepare('INSERT INTO watchlist(user_id, stock_id, created_at) VALUES(?,?, NOW()) ON CONFLICT DO NOTHING')->execute([$userId, $stock['id']]);
     }
     redirect('/stocks/' . urlencode($symbol));
+}
+
+/**
+ * @return array<int, array{code:string,is_main?:mixed}>
+ */
+function stocks_user_currencies(PDO $pdo, int $userId): array
+{
+    $stmt = $pdo->prepare('SELECT code, is_main FROM user_currencies WHERE user_id=? ORDER BY is_main DESC, code');
+    $stmt->execute([$userId]);
+    $currencies = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    if ($currencies) {
+        return $currencies;
+    }
+
+    $main = fx_user_main($pdo, $userId);
+    if ($main) {
+        return [['code' => strtoupper($main), 'is_main' => true]];
+    }
+
+    return [['code' => 'USD', 'is_main' => true]];
 }
 
 function stocks_live_api(PDO $pdo): void

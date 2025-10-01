@@ -13,6 +13,15 @@ Set the following environment variables (or edit `config/config.php`):
 
 Provider-specific settings are merged with the config array returned from `config/config.php` under the `stocks.providers` key.
 
+### Setting up Finnhub
+
+1. Create a Finnhub account at [https://finnhub.io](https://finnhub.io) and generate an API key from the dashboard.
+2. Add the key to your environment via `.env` or the hosting control panel: set `FINNHUB_API_KEY=your_key_here` and `STOCKS_PROVIDER=finnhub`.
+3. (Optional) Override the base URL with `FINNHUB_BASE_URL` if you are using a proxy or the sandbox endpoint.
+4. Clear the application cache or restart PHP-FPM/workers so the new environment variables are picked up.
+5. Run `php scripts/stocks_backfill.php --symbol=AAPL --from=$(date -d '30 days ago' +%Y-%m-%d) --to=$(date +%Y-%m-%d)` (or the equivalent for your shell) to confirm candles load.
+6. Visit `/stocks` in the UI; the live quote badges should show “fresh” timestamps and the network panel will display Finnhub API calls.
+
 ## Database
 
 Run migrations to create the new tables:
