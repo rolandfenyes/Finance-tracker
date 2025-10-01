@@ -262,18 +262,25 @@ function stocks_price_service(PDO $pdo): PriceDataService
 
 function stocks_refresh_seconds(int $userId, PDO $pdo): int
 {
+    $default = stocks_refresh_default();
+    if (!stocks_table_exists($pdo, 'user_settings_stocks')) {
+        return $default;
+    }
+
     $stmt = $pdo->prepare('SELECT refresh_seconds FROM user_settings_stocks WHERE user_id=?');
     $stmt->execute([$userId]);
     $value = (int)($stmt->fetchColumn() ?: 0);
     if ($value <= 0) {
-        global $config;
-        $value = (int)($config['stocks']['refresh_seconds'] ?? 10);
+        return $default;
     }
     return max(5, $value);
 }
 
 function stocks_settings(PDO $pdo, int $userId): array
 {
+    if (!stocks_table_exists($pdo, 'user_settings_stocks')) {
+        return ['unrealized_method' => 'AVERAGE', 'realized_method' => 'FIFO'];
+    }
     $stmt = $pdo->prepare('SELECT * FROM user_settings_stocks WHERE user_id=?');
     $stmt->execute([$userId]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -282,6 +289,9 @@ function stocks_settings(PDO $pdo, int $userId): array
 
 function stocks_fetch_stock(PDO $pdo, string $symbol): ?array
 {
+    if (!stocks_table_exists($pdo, 'stocks')) {
+        return null;
+    }
     $stmt = $pdo->prepare('SELECT * FROM stocks WHERE UPPER(symbol)=? LIMIT 1');
     $stmt->execute([$symbol]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -290,7 +300,30 @@ function stocks_fetch_stock(PDO $pdo, string $symbol): ?array
 
 function stocks_is_watched(PDO $pdo, int $userId, int $stockId): bool
 {
+    if (!stocks_table_exists($pdo, 'watchlist')) {
+        return false;
+    }
     $stmt = $pdo->prepare('SELECT 1 FROM watchlist WHERE user_id=? AND stock_id=?');
     $stmt->execute([$userId, $stockId]);
     return (bool)$stmt->fetchColumn();
+}
+
+function stocks_table_exists(PDO $pdo, string $table): bool
+{
+    static $cache = [];
+    $key = strtolower($table);
+    if (array_key_exists($key, $cache)) {
+        return $cache[$key];
+    }
+    $stmt = $pdo->prepare('SELECT 1 FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = ? LIMIT 1');
+    $stmt->execute([$table]);
+    $cache[$key] = (bool)$stmt->fetchColumn();
+    return $cache[$key];
+}
+
+function stocks_refresh_default(): int
+{
+    global $config;
+    $value = (int)($config['stocks']['refresh_seconds'] ?? 10);
+    return max(5, $value);
 }
