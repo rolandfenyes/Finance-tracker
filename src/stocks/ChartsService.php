@@ -12,6 +12,20 @@ class ChartsService
     private PDO $pdo;
     private PriceDataService $priceDataService;
 
+    /**
+     * Cached table existence lookups keyed by lowercase table name.
+     *
+     * @var array<string,bool>
+     */
+    private array $schemaCache = [];
+
+    /**
+     * Cached column existence lookups keyed by "table.column".
+     *
+     * @var array<string,bool>
+     */
+    private array $columnCache = [];
+
     public function __construct(PDO $pdo, PriceDataService $priceDataService)
     {
         $this->pdo = $pdo;
@@ -23,6 +37,10 @@ class ChartsService
      */
     public function portfolioValueSeries(int $userId, string $range = '1M'): array
     {
+        if (!$this->tableExists('stock_trades')) {
+            return ['labels' => [], 'series' => []];
+        }
+
         $dates = $this->dateRangeFor($range);
         $stocks = $this->loadUserStocks($userId);
         if (empty($stocks)) {
@@ -74,6 +92,10 @@ class ChartsService
      */
     public function positionValueSeries(int $userId, string $symbol, string $range = '6M'): array
     {
+        if (!$this->tableExists('stock_trades')) {
+            return ['labels' => [], 'series' => []];
+        }
+
         $dates = $this->dateRangeFor($range);
         $history = $this->indexHistory($this->priceDataService->getDailyHistory($symbol, $dates['start'], $dates['end']));
         $trades = $this->loadTradesForSymbol($userId, $symbol, $dates['end']);
@@ -142,11 +164,21 @@ class ChartsService
      */
     private function loadUserStocks(int $userId): array
     {
-        $stmt = $this->pdo->prepare('SELECT DISTINCT s.symbol, s.id, s.currency FROM stock_trades t JOIN stocks s ON s.id = t.stock_id WHERE t.user_id=? ORDER BY s.symbol');
+        if ($this->tableExists('stocks')) {
+            $stmt = $this->pdo->prepare('SELECT DISTINCT s.symbol, s.id, s.currency FROM stock_trades t JOIN stocks s ON s.id = t.stock_id WHERE t.user_id=? ORDER BY s.symbol');
+            $stmt->execute([$userId]);
+            $result = [];
+            foreach ($stmt as $row) {
+                $result[$row['symbol']] = ['id' => (int)$row['id'], 'currency' => $row['currency'] ?? 'USD'];
+            }
+            return $result;
+        }
+
+        $stmt = $this->pdo->prepare('SELECT DISTINCT UPPER(symbol) AS symbol, COALESCE(currency, \'USD\') AS currency FROM stock_trades WHERE user_id=? ORDER BY UPPER(symbol)');
         $stmt->execute([$userId]);
         $result = [];
         foreach ($stmt as $row) {
-            $result[$row['symbol']] = ['id' => (int)$row['id'], 'currency' => $row['currency'] ?? 'USD'];
+            $result[$row['symbol']] = ['id' => null, 'currency' => $row['currency'] ?? 'USD'];
         }
         return $result;
     }
@@ -156,8 +188,14 @@ class ChartsService
      */
     private function loadTrades(int $userId, string $endDate): array
     {
-        $stmt = $this->pdo->prepare('SELECT executed_at::date AS trade_date, s.symbol, side, quantity FROM stock_trades t JOIN stocks s ON s.id = t.stock_id WHERE t.user_id=? AND executed_at::date <= ?::date ORDER BY executed_at ASC, t.id ASC');
-        $stmt->execute([$userId, $endDate]);
+        $dateExpr = $this->tradeDateExpression();
+        if ($this->tableExists('stocks')) {
+            $stmt = $this->pdo->prepare("SELECT {$dateExpr} AS trade_date, s.symbol, side, quantity FROM stock_trades t JOIN stocks s ON s.id = t.stock_id WHERE t.user_id=? AND {$dateExpr} <= ?::date ORDER BY {$dateExpr} ASC, t.id ASC");
+            $stmt->execute([$userId, $endDate]);
+        } else {
+            $stmt = $this->pdo->prepare("SELECT {$dateExpr} AS trade_date, UPPER(symbol) AS symbol, side, quantity FROM stock_trades WHERE user_id=? AND {$dateExpr} <= ?::date ORDER BY {$dateExpr} ASC, id ASC");
+            $stmt->execute([$userId, $endDate]);
+        }
         $rows = [];
         foreach ($stmt as $row) {
             $rows[] = [
@@ -175,8 +213,14 @@ class ChartsService
      */
     private function loadTradesForSymbol(int $userId, string $symbol, string $endDate): array
     {
-        $stmt = $this->pdo->prepare('SELECT executed_at::date AS trade_date, side, quantity FROM stock_trades t JOIN stocks s ON s.id = t.stock_id WHERE t.user_id=? AND UPPER(s.symbol)=UPPER(?) AND executed_at::date <= ?::date ORDER BY executed_at ASC, t.id ASC');
-        $stmt->execute([$userId, $symbol, $endDate]);
+        $dateExpr = $this->tradeDateExpression();
+        if ($this->tableExists('stocks')) {
+            $stmt = $this->pdo->prepare("SELECT {$dateExpr} AS trade_date, side, quantity FROM stock_trades t JOIN stocks s ON s.id = t.stock_id WHERE t.user_id=? AND UPPER(s.symbol)=UPPER(?) AND {$dateExpr} <= ?::date ORDER BY {$dateExpr} ASC, t.id ASC");
+            $stmt->execute([$userId, $symbol, $endDate]);
+        } else {
+            $stmt = $this->pdo->prepare("SELECT {$dateExpr} AS trade_date, side, quantity FROM stock_trades WHERE user_id=? AND UPPER(symbol)=UPPER(?) AND {$dateExpr} <= ?::date ORDER BY {$dateExpr} ASC, id ASC");
+            $stmt->execute([$userId, $symbol, $endDate]);
+        }
         $rows = [];
         foreach ($stmt as $row) {
             $date = $row['trade_date'];
@@ -204,9 +248,65 @@ class ChartsService
 
     private function lookupCurrency(string $symbol): string
     {
-        $stmt = $this->pdo->prepare('SELECT currency FROM stocks WHERE UPPER(symbol)=UPPER(?) LIMIT 1');
+        if ($this->tableExists('stocks')) {
+            $stmt = $this->pdo->prepare('SELECT currency FROM stocks WHERE UPPER(symbol)=UPPER(?) LIMIT 1');
+            $stmt->execute([$symbol]);
+            $currency = $stmt->fetchColumn();
+            if ($currency) {
+                return (string)$currency;
+            }
+        }
+
+        $stmt = $this->pdo->prepare('SELECT currency FROM stock_trades WHERE UPPER(symbol)=UPPER(?) ORDER BY ' . $this->tradeDateExpression() . ' DESC LIMIT 1');
         $stmt->execute([$symbol]);
         $currency = $stmt->fetchColumn();
         return $currency ? (string)$currency : 'USD';
+    }
+
+    private function tradeDateExpression(): string
+    {
+        $hasExecuted = $this->columnExists('stock_trades', 'executed_at');
+        $hasTradeOn = $this->columnExists('stock_trades', 'trade_on');
+
+        if ($hasExecuted && $hasTradeOn) {
+            return 'COALESCE(executed_at, trade_on::timestamptz)::date';
+        }
+        if ($hasExecuted) {
+            return 'executed_at::date';
+        }
+        if ($hasTradeOn) {
+            return 'trade_on::date';
+        }
+        return 'CURRENT_DATE';
+    }
+
+    private function tableExists(string $table): bool
+    {
+        $key = strtolower($table);
+        if (array_key_exists($key, $this->schemaCache)) {
+            return $this->schemaCache[$key];
+        }
+        $stmt = $this->pdo->prepare('SELECT 1 FROM information_schema.tables WHERE table_name = ? LIMIT 1');
+        $stmt->execute([$key]);
+        $exists = (bool)$stmt->fetchColumn();
+        $this->schemaCache[$key] = $exists;
+        return $exists;
+    }
+
+    private function columnExists(string $table, string $column): bool
+    {
+        $key = strtolower($table . '.' . $column);
+        if (array_key_exists($key, $this->columnCache)) {
+            return $this->columnCache[$key];
+        }
+        if (!$this->tableExists($table)) {
+            $this->columnCache[$key] = false;
+            return false;
+        }
+        $stmt = $this->pdo->prepare('SELECT 1 FROM information_schema.columns WHERE table_name = ? AND column_name = ? LIMIT 1');
+        $stmt->execute([strtolower($table), strtolower($column)]);
+        $exists = (bool)$stmt->fetchColumn();
+        $this->columnCache[$key] = $exists;
+        return $exists;
     }
 }
