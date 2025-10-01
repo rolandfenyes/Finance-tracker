@@ -42,6 +42,32 @@ if ($base !== '' && str_starts_with($rawPath, $base)) {
 }
 $path = rtrim($rawPath, '/') ?: '/';
 
+// Dynamic routes for stocks module
+if (preg_match('#^/stocks/([A-Za-z0-9\.-:]+)$#', $path, $m)) {
+    require_login();
+    require __DIR__ . '/src/controllers/stocks.php';
+    stocks_detail($pdo, $m[1]);
+    return;
+}
+
+if (preg_match('#^/stocks/([A-Za-z0-9\.-:]+)/watch$#', $path, $m)) {
+    require_login();
+    require __DIR__ . '/src/controllers/stocks.php';
+    if ($method === 'POST') {
+        stocks_toggle_watch($pdo, $m[1]);
+    } else {
+        redirect('/stocks/' . urlencode($m[1]));
+    }
+    return;
+}
+
+if (preg_match('#^/api/stocks/([A-Za-z0-9\.-:]+)/history$#', $path, $m)) {
+    require_login();
+    require __DIR__ . '/src/controllers/stocks.php';
+    stocks_history_api($pdo, $m[1]);
+    return;
+}
+
 // Normalize request info for the router
 $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');           // "GET", "POST", etc.
 
@@ -562,23 +588,27 @@ switch ($path) {
         require __DIR__ . '/src/controllers/stocks.php';
         stocks_index($pdo);
         break;
-    case '/stocks/buy':
+    case '/stocks/trade':
         require_login();
         require __DIR__ . '/src/controllers/stocks.php';
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') { trade_buy($pdo); }
-        redirect('/stocks');
-        break;
-    case '/stocks/sell':
-        require_login();
-        require __DIR__ . '/src/controllers/stocks.php';
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') { trade_sell($pdo); }
-        redirect('/stocks');
+        if ($method === 'POST') {
+            stocks_trade($pdo);
+        } else {
+            redirect('/stocks');
+        }
         break;
     case '/stocks/trade/delete':
         require_login();
         require __DIR__ . '/src/controllers/stocks.php';
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') { trade_delete($pdo); }
+        if ($method === 'POST') {
+            stocks_delete_trade($pdo);
+        }
         redirect('/stocks');
+        break;
+    case '/api/stocks/live':
+        require_login();
+        require __DIR__ . '/src/controllers/stocks.php';
+        stocks_live_api($pdo);
         break;
 
     // Scheduled

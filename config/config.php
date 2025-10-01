@@ -21,4 +21,14 @@ return [
             'es' => 'Español',
         ],
     ],
+    'stocks' => [
+        'provider' => getenv('STOCKS_PROVIDER') ?: 'null',
+        'refresh_seconds' => (int)(getenv('STOCKS_REFRESH_SECONDS') ?: 10),
+        'providers' => [
+            'finnhub' => [
+                'api_key' => getenv('FINNHUB_API_KEY') ?: '',
+                'base_url' => getenv('FINNHUB_BASE_URL') ?: 'https://finnhub.io/api/v1',
+            ],
+        ],
+    ],
 ];
