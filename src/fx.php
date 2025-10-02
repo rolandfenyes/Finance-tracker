@@ -41,26 +41,99 @@ function _fx_http_get(string $url, ?int &$httpCode = null, ?string &$err = null)
   return ($out !== false && ($httpCode === null || $httpCode === 200)) ? $out : null;
 }
 
-/* ---------- fetch EUR->CODE for date with caching & multi-provider fallback ---------- */
-function fx_get_eur_to(PDO $pdo, string $code, string $date): ?float {
+/**
+ * @return array{queue: array<string,array{code:string,date:string}>, registered: bool, flushed: bool, stale: bool}
+ */
+function &fx_state(): array {
+  if (!isset($GLOBALS['__mymoneymap_fx_state']) || !is_array($GLOBALS['__mymoneymap_fx_state'])) {
+    $GLOBALS['__mymoneymap_fx_state'] = [
+      'queue' => [],
+      'registered' => false,
+      'flushed' => false,
+      'stale' => false,
+    ];
+  }
+
+  return $GLOBALS['__mymoneymap_fx_state'];
+}
+
+function fx_mark_rate_stale(): void {
+  $state = &fx_state();
+  $state['stale'] = true;
+}
+
+function fx_used_stale_rates(bool $consume = true): bool {
+  $state = &fx_state();
+  $flag = !empty($state['stale']);
+  if ($consume) {
+    $state['stale'] = false;
+  }
+
+  return $flag;
+}
+
+function fx_queue_rate_fetch(PDO $pdo, string $code, string $date): void {
+  $state = &fx_state();
   $code = strtoupper($code);
-  if ($code === 'EUR') return 1.0;
+  $key = $code . '@' . $date;
+  if (isset($state['queue'][$key])) {
+    return;
+  }
 
-  // 0) try cache (latest <= date)
-  $q=$pdo->prepare("
-    SELECT rate FROM fx_rates
-     WHERE base_code='EUR' AND code=? AND rate_date<=?::date
-     ORDER BY rate_date DESC LIMIT 1
-  ");
-  $q->execute([$code, $date]);
-  $rate = $q->fetchColumn();
-  if ($rate) return (float)$rate;
+  $state['queue'][$key] = ['code' => $code, 'date' => $date];
 
-  // Providers to try (in order)
+  if (!$state['registered']) {
+    $state['registered'] = true;
+    register_shutdown_function(static function () use ($pdo) {
+      fx_process_deferred_rates($pdo);
+    });
+  }
+}
+
+function fx_finish_response_for_deferred(): void {
+  $state = &fx_state();
+  if (!empty($state['flushed']) || PHP_SAPI === 'cli') {
+    $state['flushed'] = true;
+    return;
+  }
+
+  $state['flushed'] = true;
+
+  if (function_exists('ignore_user_abort')) {
+    ignore_user_abort(true);
+  }
+
+  if (function_exists('session_write_close')) {
+    @session_write_close();
+  }
+
+  if (function_exists('fastcgi_finish_request')) {
+    fastcgi_finish_request();
+    return;
+  }
+
+  if (function_exists('ob_get_level')) {
+    while (ob_get_level() > 0) {
+      @ob_end_flush();
+    }
+  } elseif (function_exists('ob_flush')) {
+    @ob_flush();
+  }
+
+  if (function_exists('flush')) {
+    @flush();
+  }
+}
+
+/**
+ * @return array{rate: float, date: string}|null
+ */
+function fx_fetch_rate_from_providers(string $code, string $date): ?array {
+  $code = strtoupper($code);
   $providers = [
     // exchangerate.host single-date
-    function(string $date, string $code) {
-      $url = "https://api.exchangerate.host/".rawurlencode($date)."?base=EUR&symbols=".rawurlencode($code);
+    function (string $date, string $code) {
+      $url = "https://api.exchangerate.host/" . rawurlencode($date) . "?base=EUR&symbols=" . rawurlencode($code);
       $json = _fx_http_get($url, $http, $err);
       if (!$json) { error_log("[FX] exchangerate.host miss http=$http err=$err url=$url"); return null; }
       $data = json_decode($json, true);
@@ -70,8 +143,8 @@ function fx_get_eur_to(PDO $pdo, string $code, string $date): ?float {
       return null;
     },
     // Frankfurter (ECB) single-date
-    function(string $date, string $code) {
-      $url = "https://api.frankfurter.app/".rawurlencode($date)."?from=EUR&to=".rawurlencode($code);
+    function (string $date, string $code) {
+      $url = "https://api.frankfurter.app/" . rawurlencode($date) . "?from=EUR&to=" . rawurlencode($code);
       $json = _fx_http_get($url, $http, $err);
       if (!$json) { error_log("[FX] frankfurter miss http=$http err=$err url=$url"); return null; }
       $data = json_decode($json, true);
@@ -81,29 +154,95 @@ function fx_get_eur_to(PDO $pdo, string $code, string $date): ?float {
       return null;
     },
     // exchangerate.host latest as last resort (used for future dates/weekends)
-    function(string $date, string $code) {
-      $url = "https://api.exchangerate.host/latest?base=EUR&symbols=".rawurlencode($code);
+    function (string $date, string $code) {
+      $url = "https://api.exchangerate.host/latest?base=EUR&symbols=" . rawurlencode($code);
       $json = _fx_http_get($url, $http, $err);
       if (!$json) { error_log("[FX] exchangerate.host latest miss http=$http err=$err url=$url"); return null; }
       $data = json_decode($json, true);
       if (isset($data['rates'][$code]) && is_numeric($data['rates'][$code])) {
-        return ['rate' => (float)$data['rates'][$code], 'date' => $date]; // stamp on requested date
+        return ['rate' => (float)$data['rates'][$code], 'date' => $date];
       }
       return null;
     },
   ];
 
   foreach ($providers as $provider) {
-    $res = $provider($date, $code);
-    if ($res && isset($res['rate'])) {
-      $storeDate = $res['date'] ?: $date;
-      _fx_store($pdo, $storeDate, $code, (float)$res['rate']);
-      return (float)$res['rate'];
+    $result = $provider($date, $code);
+    if ($result && isset($result['rate'])) {
+      return ['rate' => (float)$result['rate'], 'date' => $result['date'] ?? $date];
     }
   }
 
-  // still nothing
-  error_log("[FX] all providers failed for EUR->$code on $date");
+  return null;
+}
+
+function fx_fetch_rate_now(PDO $pdo, string $code, string $date): ?float {
+  $fetched = fx_fetch_rate_from_providers($code, $date);
+  if (!$fetched) {
+    return null;
+  }
+
+  $storeDate = $fetched['date'] ?: $date;
+  _fx_store($pdo, $storeDate, $code, $fetched['rate']);
+
+  return $fetched['rate'];
+}
+
+function fx_process_deferred_rates(PDO $pdo): void {
+  $state = &fx_state();
+  if (empty($state['queue'])) {
+    return;
+  }
+
+  fx_finish_response_for_deferred();
+
+  $jobs = $state['queue'];
+  $state['queue'] = [];
+
+  foreach ($jobs as $job) {
+    fx_fetch_rate_now($pdo, $job['code'], $job['date']);
+  }
+}
+
+/* ---------- fetch EUR->CODE for date with caching & multi-provider fallback ---------- */
+function fx_get_eur_to(PDO $pdo, string $code, string $date): ?float {
+  $code = strtoupper($code);
+  if ($code === 'EUR') return 1.0;
+
+  static $memory = [];
+  $cacheKey = $code . '@' . $date;
+  if (array_key_exists($cacheKey, $memory)) {
+    return $memory[$cacheKey];
+  }
+
+  // 0) try cache (latest <= date)
+  $q=$pdo->prepare("
+    SELECT rate FROM fx_rates
+     WHERE base_code='EUR' AND code=? AND rate_date<=?::date
+     ORDER BY rate_date DESC LIMIT 1
+  ");
+  $q->execute([$code, $date]);
+  $rate = $q->fetchColumn();
+  if ($rate !== false && $rate !== null) {
+    $memory[$cacheKey] = (float)$rate;
+    return $memory[$cacheKey];
+  }
+
+  // fallback to latest known rate regardless of date
+  $latest=$pdo->prepare("SELECT rate FROM fx_rates WHERE base_code='EUR' AND code=? ORDER BY rate_date DESC LIMIT 1");
+  $latest->execute([$code]);
+  $row = $latest->fetch(PDO::FETCH_ASSOC);
+  if ($row && isset($row['rate'])) {
+    fx_mark_rate_stale();
+    fx_queue_rate_fetch($pdo, $code, $date);
+    $memory[$cacheKey] = (float)$row['rate'];
+    return $memory[$cacheKey];
+  }
+
+  fx_mark_rate_stale();
+  fx_queue_rate_fetch($pdo, $code, $date);
+  $memory[$cacheKey] = null;
+
   return null;
 }
 

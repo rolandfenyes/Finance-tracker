@@ -49,6 +49,7 @@ function stocks_index(PDO $pdo): void
 
     $chartRange = strtoupper($_GET['chartRange'] ?? '6M');
     $portfolioChart = $chartsService->portfolioValueSeries($userId, $chartRange);
+    $fxStale = fx_used_stale_rates();
     $series = array_values(array_filter($portfolioChart['series'], static fn($value) => $value !== null));
     $startValue = $series ? (float)$series[0] : 0.0;
     $endValue = $series ? (float)$series[count($series) - 1] : $startValue;
@@ -76,6 +77,7 @@ function stocks_index(PDO $pdo): void
         'userCurrencies' => $userCurrencies,
         'error' => $_GET['error'] ?? null,
         'currencyContext' => $currencyContext,
+        'fxStale' => $fxStale,
     ]);
 }
 
@@ -137,6 +139,10 @@ function stocks_detail(PDO $pdo, string $symbol): void
     $positionSeries = $chartsService->positionValueSeries($userId, $symbol, $historyRange);
     $historyStale = $priceService->isHistoryRangeStale($symbol, $historyBounds['start'], $historyBounds['end'])
         || !empty($positionSeries['stale']);
+    $fxStale = fx_used_stale_rates();
+    if ($fxStale) {
+        $historyStale = true;
+    }
 
     $realizedStmt = $pdo->prepare('SELECT COALESCE(SUM(realized_pl_base),0) FROM stock_realized_pl WHERE user_id=? AND stock_id=? AND DATE_TRUNC(\'year\', closed_at)=DATE_TRUNC(\'year\', CURRENT_DATE)');
     $realizedStmt->execute([$userId, $stockRow['id']]);
@@ -161,6 +167,7 @@ function stocks_detail(PDO $pdo, string $symbol): void
         'baseCurrency' => $baseCurrency,
         'userCurrencies' => $userCurrencies,
         'historyStale' => $historyStale,
+        'fxStale' => $fxStale,
     ]);
 }
 
@@ -692,6 +699,7 @@ function stocks_refresh_overview(PDO $pdo): ?string
         }
 
         $portfolioChart = $chartsService->portfolioValueSeries($userId, $chartRange);
+        $fxStale = fx_used_stale_rates();
         $series = array_values(array_filter($portfolioChart['series'], static fn($value) => $value !== null));
         $startValue = $series ? (float)$series[0] : 0.0;
         $endValue = $series ? (float)$series[count($series) - 1] : $startValue;
@@ -758,7 +766,8 @@ function stocks_refresh_overview(PDO $pdo): ?string
                     'series' => $portfolioChart['series'],
                     'cashSeries' => array_fill(0, count($portfolioChart['series']), (float)($totals['cash_balance'] ?? 0)),
                 ],
-                'stale' => !empty($portfolioChart['stale']),
+                'stale' => !empty($portfolioChart['stale']) || $fxStale,
+                'fxStale' => $fxStale,
                 'allocations' => [
                     'labels' => array_map(static fn($row) => $row['label'], $allocationByTicker),
                     'weights' => array_map(static fn($row) => $row['weight_pct'], $allocationByTicker),
@@ -768,12 +777,16 @@ function stocks_refresh_overview(PDO $pdo): ?string
                     'watchlist' => array_map(static fn($row) => $row['symbol'], $overview['watchlist'] ?? []),
                 ],
                 'baseCurrency' => $totals['base_currency'],
-                'message' => 'Quotes refreshed from the provider.',
+                'message' => $fxStale
+                    ? 'Quotes refreshed. Currency rates are updating in the background.'
+                    : 'Quotes refreshed from the provider.',
             ]);
             return null;
         }
 
-        $_SESSION['flash_success'] = 'Quotes refreshed from the provider.';
+        $_SESSION['flash_success'] = $fxStale
+            ? 'Quotes refreshed. Currency rates are updating in the background.'
+            : 'Quotes refreshed from the provider.';
     } catch (Throwable $e) {
         error_log('[stocks_refresh_overview] ' . $e->getMessage());
         if ($wantsJson) {
@@ -962,12 +975,15 @@ function stocks_history_api(PDO $pdo, string $symbol): void
     $priceHistory = $priceService->getDailyHistory(strtoupper($symbol), $bounds['start'], $bounds['end']);
     $chartsService = new ChartsService($pdo, $priceService);
     $series = $chartsService->positionValueSeries(uid(), strtoupper($symbol), $range);
+    $fxStale = fx_used_stale_rates();
     $isStale = $priceService->isHistoryRangeStale(strtoupper($symbol), $bounds['start'], $bounds['end'])
-        || !empty($series['stale']);
+        || !empty($series['stale'])
+        || $fxStale;
     json_response([
         'price' => $priceHistory,
         'position' => $series,
         'stale' => $isStale,
+        'fxStale' => $fxStale,
     ]);
 }
 

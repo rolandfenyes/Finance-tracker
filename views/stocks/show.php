@@ -12,6 +12,7 @@
 /** @var string $baseCurrency */
 /** @var array $userCurrencies */
 /** @var bool $historyStale */
+/** @var bool $fxStale */
 
 $rangeOptions = ['1D', '5D', '1M', '6M', '1Y', '5Y'];
 
@@ -74,6 +75,14 @@ $signals = $insights['signals'] ?? [];
       <a href="/stocks" class="btn btn-ghost">Back to overview</a>
     </form>
   </header>
+
+  <div
+    class="rounded-2xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-100 <?= empty($fxStale) ? 'hidden' : '' ?>"
+    data-role="fx-rate-notice"
+    aria-live="polite"
+  >
+    Currency conversion rates are updating in the background. Totals may adjust shortly.
+  </div>
 
   <section class="grid lg:grid-cols-3 gap-6">
     <article class="card p-5 shadow-md bg-white/80 dark:bg-gray-900/40" id="positionCard"
@@ -250,6 +259,7 @@ $signals = $insights['signals'] ?? [];
   const rangeForm = document.getElementById('rangeForm');
   const rangeButtons = rangeForm ? Array.from(rangeForm.querySelectorAll('[data-range-btn]')) : [];
   const rangeHidden = rangeForm ? rangeForm.querySelector('input[name="range"]') : null;
+  const fxRateNotice = document.querySelector('[data-role="fx-rate-notice"]');
 
   let historyRetryTimer = null;
   let historyRetryAttempts = 0;
@@ -436,6 +446,13 @@ $signals = $insights['signals'] ?? [];
       }
       if (payload && payload.position) {
         ensurePositionChart(payload.position);
+      }
+      if (fxRateNotice && payload && Object.prototype.hasOwnProperty.call(payload, 'fxStale')) {
+        if (payload.fxStale) {
+          fxRateNotice.classList.remove('hidden');
+        } else {
+          fxRateNotice.classList.add('hidden');
+        }
       }
       const needsRetry = payload && (payload.stale || (payload.position && payload.position.stale));
       if (needsRetry) {

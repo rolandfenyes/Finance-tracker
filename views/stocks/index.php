@@ -8,6 +8,7 @@
 /** @var int $refreshSeconds */
 /** @var array $userCurrencies */
 /** @var null|string $error */
+/** @var bool $fxStale */
 
 $totals = $overview['totals'];
 $holdings = $overview['holdings'];
@@ -64,6 +65,13 @@ $formatQuantity = static function ($qty): string {
     </div>
     <?php unset($_SESSION['flash']); ?>
   <?php endif; ?>
+  <div
+    class="rounded-2xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-100 <?= empty($fxStale) ? 'hidden' : '' ?>"
+    data-role="fx-rate-notice"
+    aria-live="polite"
+  >
+    Currency conversion rates are updating in the background. Totals may adjust shortly.
+  </div>
 
   <header class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
     <div class="space-y-2">
@@ -326,8 +334,9 @@ $formatQuantity = static function ($qty): string {
   let holdingsSymbols = <?= json_encode(array_map(static fn($h) => $h['symbol'], $holdings)) ?>;
   let watchlistSymbols = <?= json_encode(array_map(static fn($w) => $w['symbol'], $watchlist)) ?>;
   const refreshSeconds = <?= (int)$refreshSeconds ?> * 1000;
-  const initialPortfolioStale = <?= $portfolioChartStale ? 'true' : 'false' ?>;
+  const initialPortfolioStale = <?= ($portfolioChartStale || !empty($fxStale)) ? 'true' : 'false' ?>;
   const refreshForm = document.querySelector('[data-role="refresh-form"]');
+  const fxRateNotice = document.querySelector('[data-role="fx-rate-notice"]');
   let chartCurrency = <?= json_encode($baseCurrency) ?>;
   let baseCurrencyCode = <?= json_encode($baseCurrency) ?>;
   let baseFormatter = new Intl.NumberFormat(undefined, { style: 'currency', currency: baseCurrencyCode });
@@ -801,6 +810,13 @@ $formatQuantity = static function ($qty): string {
         }
         if (payload.allocations && allocationChart) {
           updateAllocation(payload.allocations.labels || [], payload.allocations.weights || []);
+        }
+        if (fxRateNotice && Object.prototype.hasOwnProperty.call(payload, 'fxStale')) {
+          if (payload.fxStale) {
+            fxRateNotice.classList.remove('hidden');
+          } else {
+            fxRateNotice.classList.add('hidden');
+          }
         }
         if (payload.symbols) {
           holdingsSymbols = payload.symbols.holdings || holdingsSymbols;
