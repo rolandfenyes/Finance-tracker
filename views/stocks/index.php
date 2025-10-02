@@ -12,7 +12,13 @@ $holdings = $overview['holdings'];
 $allocations = $overview['allocations'];
 $watchlist = $overview['watchlist'];
 $cashEntries = $overview['cash'] ?? [];
+$transactions = $overview['trades'] ?? [];
 $baseCurrency = $totals['base_currency'];
+$formatQuantity = static function ($qty): string {
+  $formatted = number_format((float)$qty, 6, '.', '');
+  $trimmed = rtrim(rtrim($formatted, '0'), '.');
+  return $trimmed === '' ? '0' : $trimmed;
+};
 ?>
 
 <section class="space-y-6">
@@ -187,6 +193,75 @@ $baseCurrency = $totals['base_currency'];
     </div>
   </section>
 
+  <section class="card p-5 shadow-md bg-white/80 dark:bg-gray-900/40">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="text-lg font-semibold">All transactions</h3>
+        <p class="text-xs text-gray-500">Newest orders first, including fractional quantities.</p>
+      </div>
+      <span class="text-xs text-gray-400">Total: <?= count($transactions) ?></span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50/70 dark:bg-gray-900/60 text-gray-600 uppercase text-xs tracking-wide">
+          <tr>
+            <th class="px-5 py-3 text-left">Date</th>
+            <th class="px-5 py-3 text-left">Ticker</th>
+            <th class="px-5 py-3 text-left">Side</th>
+            <th class="px-5 py-3 text-right">Quantity</th>
+            <th class="px-5 py-3 text-right">Price</th>
+            <th class="px-5 py-3 text-right">Fee</th>
+            <th class="px-5 py-3 text-right">Total</th>
+            <th class="px-5 py-3 text-left">Note</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php if (empty($transactions)): ?>
+            <tr>
+              <td colspan="8" class="px-5 py-6 text-center text-gray-500">No trades recorded yet.</td>
+            </tr>
+          <?php endif; ?>
+          <?php foreach ($transactions as $trade):
+            $executedAt = $trade['executed_at'] ?? null;
+            $tradeOn = $trade['trade_on'] ?? null;
+            $timestamp = $executedAt ?: $tradeOn;
+            $displayDate = $timestamp ? date('Y-m-d H:i', strtotime($timestamp)) : '—';
+            $side = strtoupper((string)($trade['side'] ?? ''));
+            $quantityDisplay = $formatQuantity($trade['quantity'] ?? 0);
+            $priceDisplay = moneyfmt((float)($trade['price'] ?? 0), $trade['currency'] ?? 'USD');
+            $feeAmount = (float)($trade['fee'] ?? 0);
+            $feeDisplay = $feeAmount !== 0.0 ? moneyfmt($feeAmount, $trade['currency'] ?? 'USD') : '—';
+            $total = (float)($trade['quantity'] ?? 0) * (float)($trade['price'] ?? 0);
+            $totalDisplay = moneyfmt($total, $trade['currency'] ?? 'USD');
+            $note = $trade['note'] ?? '';
+          ?>
+            <tr class="border-t border-gray-100 dark:border-gray-800">
+              <td class="px-5 py-4 whitespace-nowrap text-gray-600 dark:text-gray-300"><?= htmlspecialchars($displayDate) ?></td>
+              <td class="px-5 py-4 font-semibold text-gray-900 dark:text-gray-100">
+                <?= htmlspecialchars($trade['symbol'] ?? '') ?>
+                <?php if (!empty($trade['name'])): ?>
+                  <span class="block text-xs text-gray-500"><?= htmlspecialchars($trade['name']) ?></span>
+                <?php endif; ?>
+              </td>
+              <td class="px-5 py-4">
+                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium <?= $side === 'BUY' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200' : 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200' ?>">
+                  <?= htmlspecialchars($side) ?>
+                </span>
+              </td>
+              <td class="px-5 py-4 text-right font-mono text-xs sm:text-sm"><?= htmlspecialchars($quantityDisplay) ?></td>
+              <td class="px-5 py-4 text-right"><?= $priceDisplay ?></td>
+              <td class="px-5 py-4 text-right"><?= $feeDisplay ?></td>
+              <td class="px-5 py-4 text-right"><?= $totalDisplay ?></td>
+              <td class="px-5 py-4 text-left text-xs text-gray-500">
+                <?= $note !== '' ? htmlspecialchars($note) : '—' ?>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
   <section class="grid lg:grid-cols-2 gap-6">
     <article class="card p-5 shadow-md bg-white/80 dark:bg-gray-900/40">
       <h3 class="text-lg font-semibold mb-3">Record trade</h3>
@@ -268,11 +343,20 @@ $baseCurrency = $totals['base_currency'];
         <button class="btn btn-danger">Clear history</button>
       </form>
     </div>
-    <form method="post" action="/stocks/import" enctype="multipart/form-data" class="space-y-3">
+    <form method="post" action="/stocks/import" enctype="multipart/form-data" class="space-y-3" id="stocksCsvForm">
       <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
       <input type="file" name="csv" accept=".csv,text/csv" class="input" required />
       <p class="text-xs text-gray-500">We match columns named Date, Ticker/Symbol, Type, Quantity, Price per share, Total Amount, Currency, and Fee when available.</p>
       <button class="btn btn-secondary">Upload CSV</button>
+      <div class="hidden rounded-lg border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-100" data-role="csv-progress">
+        <div class="flex items-center justify-between mb-2">
+          <span data-role="csv-progress-text">Preparing upload…</span>
+          <span data-role="csv-progress-value">0%</span>
+        </div>
+        <div class="h-2 rounded-full bg-emerald-200/60 dark:bg-emerald-500/30">
+          <div class="h-full w-0 rounded-full bg-emerald-500 transition-all duration-300" data-role="csv-progress-bar"></div>
+        </div>
+      </div>
     </form>
   </section>
 
@@ -419,5 +503,106 @@ $baseCurrency = $totals['base_currency'];
       pollTimer = setInterval(pollQuotes, refreshSeconds);
     }
   });
+
+  const csvForm = document.getElementById('stocksCsvForm');
+  if (csvForm) {
+    const progressBox = csvForm.querySelector('[data-role="csv-progress"]');
+    const progressBar = csvForm.querySelector('[data-role="csv-progress-bar"]');
+    const progressValue = csvForm.querySelector('[data-role="csv-progress-value"]');
+    const progressText = csvForm.querySelector('[data-role="csv-progress-text"]');
+
+    csvForm.addEventListener('submit', (event) => {
+      if (csvForm.dataset.uploading === '1') {
+        event.preventDefault();
+        return;
+      }
+
+      event.preventDefault();
+      const formData = new FormData(csvForm);
+      const xhr = new XMLHttpRequest();
+      csvForm.dataset.uploading = '1';
+
+      if (progressBox) {
+        progressBox.classList.remove('hidden');
+      }
+      if (progressBar) {
+        progressBar.style.width = '5%';
+      }
+      if (progressValue) {
+        progressValue.textContent = '0%';
+      }
+      if (progressText) {
+        progressText.textContent = 'Uploading CSV…';
+      }
+
+      xhr.open('POST', '/stocks/import');
+      xhr.setRequestHeader('Accept', 'application/json');
+
+      xhr.upload.addEventListener('progress', (e) => {
+        if (!e.lengthComputable) {
+          return;
+        }
+        const percent = Math.min(95, Math.round((e.loaded / e.total) * 90));
+        if (progressBar) {
+          progressBar.style.width = percent + '%';
+        }
+        if (progressValue) {
+          progressValue.textContent = percent + '%';
+        }
+        if (progressText) {
+          progressText.textContent = 'Processing trades…';
+        }
+      });
+
+      const handleFailure = (message) => {
+        if (progressBar) {
+          progressBar.style.width = '100%';
+          progressBar.classList.remove('bg-emerald-500');
+          progressBar.classList.add('bg-rose-500');
+        }
+        if (progressValue) {
+          progressValue.textContent = '100%';
+        }
+        if (progressText) {
+          progressText.textContent = message || 'Upload failed. Please try again.';
+        }
+        csvForm.dataset.uploading = '0';
+      };
+
+      xhr.addEventListener('error', () => handleFailure('Network error while uploading.'));
+
+      xhr.addEventListener('load', () => {
+        let response = null;
+        try {
+          response = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+        } catch (err) {
+          response = null;
+        }
+
+        if (xhr.status < 200 || xhr.status >= 300 || !response || response.success === false) {
+          handleFailure(response && response.message ? response.message : 'Import failed.');
+          return;
+        }
+
+        if (progressBar) {
+          progressBar.style.width = '100%';
+          progressBar.classList.remove('bg-rose-500');
+          progressBar.classList.add('bg-emerald-500');
+        }
+        if (progressValue) {
+          progressValue.textContent = '100%';
+        }
+        if (progressText) {
+          progressText.textContent = response.message || 'Import complete. Refreshing…';
+        }
+
+        setTimeout(() => {
+          window.location.reload();
+        }, 600);
+      });
+
+      xhr.send(formData);
+    });
+  }
 })();
 </script>

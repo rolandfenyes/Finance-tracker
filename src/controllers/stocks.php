@@ -180,21 +180,31 @@ function stocks_import(PDO $pdo): void
     verify_csrf();
     require_login();
     $userId = uid();
+    $wantsJson = stocks_request_wants_json();
+    $responseMeta = [
+        'imported' => 0,
+        'cash_recorded' => 0,
+        'skipped' => 0,
+        'ignored' => 0,
+    ];
 
     if (empty($_FILES['csv']) || !isset($_FILES['csv']['tmp_name'])) {
         $_SESSION['flash'] = 'Please choose a CSV file to upload.';
+        stocks_import_output($wantsJson, false, $_SESSION['flash'], $responseMeta);
         return;
     }
 
     $file = $_FILES['csv'];
     if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
         $_SESSION['flash'] = 'Upload failed. Please try again.';
+        stocks_import_output($wantsJson, false, $_SESSION['flash'], $responseMeta);
         return;
     }
 
     $tmpName = $file['tmp_name'];
     if (!is_uploaded_file($tmpName)) {
         $_SESSION['flash'] = 'Invalid upload. Please try again.';
+        stocks_import_output($wantsJson, false, $_SESSION['flash'], $responseMeta);
         return;
     }
 
@@ -203,6 +213,7 @@ function stocks_import(PDO $pdo): void
     $handle = fopen($tmpName, 'r');
     if (!$handle) {
         $_SESSION['flash'] = 'Could not read the uploaded file.';
+        stocks_import_output($wantsJson, false, $_SESSION['flash'], $responseMeta);
         return;
     }
 
@@ -210,6 +221,7 @@ function stocks_import(PDO $pdo): void
     if ($headerRow === false) {
         fclose($handle);
         $_SESSION['flash'] = 'The CSV file appears to be empty.';
+        stocks_import_output($wantsJson, false, $_SESSION['flash'], $responseMeta);
         return;
     }
 
@@ -217,6 +229,7 @@ function stocks_import(PDO $pdo): void
     if (!array_key_exists('date', $columnMap) || !array_key_exists('type', $columnMap)) {
         fclose($handle);
         $_SESSION['flash'] = 'The CSV is missing required headers (Date / Type).';
+        stocks_import_output($wantsJson, false, $_SESSION['flash'], $responseMeta);
         return;
     }
 
@@ -390,6 +403,24 @@ function stocks_import(PDO $pdo): void
     if ($imported === 0 && $ignored === 0 && $skipped === 0 && $cashRecorded === 0) {
         $_SESSION['flash'] = 'No data rows were detected in the CSV file.';
     }
+
+    $responseMeta = [
+        'imported' => $imported,
+        'cash_recorded' => $cashRecorded,
+        'skipped' => $skipped,
+        'ignored' => $ignored,
+    ];
+    $messagesOut = array_filter([
+        'success' => $_SESSION['flash_success'] ?? null,
+        'error' => $_SESSION['flash'] ?? null,
+    ]);
+    $primaryMessage = $messagesOut['success'] ?? $messagesOut['error'] ?? 'Import complete.';
+    $payload = $responseMeta + ['messages' => $messagesOut];
+    $wasSuccessful = ($imported + $cashRecorded) > 0 && $skipped === 0;
+    if (!$wasSuccessful && ($imported + $cashRecorded) > 0) {
+        $wasSuccessful = true; // partial success still returns HTTP 200 for UX reload
+    }
+    stocks_import_output($wantsJson, $wasSuccessful, $primaryMessage, $payload);
 }
 
 function stocks_cash_movement(PDO $pdo): void
@@ -873,4 +904,28 @@ function stocks_import_cash_amount(array $record, string $type): float
         return abs($total);
     }
     return $total;
+}
+
+function stocks_request_wants_json(): bool
+{
+    $accept = strtolower((string)($_SERVER['HTTP_ACCEPT'] ?? ''));
+    $requestedWith = strtolower((string)($_SERVER['HTTP_X_REQUESTED_WITH'] ?? ''));
+    return str_contains($accept, 'application/json') || $requestedWith === 'xmlhttprequest';
+}
+
+/**
+ * @param array<string,mixed> $payload
+ */
+function stocks_import_output(bool $wantsJson, bool $success, string $message, array $payload = []): void
+{
+    if (!$wantsJson) {
+        return;
+    }
+    header('Content-Type: application/json');
+    http_response_code($success ? 200 : 422);
+    echo json_encode(array_merge([
+        'success' => $success,
+        'message' => $message,
+    ], $payload));
+    exit;
 }

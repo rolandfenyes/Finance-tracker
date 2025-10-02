@@ -115,7 +115,8 @@ class TradeService
     {
         if (strtoupper($side) === 'SELL') {
             $available = $this->legacyAvailableQuantity($userId, $symbol);
-            if ($quantity - $available > 1e-6) {
+            $tolerance = max(1e-6, abs($available) * 1e-6);
+            if ($quantity > $available + $tolerance) {
                 throw new RuntimeException('Sell quantity exceeds available lots for ' . $symbol);
             }
         }
@@ -448,6 +449,7 @@ class TradeService
     {
         $stmt = $this->pdo->prepare("SELECT COALESCE(SUM(CASE WHEN LOWER(side) = 'buy' THEN quantity ELSE -quantity END), 0) FROM stock_trades WHERE user_id=? AND UPPER(symbol)=?");
         $stmt->execute([$userId, $symbol]);
-        return (float)$stmt->fetchColumn();
+        $available = (float)$stmt->fetchColumn();
+        return round($available, 6);
     }
 }

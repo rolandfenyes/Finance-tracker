@@ -22,6 +22,13 @@ class PortfolioService
      */
     private array $schemaCache = [];
 
+    /**
+     * Cached column existence lookups keyed by table => column name.
+     *
+     * @var array<string,array<string,bool>>
+     */
+    private array $columnCache = [];
+
     public function __construct(PDO $pdo, PriceDataService $priceDataService, ?CashService $cashService = null)
     {
         $this->pdo = $pdo;
@@ -133,6 +140,7 @@ class PortfolioService
 
         $allocations = $this->buildAllocations($holdings);
         $watchlist = $this->buildWatchlist($userId, $baseCurrency, $today);
+        $transactions = $this->loadTransactions($userId);
 
         return [
             'totals' => $overviewTotals,
@@ -140,6 +148,7 @@ class PortfolioService
             'allocations' => $allocations,
             'watchlist' => $watchlist,
             'cash' => $cashEntries,
+            'trades' => $transactions,
         ];
     }
 
@@ -272,6 +281,64 @@ class PortfolioService
             }
             unset($row);
         }
+
+        return $rows;
+    }
+
+    /**
+     * @return array<int,array<string,mixed>>
+     */
+    private function loadTransactions(int $userId): array
+    {
+        if (!$this->tableExists('stock_trades')) {
+            return [];
+        }
+
+        $hasStocks = $this->tableExists('stocks');
+        $hasStockId = $this->columnExists('stock_trades', 'stock_id');
+        $hasExecutedAt = $this->columnExists('stock_trades', 'executed_at');
+        $hasFee = $this->columnExists('stock_trades', 'fee');
+        $hasNote = $this->columnExists('stock_trades', 'note');
+        $hasMarket = $this->columnExists('stock_trades', 'market');
+
+        $select = 'SELECT t.id, UPPER(t.symbol) AS symbol, t.side, t.quantity, t.price, t.currency, t.trade_on';
+        $select .= $hasExecutedAt ? ', t.executed_at' : ', NULL AS executed_at';
+        $select .= $hasFee ? ', t.fee' : ', NULL AS fee';
+        $select .= $hasNote ? ', t.note' : ', NULL AS note';
+        $select .= $hasMarket ? ', t.market' : ', NULL AS market';
+
+        if ($hasStocks) {
+            if ($hasStockId) {
+                $select .= ', s.name, s.currency AS stock_currency';
+            } else {
+                $select .= ', s.name, COALESCE(s.currency, t.currency) AS stock_currency';
+            }
+        } else {
+            $select .= ', NULL AS name, t.currency AS stock_currency';
+        }
+
+        $sql = $select . ' FROM stock_trades t';
+        if ($hasStocks) {
+            if ($hasStockId) {
+                $sql .= ' LEFT JOIN stocks s ON s.id = t.stock_id';
+            } else {
+                $sql .= ' LEFT JOIN stocks s ON UPPER(s.symbol) = UPPER(t.symbol)';
+            }
+        }
+        $sql .= ' WHERE t.user_id = ?';
+        $orderExpr = $hasExecutedAt ? 'COALESCE(t.executed_at, t.trade_on::timestamptz)' : 't.trade_on';
+        $sql .= ' ORDER BY ' . $orderExpr . ' DESC, t.id DESC';
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([$userId]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        foreach ($rows as &$row) {
+            if (!isset($row['stock_currency']) || $row['stock_currency'] === null) {
+                $row['stock_currency'] = $row['currency'] ?? 'USD';
+            }
+        }
+        unset($row);
 
         return $rows;
     }
@@ -410,6 +477,23 @@ class PortfolioService
             ];
         }
         return $watchlist;
+    }
+
+    private function columnExists(string $table, string $column): bool
+    {
+        $tableKey = strtolower($table);
+        $columnKey = strtolower($column);
+        if (isset($this->columnCache[$tableKey][$columnKey])) {
+            return $this->columnCache[$tableKey][$columnKey];
+        }
+        $stmt = $this->pdo->prepare('SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = ? AND column_name = ? LIMIT 1');
+        $stmt->execute([$table, $column]);
+        $exists = (bool)$stmt->fetchColumn();
+        if (!isset($this->columnCache[$tableKey])) {
+            $this->columnCache[$tableKey] = [];
+        }
+        $this->columnCache[$tableKey][$columnKey] = $exists;
+        return $exists;
     }
 
     private function tableExists(string $table): bool
