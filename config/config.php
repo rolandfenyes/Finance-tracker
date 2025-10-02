@@ -22,14 +22,14 @@ return [
         ],
     ],
     'stocks' => [
-        'provider' => getenv('STOCKS_PROVIDER') ?: 'null',
+        'provider' => getenv('STOCKS_PROVIDER') ?: 'finnhub',
         'refresh_seconds' => (int)(getenv('STOCKS_REFRESH_SECONDS') ?: 10),
         'overview_cache_seconds' => (int)(getenv('STOCKS_OVERVIEW_CACHE_SECONDS') ?: 20),
         'overview_cache_dir' => getenv('STOCKS_OVERVIEW_CACHE_DIR') ?: __DIR__ . '/../storage/cache/stocks',
         'performance_log' => getenv('STOCKS_PERFORMANCE_LOG') ?: __DIR__ . '/../storage/logs/stocks_performance.log',
         'providers' => [
             'finnhub' => [
-                'api_key' => getenv('FINNHUB_API_KEY') ?: '',
+                'api_key' => getenv('FINNHUB_API_KEY') ?: 'd3edaspr01qrd38ttv9gd3edaspr01qrd38ttva0',
                 'base_url' => getenv('FINNHUB_BASE_URL') ?: 'https://finnhub.io/api/v1',
             ],
         ],
