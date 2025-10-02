@@ -56,6 +56,7 @@ function stocks_index(PDO $pdo): void
         'filters' => $filters,
         'refreshSeconds' => $refreshSeconds,
         'userCurrencies' => $userCurrencies,
+        'error' => $_GET['error'] ?? null,
     ]);
 }
 
@@ -160,7 +161,11 @@ function stocks_trade(PDO $pdo): void
     ];
     try {
         $tradeService->recordTrade($userId, $payload);
-        redirect('/stocks/' . urlencode($symbol));
+        $destination = '/stocks/' . urlencode($symbol);
+        if (!stocks_table_exists($pdo, 'stocks')) {
+            $destination = '/stocks';
+        }
+        redirect($destination);
     } catch (Throwable $e) {
         error_log('[stocks_trade] ' . $e->getMessage());
         redirect('/stocks?error=trade');

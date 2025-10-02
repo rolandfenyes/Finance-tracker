@@ -5,6 +5,7 @@
 /** @var array $filters */
 /** @var int $refreshSeconds */
 /** @var array $userCurrencies */
+/** @var null|string $error */
 
 $totals = $overview['totals'];
 $holdings = $overview['holdings'];
@@ -14,6 +15,11 @@ $baseCurrency = $totals['base_currency'];
 ?>
 
 <section class="space-y-6">
+  <?php if (!empty($error) && $error === 'trade'): ?>
+    <div class="rounded-xl border border-amber-200 bg-amber-50 text-amber-800 px-4 py-3 text-sm">
+      Unable to record the trade. Please ensure the latest database migrations have been run and try again.
+    </div>
+  <?php endif; ?>
   <header class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
     <div>
       <h1 class="text-3xl font-semibold text-gray-900 dark:text-gray-100">Stocks</h1>
