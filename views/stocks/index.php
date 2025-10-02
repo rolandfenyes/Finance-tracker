@@ -1,5 +1,5 @@
 <?php
-/** @var array $overview */
+/** @var array|null $overview */
 /** @var array $insights */
 /** @var array $portfolioChart */
 /** @var array $chartMeta */
@@ -8,13 +8,27 @@
 /** @var int $refreshSeconds */
 /** @var array $userCurrencies */
 /** @var null|string $error */
+/** @var string $baseCurrency */
 
-$totals = $overview['totals'];
-$holdings = $overview['holdings'];
-$allocations = $overview['allocations'];
-$watchlist = $overview['watchlist'];
-$cashEntries = $overview['cash'] ?? [];
-$baseCurrency = $totals['base_currency'];
+$hasInitialData = is_array($overview) && !empty($overview['totals']);
+$totals = $hasInitialData ? ($overview['totals'] ?? []) : [];
+$baseCurrency = $totals['base_currency'] ?? ($baseCurrency ?? 'USD');
+$totals += [
+    'base_currency' => $baseCurrency,
+    'cash_balance' => $totals['cash_balance'] ?? 0.0,
+];
+$holdings = $hasInitialData ? ($overview['holdings'] ?? []) : [];
+$allocations = $hasInitialData ? ($overview['allocations'] ?? ['by_ticker' => []]) : ['by_ticker' => []];
+$watchlist = $hasInitialData ? ($overview['watchlist'] ?? []) : [];
+$cashEntries = $hasInitialData ? ($overview['cash'] ?? []) : [];
+$portfolioChart = $portfolioChart ?? ['labels' => [], 'series' => []];
+$chartMeta = $chartMeta ?? [
+    'range' => $chartRange ?? '6M',
+    'start' => 0.0,
+    'end' => 0.0,
+    'change' => 0.0,
+    'change_pct' => 0.0,
+];
 $rangeOptions = ['1M', '3M', '6M', '1Y', '5Y'];
 
 $currencyContext = $currencyContext ?? [
@@ -108,124 +122,121 @@ $formatQuantity = static function ($qty): string {
     <input type="hidden" name="chartRange" value="<?= htmlspecialchars($chartRange) ?>" />
   </form>
 
-  <section class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-800 p-6 text-white shadow-xl">
-    <div class="absolute -top-20 -right-20 h-60 w-60 rounded-full bg-emerald-500/20 blur-3xl"></div>
-    <div class="absolute bottom-0 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-emerald-400/20 blur-3xl"></div>
-    <div id="overviewHeroContent">
-      <?php include __DIR__ . '/partials/overview_hero.php'; ?>
+  <div class="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 text-sm text-emerald-700 shadow-sm dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-100 <?= $hasInitialData ? 'hidden' : '' ?>" data-role="stocks-loading">
+    <div class="flex items-center justify-between gap-4 mb-3">
+      <div class="space-y-1">
+        <p class="font-medium" data-role="stocks-loading-text">Loading portfolio…</p>
+        <p class="text-xs text-emerald-600/80 dark:text-emerald-100/70" data-role="stocks-loading-hint">Hang tight while we fetch the latest data.</p>
+      </div>
+      <span class="text-xs font-semibold" data-role="stocks-loading-value">0%</span>
     </div>
-  </section>
-
-  <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" id="overviewCards">
-    <?php include __DIR__ . '/partials/overview_cards.php'; ?>
-  </section>
-
-  <section class="grid gap-6 xl:grid-cols-3">
-    <article class="xl:col-span-2 rounded-2xl border border-gray-200/70 bg-white/80 shadow-sm dark:border-gray-800 dark:bg-gray-900/40">
-      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-        <div>
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Current holdings</h3>
-          <p class="text-xs text-gray-500">Base currency: <?= htmlspecialchars($baseCurrency) ?></p>
-        </div>
-        <div class="text-xs text-gray-400">Updated live</div>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="min-w-full text-sm">
-          <thead class="bg-gray-50/80 text-gray-600 uppercase text-xs tracking-wide dark:bg-gray-900/60">
-            <tr>
-              <th class="px-6 py-3 text-left">Ticker</th>
-              <th class="px-6 py-3 text-right">Qty</th>
-              <th class="px-6 py-3 text-right">Avg cost</th>
-              <th class="px-6 py-3 text-right">Last</th>
-              <th class="px-6 py-3 text-right">Market value</th>
-              <th class="px-6 py-3 text-right">Unrealized</th>
-              <th class="px-6 py-3 text-right">Day P/L</th>
-              <th class="px-6 py-3 text-right">Weight</th>
-              <th class="px-6 py-3 text-left">Insights</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100 dark:divide-gray-800" id="holdingsTableBody">
-            <?php include __DIR__ . '/partials/holdings_rows.php'; ?>
-          </tbody>
-        </table>
-      </div>
-    </article>
-    <div class="space-y-6">
-      <article class="rounded-2xl border border-gray-200/70 bg-white/80 p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900/40">
-        <h3 class="text-lg font-semibold mb-3 text-gray-900 dark:text-gray-100">Allocation by ticker</h3>
-        <canvas id="allocationTickerChart" height="220"></canvas>
-      </article>
-      <article class="rounded-2xl border border-gray-200/70 bg-white/80 p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900/40">
-        <h3 class="text-lg font-semibold mb-3 text-gray-900 dark:text-gray-100">Quick actions</h3>
-        <p class="text-sm text-gray-500">Need to adjust cash or rebalance? Use the buttons below.</p>
-        <div class="mt-4 flex flex-wrap gap-2">
-          <button type="button" class="btn btn-primary" data-dialog-open="tradeDialog">Record trade</button>
-          <button type="button" class="btn btn-secondary" data-dialog-open="cashDialog">Record cash movement</button>
-          <a href="/stocks/transactions" class="btn btn-ghost">View transactions</a>
-        </div>
-      </article>
+    <div class="h-2 rounded-full bg-emerald-200/60 dark:bg-emerald-500/30">
+      <div class="h-full w-0 rounded-full bg-emerald-500 transition-all duration-300" data-role="stocks-loading-bar"></div>
     </div>
-  </section>
+  </div>
 
-  <?php if (!empty($watchlist)): ?>
-    <section class="rounded-2xl border border-gray-200/70 bg-white/80 p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900/40">
-      <div class="mb-4 flex items-center justify-between">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Watchlist</h3>
-        <span class="text-xs text-gray-400">Auto-refreshing</span>
-      </div>
-      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" id="watchlistStrip">
-        <?php foreach ($watchlist as $item): ?>
-          <article class="flex flex-col gap-1 rounded-2xl border border-gray-100 bg-white/70 p-4 shadow-sm transition dark:border-gray-800 dark:bg-gray-900/40" data-symbol="<?= htmlspecialchars($item['symbol']) ?>">
-            <div class="flex items-center justify-between">
-              <a href="/stocks/<?= urlencode($item['symbol']) ?>" class="font-semibold text-gray-900 dark:text-gray-100"><?= htmlspecialchars($item['symbol']) ?></a>
-              <span class="text-xs text-gray-500"><?= htmlspecialchars($item['currency']) ?></span>
-            </div>
-            <div class="text-xl font-semibold text-gray-800 dark:text-gray-100" data-role="last">
-              <?= $item['last_price'] !== null ? moneyfmt($item['last_price'], $item['currency']) : '—' ?>
-            </div>
-            <div class="text-xs text-gray-500" data-role="change">Prev: <?= $item['prev_close'] !== null ? moneyfmt($item['prev_close'], $item['currency']) : '—' ?></div>
-          </article>
-        <?php endforeach; ?>
+  <div class="space-y-8 <?= $hasInitialData ? '' : 'hidden' ?>" data-role="stocks-content">
+    <section class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-800 p-6 text-white shadow-xl">
+      <div class="absolute -top-20 -right-20 h-60 w-60 rounded-full bg-emerald-500/20 blur-3xl"></div>
+      <div class="absolute bottom-0 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-emerald-400/20 blur-3xl"></div>
+      <div id="overviewHeroContent">
+        <?php if ($hasInitialData) { include __DIR__ . '/partials/overview_hero.php'; } ?>
       </div>
     </section>
-  <?php endif; ?>
 
-  <section class="rounded-2xl border border-gray-200/70 bg-white/80 p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900/40">
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <div>
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Import trades from CSV</h3>
-        <p class="text-xs text-gray-500">Upload broker exports to backfill BUY/SELL activity. Cash top-ups, withdrawals, dividends, and fees are reconciled automatically.</p>
+    <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" id="overviewCards">
+      <?php if ($hasInitialData) { include __DIR__ . '/partials/overview_cards.php'; } ?>
+    </section>
+
+    <section class="grid gap-6 xl:grid-cols-3">
+      <article class="xl:col-span-2 rounded-2xl border border-gray-200/70 bg-white/80 shadow-sm dark:border-gray-800 dark:bg-gray-900/40">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Current holdings</h3>
+            <p class="text-xs text-gray-500" data-role="holdings-base-currency">Base currency: <?= htmlspecialchars($baseCurrency) ?></p>
+          </div>
+          <div class="text-xs text-gray-400">Updated live</div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-50/80 text-gray-600 uppercase text-xs tracking-wide dark:bg-gray-900/60">
+              <tr>
+                <th class="px-6 py-3 text-left">Ticker</th>
+                <th class="px-6 py-3 text-right">Qty</th>
+                <th class="px-6 py-3 text-right">Avg cost</th>
+                <th class="px-6 py-3 text-right">Last</th>
+                <th class="px-6 py-3 text-right">Market value</th>
+                <th class="px-6 py-3 text-right">Unrealized</th>
+                <th class="px-6 py-3 text-right">Day P/L</th>
+                <th class="px-6 py-3 text-right">Weight</th>
+                <th class="px-6 py-3 text-left">Insights</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-800" id="holdingsTableBody">
+              <?php if ($hasInitialData) { include __DIR__ . '/partials/holdings_rows.php'; } ?>
+            </tbody>
+          </table>
+        </div>
+      </article>
+      <div class="space-y-6">
+        <article class="rounded-2xl border border-gray-200/70 bg-white/80 p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900/40">
+          <h3 class="text-lg font-semibold mb-3 text-gray-900 dark:text-gray-100">Allocation by ticker</h3>
+          <canvas id="allocationTickerChart" height="220"></canvas>
+        </article>
+        <article class="rounded-2xl border border-gray-200/70 bg-white/80 p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900/40">
+          <h3 class="text-lg font-semibold mb-3 text-gray-900 dark:text-gray-100">Quick actions</h3>
+          <p class="text-sm text-gray-500">Need to adjust cash or rebalance? Use the buttons below.</p>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <button type="button" class="btn btn-primary" data-dialog-open="tradeDialog">Record trade</button>
+            <button type="button" class="btn btn-secondary" data-dialog-open="cashDialog">Record cash movement</button>
+            <a href="/stocks/transactions" class="btn btn-ghost">View transactions</a>
+          </div>
+        </article>
       </div>
-      <form method="post" action="/stocks/clear" onsubmit="return confirm('Clear all recorded stock trades? This cannot be undone.');" class="shrink-0">
-        <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-        <button class="btn btn-danger">Clear history</button>
-      </form>
+    </section>
+
+    <div id="watchlistContainer">
+      <?php if ($hasInitialData) { include __DIR__ . '/partials/watchlist_section.php'; } ?>
     </div>
-    <form method="post" action="/stocks/import" enctype="multipart/form-data" class="mt-4 space-y-3" id="stocksCsvForm">
-      <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-      <input type="file" name="csv" accept=".csv,text/csv" class="input" required />
-      <p class="text-xs text-gray-500">We match columns named Date, Ticker/Symbol, Type, Quantity, Price per share, Total Amount, Currency, and Fee when available.</p>
-      <button class="btn btn-secondary">Upload CSV</button>
-      <div class="hidden rounded-xl border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-100" data-role="csv-progress">
-        <div class="flex items-center justify-between mb-2">
-          <span data-role="csv-progress-text">Preparing upload…</span>
-          <span data-role="csv-progress-value">0%</span>
+
+    <section class="rounded-2xl border border-gray-200/70 bg-white/80 p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900/40">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Import trades from CSV</h3>
+          <p class="text-xs text-gray-500">Upload broker exports to backfill BUY/SELL activity. Cash top-ups, withdrawals, dividends, and fees are reconciled automatically.</p>
         </div>
-        <div class="h-2 rounded-full bg-emerald-200/60 dark:bg-emerald-500/30">
-          <div class="h-full w-0 rounded-full bg-emerald-500 transition-all duration-300" data-role="csv-progress-bar"></div>
-        </div>
+        <form method="post" action="/stocks/clear" onsubmit="return confirm('Clear all recorded stock trades? This cannot be undone.');" class="shrink-0">
+          <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+          <button class="btn btn-danger">Clear history</button>
+        </form>
       </div>
-      <div class="hidden rounded-xl border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-100" data-role="csv-server-progress">
-        <div class="flex items-center justify-between mb-2">
-          <span data-role="csv-server-text">Reconciling portfolio…</span>
-          <span data-role="csv-server-value">0%</span>
+      <form method="post" action="/stocks/import" enctype="multipart/form-data" class="mt-4 space-y-3" id="stocksCsvForm">
+        <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+        <input type="file" name="csv" accept=".csv,text/csv" class="input" required />
+        <p class="text-xs text-gray-500">We match columns named Date, Ticker/Symbol, Type, Quantity, Price per share, Total Amount, Currency, and Fee when available.</p>
+        <button class="btn btn-secondary">Upload CSV</button>
+        <div class="hidden rounded-xl border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-100" data-role="csv-progress">
+          <div class="flex items-center justify-between mb-2">
+            <span data-role="csv-progress-text">Preparing upload…</span>
+            <span data-role="csv-progress-value">0%</span>
+          </div>
+          <div class="h-2 rounded-full bg-emerald-200/60 dark:bg-emerald-500/30">
+            <div class="h-full w-0 rounded-full bg-emerald-500 transition-all duration-300" data-role="csv-progress-bar"></div>
+          </div>
         </div>
-        <div class="h-2 rounded-full bg-emerald-200/60 dark:bg-emerald-500/30">
-          <div class="h-full w-0 rounded-full bg-emerald-500 transition-all duration-300" data-role="csv-server-bar"></div>
+        <div class="hidden rounded-xl border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-100" data-role="csv-server-progress">
+          <div class="flex items-center justify-between mb-2">
+            <span data-role="csv-server-text">Reconciling portfolio…</span>
+            <span data-role="csv-server-value">0%</span>
+          </div>
+          <div class="h-2 rounded-full bg-emerald-200/60 dark:bg-emerald-500/30">
+            <div class="h-full w-0 rounded-full bg-emerald-500 transition-all duration-300" data-role="csv-server-bar"></div>
+          </div>
         </div>
-      </div>
-    </form>
-  </section>
+      </form>
+    </section>
+  </div>
+
 </section>
 
 <div class="dialog hidden" id="tradeDialog" role="dialog" aria-modal="true" aria-labelledby="tradeDialogTitle">
@@ -319,21 +330,40 @@ $formatQuantity = static function ($qty): string {
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" crossorigin="anonymous"></script>
 <script>
 (function(){
-  let allocationData = <?= json_encode($allocations['by_ticker']) ?>;
-  let portfolioLabels = <?= json_encode($portfolioChart['labels']) ?>;
-  let portfolioSeries = <?= json_encode($portfolioChart['series']) ?>;
+  const hasInitialData = <?= $hasInitialData ? 'true' : 'false' ?>;
   let holdingsSymbols = <?= json_encode(array_map(static fn($h) => $h['symbol'], $holdings)) ?>;
   let watchlistSymbols = <?= json_encode(array_map(static fn($w) => $w['symbol'], $watchlist)) ?>;
   const refreshSeconds = <?= (int)$refreshSeconds ?> * 1000;
   let chartCurrency = <?= json_encode($baseCurrency) ?>;
   let baseCurrencyCode = <?= json_encode($baseCurrency) ?>;
   let baseFormatter = new Intl.NumberFormat(undefined, { style: 'currency', currency: baseCurrencyCode });
-  let cashSeries = <?= json_encode(array_fill(0, count($portfolioChart['series']), (float)$totals['cash_balance'])) ?>;
+  let portfolioLabels = <?= json_encode($portfolioChart['labels'] ?? []) ?>;
+  let portfolioSeries = <?= json_encode($portfolioChart['series'] ?? []) ?>;
+  let cashSeries = <?= json_encode(array_fill(0, count($portfolioChart['series'] ?? []), (float)$totals['cash_balance'])) ?>;
+  const allocationInitial = <?= json_encode($allocations['by_ticker'] ?? []) ?>;
+
   let allocationChart = null;
   let portfolioChartInstance = null;
   let contributionVisible = false;
   let contributionsToggle = null;
   let contributionListener = null;
+
+  const loadingBox = document.querySelector('[data-role="stocks-loading"]');
+  const loadingText = loadingBox ? loadingBox.querySelector('[data-role="stocks-loading-text"]') : null;
+  const loadingHint = loadingBox ? loadingBox.querySelector('[data-role="stocks-loading-hint"]') : null;
+  const loadingValue = loadingBox ? loadingBox.querySelector('[data-role="stocks-loading-value"]') : null;
+  const loadingBar = loadingBox ? loadingBox.querySelector('[data-role="stocks-loading-bar"]') : null;
+  const contentWrapper = document.querySelector('[data-role="stocks-content"]');
+  const watchlistContainer = document.getElementById('watchlistContainer');
+  const heroContainer = document.getElementById('overviewHeroContent');
+  const cardsContainer = document.getElementById('overviewCards');
+  const holdingsBody = document.getElementById('holdingsTableBody');
+  const holdingsBaseLabel = document.querySelector('[data-role="holdings-base-currency"]');
+  const refreshForm = document.querySelector('[data-role="refresh-form"]');
+
+  let loadingTimer = null;
+  let dataLoaded = hasInitialData;
+  let dataLoading = false;
 
   const parseNumber = (value) => {
     if (value === null || value === undefined || value === '') return 0;
@@ -354,25 +384,105 @@ $formatQuantity = static function ($qty): string {
     baseFormatter = new Intl.NumberFormat(undefined, { style: 'currency', currency: baseCurrencyCode });
   };
 
-  const allocationCtx = document.getElementById('allocationTickerChart');
-  if (allocationCtx && allocationData.length) {
-    const labels = allocationData.map(item => item.label);
-    const data = allocationData.map(item => item.weight_pct);
-    allocationChart = new Chart(allocationCtx, {
-      type: 'doughnut',
-      data: {
-        labels,
-        datasets: [{
-          data,
-          backgroundColor: labels.map((_, idx) => `rgba(94, 234, 212, ${0.85 - idx * 0.05})`),
-          borderWidth: 0,
-          hoverOffset: 6
-        }]
-      },
-      options: {
-        plugins: { legend: { position: 'bottom', labels: { color: '#4b5563' } } }
+  function beginLoading(message = 'Loading portfolio…') {
+    if (!loadingBox) return;
+    if (contentWrapper) contentWrapper.classList.add('hidden');
+    loadingBox.classList.remove('hidden');
+    if (loadingText) loadingText.textContent = message;
+    if (loadingHint) loadingHint.textContent = 'Hang tight while we fetch the latest data.';
+    if (loadingBar) {
+      loadingBar.style.width = '5%';
+      loadingBar.classList.remove('bg-rose-500');
+      loadingBar.classList.add('bg-emerald-500');
+    }
+    if (loadingValue) loadingValue.textContent = '5%';
+    let progress = 5;
+    if (loadingTimer) clearInterval(loadingTimer);
+    loadingTimer = setInterval(() => {
+      if (progress >= 90) return;
+      progress += 5;
+      if (loadingBar) loadingBar.style.width = progress + '%';
+      if (loadingValue) loadingValue.textContent = progress + '%';
+    }, 200);
+  }
+
+  function endLoading(message = 'Portfolio ready') {
+    if (!loadingBox) return;
+    if (loadingTimer) {
+      clearInterval(loadingTimer);
+      loadingTimer = null;
+    }
+    if (loadingBar) {
+      loadingBar.style.width = '100%';
+      loadingBar.classList.remove('bg-rose-500');
+      loadingBar.classList.add('bg-emerald-500');
+    }
+    if (loadingValue) loadingValue.textContent = '100%';
+    if (loadingText) loadingText.textContent = message;
+    setTimeout(() => {
+      if (loadingBox) loadingBox.classList.add('hidden');
+      if (contentWrapper) contentWrapper.classList.remove('hidden');
+      if (loadingBar) loadingBar.style.width = '0%';
+      if (loadingValue) loadingValue.textContent = '0%';
+    }, 350);
+  }
+
+  function failLoading(message) {
+    if (!loadingBox) return;
+    if (loadingTimer) {
+      clearInterval(loadingTimer);
+      loadingTimer = null;
+    }
+    if (loadingBar) {
+      loadingBar.style.width = '100%';
+      loadingBar.classList.remove('bg-emerald-500');
+      loadingBar.classList.add('bg-rose-500');
+    }
+    if (loadingValue) loadingValue.textContent = '';
+    if (loadingText) loadingText.textContent = message || 'Unable to load portfolio.';
+    if (loadingHint) loadingHint.textContent = 'Please try again using the refresh button.';
+    if (contentWrapper) contentWrapper.classList.add('hidden');
+  }
+
+  const buildAllocationColors = (labels) => labels.map((_, idx) => {
+    const alpha = Math.max(0.2, 0.85 - idx * 0.05);
+    return `rgba(94, 234, 212, ${alpha})`;
+  });
+
+  function updateAllocation(labels, weights) {
+    const ctx = document.getElementById('allocationTickerChart');
+    if (!ctx) return;
+    const hasData = Array.isArray(labels) && labels.length && Array.isArray(weights) && weights.length;
+    if (!hasData) {
+      if (allocationChart) {
+        allocationChart.destroy();
+        allocationChart = null;
       }
-    });
+      return;
+    }
+    const colors = buildAllocationColors(labels);
+    if (!allocationChart) {
+      allocationChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{
+            data: weights,
+            backgroundColor: colors,
+            borderWidth: 0,
+            hoverOffset: 6
+          }]
+        },
+        options: {
+          plugins: { legend: { position: 'bottom', labels: { color: '#4b5563' } } }
+        }
+      });
+    } else {
+      allocationChart.data.labels = labels;
+      allocationChart.data.datasets[0].data = weights;
+      allocationChart.data.datasets[0].backgroundColor = colors;
+      allocationChart.update();
+    }
   }
 
   function bindContributionsToggle() {
@@ -471,45 +581,92 @@ $formatQuantity = static function ($qty): string {
     bindContributionsToggle();
   }
 
-  function updateAllocation(labels, weights) {
-    if (!allocationChart) return;
-    allocationChart.data.labels = labels;
-    allocationChart.data.datasets[0].data = weights;
-    allocationChart.update();
-  }
-
-  renderPortfolioChart(portfolioLabels, portfolioSeries, cashSeries);
-
-  const openDialog = (id) => {
-    const dialog = document.getElementById(id);
-    if (!dialog) return;
-    dialog.classList.remove('hidden');
-    document.body.classList.add('overflow-hidden');
-  };
-
-  const closeDialog = (dialog) => {
-    dialog.classList.add('hidden');
-    document.body.classList.remove('overflow-hidden');
-  };
-
-  document.querySelectorAll('[data-dialog-open]').forEach(trigger => {
-    trigger.addEventListener('click', () => openDialog(trigger.getAttribute('data-dialog-open')));
-  });
-
-  document.querySelectorAll('[data-dialog-close]').forEach(closeBtn => {
-    closeBtn.addEventListener('click', () => closeDialog(closeBtn.closest('.dialog')));
-  });
-
-  document.querySelectorAll('.dialog').forEach(dialog => {
-    dialog.addEventListener('click', (evt) => {
-      if (evt.target === dialog.querySelector('.dialog-backdrop')) {
-        closeDialog(dialog);
-      }
-    });
-  });
-
   const buildSymbols = () => Array.from(new Set([...holdingsSymbols, ...watchlistSymbols]));
   let symbols = buildSymbols();
+
+  function applyPortfolioPayload(payload) {
+    if (!payload) return;
+    if (payload.hero && heroContainer) {
+      heroContainer.innerHTML = payload.hero;
+    }
+    if (payload.cards && cardsContainer) {
+      cardsContainer.innerHTML = payload.cards;
+    }
+    if (payload.holdings && holdingsBody) {
+      holdingsBody.innerHTML = payload.holdings;
+    }
+    if (typeof payload.watchlist === 'string' && watchlistContainer) {
+      watchlistContainer.innerHTML = payload.watchlist;
+    }
+    if (payload.portfolioChart) {
+      portfolioLabels = payload.portfolioChart.labels || [];
+      portfolioSeries = payload.portfolioChart.series || [];
+      cashSeries = payload.portfolioChart.cashSeries || [];
+      renderPortfolioChart(portfolioLabels, portfolioSeries, cashSeries);
+    } else {
+      bindContributionsToggle();
+    }
+    if (payload.allocations) {
+      updateAllocation(payload.allocations.labels || [], payload.allocations.weights || []);
+    }
+    if (payload.symbols) {
+      holdingsSymbols = payload.symbols.holdings || [];
+      watchlistSymbols = payload.symbols.watchlist || [];
+      symbols = buildSymbols();
+    }
+    if (payload.baseCurrency) {
+      chartCurrency = payload.baseCurrency;
+      updateBaseFormatter(payload.baseCurrency);
+      if (holdingsBaseLabel) {
+        holdingsBaseLabel.textContent = `Base currency: ${payload.baseCurrency}`;
+      }
+    }
+    bindContributionsToggle();
+    if (contentWrapper) contentWrapper.classList.remove('hidden');
+  }
+
+  async function fetchPortfolioPayload(form) {
+    if (!form) throw new Error('Missing refresh form');
+    const resp = await fetch(form.action, {
+      method: 'POST',
+      body: new FormData(form),
+      credentials: 'same-origin',
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
+    const contentType = resp.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      throw new Error('Unexpected response from server.');
+    }
+    const payload = await resp.json();
+    if (!resp.ok || !payload.success) {
+      const errorMessage = payload && payload.message ? payload.message : 'Unable to refresh portfolio.';
+      const error = new Error(errorMessage);
+      error.payload = payload;
+      throw error;
+    }
+    return payload;
+  }
+
+  async function loadInitialPortfolio() {
+    if (!refreshForm || dataLoaded) return;
+    dataLoading = true;
+    beginLoading('Loading portfolio…');
+    try {
+      const payload = await fetchPortfolioPayload(refreshForm);
+      applyPortfolioPayload(payload);
+      endLoading(payload.message || 'Portfolio ready');
+      dataLoaded = true;
+      pollQuotes();
+    } catch (error) {
+      console.error('Initial portfolio load failed', error);
+      failLoading(error.message || 'Unable to load portfolio.');
+    } finally {
+      dataLoading = false;
+    }
+  }
 
   const updatePanels = (quotes) => {
     document.querySelectorAll('#watchlistStrip [data-symbol]').forEach(panel => {
@@ -557,9 +714,6 @@ $formatQuantity = static function ($qty): string {
         const storedMarketCcy = parseNumber(row.getAttribute('data-market-ccy'));
         const storedMarketBase = parseNumber(row.getAttribute('data-market-base'));
         fxRate = storedMarketCcy !== 0 ? storedMarketBase / storedMarketCcy : 1;
-      }
-      if (!Number.isFinite(fxRate) || fxRate <= 0) {
-        fxRate = 1;
       }
       if (currency === baseCurrencyCode) {
         fxRate = 1;
@@ -655,7 +809,7 @@ $formatQuantity = static function ($qty): string {
     });
   };
 
-  async function pollQuotes(){
+  async function pollQuotes() {
     if (!symbols.length) return;
     try {
       const resp = await fetch(`/api/stocks/live?symbols=${symbols.join(',')}`, { headers: { 'Accept': 'application/json' } });
@@ -682,7 +836,6 @@ $formatQuantity = static function ($qty): string {
     }
   });
 
-  const refreshForm = document.querySelector('[data-role="refresh-form"]');
   if (refreshForm) {
     refreshForm.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -696,55 +849,8 @@ $formatQuantity = static function ($qty): string {
         statusEl.textContent = 'Refreshing…';
       }
       try {
-        const resp = await fetch(refreshForm.action, {
-          method: 'POST',
-          body: new FormData(refreshForm),
-          credentials: 'same-origin',
-          headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
-          }
-        });
-        const contentType = resp.headers.get('content-type') || '';
-        if (!contentType.includes('application/json')) {
-          throw new Error('Unexpected response from server.');
-        }
-        const payload = await resp.json();
-        if (!resp.ok || !payload.success) {
-          throw new Error(payload && payload.message ? payload.message : 'Unable to refresh quotes');
-        }
-        if (payload.hero) {
-          const hero = document.getElementById('overviewHeroContent');
-          if (hero) hero.innerHTML = payload.hero;
-        }
-        if (payload.cards) {
-          const cards = document.getElementById('overviewCards');
-          if (cards) cards.innerHTML = payload.cards;
-        }
-        if (payload.holdings) {
-          const tbody = document.getElementById('holdingsTableBody');
-          if (tbody) tbody.innerHTML = payload.holdings;
-        }
-        if (payload.portfolioChart) {
-          portfolioLabels = payload.portfolioChart.labels || [];
-          portfolioSeries = payload.portfolioChart.series || [];
-          cashSeries = payload.portfolioChart.cashSeries || [];
-          renderPortfolioChart(portfolioLabels, portfolioSeries, cashSeries);
-        } else {
-          bindContributionsToggle();
-        }
-        if (payload.allocations && allocationChart) {
-          updateAllocation(payload.allocations.labels || [], payload.allocations.weights || []);
-        }
-        if (payload.symbols) {
-          holdingsSymbols = payload.symbols.holdings || holdingsSymbols;
-          watchlistSymbols = payload.symbols.watchlist || watchlistSymbols;
-          symbols = buildSymbols();
-        }
-        if (payload.baseCurrency) {
-          chartCurrency = payload.baseCurrency;
-          updateBaseFormatter(payload.baseCurrency);
-        }
+        const payload = await fetchPortfolioPayload(refreshForm);
+        applyPortfolioPayload(payload);
         if (statusEl) {
           statusEl.textContent = payload.message || 'Quotes refreshed.';
         }
@@ -768,6 +874,59 @@ $formatQuantity = static function ($qty): string {
     });
   }
 
+  const ensureInitialLoad = () => {
+    if (dataLoaded || dataLoading) return;
+    loadInitialPortfolio();
+  };
+
+  if (!hasInitialData) {
+    if (document.visibilityState === 'visible') {
+      ensureInitialLoad();
+    } else {
+      const visibilityHandler = () => {
+        if (document.visibilityState === 'visible') {
+          document.removeEventListener('visibilitychange', visibilityHandler);
+          ensureInitialLoad();
+        }
+      };
+      document.addEventListener('visibilitychange', visibilityHandler);
+    }
+  } else {
+    const initialLabels = allocationInitial.map(item => item.label);
+    const initialWeights = allocationInitial.map(item => item.weight_pct);
+    updateAllocation(initialLabels, initialWeights);
+    renderPortfolioChart(portfolioLabels, portfolioSeries, cashSeries);
+    bindContributionsToggle();
+  }
+
+  const openDialog = (id) => {
+    const dialog = document.getElementById(id);
+    if (!dialog) return;
+    dialog.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+  };
+
+  const closeDialog = (dialog) => {
+    dialog.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+  };
+
+  document.querySelectorAll('[data-dialog-open]').forEach(trigger => {
+    trigger.addEventListener('click', () => openDialog(trigger.getAttribute('data-dialog-open')));
+  });
+
+  document.querySelectorAll('[data-dialog-close]').forEach(closeBtn => {
+    closeBtn.addEventListener('click', () => closeDialog(closeBtn.closest('.dialog')));
+  });
+
+  document.querySelectorAll('.dialog').forEach(dialog => {
+    dialog.addEventListener('click', (evt) => {
+      if (evt.target === dialog.querySelector('.dialog-backdrop')) {
+        closeDialog(dialog);
+      }
+    });
+  });
+
   const csvForm = document.getElementById('stocksCsvForm');
   if (csvForm) {
     const uploadBox = csvForm.querySelector('[data-role="csv-progress"]');
@@ -780,7 +939,6 @@ $formatQuantity = static function ($qty): string {
     const serverText = csvForm.querySelector('[data-role="csv-server-text"]');
 
     let serverTimer = null;
-    let serverStarted = false;
     let serverGauge = 0;
 
     const resetServerProgress = () => {
@@ -788,7 +946,6 @@ $formatQuantity = static function ($qty): string {
         clearInterval(serverTimer);
         serverTimer = null;
       }
-      serverStarted = false;
       serverGauge = 0;
       if (serverBox) serverBox.classList.add('hidden');
       if (serverBar) {
@@ -802,7 +959,6 @@ $formatQuantity = static function ($qty): string {
 
     const beginServerProgress = (message) => {
       if (serverTimer) clearInterval(serverTimer);
-      serverStarted = true;
       serverGauge = 10;
       if (serverBox) serverBox.classList.remove('hidden');
       if (serverBar) {
@@ -879,3 +1035,4 @@ $formatQuantity = static function ($qty): string {
   }
 })();
 </script>
+
