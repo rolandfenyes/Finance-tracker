@@ -65,6 +65,13 @@ $formatQuantity = static function ($qty): string {
     <article class="card p-5 shadow-md bg-white/80 dark:bg-gray-900/40">
       <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wide">Total Market Value</h2>
       <p class="text-3xl font-semibold mt-2"><?= moneyfmt($totals['total_market_value'], $baseCurrency) ?></p>
+      <?php if (!empty($totals['total_market_value_by_currency'])): ?>
+        <ul class="mt-3 space-y-1 text-xs text-gray-500">
+          <?php foreach ($totals['total_market_value_by_currency'] as $currency => $amount): ?>
+            <li><?= moneyfmt($amount, $currency) ?></li>
+          <?php endforeach; ?>
+        </ul>
+      <?php endif; ?>
       <p class="text-xs text-gray-500">Trade cash flow: <?= moneyfmt($totals['cash_impact'], $baseCurrency) ?></p>
     </article>
     <article class="card p-5 shadow-md bg-white/80 dark:bg-gray-900/40">
@@ -73,6 +80,13 @@ $formatQuantity = static function ($qty): string {
         <?= moneyfmt($totals['unrealized_pl'], $baseCurrency) ?>
       </p>
       <p class="text-xs text-gray-500"><?= number_format($totals['unrealized_pct'], 2) ?>%</p>
+      <?php if (!empty($totals['unrealized_by_currency'])): ?>
+        <ul class="mt-3 space-y-1 text-xs <?= $totals['unrealized_pl'] >= 0 ? 'text-emerald-500' : 'text-rose-500' ?>">
+          <?php foreach ($totals['unrealized_by_currency'] as $currency => $amount): ?>
+            <li><?= moneyfmt($amount, $currency) ?></li>
+          <?php endforeach; ?>
+        </ul>
+      <?php endif; ?>
     </article>
     <article class="card p-5 shadow-md bg-white/80 dark:bg-gray-900/40">
       <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wide">Realized P/L (<?= htmlspecialchars($totals['realized_period']) ?>)</h2>
@@ -80,12 +94,26 @@ $formatQuantity = static function ($qty): string {
         <?= moneyfmt($totals['realized_pl'], $baseCurrency) ?>
       </p>
       <p class="text-xs text-gray-500">Daily P/L: <?= moneyfmt($totals['daily_pl'], $baseCurrency) ?></p>
+      <?php if (!empty($totals['realized_by_currency'])): ?>
+        <ul class="mt-3 space-y-1 text-xs <?= $totals['realized_pl'] >= 0 ? 'text-emerald-500' : 'text-rose-500' ?>">
+          <?php foreach ($totals['realized_by_currency'] as $currency => $amount): ?>
+            <li><?= moneyfmt($amount, $currency) ?></li>
+          <?php endforeach; ?>
+        </ul>
+      <?php endif; ?>
     </article>
     <article class="card p-5 shadow-md bg-white/80 dark:bg-gray-900/40">
       <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wide">Cash Balance</h2>
       <p class="text-3xl font-semibold mt-2 text-slate-700 dark:text-slate-100">
         <?= moneyfmt($totals['cash_balance'] ?? 0, $baseCurrency) ?>
       </p>
+      <?php if (!empty($totals['cash_by_currency'])): ?>
+        <ul class="mt-3 space-y-1 text-xs text-gray-500">
+          <?php foreach ($totals['cash_by_currency'] as $currency => $amount): ?>
+            <li><?= moneyfmt($amount, $currency) ?></li>
+          <?php endforeach; ?>
+        </ul>
+      <?php endif; ?>
       <?php if (!empty($cashEntries)): ?>
         <ul class="mt-3 space-y-1 text-xs text-gray-500 dark:text-gray-400">
           <?php foreach ($cashEntries as $entry): ?>
@@ -152,9 +180,13 @@ $formatQuantity = static function ($qty): string {
                 <td class="px-5 py-4 text-right <?= $holding['unrealized_base'] >= 0 ? 'text-emerald-500' : 'text-rose-500' ?>">
                   <div data-role="holding-unrealized"><?= moneyfmt($holding['unrealized_base'], $baseCurrency) ?></div>
                   <div class="text-xs text-gray-400" data-role="holding-unrealized-ccy"><?= moneyfmt($holding['unrealized_ccy'], $holding['currency']) ?></div>
+                  <?php if ($holding['unrealized_pct'] !== null): ?>
+                    <div class="text-xs font-medium <?= $holding['unrealized_base'] >= 0 ? 'text-emerald-500' : 'text-rose-500' ?>"><?= number_format($holding['unrealized_pct'], 2) ?>%</div>
+                  <?php endif; ?>
                 </td>
                 <td class="px-5 py-4 text-right <?= $holding['day_pl_base'] >= 0 ? 'text-emerald-500' : 'text-rose-500' ?>" data-role="holding-day">
-                  <?= moneyfmt($holding['day_pl_base'], $baseCurrency) ?>
+                  <div><?= moneyfmt($holding['day_pl_base'], $baseCurrency) ?></div>
+                  <div class="text-xs text-gray-400"><?= moneyfmt($holding['day_pl_ccy'], $holding['currency']) ?></div>
                 </td>
                 <td class="px-5 py-4 text-right">
                   <?= number_format($holding['weight_pct'], 2) ?>%

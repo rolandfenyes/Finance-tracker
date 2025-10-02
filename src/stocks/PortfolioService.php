@@ -46,7 +46,11 @@ class PortfolioService
         $today = (new DateTime())->format('Y-m-d');
 
         $positions = $this->loadPositions($userId, $filters);
-        $symbols = array_map(static fn($row) => $row['symbol'], $positions);
+        $watchlistRows = $this->loadWatchlistRows($userId);
+
+        $positionSymbols = array_map(static fn($row) => $row['symbol'], $positions);
+        $watchlistSymbols = array_map(static fn($row) => $row['symbol'], $watchlistRows);
+        $symbols = array_values(array_unique(array_merge($positionSymbols, $watchlistSymbols)));
         $quotes = $this->priceDataService->getLiveQuotes($symbols);
         $quotesBySymbol = [];
         foreach ($quotes as $quote) {
@@ -58,6 +62,8 @@ class PortfolioService
         $totalCostBase = 0.0;
         $totalDailyBase = 0.0;
         $cashImpactBase = 0.0;
+        $marketByCurrency = [];
+        $unrealizedByCurrency = [];
 
         foreach ($positions as $row) {
             $symbol = $row['symbol'];
@@ -77,6 +83,9 @@ class PortfolioService
             $dayPlBase = fx_convert($this->pdo, $dayPlCcy, $currency, $baseCurrency, $today);
             $cashImpactBase += fx_convert($this->pdo, (float)$row['cash_impact_ccy'], $currency, $baseCurrency, $today);
 
+            $marketByCurrency[$currency] = ($marketByCurrency[$currency] ?? 0.0) + $marketValueCcy;
+            $unrealizedByCurrency[$currency] = ($unrealizedByCurrency[$currency] ?? 0.0) + $unrealizedCcy;
+
             $holdings[] = [
                 'symbol' => $symbol,
                 'name' => $row['name'] ?? $symbol,
@@ -93,6 +102,7 @@ class PortfolioService
                 'cost_base' => $costBase,
                 'unrealized_ccy' => $unrealizedCcy,
                 'unrealized_base' => $unrealizedBase,
+                'unrealized_pct' => $costBase > 0 ? ($unrealizedBase / $costBase) * 100 : null,
                 'day_pl_ccy' => $dayPlCcy,
                 'day_pl_base' => $dayPlBase,
                 'stale' => $quote['stale'] ?? false,
@@ -123,7 +133,7 @@ class PortfolioService
 
         $realizedPeriod = $filters['realized_period'] ?? 'YTD';
         [$from, $to] = $this->resolvePeriodRange($realizedPeriod);
-        $realizedBase = $this->sumRealized($userId, $from, $to);
+        $realized = $this->sumRealized($userId, $from, $to);
 
         $overviewTotals = [
             'base_currency' => $baseCurrency,
@@ -134,12 +144,16 @@ class PortfolioService
             'daily_pl' => $totalDailyBase,
             'cash_impact' => $cashImpactBase,
             'cash_balance' => $cashBalanceBase,
-            'realized_pl' => $realizedBase,
+            'realized_pl' => $realized['base'],
             'realized_period' => $realizedPeriod,
+            'total_market_value_by_currency' => $this->cleanCurrencyTotals($marketByCurrency),
+            'unrealized_by_currency' => $this->cleanCurrencyTotals($unrealizedByCurrency),
+            'cash_by_currency' => $this->cleanCurrencyTotals($cashTotals),
+            'realized_by_currency' => $this->cleanCurrencyTotals($realized['by_currency']),
         ];
 
         $allocations = $this->buildAllocations($holdings);
-        $watchlist = $this->buildWatchlist($userId, $baseCurrency, $today);
+        $watchlist = $this->buildWatchlist($watchlistRows, $quotesBySymbol, $baseCurrency, $today);
         $transactions = $this->loadTransactions($userId);
 
         return [
@@ -409,14 +423,31 @@ class PortfolioService
         return [$start->format('Y-m-d'), $end->format('Y-m-d')];
     }
 
-    private function sumRealized(int $userId, string $from, string $to): float
+    private function sumRealized(int $userId, string $from, string $to): array
     {
         if (!$this->tableExists('stock_realized_pl')) {
-            return 0.0;
+            return ['base' => 0.0, 'by_currency' => []];
         }
+        $params = [$userId, $from . ' 00:00:00', $to . ' 23:59:59'];
         $stmt = $this->pdo->prepare('SELECT COALESCE(SUM(realized_pl_base),0) FROM stock_realized_pl WHERE user_id=? AND closed_at BETWEEN ?::timestamptz AND ?::timestamptz');
-        $stmt->execute([$userId, $from . ' 00:00:00', $to . ' 23:59:59']);
-        return (float)$stmt->fetchColumn();
+        $stmt->execute($params);
+        $base = (float)$stmt->fetchColumn();
+
+        $stmtCurrency = $this->pdo->prepare('SELECT currency, COALESCE(SUM(realized_pl_ccy),0) AS total FROM stock_realized_pl WHERE user_id=? AND closed_at BETWEEN ?::timestamptz AND ?::timestamptz GROUP BY currency');
+        $stmtCurrency->execute($params);
+        $byCurrency = [];
+        foreach ($stmtCurrency->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $currency = strtoupper((string)($row['currency'] ?? ''));
+            if ($currency === '') {
+                continue;
+            }
+            $byCurrency[$currency] = (float)$row['total'];
+        }
+
+        return [
+            'base' => $base,
+            'by_currency' => $byCurrency,
+        ];
     }
 
     /**
@@ -463,28 +494,16 @@ class PortfolioService
         ];
     }
 
-    private function buildWatchlist(int $userId, string $baseCurrency, string $today): array
+    private function buildWatchlist(array $rows, array $quotesBySymbol, string $baseCurrency, string $today): array
     {
-        if (!$this->tableExists('watchlist') || !$this->tableExists('stocks')) {
-            return [];
-        }
-        $stmt = $this->pdo->prepare('SELECT w.stock_id, s.symbol, s.name, s.currency FROM watchlist w JOIN stocks s ON s.id = w.stock_id WHERE w.user_id=? ORDER BY s.symbol');
-        $stmt->execute([$userId]);
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         if (!$rows) {
             return [];
-        }
-        $symbols = array_map(static fn($row) => $row['symbol'], $rows);
-        $quotes = $this->priceDataService->getLiveQuotes($symbols);
-        $lookup = [];
-        foreach ($quotes as $quote) {
-            $lookup[$quote['symbol']] = $quote;
         }
         require_once __DIR__ . '/../fx.php';
         $watchlist = [];
         foreach ($rows as $row) {
             $symbol = $row['symbol'];
-            $quote = $lookup[$symbol] ?? null;
+            $quote = $quotesBySymbol[$symbol] ?? null;
             $last = $quote['last'] ?? null;
             $currency = $row['currency'] ?? 'USD';
             $lastBase = $last !== null ? fx_convert($this->pdo, $last, $currency, $baseCurrency, $today) : null;
@@ -499,6 +518,47 @@ class PortfolioService
             ];
         }
         return $watchlist;
+    }
+
+    private function loadWatchlistRows(int $userId): array
+    {
+        if (!$this->tableExists('watchlist') || !$this->tableExists('stocks')) {
+            return [];
+        }
+
+        $stmt = $this->pdo->prepare('SELECT w.stock_id, s.symbol, s.name, s.currency FROM watchlist w JOIN stocks s ON s.id = w.stock_id WHERE w.user_id=? ORDER BY s.symbol');
+        $stmt->execute([$userId]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    /**
+     * @param array<string,float> $totals
+     * @return array<string,float>
+     */
+    private function cleanCurrencyTotals(array $totals): array
+    {
+        $filtered = [];
+        foreach ($totals as $currency => $amount) {
+            $currency = strtoupper((string)$currency);
+            if ($currency === '') {
+                continue;
+            }
+            if (abs($amount) < 0.0005) {
+                continue;
+            }
+            $filtered[$currency] = $amount;
+        }
+
+        if (!$filtered) {
+            return [];
+        }
+
+        uasort($filtered, static function (float $a, float $b): int {
+            return abs($b) <=> abs($a);
+        });
+
+        return $filtered;
     }
 
     private function columnExists(string $table, string $column): bool
