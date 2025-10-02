@@ -114,12 +114,13 @@ class PriceDataService
                     }
                 } else {
                     $missingSymbols[] = $symbol;
+                    $staleSymbols[] = $symbol;
                     $result[$symbol] = $this->emptyQuote($symbol, $stockId, $symbolCurrency[$symbol] ?? null);
                     $this->memoryCache[$symbol] = ['ts' => $now, 'data' => $result[$symbol]];
                 }
             }
 
-            $immediateFetch = $forceRefresh ? array_unique(array_merge($staleSymbols, $missingSymbols)) : $missingSymbols;
+            $immediateFetch = $forceRefresh ? array_values(array_unique(array_merge($staleSymbols, $missingSymbols))) : [];
             if (!empty($immediateFetch)) {
                 $fresh = $this->fetchAndApply($immediateFetch, $indexBySymbol, $symbolCurrency, $now);
                 foreach ($immediateFetch as $symbol) {
@@ -129,9 +130,11 @@ class PriceDataService
                 }
             }
 
-            $deferred = array_diff($staleSymbols, $immediateFetch);
-            if (!$forceRefresh && !empty($deferred)) {
-                $this->queueDeferredRefresh($deferred, $indexBySymbol, $symbolCurrency);
+            if (!$forceRefresh) {
+                $deferred = array_values(array_unique($staleSymbols));
+                if (!empty($deferred)) {
+                    $this->queueDeferredRefresh($deferred, $indexBySymbol, $symbolCurrency);
+                }
             }
         }
 
