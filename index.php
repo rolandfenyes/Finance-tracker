@@ -623,7 +623,9 @@ switch ($path) {
         require __DIR__ . '/src/controllers/stocks.php';
         if ($method === 'POST') {
             $target = stocks_refresh_overview($pdo);
-            redirect($target);
+            if ($target !== null) {
+                redirect($target);
+            }
         } else {
             redirect('/stocks');
         }

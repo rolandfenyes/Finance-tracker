@@ -17,15 +17,26 @@ $cashEntries = $overview['cash'] ?? [];
 $baseCurrency = $totals['base_currency'];
 $rangeOptions = ['1M', '3M', '6M', '1Y', '5Y'];
 
-$marketByCurrency = $totals['total_market_value_by_currency'] ?? [];
-$unrealizedByCurrency = $totals['unrealized_by_currency'] ?? [];
-$realizedByCurrency = $totals['realized_by_currency'] ?? [];
-$cashByCurrency = $totals['cash_by_currency'] ?? [];
-$preferredCurrency = array_key_exists('USD', $marketByCurrency) ? 'USD' : (array_key_first($marketByCurrency) ?: $baseCurrency);
-$preferredMarket = $marketByCurrency[$preferredCurrency] ?? null;
-$preferredUnrealized = $unrealizedByCurrency[$preferredCurrency] ?? null;
-$preferredRealized = $realizedByCurrency[$preferredCurrency] ?? null;
-$preferredCash = $cashByCurrency[$preferredCurrency] ?? null;
+$currencyContext = $currencyContext ?? [
+    'marketByCurrency' => [],
+    'unrealizedByCurrency' => [],
+    'realizedByCurrency' => [],
+    'cashByCurrency' => [],
+    'preferredCurrency' => $baseCurrency,
+    'preferredMarket' => null,
+    'preferredUnrealized' => null,
+    'preferredRealized' => null,
+    'preferredCash' => null,
+];
+$marketByCurrency = $currencyContext['marketByCurrency'];
+$unrealizedByCurrency = $currencyContext['unrealizedByCurrency'];
+$realizedByCurrency = $currencyContext['realizedByCurrency'];
+$cashByCurrency = $currencyContext['cashByCurrency'];
+$preferredCurrency = $currencyContext['preferredCurrency'];
+$preferredMarket = $currencyContext['preferredMarket'];
+$preferredUnrealized = $currencyContext['preferredUnrealized'];
+$preferredRealized = $currencyContext['preferredRealized'];
+$preferredCash = $currencyContext['preferredCash'];
 
 $formatQuantity = static function ($qty): string {
     $formatted = number_format((float)$qty, 6, '.', '');
@@ -59,10 +70,19 @@ $formatQuantity = static function ($qty): string {
       <p class="text-sm text-gray-500">A live look at your equity exposure, performance, and cash firepower.</p>
     </div>
     <div class="flex flex-wrap gap-2">
-      <form method="post" action="/stocks/refresh" class="inline-flex">
+      <form method="post" action="/stocks/refresh" class="inline-flex items-center gap-2" data-role="refresh-form">
         <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
         <input type="hidden" name="return_to" value="<?= htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/stocks', ENT_QUOTES) ?>" />
-        <button class="btn btn-ghost" type="submit">Refresh quotes</button>
+        <input type="hidden" name="q" value="<?= htmlspecialchars($filters['search'] ?? '') ?>" />
+        <input type="hidden" name="sector" value="<?= htmlspecialchars($filters['sector'] ?? '') ?>" />
+        <input type="hidden" name="currency" value="<?= htmlspecialchars($filters['currency'] ?? '') ?>" />
+        <input type="hidden" name="period" value="<?= htmlspecialchars($filters['realized_period'] ?? 'YTD') ?>" />
+        <?php if (!empty($filters['watchlist_only'])): ?>
+          <input type="hidden" name="watchlist" value="1" />
+        <?php endif; ?>
+        <input type="hidden" name="chartRange" value="<?= htmlspecialchars($chartRange) ?>" />
+        <button class="btn btn-ghost" type="submit" data-role="refresh-submit">Refresh quotes</button>
+        <span class="text-xs text-gray-500" data-role="refresh-status" aria-live="polite"></span>
       </form>
       <a href="/stocks/transactions" class="btn btn-ghost">Transactions</a>
       <button type="button" class="btn btn-secondary" data-dialog-open="cashDialog">Record cash</button>
@@ -90,144 +110,13 @@ $formatQuantity = static function ($qty): string {
   <section class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-800 p-6 text-white shadow-xl">
     <div class="absolute -top-20 -right-20 h-60 w-60 rounded-full bg-emerald-500/20 blur-3xl"></div>
     <div class="absolute bottom-0 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-emerald-400/20 blur-3xl"></div>
-    <div class="relative flex flex-col gap-6 lg:flex-row lg:items-start">
-      <div class="flex-1 space-y-4">
-        <div>
-          <p class="text-xs uppercase tracking-widest text-white/60">Total value</p>
-          <div class="text-4xl font-semibold"><?= moneyfmt($totals['total_market_value'], $baseCurrency) ?></div>
-          <?php if ($preferredMarket !== null): ?>
-            <p class="text-sm text-white/70">≈ <?= moneyfmt($preferredMarket, $preferredCurrency) ?></p>
-          <?php endif; ?>
-        </div>
-        <div class="flex flex-wrap items-center gap-4 text-sm">
-          <div>
-            <span class="text-white/60">Change (<?= htmlspecialchars(strtoupper($chartMeta['range'])) ?>)</span>
-            <div class="text-lg font-medium <?= $chartMeta['change'] >= 0 ? 'text-emerald-300' : 'text-rose-300' ?>">
-              <?= ($chartMeta['change'] >= 0 ? '+' : '') . moneyfmt($chartMeta['change'], $baseCurrency) ?>
-              <span class="text-sm text-white/70">(<?= number_format($chartMeta['change_pct'], 2) ?>%)</span>
-            </div>
-          </div>
-          <div class="hidden sm:block h-10 w-px bg-white/10"></div>
-          <div>
-            <span class="text-white/60">Unrealized P/L</span>
-            <div class="text-lg font-medium <?= $totals['unrealized_pl'] >= 0 ? 'text-emerald-300' : 'text-rose-300' ?>">
-              <?= moneyfmt($totals['unrealized_pl'], $baseCurrency) ?>
-              <?php if ($preferredUnrealized !== null): ?>
-                <span class="text-sm text-white/70">(<?= moneyfmt($preferredUnrealized, $preferredCurrency) ?>)</span>
-              <?php endif; ?>
-            </div>
-          </div>
-        </div>
-        <?php if (!empty($marketByCurrency)): ?>
-          <div class="flex flex-wrap gap-3 text-xs text-white/70">
-            <?php foreach ($marketByCurrency as $currency => $amount): ?>
-              <span class="inline-flex items-center rounded-full bg-white/10 px-2.5 py-1 font-medium">
-                <?= htmlspecialchars($currency) ?> · <?= moneyfmt($amount, $currency) ?>
-              </span>
-            <?php endforeach; ?>
-          </div>
-        <?php endif; ?>
-      </div>
-      <div class="flex w-full flex-col gap-4 lg:w-1/2">
-        <div class="h-56">
-          <canvas id="portfolioValueChart" height="224"></canvas>
-        </div>
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <label class="inline-flex items-center gap-2 text-xs text-white/70">
-            <input type="checkbox" class="h-4 w-4 rounded border-white/40 bg-transparent text-emerald-300 focus:ring-emerald-200" data-role="chart-contributions" />
-            Show cash contributions
-          </label>
-          <form method="get" action="/stocks" class="flex flex-wrap gap-1" id="portfolioRangeForm">
-            <input type="hidden" name="q" value="<?= htmlspecialchars($filters['search'] ?? '') ?>" />
-            <input type="hidden" name="sector" value="<?= htmlspecialchars($filters['sector'] ?? '') ?>" />
-            <input type="hidden" name="currency" value="<?= htmlspecialchars($filters['currency'] ?? '') ?>" />
-            <input type="hidden" name="period" value="<?= htmlspecialchars($filters['realized_period'] ?? 'YTD') ?>" />
-            <?php if (!empty($filters['watchlist_only'])): ?>
-              <input type="hidden" name="watchlist" value="1" />
-            <?php endif; ?>
-            <?php foreach ($rangeOptions as $option): ?>
-              <?php $isActive = strtoupper($chartRange) === $option; ?>
-              <button
-                type="submit"
-                name="chartRange"
-                value="<?= htmlspecialchars($option) ?>"
-                class="px-3 py-1 text-xs font-medium rounded-full <?= $isActive ? 'bg-white text-slate-900 shadow-sm' : 'bg-white/10 text-white/80 hover:bg-white/20' ?>"
-                aria-pressed="<?= $isActive ? 'true' : 'false' ?>"
-              ><?= htmlspecialchars($option) ?></button>
-            <?php endforeach; ?>
-          </form>
-        </div>
-      </div>
+    <div id="overviewHeroContent">
+      <?php include __DIR__ . '/partials/overview_hero.php'; ?>
     </div>
   </section>
 
-  <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-    <article class="rounded-2xl border border-gray-200/70 bg-white/80 p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900/40">
-      <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500">Total Market Value</h2>
-      <p class="mt-3 text-2xl font-semibold text-gray-900 dark:text-gray-100"><?= moneyfmt($totals['total_market_value'], $baseCurrency) ?></p>
-      <?php if ($preferredMarket !== null): ?>
-        <p class="text-sm text-gray-500">≈ <?= moneyfmt($preferredMarket, $preferredCurrency) ?></p>
-      <?php endif; ?>
-      <?php if (!empty($marketByCurrency)): ?>
-        <ul class="mt-3 space-y-1 text-xs text-gray-500">
-          <?php foreach ($marketByCurrency as $currency => $amount): ?>
-            <li><?= moneyfmt($amount, $currency) ?></li>
-          <?php endforeach; ?>
-        </ul>
-      <?php endif; ?>
-    </article>
-    <article class="rounded-2xl border border-gray-200/70 bg-white/80 p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900/40">
-      <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500">Unrealized P/L</h2>
-      <p class="mt-3 text-2xl font-semibold <?= $totals['unrealized_pl'] >= 0 ? 'text-emerald-500' : 'text-rose-500' ?>">
-        <?= moneyfmt($totals['unrealized_pl'], $baseCurrency) ?>
-      </p>
-      <?php if ($preferredUnrealized !== null): ?>
-        <p class="text-sm text-gray-500">≈ <?= moneyfmt($preferredUnrealized, $preferredCurrency) ?></p>
-      <?php endif; ?>
-      <p class="text-xs text-gray-500 mt-1"><?= number_format($totals['unrealized_pct'], 2) ?>%</p>
-      <?php if (!empty($unrealizedByCurrency)): ?>
-        <ul class="mt-3 space-y-1 text-xs <?= $totals['unrealized_pl'] >= 0 ? 'text-emerald-500' : 'text-rose-500' ?>">
-          <?php foreach ($unrealizedByCurrency as $currency => $amount): ?>
-            <li><?= moneyfmt($amount, $currency) ?></li>
-          <?php endforeach; ?>
-        </ul>
-      <?php endif; ?>
-    </article>
-    <article class="rounded-2xl border border-gray-200/70 bg-white/80 p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900/40">
-      <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500">Realized P/L (<?= htmlspecialchars($totals['realized_period']) ?>)</h2>
-      <p class="mt-3 text-2xl font-semibold <?= $totals['realized_pl'] >= 0 ? 'text-emerald-500' : 'text-rose-500' ?>">
-        <?= moneyfmt($totals['realized_pl'], $baseCurrency) ?>
-      </p>
-      <?php if ($preferredRealized !== null): ?>
-        <p class="text-sm text-gray-500">≈ <?= moneyfmt($preferredRealized, $preferredCurrency) ?></p>
-      <?php endif; ?>
-      <p class="text-xs text-gray-500 mt-1">Daily P/L: <?= moneyfmt($totals['daily_pl'], $baseCurrency) ?></p>
-      <?php if (!empty($realizedByCurrency)): ?>
-        <ul class="mt-3 space-y-1 text-xs <?= $totals['realized_pl'] >= 0 ? 'text-emerald-500' : 'text-rose-500' ?>">
-          <?php foreach ($realizedByCurrency as $currency => $amount): ?>
-            <li><?= moneyfmt($amount, $currency) ?></li>
-          <?php endforeach; ?>
-        </ul>
-      <?php endif; ?>
-    </article>
-    <article class="rounded-2xl border border-gray-200/70 bg-white/80 p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900/40">
-      <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500">Cash Balance</h2>
-      <p class="mt-3 text-2xl font-semibold text-slate-800 dark:text-slate-100">
-        <?= moneyfmt($totals['cash_balance'] ?? 0, $baseCurrency) ?>
-      </p>
-      <?php if ($preferredCash !== null): ?>
-        <p class="text-sm text-gray-500">≈ <?= moneyfmt($preferredCash, $preferredCurrency) ?></p>
-      <?php endif; ?>
-      <?php if (!empty($cashEntries)): ?>
-        <ul class="mt-3 space-y-1 text-xs text-gray-500 dark:text-gray-400">
-          <?php foreach ($cashEntries as $entry): ?>
-            <li><?= moneyfmt($entry['amount'], $entry['currency']) ?> <span class="text-[11px] text-gray-400">(<?= moneyfmt($entry['amount_base'], $baseCurrency) ?>)</span></li>
-          <?php endforeach; ?>
-        </ul>
-      <?php else: ?>
-        <p class="text-xs text-gray-500 mt-3">No cash entries yet.</p>
-      <?php endif; ?>
-    </article>
+  <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" id="overviewCards">
+    <?php include __DIR__ . '/partials/overview_cards.php'; ?>
   </section>
 
   <section class="grid gap-6 xl:grid-cols-3">
@@ -254,65 +143,8 @@ $formatQuantity = static function ($qty): string {
               <th class="px-6 py-3 text-left">Insights</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-            <?php if (empty($holdings)): ?>
-              <tr>
-                <td colspan="9" class="px-6 py-8 text-center text-gray-500">No holdings yet. Record your first trade to get started.</td>
-              </tr>
-            <?php endif; ?>
-            <?php foreach ($holdings as $holding):
-              $symbol = $holding['symbol'];
-              $suggestions = $insights[$symbol]['suggestions'] ?? [];
-              $signals = $insights[$symbol]['signals'] ?? [];
-            ?>
-              <tr class="hover:bg-gray-50/80 dark:hover:bg-gray-900/40 transition" data-symbol="<?= htmlspecialchars($symbol) ?>" data-qty="<?= htmlspecialchars($holding['qty']) ?>" data-avg="<?= htmlspecialchars($holding['avg_cost']) ?>" data-currency="<?= htmlspecialchars($holding['currency']) ?>">
-                <td class="px-6 py-4 font-semibold text-gray-900 dark:text-gray-100">
-                  <a href="/stocks/<?= urlencode($symbol) ?>" class="hover:text-emerald-500 transition"><?= htmlspecialchars($symbol) ?></a>
-                  <span class="block text-xs text-gray-500"><?= htmlspecialchars($holding['name'] ?? '') ?></span>
-                </td>
-                <td class="px-6 py-4 text-right font-mono text-xs sm:text-sm"><?= $formatQuantity($holding['qty']) ?></td>
-                <td class="px-6 py-4 text-right">
-                  <?= moneyfmt($holding['avg_cost'], $holding['currency']) ?>
-                </td>
-                <td class="px-6 py-4 text-right" data-role="holding-last">
-                  <?= $holding['last_price'] !== null ? moneyfmt($holding['last_price'], $holding['currency']) : '<span class="text-xs text-gray-400">stale</span>' ?>
-                </td>
-                <td class="px-6 py-4 text-right">
-                  <div data-role="holding-market"><?= moneyfmt($holding['market_value_base'], $baseCurrency) ?></div>
-                  <div class="text-xs text-gray-400" data-role="holding-market-ccy"><?= moneyfmt($holding['market_value_ccy'], $holding['currency']) ?></div>
-                </td>
-                <td class="px-6 py-4 text-right <?= $holding['unrealized_base'] >= 0 ? 'text-emerald-500' : 'text-rose-500' ?>">
-                  <div data-role="holding-unrealized"><?= moneyfmt($holding['unrealized_base'], $baseCurrency) ?></div>
-                  <div class="text-xs text-gray-400" data-role="holding-unrealized-ccy"><?= moneyfmt($holding['unrealized_ccy'], $holding['currency']) ?></div>
-                  <?php if ($holding['unrealized_pct'] !== null): ?>
-                    <div class="text-xs font-medium <?= $holding['unrealized_base'] >= 0 ? 'text-emerald-500' : 'text-rose-500' ?>"><?= number_format($holding['unrealized_pct'], 2) ?>%</div>
-                  <?php endif; ?>
-                </td>
-                <td class="px-6 py-4 text-right <?= $holding['day_pl_base'] >= 0 ? 'text-emerald-500' : 'text-rose-500' ?>" data-role="holding-day">
-                  <div><?= moneyfmt($holding['day_pl_base'], $baseCurrency) ?></div>
-                  <div class="text-xs text-gray-400"><?= moneyfmt($holding['day_pl_ccy'], $holding['currency']) ?></div>
-                </td>
-                <td class="px-6 py-4 text-right">
-                  <?= number_format($holding['weight_pct'], 2) ?>%
-                  <?php if (!empty($holding['risk_note'])): ?>
-                    <span class="block text-xs text-rose-500"><?= htmlspecialchars($holding['risk_note']) ?></span>
-                  <?php endif; ?>
-                </td>
-                <td class="px-6 py-4 text-left">
-                  <?php if (!empty($suggestions)): ?>
-                    <ul class="space-y-1 text-xs text-gray-600 dark:text-gray-300">
-                      <?php foreach ($suggestions as $suggestion): ?>
-                        <li>• <?= htmlspecialchars($suggestion) ?></li>
-                      <?php endforeach; ?>
-                    </ul>
-                  <?php elseif (!empty($signals)): ?>
-                    <span class="text-xs text-gray-500">Balanced</span>
-                  <?php else: ?>
-                    <span class="text-xs text-gray-400">–</span>
-                  <?php endif; ?>
-                </td>
-              </tr>
-            <?php endforeach; ?>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800" id="holdingsTableBody">
+            <?php include __DIR__ . '/partials/holdings_rows.php'; ?>
           </tbody>
         </table>
       </div>
@@ -486,20 +318,25 @@ $formatQuantity = static function ($qty): string {
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" crossorigin="anonymous"></script>
 <script>
 (function(){
-  const allocationData = <?= json_encode($allocations['by_ticker']) ?>;
-  const portfolioSeries = <?= json_encode($portfolioChart['series']) ?>;
-  const portfolioLabels = <?= json_encode($portfolioChart['labels']) ?>;
-  const holdings = <?= json_encode(array_map(static fn($h) => $h['symbol'], $holdings)) ?>;
-  const watchlist = <?= json_encode(array_map(static fn($w) => $w['symbol'], $watchlist)) ?>;
+  let allocationData = <?= json_encode($allocations['by_ticker']) ?>;
+  let portfolioLabels = <?= json_encode($portfolioChart['labels']) ?>;
+  let portfolioSeries = <?= json_encode($portfolioChart['series']) ?>;
+  let holdingsSymbols = <?= json_encode(array_map(static fn($h) => $h['symbol'], $holdings)) ?>;
+  let watchlistSymbols = <?= json_encode(array_map(static fn($w) => $w['symbol'], $watchlist)) ?>;
   const refreshSeconds = <?= (int)$refreshSeconds ?> * 1000;
-  const chartCurrency = <?= json_encode($baseCurrency) ?>;
-  const cashSeries = <?= json_encode(array_fill(0, count($portfolioChart['series']), (float)$totals['cash_balance'])) ?>;
+  let chartCurrency = <?= json_encode($baseCurrency) ?>;
+  let cashSeries = <?= json_encode(array_fill(0, count($portfolioChart['series']), (float)$totals['cash_balance'])) ?>;
+  let allocationChart = null;
+  let portfolioChartInstance = null;
+  let contributionVisible = false;
+  let contributionsToggle = null;
+  let contributionListener = null;
 
   const allocationCtx = document.getElementById('allocationTickerChart');
   if (allocationCtx && allocationData.length) {
     const labels = allocationData.map(item => item.label);
     const data = allocationData.map(item => item.weight_pct);
-    new Chart(allocationCtx, {
+    allocationChart = new Chart(allocationCtx, {
       type: 'doughnut',
       data: {
         labels,
@@ -516,26 +353,58 @@ $formatQuantity = static function ($qty): string {
     });
   }
 
-  const valueCanvas = document.getElementById('portfolioValueChart');
-  let contributionVisible = false;
-  if (valueCanvas && portfolioSeries.length) {
-    const ctx = valueCanvas.getContext('2d');
-    const gradient = ctx.createLinearGradient(0, 0, 0, valueCanvas.height);
+  function bindContributionsToggle() {
+    const toggle = document.querySelector('[data-role="chart-contributions"]');
+    if (contributionsToggle && contributionListener) {
+      contributionsToggle.removeEventListener('change', contributionListener);
+    }
+    contributionsToggle = toggle;
+    if (!contributionsToggle) {
+      contributionListener = null;
+      return;
+    }
+    contributionsToggle.checked = contributionVisible;
+    contributionListener = () => {
+      contributionVisible = contributionsToggle.checked;
+      if (portfolioChartInstance && portfolioChartInstance.data.datasets[1]) {
+        portfolioChartInstance.data.datasets[1].hidden = !contributionVisible;
+        portfolioChartInstance.update();
+      }
+    };
+    contributionsToggle.addEventListener('change', contributionListener);
+  }
+
+  function renderPortfolioChart(labels, series, cash) {
+    const canvas = document.getElementById('portfolioValueChart');
+    if (!canvas) {
+      bindContributionsToggle();
+      return;
+    }
+    if (portfolioChartInstance) {
+      portfolioChartInstance.destroy();
+      portfolioChartInstance = null;
+    }
+    if (!series || !series.length) {
+      bindContributionsToggle();
+      return;
+    }
+    const ctx = canvas.getContext('2d');
+    const height = canvas.height || canvas.clientHeight || 200;
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
     gradient.addColorStop(0, 'rgba(16, 185, 129, 0.45)');
     gradient.addColorStop(1, 'rgba(16, 185, 129, 0.05)');
-    const cashGradient = ctx.createLinearGradient(0, 0, 0, valueCanvas.height);
+    const cashGradient = ctx.createLinearGradient(0, 0, 0, height);
     cashGradient.addColorStop(0, 'rgba(59, 130, 246, 0.35)');
     cashGradient.addColorStop(1, 'rgba(59, 130, 246, 0.05)');
-
     const formatCurrency = value => new Intl.NumberFormat(undefined, { style: 'currency', currency: chartCurrency }).format(value);
 
-    const chart = new Chart(valueCanvas, {
+    portfolioChartInstance = new Chart(canvas, {
       type: 'line',
       data: {
-        labels: portfolioLabels,
+        labels,
         datasets: [{
           label: 'Portfolio',
-          data: portfolioSeries,
+          data: series,
           borderColor: '#34d399',
           backgroundColor: gradient,
           tension: 0.35,
@@ -544,14 +413,14 @@ $formatQuantity = static function ($qty): string {
           spanGaps: true
         }, {
           label: 'Cash',
-          data: cashSeries,
+          data: cash,
           borderColor: '#3b82f6',
           backgroundColor: cashGradient,
           tension: 0.3,
           fill: true,
           pointRadius: 0,
           spanGaps: true,
-          hidden: true
+          hidden: !contributionVisible
         }]
       },
       options: {
@@ -577,16 +446,17 @@ $formatQuantity = static function ($qty): string {
         }
       }
     });
-
-    const contributionsToggle = document.querySelector('[data-role="chart-contributions"]');
-    if (contributionsToggle) {
-      contributionsToggle.addEventListener('change', () => {
-        contributionVisible = !contributionVisible;
-        chart.data.datasets[1].hidden = !contributionVisible;
-        chart.update();
-      });
-    }
+    bindContributionsToggle();
   }
+
+  function updateAllocation(labels, weights) {
+    if (!allocationChart) return;
+    allocationChart.data.labels = labels;
+    allocationChart.data.datasets[0].data = weights;
+    allocationChart.update();
+  }
+
+  renderPortfolioChart(portfolioLabels, portfolioSeries, cashSeries);
 
   const openDialog = (id) => {
     const dialog = document.getElementById(id);
@@ -616,17 +486,19 @@ $formatQuantity = static function ($qty): string {
     });
   });
 
-  const symbols = Array.from(new Set([...holdings, ...watchlist]));
-  const panels = document.querySelectorAll('#watchlistStrip [data-symbol]');
+  const buildSymbols = () => Array.from(new Set([...holdingsSymbols, ...watchlistSymbols]));
+  let symbols = buildSymbols();
+
   const updatePanels = (quotes) => {
-    panels.forEach(panel => {
+    document.querySelectorAll('#watchlistStrip [data-symbol]').forEach(panel => {
       const symbol = panel.getAttribute('data-symbol');
       const quote = quotes[symbol];
       if (!quote) return;
+      const currency = quote.currency || chartCurrency;
       const lastEl = panel.querySelector('[data-role="last"]');
       const changeEl = panel.querySelector('[data-role="change"]');
       if (lastEl && quote.last !== null) {
-        lastEl.textContent = new Intl.NumberFormat(undefined, { style: 'currency', currency: quote.currency || '<?= $baseCurrency ?>' }).format(quote.last);
+        lastEl.textContent = new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(quote.last);
       }
       if (changeEl && quote.prev_close !== null && quote.last !== null) {
         const diff = quote.last - quote.prev_close;
@@ -636,11 +508,11 @@ $formatQuantity = static function ($qty): string {
         changeEl.classList.toggle('text-rose-500', diff < 0);
       }
     });
-    document.querySelectorAll('tr[data-symbol]').forEach(row => {
+    document.querySelectorAll('#holdingsTableBody tr[data-symbol]').forEach(row => {
       const symbol = row.getAttribute('data-symbol');
       const quote = quotes[symbol];
       if (!quote) return;
-      const currency = row.getAttribute('data-currency') || quote.currency || '<?= $baseCurrency ?>';
+      const currency = row.getAttribute('data-currency') || quote.currency || chartCurrency;
       const qty = parseFloat(row.getAttribute('data-qty') || '0');
       const avg = parseFloat(row.getAttribute('data-avg') || '0');
       const lastCell = row.querySelector('[data-role="holding-last"]');
@@ -652,7 +524,7 @@ $formatQuantity = static function ($qty): string {
         marketCcy.textContent = new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(qty * quote.last);
       }
       const unrealizedCcy = row.querySelector('[data-role="holding-unrealized-ccy"]');
-      if (quote.last !== null && unrealizedCcy) {
+      if (unrealizedCcy && quote.last !== null) {
         const diffCcy = (quote.last - avg) * qty;
         unrealizedCcy.textContent = new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(diffCcy);
       }
@@ -685,6 +557,83 @@ $formatQuantity = static function ($qty): string {
       pollTimer = setInterval(pollQuotes, refreshSeconds);
     }
   });
+
+  const refreshForm = document.querySelector('[data-role="refresh-form"]');
+  if (refreshForm) {
+    refreshForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const submitBtn = refreshForm.querySelector('[data-role="refresh-submit"]');
+      const statusEl = refreshForm.querySelector('[data-role="refresh-status"]');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Refreshing…';
+      }
+      if (statusEl) {
+        statusEl.textContent = 'Refreshing…';
+      }
+      try {
+        const resp = await fetch(refreshForm.action, {
+          method: 'POST',
+          body: new FormData(refreshForm),
+          headers: { 'Accept': 'application/json' }
+        });
+        const payload = await resp.json();
+        if (!resp.ok || !payload.success) {
+          throw new Error(payload && payload.message ? payload.message : 'Unable to refresh quotes');
+        }
+        if (payload.hero) {
+          const hero = document.getElementById('overviewHeroContent');
+          if (hero) hero.innerHTML = payload.hero;
+        }
+        if (payload.cards) {
+          const cards = document.getElementById('overviewCards');
+          if (cards) cards.innerHTML = payload.cards;
+        }
+        if (payload.holdings) {
+          const tbody = document.getElementById('holdingsTableBody');
+          if (tbody) tbody.innerHTML = payload.holdings;
+        }
+        if (payload.portfolioChart) {
+          portfolioLabels = payload.portfolioChart.labels || [];
+          portfolioSeries = payload.portfolioChart.series || [];
+          cashSeries = payload.portfolioChart.cashSeries || [];
+          renderPortfolioChart(portfolioLabels, portfolioSeries, cashSeries);
+        } else {
+          bindContributionsToggle();
+        }
+        if (payload.allocations && allocationChart) {
+          updateAllocation(payload.allocations.labels || [], payload.allocations.weights || []);
+        }
+        if (payload.symbols) {
+          holdingsSymbols = payload.symbols.holdings || holdingsSymbols;
+          watchlistSymbols = payload.symbols.watchlist || watchlistSymbols;
+          symbols = buildSymbols();
+        }
+        if (payload.baseCurrency) {
+          chartCurrency = payload.baseCurrency;
+        }
+        if (statusEl) {
+          statusEl.textContent = payload.message || 'Quotes refreshed.';
+        }
+        pollQuotes();
+      } catch (error) {
+        console.error('Quote refresh failed', error);
+        if (statusEl) {
+          statusEl.textContent = error.message || 'Unable to refresh quotes';
+        }
+      } finally {
+        const submitBtnFinal = refreshForm.querySelector('[data-role="refresh-submit"]');
+        if (submitBtnFinal) {
+          submitBtnFinal.disabled = false;
+          submitBtnFinal.textContent = 'Refresh quotes';
+        }
+        setTimeout(() => {
+          const status = refreshForm.querySelector('[data-role="refresh-status"]');
+          if (status) status.textContent = '';
+        }, 4000);
+      }
+    });
+  }
 
   const csvForm = document.getElementById('stocksCsvForm');
   if (csvForm) {

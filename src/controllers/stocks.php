@@ -40,6 +40,7 @@ function stocks_index(PDO $pdo): void
     $overview = $portfolio->buildOverview($userId, $filters, false);
     $holdings = $overview['holdings'];
     $totals = $overview['totals'] + ['user_id' => $userId, 'default_target' => 10.0];
+    $currencyContext = stocks_currency_breakdown($totals);
 
     $insights = [];
     foreach ($holdings as $holding) {
@@ -74,6 +75,7 @@ function stocks_index(PDO $pdo): void
         'refreshSeconds' => $refreshSeconds,
         'userCurrencies' => $userCurrencies,
         'error' => $_GET['error'] ?? null,
+        'currencyContext' => $currencyContext,
     ]);
 }
 
@@ -633,11 +635,13 @@ function stocks_cash_movement(PDO $pdo): void
     }
 }
 
-function stocks_refresh_overview(PDO $pdo): string
+function stocks_refresh_overview(PDO $pdo): ?string
 {
     verify_csrf();
     require_login();
     $userId = uid();
+
+    $wantsJson = stocks_request_wants_json();
 
     $returnTo = '/stocks';
     $requested = $_POST['return_to'] ?? null;
@@ -646,13 +650,127 @@ function stocks_refresh_overview(PDO $pdo): string
     }
 
     $portfolio = stocks_portfolio_service($pdo);
+    $priceService = stocks_price_service($pdo);
+    $signalsService = new SignalsService($pdo, $priceService);
+    $chartsService = new ChartsService($pdo, $priceService);
+
+    $filters = [
+        'search' => $_POST['q'] ?? ($_POST['search'] ?? null),
+        'sector' => $_POST['sector'] ?? null,
+        'currency' => $_POST['currency'] ?? null,
+        'watchlist_only' => isset($_POST['watchlist']) && (string)$_POST['watchlist'] === '1',
+        'realized_period' => $_POST['period'] ?? null,
+    ];
+    $chartRange = strtoupper($_POST['chartRange'] ?? '6M');
 
     try {
         $portfolio->invalidateOverviewCache($userId);
-        $portfolio->buildOverview($userId, [], false, true);
+        $overview = $portfolio->buildOverview($userId, $filters, false, true);
+        $holdings = $overview['holdings'];
+        $totals = $overview['totals'] + ['user_id' => $userId, 'default_target' => 10.0];
+        $currencyContext = stocks_currency_breakdown($totals);
+
+        $insights = [];
+        foreach ($holdings as $holding) {
+            $insights[$holding['symbol']] = $signalsService->analyze(
+                $userId,
+                $holding,
+                ['prev_close' => $holding['prev_close'] ?? null],
+                $totals
+            );
+        }
+
+        $portfolioChart = $chartsService->portfolioValueSeries($userId, $chartRange);
+        $series = array_values(array_filter($portfolioChart['series'], static fn($value) => $value !== null));
+        $startValue = $series ? (float)$series[0] : 0.0;
+        $endValue = $series ? (float)$series[count($series) - 1] : $startValue;
+        $changeValue = $endValue - $startValue;
+        $changePct = ($startValue > 0) ? ($changeValue / $startValue) * 100 : 0.0;
+        $chartMeta = [
+            'range' => $chartRange,
+            'start' => $startValue,
+            'end' => $endValue,
+            'change' => $changeValue,
+            'change_pct' => $changePct,
+        ];
+
+        if ($wantsJson) {
+            $formatQuantity = static function ($qty): string {
+                $formatted = number_format((float)$qty, 6, '.', '');
+                $trimmed = rtrim(rtrim($formatted, '0'), '.');
+                return $trimmed === '' ? '0' : $trimmed;
+            };
+
+            $heroHtml = stocks_render_partial('stocks/partials/overview_hero', [
+                'totals' => $totals,
+                'chartMeta' => $chartMeta,
+                'portfolioChart' => $portfolioChart,
+                'baseCurrency' => $totals['base_currency'],
+                'marketByCurrency' => $currencyContext['marketByCurrency'],
+                'preferredCurrency' => $currencyContext['preferredCurrency'],
+                'preferredMarket' => $currencyContext['preferredMarket'],
+                'preferredUnrealized' => $currencyContext['preferredUnrealized'],
+                'filters' => $filters,
+            ]);
+
+            $cardsHtml = stocks_render_partial('stocks/partials/overview_cards', [
+                'totals' => $totals,
+                'baseCurrency' => $totals['base_currency'],
+                'marketByCurrency' => $currencyContext['marketByCurrency'],
+                'unrealizedByCurrency' => $currencyContext['unrealizedByCurrency'],
+                'realizedByCurrency' => $currencyContext['realizedByCurrency'],
+                'cashEntries' => $overview['cash'] ?? [],
+                'cashByCurrency' => $currencyContext['cashByCurrency'],
+                'preferredCurrency' => $currencyContext['preferredCurrency'],
+                'preferredMarket' => $currencyContext['preferredMarket'],
+                'preferredUnrealized' => $currencyContext['preferredUnrealized'],
+                'preferredRealized' => $currencyContext['preferredRealized'],
+                'preferredCash' => $currencyContext['preferredCash'],
+            ]);
+
+            $holdingsHtml = stocks_render_partial('stocks/partials/holdings_rows', [
+                'holdings' => $holdings,
+                'insights' => $insights,
+                'baseCurrency' => $totals['base_currency'],
+                'formatQuantity' => $formatQuantity,
+            ]);
+
+            $allocationByTicker = $overview['allocations']['by_ticker'] ?? [];
+
+            json_response([
+                'success' => true,
+                'hero' => $heroHtml,
+                'cards' => $cardsHtml,
+                'holdings' => $holdingsHtml,
+                'portfolioChart' => [
+                    'labels' => $portfolioChart['labels'],
+                    'series' => $portfolioChart['series'],
+                    'cashSeries' => array_fill(0, count($portfolioChart['series']), (float)($totals['cash_balance'] ?? 0)),
+                ],
+                'allocations' => [
+                    'labels' => array_map(static fn($row) => $row['label'], $allocationByTicker),
+                    'weights' => array_map(static fn($row) => $row['weight_pct'], $allocationByTicker),
+                ],
+                'symbols' => [
+                    'holdings' => array_map(static fn($row) => $row['symbol'], $holdings),
+                    'watchlist' => array_map(static fn($row) => $row['symbol'], $overview['watchlist'] ?? []),
+                ],
+                'baseCurrency' => $totals['base_currency'],
+                'message' => 'Quotes refreshed from the provider.',
+            ]);
+            return null;
+        }
+
         $_SESSION['flash_success'] = 'Quotes refreshed from the provider.';
     } catch (Throwable $e) {
         error_log('[stocks_refresh_overview] ' . $e->getMessage());
+        if ($wantsJson) {
+            json_response([
+                'success' => false,
+                'message' => 'Unable to refresh quotes right now. Please try again.',
+            ], 500);
+            return null;
+        }
         $_SESSION['flash'] = 'Unable to refresh quotes right now. Please try again.';
     }
 
@@ -760,6 +878,57 @@ function stocks_user_currencies(PDO $pdo, int $userId): array
     }
 
     return [['code' => 'USD', 'is_main' => true]];
+}
+
+/**
+ * @param array<string,mixed> $totals
+ * @return array{
+ *   marketByCurrency: array<string,float>,
+ *   unrealizedByCurrency: array<string,float>,
+ *   realizedByCurrency: array<string,float>,
+ *   cashByCurrency: array<string,float>,
+ *   preferredCurrency: string,
+ *   preferredMarket: ?float,
+ *   preferredUnrealized: ?float,
+ *   preferredRealized: ?float,
+ *   preferredCash: ?float
+ * }
+ */
+function stocks_currency_breakdown(array $totals): array
+{
+    $marketByCurrency = $totals['total_market_value_by_currency'] ?? [];
+    $unrealizedByCurrency = $totals['unrealized_by_currency'] ?? [];
+    $realizedByCurrency = $totals['realized_by_currency'] ?? [];
+    $cashByCurrency = $totals['cash_by_currency'] ?? [];
+    $baseCurrency = $totals['base_currency'] ?? 'USD';
+
+    $preferredCurrency = array_key_exists('USD', $marketByCurrency)
+        ? 'USD'
+        : (array_key_first($marketByCurrency) ?: $baseCurrency);
+
+    return [
+        'marketByCurrency' => $marketByCurrency,
+        'unrealizedByCurrency' => $unrealizedByCurrency,
+        'realizedByCurrency' => $realizedByCurrency,
+        'cashByCurrency' => $cashByCurrency,
+        'preferredCurrency' => $preferredCurrency,
+        'preferredMarket' => $marketByCurrency[$preferredCurrency] ?? null,
+        'preferredUnrealized' => $unrealizedByCurrency[$preferredCurrency] ?? null,
+        'preferredRealized' => $realizedByCurrency[$preferredCurrency] ?? null,
+        'preferredCash' => $cashByCurrency[$preferredCurrency] ?? null,
+    ];
+}
+
+function stocks_render_partial(string $partial, array $vars = []): string
+{
+    $path = __DIR__ . '/../../views/' . $partial . '.php';
+    if (!is_file($path)) {
+        return '';
+    }
+    extract($vars);
+    ob_start();
+    include $path;
+    return (string)ob_get_clean();
 }
 
 function stocks_live_api(PDO $pdo): void
