@@ -1007,6 +1007,17 @@ function stocks_overview_cache_settings(): array
     return ['dir' => $dir, 'ttl' => $ttl];
 }
 
+function stocks_performance_log_path(): ?string
+{
+    global $config;
+    $path = $config['stocks']['performance_log'] ?? null;
+    if (!is_string($path) || trim($path) === '') {
+        return null;
+    }
+
+    return $path;
+}
+
 function stocks_portfolio_service(PDO $pdo): PortfolioService
 {
     static $service;
@@ -1017,7 +1028,8 @@ function stocks_portfolio_service(PDO $pdo): PortfolioService
     $priceService = stocks_price_service($pdo);
     $cashService = new CashService($pdo);
     $settings = stocks_overview_cache_settings();
-    $service = new PortfolioService($pdo, $priceService, $cashService, $settings['dir'], $settings['ttl']);
+    $logPath = stocks_performance_log_path();
+    $service = new PortfolioService($pdo, $priceService, $cashService, $settings['dir'], $settings['ttl'], $logPath);
     return $service;
 }
 

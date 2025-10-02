@@ -26,6 +26,7 @@ return [
         'refresh_seconds' => (int)(getenv('STOCKS_REFRESH_SECONDS') ?: 10),
         'overview_cache_seconds' => (int)(getenv('STOCKS_OVERVIEW_CACHE_SECONDS') ?: 20),
         'overview_cache_dir' => getenv('STOCKS_OVERVIEW_CACHE_DIR') ?: __DIR__ . '/../storage/cache/stocks',
+        'performance_log' => getenv('STOCKS_PERFORMANCE_LOG') ?: __DIR__ . '/../storage/logs/stocks_performance.log',
         'providers' => [
             'finnhub' => [
                 'api_key' => getenv('FINNHUB_API_KEY') ?: '',

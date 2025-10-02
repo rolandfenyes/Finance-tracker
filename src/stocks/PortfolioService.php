@@ -58,7 +58,12 @@ class PortfolioService
      */
     private array $fxRateCache = [];
 
-    public function __construct(PDO $pdo, PriceDataService $priceDataService, ?CashService $cashService = null, ?string $cacheDir = null, ?int $cacheTtl = null)
+    /**
+     * Optional file path where performance timings are appended as JSON lines.
+     */
+    private ?string $performanceLogPath = null;
+
+    public function __construct(PDO $pdo, PriceDataService $priceDataService, ?CashService $cashService = null, ?string $cacheDir = null, ?int $cacheTtl = null, ?string $performanceLogPath = null)
     {
         $this->pdo = $pdo;
         $this->priceDataService = $priceDataService;
@@ -74,6 +79,10 @@ class PortfolioService
                 $this->cacheEnabled = $this->cacheTtl > 0;
             }
         }
+
+        if (is_string($performanceLogPath) && trim($performanceLogPath) !== '') {
+            $this->performanceLogPath = $performanceLogPath;
+        }
     }
 
     /**
@@ -82,9 +91,22 @@ class PortfolioService
      */
     public function buildOverview(int $userId, array $filters = [], bool $includeTransactions = false, bool $forceQuoteRefresh = false): array
     {
+        $overallStart = microtime(true);
+        $timings = [];
+
         $cacheKey = $this->cacheKey($userId, $filters, $includeTransactions);
         if (!$forceQuoteRefresh && isset($this->runtimeCache[$cacheKey])) {
-            return $this->runtimeCache[$cacheKey];
+            $cached = $this->runtimeCache[$cacheKey];
+            $metrics = [
+                'cache_hit' => 'runtime',
+                'positions' => $this->countArrayEntries($cached['holdings'] ?? null),
+                'watchlist' => $this->countArrayEntries($cached['watchlist'] ?? null),
+            ];
+            if ($includeTransactions) {
+                $metrics['transactions'] = $this->countArrayEntries($cached['trades'] ?? null);
+            }
+            $this->logPerformance($userId, $filters, $includeTransactions, $forceQuoteRefresh, $timings, microtime(true) - $overallStart, $metrics);
+            return $cached;
         }
 
         $baseCurrency = fx_user_main($this->pdo, $userId) ?: 'EUR';
@@ -93,22 +115,47 @@ class PortfolioService
         $canReadDiskCache = $this->cacheEnabled && !$includeTransactions && !$forceQuoteRefresh;
         $shouldWriteDiskCache = $this->cacheEnabled && !$includeTransactions;
         if ($canReadDiskCache) {
+            $stageStart = microtime(true);
             $cached = $this->readCache($cacheKey);
+            $this->recordTiming($timings, 'read_cache', $stageStart);
             if ($cached !== null) {
                 $this->runtimeCache[$cacheKey] = $cached;
+                $metrics = [
+                    'cache_hit' => 'disk',
+                    'positions' => $this->countArrayEntries($cached['holdings'] ?? null),
+                    'watchlist' => $this->countArrayEntries($cached['watchlist'] ?? null),
+                ];
+                if ($includeTransactions) {
+                    $metrics['transactions'] = $this->countArrayEntries($cached['trades'] ?? null);
+                }
+                $this->logPerformance($userId, $filters, $includeTransactions, $forceQuoteRefresh, $timings, microtime(true) - $overallStart, $metrics);
                 return $cached;
             }
         }
 
         $this->fxRateCache = [];
 
+        $stageStart = microtime(true);
         $positions = $this->loadPositions($userId, $filters);
-        $watchlistRows = $this->loadWatchlistRows($userId);
+        $this->recordTiming($timings, 'load_positions', $stageStart);
+        $positionsCount = count($positions);
 
+        $stageStart = microtime(true);
+        $watchlistRows = $this->loadWatchlistRows($userId);
+        $this->recordTiming($timings, 'load_watchlist', $stageStart);
+        $watchlistCount = count($watchlistRows);
+
+        $stageStart = microtime(true);
         $positionSymbols = array_map(static fn($row) => $row['symbol'], $positions);
         $watchlistSymbols = array_map(static fn($row) => $row['symbol'], $watchlistRows);
         $symbols = array_values(array_unique(array_merge($positionSymbols, $watchlistSymbols)));
+        $this->recordTiming($timings, 'prepare_symbols', $stageStart);
+        $symbolCount = count($symbols);
+
+        $stageStart = microtime(true);
         $quotes = $this->priceDataService->getLiveQuotes($symbols, $forceQuoteRefresh);
+        $this->recordTiming($timings, 'fetch_quotes', $stageStart);
+        $quoteCount = count($quotes);
         $quotesBySymbol = [];
         foreach ($quotes as $quote) {
             $quotesBySymbol[$quote['symbol']] = $quote;
@@ -122,6 +169,7 @@ class PortfolioService
         $marketByCurrency = [];
         $unrealizedByCurrency = [];
 
+        $stageStart = microtime(true);
         foreach ($positions as $row) {
             $symbol = $row['symbol'];
             $currency = $row['currency'] ?: 'USD';
@@ -168,13 +216,17 @@ class PortfolioService
             $totalCostBase += $costBase;
             $totalDailyBase += $dayPlBase;
         }
+        $this->recordTiming($timings, 'build_holdings', $stageStart);
 
+        $stageStart = microtime(true);
         $weights = $this->distributeWeights($holdings, $totalMarketBase);
         foreach ($holdings as $idx => $holding) {
             $holdings[$idx]['weight_pct'] = $weights[$holding['symbol']] ?? 0.0;
             $holdings[$idx]['risk_note'] = ($holdings[$idx]['weight_pct'] > 15) ? 'High concentration' : null;
         }
+        $this->recordTiming($timings, 'apply_weights', $stageStart);
 
+        $stageStart = microtime(true);
         $cashEntries = [];
         $cashBalanceBase = 0.0;
         $cashTotals = $this->cashService->sumByCurrency($userId);
@@ -187,10 +239,13 @@ class PortfolioService
             ];
             $cashBalanceBase += $converted;
         }
+        $this->recordTiming($timings, 'load_cash', $stageStart);
 
         $realizedPeriod = $filters['realized_period'] ?? 'YTD';
         [$from, $to] = $this->resolvePeriodRange($realizedPeriod);
+        $stageStart = microtime(true);
         $realized = $this->sumRealized($userId, $from, $to);
+        $this->recordTiming($timings, 'load_realized', $stageStart);
 
         $overviewTotals = [
             'base_currency' => $baseCurrency,
@@ -209,9 +264,20 @@ class PortfolioService
             'realized_by_currency' => $this->cleanCurrencyTotals($realized['by_currency']),
         ];
 
+        $stageStart = microtime(true);
         $allocations = $this->buildAllocations($holdings);
+        $this->recordTiming($timings, 'build_allocations', $stageStart);
+
+        $stageStart = microtime(true);
         $watchlist = $this->buildWatchlist($watchlistRows, $quotesBySymbol, $baseCurrency, $today);
-        $transactions = $includeTransactions ? $this->loadTransactions($userId) : [];
+        $this->recordTiming($timings, 'build_watchlist', $stageStart);
+
+        $transactions = [];
+        if ($includeTransactions) {
+            $stageStart = microtime(true);
+            $transactions = $this->loadTransactions($userId);
+            $this->recordTiming($timings, 'load_transactions', $stageStart);
+        }
 
         $snapshot = [
             'totals' => $overviewTotals,
@@ -224,8 +290,24 @@ class PortfolioService
 
         $this->runtimeCache[$cacheKey] = $snapshot;
         if ($shouldWriteDiskCache) {
+            $stageStart = microtime(true);
             $this->writeCache($cacheKey, $snapshot);
+            $this->recordTiming($timings, 'write_cache', $stageStart);
         }
+
+        $metrics = [
+            'cache_hit' => $canReadDiskCache ? 'miss' : 'disabled',
+            'positions' => $positionsCount,
+            'watchlist' => $watchlistCount,
+            'symbols' => $symbolCount,
+            'quotes' => $quoteCount,
+            'cash_currencies' => count($cashTotals),
+            'cache_written' => $shouldWriteDiskCache,
+        ];
+        if ($includeTransactions) {
+            $metrics['transactions'] = count($transactions);
+        }
+        $this->logPerformance($userId, $filters, $includeTransactions, $forceQuoteRefresh, $timings, microtime(true) - $overallStart, $metrics);
 
         return $snapshot;
     }
@@ -767,6 +849,69 @@ class PortfolioService
         });
 
         return $filtered;
+    }
+
+    /**
+     * @param array<int,array<string,mixed>> $timings
+     */
+    private function recordTiming(array &$timings, string $label, float $start): void
+    {
+        $timings[] = [
+            'label' => $label,
+            'ms' => round((microtime(true) - $start) * 1000, 2),
+        ];
+    }
+
+    private function logPerformance(int $userId, array $filters, bool $includeTransactions, bool $forceQuoteRefresh, array $timings, float $totalSeconds, array $metrics): void
+    {
+        if ($this->performanceLogPath === null) {
+            return;
+        }
+
+        $payload = [
+            'timestamp' => (new DateTime())->format(DateTime::ATOM),
+            'user_id' => $userId,
+            'include_transactions' => $includeTransactions,
+            'force_quote_refresh' => $forceQuoteRefresh,
+            'filters' => $filters,
+            'metrics' => $metrics,
+            'total_ms' => round($totalSeconds * 1000, 2),
+            'timings' => $timings,
+        ];
+
+        $json = json_encode($payload, JSON_PRESERVE_ZERO_FRACTION);
+        if ($json === false) {
+            $fallback = [
+                'timestamp' => (new DateTime())->format(DateTime::ATOM),
+                'user_id' => $userId,
+                'warning' => 'Failed to encode performance payload',
+            ];
+            $json = json_encode($fallback, JSON_PRESERVE_ZERO_FRACTION);
+            if ($json === false) {
+                return;
+            }
+        }
+
+        $path = $this->performanceLogPath;
+        $dir = dirname($path);
+        if (!is_dir($dir)) {
+            if (!@mkdir($dir, 0775, true) && !is_dir($dir)) {
+                error_log('[PortfolioService] Unable to create performance log directory: ' . $dir);
+                return;
+            }
+        }
+
+        if (@file_put_contents($path, $json . PHP_EOL, FILE_APPEND | LOCK_EX) === false) {
+            error_log('[PortfolioService] Unable to write performance log entry to ' . $path);
+        }
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function countArrayEntries($value): int
+    {
+        return is_array($value) ? count($value) : 0;
     }
 
     private function columnExists(string $table, string $column): bool
