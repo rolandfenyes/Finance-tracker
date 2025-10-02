@@ -36,7 +36,7 @@ class TradeService
     }
 
     /**
-     * @param array{symbol:string,market?:?string,quantity:float,price:float,fee?:float,side:string,currency:string,executed_at?:?string,note?:?string} $payload
+     * @param array{symbol:string,market?:?string,quantity:float,price:float,fee?:float,side:string,currency:string,executed_at?:?string,note?:?string,cash_total?:?float} $payload
      */
     public function recordTrade(int $userId, array $payload): int
     {
@@ -64,6 +64,13 @@ class TradeService
         $market = isset($payload['market']) && $payload['market'] !== null && $payload['market'] !== ''
             ? strtoupper((string)$payload['market'])
             : null;
+        $cashTotal = null;
+        if (array_key_exists('cash_total', $payload)) {
+            $cashTotal = abs((float)$payload['cash_total']);
+            if ($cashTotal <= 0.0) {
+                $cashTotal = null;
+            }
+        }
 
         $usesLegacy = $this->usesLegacySchema();
 
@@ -73,7 +80,7 @@ class TradeService
                 $this->ensureStockExists($symbol, $market, $currency);
             }
 
-            return $this->recordTradeLegacy($userId, $symbol, $side, $quantity, $price, $currency, $executedTs, $fee);
+            return $this->recordTradeLegacy($userId, $symbol, $side, $quantity, $price, $currency, $executedTs, $fee, $cashTotal);
         }
 
         $startedTransaction = false;
@@ -102,7 +109,7 @@ class TradeService
             ]);
             $tradeId = (int)$stmt->fetchColumn();
 
-            $this->recordTradeCashFlow($userId, $symbol, $side, $quantity, $price, $fee, $currency, $executedTs);
+            $this->recordTradeCashFlow($userId, $symbol, $side, $quantity, $price, $fee, $currency, $executedTs, $cashTotal);
             $this->rebuildPositions($userId, $stockId);
             if ($startedTransaction) {
                 $this->pdo->commit();
@@ -116,7 +123,7 @@ class TradeService
         }
     }
 
-    private function recordTradeLegacy(int $userId, string $symbol, string $side, float $quantity, float $price, string $currency, DateTime $executedAt, float $fee): int
+    private function recordTradeLegacy(int $userId, string $symbol, string $side, float $quantity, float $price, string $currency, DateTime $executedAt, float $fee, ?float $cashTotal): int
     {
         $startedTransaction = false;
         if (!$this->pdo->inTransaction()) {
@@ -147,7 +154,7 @@ class TradeService
             ]);
             $tradeId = (int)$stmt->fetchColumn();
 
-            $this->recordTradeCashFlow($userId, $symbol, $side, $quantity, $price, $fee, $currency, $executedAt);
+            $this->recordTradeCashFlow($userId, $symbol, $side, $quantity, $price, $fee, $currency, $executedAt, $cashTotal);
             if ($startedTransaction) {
                 $this->pdo->commit();
             }
@@ -465,7 +472,7 @@ class TradeService
         return $this->cashService;
     }
 
-    private function recordTradeCashFlow(int $userId, string $symbol, string $side, float $quantity, float $price, float $fee, string $currency, DateTime $executedAt): void
+    private function recordTradeCashFlow(int $userId, string $symbol, string $side, float $quantity, float $price, float $fee, string $currency, DateTime $executedAt, ?float $cashTotal = null): void
     {
         if ($quantity <= 0 || $price < 0) {
             return;
@@ -480,7 +487,17 @@ class TradeService
         $fee = max(0.0, $fee);
         $notional = $quantity * $price;
 
-        if ($normalizedSide === 'BUY') {
+        $overrideAmount = null;
+        if ($cashTotal !== null) {
+            $cashTotal = round(abs($cashTotal), 2);
+            if ($cashTotal > 0.0) {
+                $overrideAmount = $normalizedSide === 'BUY' ? -$cashTotal : $cashTotal;
+            }
+        }
+
+        if ($overrideAmount !== null) {
+            $amount = $overrideAmount;
+        } elseif ($normalizedSide === 'BUY') {
             $amount = -($notional + $fee);
         } else {
             $amount = $notional - $fee;

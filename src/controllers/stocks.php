@@ -347,11 +347,25 @@ function stocks_import(PDO $pdo): void
         }
 
         $totalAmount = stocks_import_to_float($record['total'] ?? null);
-        if ($totalAmount !== 0.0 && !isset($payload['fee'])) {
-            $notional = abs($quantity * $price);
-            $feeGuess = abs(abs($totalAmount) - $notional);
-            if ($feeGuess > 0.005) {
-                $payload['fee'] = round($feeGuess, 2);
+        if ($totalAmount !== 0.0) {
+            $cashTotal = abs($totalAmount);
+            if ($cashTotal > 0.0) {
+                $payload['cash_total'] = $cashTotal;
+            }
+
+            if (!isset($payload['fee'])) {
+                $notional = abs($quantity * $price);
+                if ($notional > 0.0 && $cashTotal > 0.0) {
+                    if ($side === 'BUY') {
+                        $feeGuess = $cashTotal - $notional;
+                    } else {
+                        $feeGuess = $notional - $cashTotal;
+                    }
+
+                    if ($feeGuess > 0.005) {
+                        $payload['fee'] = round($feeGuess, 2);
+                    }
+                }
             }
         }
 
