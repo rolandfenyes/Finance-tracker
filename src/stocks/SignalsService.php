@@ -9,6 +9,8 @@ class SignalsService
 {
     private PDO $pdo;
     private PriceDataService $priceDataService;
+    /** @var array<int,array<string,float>> */
+    private array $targetAllocationCache = [];
 
     public function __construct(PDO $pdo, PriceDataService $priceDataService)
     {
@@ -25,7 +27,9 @@ class SignalsService
     public function analyze(int $userId, array $holding, array $quote, array $portfolioTotals = []): array
     {
         $symbol = $holding['symbol'];
-        $history = $this->priceDataService->getDailyHistory($symbol, (new DateTime('-180 days'))->format('Y-m-d'), (new DateTime())->format('Y-m-d'));
+        $endDate = new DateTime();
+        $startDate = (clone $endDate)->modify('-180 days');
+        $history = $this->priceDataService->getDailyHistory($symbol, $startDate->format('Y-m-d'), $endDate->format('Y-m-d'));
         $closes = array_map(static fn($candle) => $candle['close'], $history);
         $signals = [];
 
@@ -130,11 +134,11 @@ class SignalsService
         $diff = $avgCost > 0 ? (($last - $avgCost) / $avgCost) * 100 : null;
         $valid = array_filter($closes, static fn($v) => $v !== null);
         if (empty($valid)) {
-            return $parts ? implode(' · ', $parts) : null;
+            return null;
         }
+        $parts = [];
         $peak = max($valid);
         $drawdown = $peak > 0 ? (($last - $peak) / $peak) * 100 : null;
-        $parts = [];
         if ($diff !== null) {
             $parts[] = sprintf('%.2f%% vs avg cost', $diff);
         }
@@ -194,20 +198,27 @@ class SignalsService
         if ($userId <= 0) {
             return [];
         }
+        if (array_key_exists($userId, $this->targetAllocationCache)) {
+            return $this->targetAllocationCache[$userId];
+        }
         $stmt = $this->pdo->prepare('SELECT target_allocations FROM user_settings_stocks WHERE user_id=?');
         $stmt->execute([$userId]);
         $json = $stmt->fetchColumn();
         if (!$json) {
+            $this->targetAllocationCache[$userId] = [];
             return [];
         }
         $decoded = json_decode((string)$json, true);
         if (!is_array($decoded)) {
+            $this->targetAllocationCache[$userId] = [];
             return [];
         }
         $clean = [];
         foreach ($decoded as $key => $value) {
             $clean[strtoupper($key)] = (float)$value;
         }
+        $this->targetAllocationCache[$userId] = $clean;
+
         return $clean;
     }
 }

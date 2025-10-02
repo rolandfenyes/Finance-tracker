@@ -13,6 +13,10 @@ class PriceDataService
     private int $maxProviderBatch;
     /** @var array<string, array> */
     private array $memoryCache = [];
+    /** @var array<string,int|null> */
+    private array $stockIdCache = [];
+    /** @var array<string,array<int,array{date:string,open:?float,high:?float,low:?float,close:?float,volume:?float}>> */
+    private array $historyCache = [];
 
     public function __construct(PDO $pdo, ?PriceProviderAdapter $adapter = null, int $ttlSeconds = 10, ?int $maxProviderBatch = null)
     {
@@ -186,8 +190,13 @@ class PriceDataService
         if ($symbol === '') {
             return [];
         }
+        $cacheKey = $this->historyCacheKey($symbol, $from, $to);
+        if (array_key_exists($cacheKey, $this->historyCache)) {
+            return $this->historyCache[$cacheKey];
+        }
         $stockId = $this->lookupStockId($symbol);
         if (!$stockId) {
+            $this->historyCache[$cacheKey] = [];
             return [];
         }
         $stmt = $this->pdo->prepare('SELECT date, open, high, low, close, volume FROM price_daily WHERE stock_id=? AND date BETWEEN ?::date AND ?::date ORDER BY date ASC');
@@ -201,7 +210,7 @@ class PriceDataService
             $stmt->execute([$stockId, $from, $to]);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
-        return array_map(static function ($row) {
+        $mapped = array_map(static function ($row) {
             return [
                 'date' => $row['date'],
                 'open' => $row['open'] !== null ? (float)$row['open'] : null,
@@ -211,6 +220,10 @@ class PriceDataService
                 'volume' => $row['volume'] !== null ? (float)$row['volume'] : null,
             ];
         }, $rows);
+
+        $this->historyCache[$cacheKey] = $mapped;
+
+        return $mapped;
     }
 
     public function refreshMetadata(string $symbol): array
@@ -246,10 +259,21 @@ class PriceDataService
 
     private function lookupStockId(string $symbol): ?int
     {
+        $normalized = strtoupper(trim($symbol));
+        if ($normalized === '') {
+            return null;
+        }
+        if (array_key_exists($normalized, $this->stockIdCache)) {
+            $cached = $this->stockIdCache[$normalized];
+            return $cached !== null ? (int)$cached : null;
+        }
         $stmt = $this->pdo->prepare('SELECT id FROM stocks WHERE UPPER(symbol)=? LIMIT 1');
-        $stmt->execute([$symbol]);
+        $stmt->execute([$normalized]);
         $id = $stmt->fetchColumn();
-        return $id ? (int)$id : null;
+        $value = $id ? (int)$id : null;
+        $this->stockIdCache[$normalized] = $value;
+
+        return $value;
     }
 
     /**
@@ -332,5 +356,10 @@ class PriceDataService
             $candle['close'] ?? null,
             $candle['volume'] ?? null,
         ]);
+    }
+
+    private function historyCacheKey(string $symbol, string $from, string $to): string
+    {
+        return $symbol . '|' . $from . '|' . $to;
     }
 }
