@@ -59,6 +59,11 @@ $formatQuantity = static function ($qty): string {
       <p class="text-sm text-gray-500">A live look at your equity exposure, performance, and cash firepower.</p>
     </div>
     <div class="flex flex-wrap gap-2">
+      <form method="post" action="/stocks/refresh" class="inline-flex">
+        <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+        <input type="hidden" name="return_to" value="<?= htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/stocks', ENT_QUOTES) ?>" />
+        <button class="btn btn-ghost" type="submit">Refresh quotes</button>
+      </form>
       <a href="/stocks/transactions" class="btn btn-ghost">Transactions</a>
       <button type="button" class="btn btn-secondary" data-dialog-open="cashDialog">Record cash</button>
       <button type="button" class="btn btn-primary" data-dialog-open="tradeDialog">New trade</button>

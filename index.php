@@ -618,6 +618,16 @@ switch ($path) {
         }
         redirect('/stocks');
         break;
+    case '/stocks/refresh':
+        require_login();
+        require __DIR__ . '/src/controllers/stocks.php';
+        if ($method === 'POST') {
+            $target = stocks_refresh_overview($pdo);
+            redirect($target);
+        } else {
+            redirect('/stocks');
+        }
+        break;
     case '/stocks/clear':
         require_login();
         require __DIR__ . '/src/controllers/stocks.php';

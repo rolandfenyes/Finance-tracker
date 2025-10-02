@@ -73,18 +73,19 @@ class PortfolioService
      * @param array{search?:?string,sector?:?string,currency?:?string,watchlist_only?:bool,realized_period?:?string} $filters
      * @return array<string,mixed>
      */
-    public function buildOverview(int $userId, array $filters = [], bool $includeTransactions = false): array
+    public function buildOverview(int $userId, array $filters = [], bool $includeTransactions = false, bool $forceQuoteRefresh = false): array
     {
         $cacheKey = $this->cacheKey($userId, $filters, $includeTransactions);
-        if (isset($this->runtimeCache[$cacheKey])) {
+        if (!$forceQuoteRefresh && isset($this->runtimeCache[$cacheKey])) {
             return $this->runtimeCache[$cacheKey];
         }
 
         $baseCurrency = fx_user_main($this->pdo, $userId) ?: 'EUR';
         $today = (new DateTime())->format('Y-m-d');
 
-        $shouldUseDiskCache = $this->cacheEnabled && !$includeTransactions;
-        if ($shouldUseDiskCache) {
+        $canReadDiskCache = $this->cacheEnabled && !$includeTransactions && !$forceQuoteRefresh;
+        $shouldWriteDiskCache = $this->cacheEnabled && !$includeTransactions;
+        if ($canReadDiskCache) {
             $cached = $this->readCache($cacheKey);
             if ($cached !== null) {
                 $this->runtimeCache[$cacheKey] = $cached;
@@ -98,7 +99,7 @@ class PortfolioService
         $positionSymbols = array_map(static fn($row) => $row['symbol'], $positions);
         $watchlistSymbols = array_map(static fn($row) => $row['symbol'], $watchlistRows);
         $symbols = array_values(array_unique(array_merge($positionSymbols, $watchlistSymbols)));
-        $quotes = $this->priceDataService->getLiveQuotes($symbols);
+        $quotes = $this->priceDataService->getLiveQuotes($symbols, $forceQuoteRefresh);
         $quotesBySymbol = [];
         foreach ($quotes as $quote) {
             $quotesBySymbol[$quote['symbol']] = $quote;
@@ -213,7 +214,7 @@ class PortfolioService
         ];
 
         $this->runtimeCache[$cacheKey] = $snapshot;
-        if ($shouldUseDiskCache) {
+        if ($shouldWriteDiskCache) {
             $this->writeCache($cacheKey, $snapshot);
         }
 

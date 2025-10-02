@@ -633,6 +633,32 @@ function stocks_cash_movement(PDO $pdo): void
     }
 }
 
+function stocks_refresh_overview(PDO $pdo): string
+{
+    verify_csrf();
+    require_login();
+    $userId = uid();
+
+    $returnTo = '/stocks';
+    $requested = $_POST['return_to'] ?? null;
+    if (is_string($requested) && str_starts_with($requested, '/')) {
+        $returnTo = $requested;
+    }
+
+    $portfolio = stocks_portfolio_service($pdo);
+
+    try {
+        $portfolio->invalidateOverviewCache($userId);
+        $portfolio->buildOverview($userId, [], false, true);
+        $_SESSION['flash_success'] = 'Quotes refreshed from the provider.';
+    } catch (Throwable $e) {
+        error_log('[stocks_refresh_overview] ' . $e->getMessage());
+        $_SESSION['flash'] = 'Unable to refresh quotes right now. Please try again.';
+    }
+
+    return $returnTo;
+}
+
 function stocks_delete_trade(PDO $pdo): void
 {
     verify_csrf();

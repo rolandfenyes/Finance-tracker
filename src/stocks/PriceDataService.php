@@ -26,7 +26,7 @@ class PriceDataService
      * @param string[] $symbols
      * @return array<int, array{stock_id:int,symbol:string,last:?float,prev_close:?float,day_high:?float,day_low:?float,volume:?float,currency:?string,provider_ts:?string,stale:bool}>
      */
-    public function getLiveQuotes(array $symbols): array
+    public function getLiveQuotes(array $symbols, bool $forceRefresh = false): array
     {
         if (empty($symbols)) {
             return [];
@@ -48,7 +48,7 @@ class PriceDataService
             $symbol = $row['symbol'];
             $indexBySymbol[$symbol] = (int)$row['id'];
             $symbolCurrency[$symbol] = $row['currency'] ?? null;
-            if (isset($this->memoryCache[$symbol])) {
+            if (!$forceRefresh && isset($this->memoryCache[$symbol])) {
                 $cached = $this->memoryCache[$symbol];
                 if (($cached['ts'] ?? 0) + $this->ttlSeconds > $now) {
                     $result[] = $cached['data'];
@@ -72,7 +72,7 @@ class PriceDataService
             foreach ($toFetch as $symbol) {
                 $stockId = $indexBySymbol[$symbol];
                 $row = $existing[$stockId] ?? null;
-                if ($row) {
+                if ($row && !$forceRefresh) {
                     $updatedAt = strtotime((string)$row['updated_at']);
                     if ($updatedAt && $updatedAt + $this->ttlSeconds > $now) {
                         $formatted = $this->formatRow($symbol, (int)$stockId, $row, $symbolCurrency[$symbol] ?? null);
@@ -85,52 +85,76 @@ class PriceDataService
             }
 
             if (!empty($needsProvider)) {
-                $withoutExisting = array_values(array_filter($needsProvider, static function ($symbol) use ($existing, $indexBySymbol) {
-                    $stockId = $indexBySymbol[$symbol];
-                    return !isset($existing[$stockId]);
-                }));
-                $withExisting = array_values(array_diff($needsProvider, $withoutExisting));
+                if ($forceRefresh) {
+                    $chunks = array_chunk($needsProvider, $this->maxProviderBatch ?: count($needsProvider));
+                    foreach ($chunks as $chunk) {
+                        $fetched = $this->adapter->fetchLiveQuotes($chunk);
+                        foreach ($chunk as $symbol) {
+                            $stockId = $indexBySymbol[$symbol];
+                            $quote = $fetched[$symbol] ?? null;
+                            if ($quote) {
+                                $this->upsertLastQuote($stockId, $quote);
+                                $row = $quote + ['provider_ts' => $quote['provider_ts'] ?? null, 'stale' => false];
+                                $formatted = $this->formatRow($symbol, $stockId, $row, $symbolCurrency[$symbol] ?? null);
+                                $result[] = $formatted;
+                                $this->memoryCache[$symbol] = ['ts' => $now, 'data' => $formatted];
+                            } elseif (isset($existing[$stockId])) {
+                                $row = $existing[$stockId];
+                                $row['stale'] = true;
+                                $formatted = $this->formatRow($symbol, $stockId, $row, $symbolCurrency[$symbol] ?? null);
+                                $result[] = $formatted;
+                                $this->memoryCache[$symbol] = ['ts' => $now, 'data' => $formatted];
+                            }
+                        }
+                    }
+                } else {
+                    $withoutExisting = array_values(array_filter($needsProvider, static function ($symbol) use ($existing, $indexBySymbol) {
+                        $stockId = $indexBySymbol[$symbol];
+                        return !isset($existing[$stockId]);
+                    }));
+                    $withExisting = array_values(array_diff($needsProvider, $withoutExisting));
 
-                $fetchBudget = $this->maxProviderBatch;
-                $fetchList = [];
-                if (!empty($withoutExisting)) {
-                    $fetchList = $withoutExisting;
-                    $fetchBudget -= count($withoutExisting);
-                }
-                if ($fetchBudget > 0 && !empty($withExisting)) {
-                    $fetchList = array_merge($fetchList, array_slice($withExisting, 0, $fetchBudget));
-                }
-                $deferred = array_diff($needsProvider, $fetchList);
+                    $fetchBudget = $this->maxProviderBatch;
+                    $fetchList = [];
+                    if (!empty($withoutExisting)) {
+                        $fetchList = $withoutExisting;
+                        $fetchBudget -= count($withoutExisting);
+                    }
+                    if ($fetchBudget > 0 && !empty($withExisting)) {
+                        $fetchList = array_merge($fetchList, array_slice($withExisting, 0, $fetchBudget));
+                    }
+                    $deferred = array_diff($needsProvider, $fetchList);
 
-                $fetched = $this->adapter->fetchLiveQuotes($fetchList);
-                foreach ($fetchList as $symbol) {
-                    $stockId = $indexBySymbol[$symbol];
-                    $quote = $fetched[$symbol] ?? null;
-                    if ($quote) {
-                        $this->upsertLastQuote($stockId, $quote);
-                        $row = $quote + ['provider_ts' => $quote['provider_ts'] ?? null, 'stale' => false];
-                        $formatted = $this->formatRow($symbol, $stockId, $row, $symbolCurrency[$symbol] ?? null);
-                        $result[] = $formatted;
-                        $this->memoryCache[$symbol] = ['ts' => $now, 'data' => $formatted];
-                    } elseif (isset($existing[$stockId])) {
+                    $fetched = $this->adapter->fetchLiveQuotes($fetchList);
+                    foreach ($fetchList as $symbol) {
+                        $stockId = $indexBySymbol[$symbol];
+                        $quote = $fetched[$symbol] ?? null;
+                        if ($quote) {
+                            $this->upsertLastQuote($stockId, $quote);
+                            $row = $quote + ['provider_ts' => $quote['provider_ts'] ?? null, 'stale' => false];
+                            $formatted = $this->formatRow($symbol, $stockId, $row, $symbolCurrency[$symbol] ?? null);
+                            $result[] = $formatted;
+                            $this->memoryCache[$symbol] = ['ts' => $now, 'data' => $formatted];
+                        } elseif (isset($existing[$stockId])) {
+                            $row = $existing[$stockId];
+                            $row['stale'] = true;
+                            $formatted = $this->formatRow($symbol, $stockId, $row, $symbolCurrency[$symbol] ?? null);
+                            $result[] = $formatted;
+                            $this->memoryCache[$symbol] = ['ts' => $now, 'data' => $formatted];
+                        }
+                    }
+
+                    foreach ($deferred as $symbol) {
+                        $stockId = $indexBySymbol[$symbol];
+                        if (!isset($existing[$stockId])) {
+                            continue;
+                        }
                         $row = $existing[$stockId];
                         $row['stale'] = true;
                         $formatted = $this->formatRow($symbol, $stockId, $row, $symbolCurrency[$symbol] ?? null);
                         $result[] = $formatted;
                         $this->memoryCache[$symbol] = ['ts' => $now, 'data' => $formatted];
                     }
-                }
-
-                foreach ($deferred as $symbol) {
-                    $stockId = $indexBySymbol[$symbol];
-                    if (!isset($existing[$stockId])) {
-                        continue;
-                    }
-                    $row = $existing[$stockId];
-                    $row['stale'] = true;
-                    $formatted = $this->formatRow($symbol, $stockId, $row, $symbolCurrency[$symbol] ?? null);
-                    $result[] = $formatted;
-                    $this->memoryCache[$symbol] = ['ts' => $now, 'data' => $formatted];
                 }
             }
         }
