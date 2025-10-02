@@ -6,6 +6,7 @@ use DateTime;
 use PDO;
 use PDOException;
 use RuntimeException;
+use Throwable;
 
 class TradeService
 {
@@ -71,10 +72,14 @@ class TradeService
             return $this->recordTradeLegacy($userId, $symbol, $side, $quantity, $price, $currency, $executedTs, $fee);
         }
 
-        $stockId = $this->ensureStockExists($symbol, $market, $currency);
+        $startedTransaction = false;
+        if (!$this->pdo->inTransaction()) {
+            $this->pdo->beginTransaction();
+            $startedTransaction = true;
+        }
 
-        $this->pdo->beginTransaction();
         try {
+            $stockId = $this->ensureStockExists($symbol, $market, $currency);
             $stmt = $this->pdo->prepare('INSERT INTO stock_trades(user_id, stock_id, symbol, trade_on, side, quantity, price, currency, executed_at, fee, note, market, created_at, updated_at)
                 VALUES(?,?,?,?,?,?,?,?,?,?,?, ?, NOW(), NOW()) RETURNING id');
             $stmt->execute([
@@ -94,10 +99,14 @@ class TradeService
             $tradeId = (int)$stmt->fetchColumn();
 
             $this->rebuildPositions($userId, $stockId);
-            $this->pdo->commit();
+            if ($startedTransaction) {
+                $this->pdo->commit();
+            }
             return $tradeId;
-        } catch (PDOException $e) {
-            $this->pdo->rollBack();
+        } catch (Throwable $e) {
+            if ($startedTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
             throw $e;
         }
     }
