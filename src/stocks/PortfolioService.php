@@ -199,7 +199,19 @@ class PortfolioService
         $sql .= ' ORDER BY s.symbol ASC';
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $filtered = [];
+        foreach ($rows as $row) {
+            $qty = isset($row['qty']) ? (float)$row['qty'] : 0.0;
+            if ($qty <= 1e-6) {
+                continue;
+            }
+            $row['qty'] = max(0.0, $qty);
+            $filtered[] = $row;
+        }
+
+        return $filtered;
     }
 
     /**
@@ -272,17 +284,27 @@ class PortfolioService
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $filtered = [];
+        foreach ($rows as $row) {
+            $qty = isset($row['qty']) ? (float)$row['qty'] : 0.0;
+            if ($qty <= 1e-6) {
+                continue;
+            }
+            $row['qty'] = max(0.0, $qty);
+            $filtered[] = $row;
+        }
 
         if (!$hasStocksTable) {
-            foreach ($rows as &$row) {
+            foreach ($filtered as &$row) {
                 $row['sector'] = $row['sector'] ?? null;
                 $row['industry'] = $row['industry'] ?? null;
             }
             unset($row);
         }
 
-        return $rows;
+        return $filtered;
     }
 
     /**

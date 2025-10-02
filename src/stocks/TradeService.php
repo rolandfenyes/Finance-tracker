@@ -113,14 +113,6 @@ class TradeService
 
     private function recordTradeLegacy(int $userId, string $symbol, string $side, float $quantity, float $price, string $currency, DateTime $executedAt, float $fee): int
     {
-        if (strtoupper($side) === 'SELL') {
-            $available = $this->legacyAvailableQuantity($userId, $symbol);
-            $tolerance = max(1e-6, abs($available) * 1e-6);
-            if ($quantity > $available + $tolerance) {
-                throw new RuntimeException('Sell quantity exceeds available lots for ' . $symbol);
-            }
-        }
-
         $adjustedPrice = $price;
         if ($fee > 0 && $quantity > 0) {
             if (strtoupper($side) === 'BUY') {
@@ -278,11 +270,13 @@ class TradeService
                     if ($tradeQty <= 0) {
                         continue;
                     }
-                    if ($tradeQty > $qty + 1e-8) {
-                        throw new RuntimeException('Sell quantity exceeds available lots for ' . $sid);
-                    }
+                    $availableBefore = max(0.0, $qty);
+                    $tolerance = max(1e-6, $availableBefore * 1e-6);
+                    $consumeQty = ($tradeQty > $availableBefore + $tolerance)
+                        ? $availableBefore
+                        : $tradeQty;
+                    $remaining = $consumeQty;
                     $sellFeePerShare = $tradeFee > 0 ? $tradeFee / $tradeQty : 0.0;
-                    $remaining = $tradeQty;
                     $realizedCcy = 0.0;
                     foreach ($lots as &$lot) {
                         if ($remaining <= 0) {
@@ -303,12 +297,19 @@ class TradeService
                         $remaining -= $portion;
                     }
                     unset($lot);
+                    $qty = max(0.0, $qty);
                     if ($remaining > 1e-6) {
-                        throw new RuntimeException('Insufficient lot quantity when processing sell trade');
+                        $remaining = 0.0;
                     }
+                    if ($totalCost < 0 && abs($totalCost) <= 1e-6) {
+                        $totalCost = 0.0;
+                    }
+                    $totalCost = max(0.0, $totalCost);
                     $cashImpact += $tradeQty * $tradePrice - $tradeFee;
-                    $realizedBase = fx_convert($this->pdo, $realizedCcy, $currency, $baseCurrency, $executedAt->format('Y-m-d'));
-                    $this->insertRealized($userId, $sid, (int)$trade['id'], $realizedBase, $realizedCcy, $currency, $tradeQty, $executedAt);
+                    if ($consumeQty > 0) {
+                        $realizedBase = fx_convert($this->pdo, $realizedCcy, $currency, $baseCurrency, $executedAt->format('Y-m-d'));
+                        $this->insertRealized($userId, $sid, (int)$trade['id'], $realizedBase, $realizedCcy, $currency, $consumeQty, $executedAt);
+                    }
                 }
             }
 
@@ -445,11 +446,4 @@ class TradeService
         return $exists;
     }
 
-    private function legacyAvailableQuantity(int $userId, string $symbol): float
-    {
-        $stmt = $this->pdo->prepare("SELECT COALESCE(SUM(CASE WHEN LOWER(side) = 'buy' THEN quantity ELSE -quantity END), 0) FROM stock_trades WHERE user_id=? AND UPPER(symbol)=?");
-        $stmt->execute([$userId, $symbol]);
-        $available = (float)$stmt->fetchColumn();
-        return round($available, 6);
-    }
 }

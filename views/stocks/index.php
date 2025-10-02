@@ -357,6 +357,15 @@ $formatQuantity = static function ($qty): string {
           <div class="h-full w-0 rounded-full bg-emerald-500 transition-all duration-300" data-role="csv-progress-bar"></div>
         </div>
       </div>
+      <div class="hidden rounded-lg border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-100" data-role="csv-server-progress">
+        <div class="flex items-center justify-between mb-2">
+          <span data-role="csv-server-text">Reconciling portfolio…</span>
+          <span data-role="csv-server-value">0%</span>
+        </div>
+        <div class="h-2 rounded-full bg-emerald-200/60 dark:bg-emerald-500/30">
+          <div class="h-full w-0 rounded-full bg-emerald-500 transition-all duration-300" data-role="csv-server-bar"></div>
+        </div>
+      </div>
     </form>
   </section>
 
@@ -506,10 +515,114 @@ $formatQuantity = static function ($qty): string {
 
   const csvForm = document.getElementById('stocksCsvForm');
   if (csvForm) {
-    const progressBox = csvForm.querySelector('[data-role="csv-progress"]');
-    const progressBar = csvForm.querySelector('[data-role="csv-progress-bar"]');
-    const progressValue = csvForm.querySelector('[data-role="csv-progress-value"]');
-    const progressText = csvForm.querySelector('[data-role="csv-progress-text"]');
+    const uploadBox = csvForm.querySelector('[data-role="csv-progress"]');
+    const uploadBar = csvForm.querySelector('[data-role="csv-progress-bar"]');
+    const uploadValue = csvForm.querySelector('[data-role="csv-progress-value"]');
+    const uploadText = csvForm.querySelector('[data-role="csv-progress-text"]');
+    const serverBox = csvForm.querySelector('[data-role="csv-server-progress"]');
+    const serverBar = csvForm.querySelector('[data-role="csv-server-bar"]');
+    const serverValue = csvForm.querySelector('[data-role="csv-server-value"]');
+    const serverText = csvForm.querySelector('[data-role="csv-server-text"]');
+
+    let serverTimer = null;
+    let serverStarted = false;
+    let serverGauge = 0;
+
+    const resetServerProgress = () => {
+      if (serverTimer) {
+        clearInterval(serverTimer);
+        serverTimer = null;
+      }
+      serverStarted = false;
+      serverGauge = 0;
+      if (serverBox) {
+        serverBox.classList.add('hidden');
+      }
+      if (serverBar) {
+        serverBar.style.width = '0%';
+        serverBar.classList.remove('bg-rose-500');
+        serverBar.classList.add('bg-emerald-500');
+      }
+      if (serverValue) {
+        serverValue.textContent = '0%';
+      }
+      if (serverText) {
+        serverText.textContent = 'Reconciling portfolio…';
+      }
+    };
+
+    const beginServerProgress = (message) => {
+      if (serverTimer) {
+        clearInterval(serverTimer);
+      }
+      serverStarted = true;
+      serverGauge = 10;
+      if (serverBox) {
+        serverBox.classList.remove('hidden');
+      }
+      if (serverBar) {
+        serverBar.style.width = serverGauge + '%';
+        serverBar.classList.remove('bg-rose-500');
+        serverBar.classList.add('bg-emerald-500');
+      }
+      if (serverValue) {
+        serverValue.textContent = serverGauge + '%';
+      }
+      if (serverText) {
+        serverText.textContent = message || 'Reconciling portfolio…';
+      }
+      serverTimer = window.setInterval(() => {
+        if (serverGauge >= 92) {
+          return;
+        }
+        serverGauge = Math.min(92, serverGauge + Math.floor(Math.random() * 6) + 1);
+        if (serverBar) {
+          serverBar.style.width = serverGauge + '%';
+        }
+        if (serverValue) {
+          serverValue.textContent = serverGauge + '%';
+        }
+      }, 500);
+    };
+
+    const finishServerProgress = (message, isError, forceShow = false) => {
+      if (!serverStarted && !forceShow) {
+        return;
+      }
+      if (serverTimer) {
+        clearInterval(serverTimer);
+        serverTimer = null;
+      }
+      if (serverBox) {
+        serverBox.classList.remove('hidden');
+      }
+      if (serverBar) {
+        serverBar.style.width = '100%';
+        serverBar.classList.remove('bg-emerald-500', 'bg-rose-500');
+        serverBar.classList.add(isError ? 'bg-rose-500' : 'bg-emerald-500');
+      }
+      if (serverValue) {
+        serverValue.textContent = '100%';
+      }
+      if (serverText) {
+        serverText.textContent = message || (isError ? 'Import failed.' : 'Finishing up…');
+      }
+      serverStarted = true;
+    };
+
+    const setUploadBar = (width, text, isError = false) => {
+      if (uploadBar) {
+        uploadBar.style.width = width;
+        uploadBar.classList.remove('bg-emerald-500', 'bg-rose-500');
+        uploadBar.classList.add(isError ? 'bg-rose-500' : 'bg-emerald-500');
+      }
+      if (uploadValue) {
+        uploadValue.textContent = width;
+      }
+      if (uploadText) {
+        uploadText.textContent = text;
+      }
+    };
 
     csvForm.addEventListener('submit', (event) => {
       if (csvForm.dataset.uploading === '1') {
@@ -522,17 +635,13 @@ $formatQuantity = static function ($qty): string {
       const xhr = new XMLHttpRequest();
       csvForm.dataset.uploading = '1';
 
-      if (progressBox) {
-        progressBox.classList.remove('hidden');
+      if (uploadBox) {
+        uploadBox.classList.remove('hidden');
       }
-      if (progressBar) {
-        progressBar.style.width = '5%';
-      }
-      if (progressValue) {
-        progressValue.textContent = '0%';
-      }
-      if (progressText) {
-        progressText.textContent = 'Uploading CSV…';
+      resetServerProgress();
+      setUploadBar('5%', 'Uploading CSV…');
+      if (uploadValue) {
+        uploadValue.textContent = '0%';
       }
 
       xhr.open('POST', '/stocks/import');
@@ -543,29 +652,24 @@ $formatQuantity = static function ($qty): string {
           return;
         }
         const percent = Math.min(95, Math.round((e.loaded / e.total) * 90));
-        if (progressBar) {
-          progressBar.style.width = percent + '%';
+        if (uploadBar) {
+          uploadBar.style.width = percent + '%';
         }
-        if (progressValue) {
-          progressValue.textContent = percent + '%';
+        if (uploadValue) {
+          uploadValue.textContent = percent + '%';
         }
-        if (progressText) {
-          progressText.textContent = 'Processing trades…';
+        if (uploadText) {
+          uploadText.textContent = 'Processing trades…';
         }
       });
 
+      xhr.upload.addEventListener('load', () => {
+        beginServerProgress('Reconciling portfolio…');
+      });
+
       const handleFailure = (message) => {
-        if (progressBar) {
-          progressBar.style.width = '100%';
-          progressBar.classList.remove('bg-emerald-500');
-          progressBar.classList.add('bg-rose-500');
-        }
-        if (progressValue) {
-          progressValue.textContent = '100%';
-        }
-        if (progressText) {
-          progressText.textContent = message || 'Upload failed. Please try again.';
-        }
+        setUploadBar('100%', message || 'Upload failed. Please try again.', true);
+        finishServerProgress(message || 'Import failed.', true, true);
         csvForm.dataset.uploading = '0';
       };
 
@@ -584,21 +688,12 @@ $formatQuantity = static function ($qty): string {
           return;
         }
 
-        if (progressBar) {
-          progressBar.style.width = '100%';
-          progressBar.classList.remove('bg-rose-500');
-          progressBar.classList.add('bg-emerald-500');
-        }
-        if (progressValue) {
-          progressValue.textContent = '100%';
-        }
-        if (progressText) {
-          progressText.textContent = response.message || 'Import complete. Refreshing…';
-        }
+        setUploadBar('100%', response.message || 'Upload complete.', false);
+        finishServerProgress(response.processing_message || 'Rebuilding portfolio…', false, true);
 
         setTimeout(() => {
           window.location.reload();
-        }, 600);
+        }, 800);
       });
 
       xhr.send(formData);
