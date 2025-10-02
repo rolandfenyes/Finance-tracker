@@ -588,6 +588,11 @@ switch ($path) {
         require __DIR__ . '/src/controllers/stocks.php';
         stocks_index($pdo);
         break;
+    case '/stocks/transactions':
+        require_login();
+        require __DIR__ . '/src/controllers/stocks.php';
+        stocks_transactions($pdo);
+        break;
     case '/stocks/trade':
         require_login();
         require __DIR__ . '/src/controllers/stocks.php';

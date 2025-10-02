@@ -10,14 +10,16 @@ class PriceDataService
     private PDO $pdo;
     private PriceProviderAdapter $adapter;
     private int $ttlSeconds;
+    private int $maxProviderBatch;
     /** @var array<string, array> */
     private array $memoryCache = [];
 
-    public function __construct(PDO $pdo, ?PriceProviderAdapter $adapter = null, int $ttlSeconds = 10)
+    public function __construct(PDO $pdo, ?PriceProviderAdapter $adapter = null, int $ttlSeconds = 10, ?int $maxProviderBatch = null)
     {
         $this->pdo = $pdo;
         $this->adapter = $adapter ?? new NullPriceProvider();
         $this->ttlSeconds = max(5, $ttlSeconds);
+        $this->maxProviderBatch = $maxProviderBatch !== null ? max(1, $maxProviderBatch) : 12;
     }
 
     /**
@@ -83,8 +85,25 @@ class PriceDataService
             }
 
             if (!empty($needsProvider)) {
-                $fetched = $this->adapter->fetchLiveQuotes($needsProvider);
-                foreach ($needsProvider as $symbol) {
+                $withoutExisting = array_values(array_filter($needsProvider, static function ($symbol) use ($existing, $indexBySymbol) {
+                    $stockId = $indexBySymbol[$symbol];
+                    return !isset($existing[$stockId]);
+                }));
+                $withExisting = array_values(array_diff($needsProvider, $withoutExisting));
+
+                $fetchBudget = $this->maxProviderBatch;
+                $fetchList = [];
+                if (!empty($withoutExisting)) {
+                    $fetchList = $withoutExisting;
+                    $fetchBudget -= count($withoutExisting);
+                }
+                if ($fetchBudget > 0 && !empty($withExisting)) {
+                    $fetchList = array_merge($fetchList, array_slice($withExisting, 0, $fetchBudget));
+                }
+                $deferred = array_diff($needsProvider, $fetchList);
+
+                $fetched = $this->adapter->fetchLiveQuotes($fetchList);
+                foreach ($fetchList as $symbol) {
                     $stockId = $indexBySymbol[$symbol];
                     $quote = $fetched[$symbol] ?? null;
                     if ($quote) {
@@ -100,6 +119,18 @@ class PriceDataService
                         $result[] = $formatted;
                         $this->memoryCache[$symbol] = ['ts' => $now, 'data' => $formatted];
                     }
+                }
+
+                foreach ($deferred as $symbol) {
+                    $stockId = $indexBySymbol[$symbol];
+                    if (!isset($existing[$stockId])) {
+                        continue;
+                    }
+                    $row = $existing[$stockId];
+                    $row['stale'] = true;
+                    $formatted = $this->formatRow($symbol, $stockId, $row, $symbolCurrency[$symbol] ?? null);
+                    $result[] = $formatted;
+                    $this->memoryCache[$symbol] = ['ts' => $now, 'data' => $formatted];
                 }
             }
         }

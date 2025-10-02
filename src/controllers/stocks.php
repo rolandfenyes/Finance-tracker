@@ -38,7 +38,7 @@ function stocks_index(PDO $pdo): void
         'watchlist_only' => !empty($_GET['watchlist']),
         'realized_period' => $_GET['period'] ?? null,
     ];
-    $overview = $portfolio->buildOverview($userId, $filters);
+    $overview = $portfolio->buildOverview($userId, $filters, false);
     $holdings = $overview['holdings'];
     $totals = $overview['totals'] + ['user_id' => $userId, 'default_target' => 10.0];
 
@@ -47,7 +47,20 @@ function stocks_index(PDO $pdo): void
         $insights[$holding['symbol']] = $signalsService->analyze($userId, $holding, ['prev_close' => $holding['prev_close'] ?? null], $totals);
     }
 
-    $portfolioChart = $chartsService->portfolioValueSeries($userId, $_GET['chartRange'] ?? '6M');
+    $chartRange = strtoupper($_GET['chartRange'] ?? '6M');
+    $portfolioChart = $chartsService->portfolioValueSeries($userId, $chartRange);
+    $series = array_values(array_filter($portfolioChart['series'], static fn($value) => $value !== null));
+    $startValue = $series ? (float)$series[0] : 0.0;
+    $endValue = $series ? (float)$series[count($series) - 1] : $startValue;
+    $changeValue = $endValue - $startValue;
+    $changePct = ($startValue > 0) ? ($changeValue / $startValue) * 100 : 0.0;
+    $chartMeta = [
+        'range' => $chartRange,
+        'start' => $startValue,
+        'end' => $endValue,
+        'change' => $changeValue,
+        'change_pct' => $changePct,
+    ];
     $refreshSeconds = stocks_refresh_seconds($userId, $pdo);
 
     $userCurrencies = stocks_user_currencies($pdo, $userId);
@@ -56,10 +69,29 @@ function stocks_index(PDO $pdo): void
         'overview' => $overview,
         'insights' => $insights,
         'portfolioChart' => $portfolioChart,
+        'chartMeta' => $chartMeta,
+        'chartRange' => $chartRange,
         'filters' => $filters,
         'refreshSeconds' => $refreshSeconds,
         'userCurrencies' => $userCurrencies,
         'error' => $_GET['error'] ?? null,
+    ]);
+}
+
+function stocks_transactions(PDO $pdo): void
+{
+    require_login();
+    $userId = uid();
+    $priceService = stocks_price_service($pdo);
+    $cashService = new CashService($pdo);
+    $portfolio = new PortfolioService($pdo, $priceService, $cashService);
+
+    $transactions = $portfolio->listTransactions($userId);
+    $baseCurrency = fx_user_main($pdo, $userId) ?: 'EUR';
+
+    view('stocks/transactions', [
+        'transactions' => $transactions,
+        'baseCurrency' => $baseCurrency,
     ]);
 }
 

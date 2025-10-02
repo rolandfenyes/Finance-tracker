@@ -40,7 +40,7 @@ class PortfolioService
      * @param array{search?:?string,sector?:?string,currency?:?string,watchlist_only?:bool,realized_period?:?string} $filters
      * @return array<string,mixed>
      */
-    public function buildOverview(int $userId, array $filters = []): array
+    public function buildOverview(int $userId, array $filters = [], bool $includeTransactions = false): array
     {
         $baseCurrency = fx_user_main($this->pdo, $userId) ?: 'EUR';
         $today = (new DateTime())->format('Y-m-d');
@@ -154,7 +154,7 @@ class PortfolioService
 
         $allocations = $this->buildAllocations($holdings);
         $watchlist = $this->buildWatchlist($watchlistRows, $quotesBySymbol, $baseCurrency, $today);
-        $transactions = $this->loadTransactions($userId);
+        $transactions = $includeTransactions ? $this->loadTransactions($userId) : [];
 
         return [
             'totals' => $overviewTotals,
@@ -164,6 +164,16 @@ class PortfolioService
             'cash' => $cashEntries,
             'trades' => $transactions,
         ];
+    }
+
+    /**
+     * Expose transactions without forcing the overview snapshot to hydrate them every time.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    public function listTransactions(int $userId): array
+    {
+        return $this->loadTransactions($userId);
     }
 
     /**

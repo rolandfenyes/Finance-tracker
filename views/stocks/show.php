@@ -169,8 +169,24 @@ $signals = $insights['signals'] ?? [];
   </section>
 
   <section class="card p-5 shadow-md bg-white/80 dark:bg-gray-900/40">
-    <h2 class="text-lg font-semibold mb-3">Quick trade</h2>
-    <form method="post" action="/stocks/trade" class="grid sm:grid-cols-6 gap-3">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h2 class="text-lg font-semibold">Trade</h2>
+        <p class="text-xs text-gray-500">Open the trade ticket to record buy or sell activity for <?= htmlspecialchars($symbol) ?>.</p>
+      </div>
+      <button type="button" class="btn btn-primary" data-dialog-open="detailTradeDialog">Open trade ticket</button>
+    </div>
+  </section>
+</section>
+
+<div class="dialog hidden" id="detailTradeDialog" role="dialog" aria-modal="true" aria-labelledby="detailTradeDialogTitle">
+  <div class="dialog-backdrop" data-dialog-close></div>
+  <div class="dialog-panel">
+    <div class="dialog-header">
+      <h2 id="detailTradeDialogTitle" class="text-lg font-semibold text-gray-900 dark:text-gray-100">Trade <?= htmlspecialchars($symbol) ?></h2>
+      <button type="button" class="dialog-close" data-dialog-close>&times;</button>
+    </div>
+    <form method="post" action="/stocks/trade" class="grid gap-3 sm:grid-cols-6">
       <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
       <input type="hidden" name="symbol" value="<?= htmlspecialchars($symbol) ?>" />
       <select name="side" class="input">
@@ -183,9 +199,7 @@ $signals = $insights['signals'] ?? [];
         <?php if (!empty($userCurrencies)): ?>
           <?php foreach ($userCurrencies as $c): ?>
             <?php $code = strtoupper($c['code']); ?>
-            <option value="<?= htmlspecialchars($code) ?>" <?= $code === $selectedCurrencyCode ? 'selected' : '' ?>>
-              <?= htmlspecialchars($code) ?>
-            </option>
+            <option value="<?= htmlspecialchars($code) ?>" <?= $code === $selectedCurrencyCode ? 'selected' : '' ?>><?= htmlspecialchars($code) ?></option>
           <?php endforeach; ?>
         <?php else: ?>
           <option value="<?= htmlspecialchars($selectedCurrencyCode) ?>" selected><?= htmlspecialchars($selectedCurrencyCode) ?></option>
@@ -194,11 +208,31 @@ $signals = $insights['signals'] ?? [];
       <input name="fee" type="number" step="0.01" placeholder="Fee" class="input" />
       <input name="trade_date" type="date" value="<?= date('Y-m-d') ?>" class="input" />
       <input name="trade_time" type="time" value="<?= date('H:i') ?>" class="input" />
-      <input name="note" placeholder="Note" class="input sm:col-span-2" />
-      <button class="btn btn-primary sm:col-span-2">Submit trade</button>
+      <input name="note" placeholder="Note" class="input sm:col-span-3" />
+      <div class="sm:col-span-6 flex flex-wrap gap-2 text-xs text-gray-500">
+        <span class="self-center">Quick presets:</span>
+        <?php foreach ([1, 10, 100] as $preset): ?>
+          <button type="button" class="rounded-full border border-emerald-200 px-3 py-1 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-500/40 dark:text-emerald-200 dark:hover:bg-emerald-500/10" data-quantity-preset="<?= $preset ?>">+<?= $preset ?></button>
+        <?php endforeach; ?>
+      </div>
+      <button class="btn btn-primary sm:col-span-6">Submit trade</button>
     </form>
-  </section>
-</section>
+  </div>
+</div>
+
+<?php if (!defined('STOCKS_DIALOG_STYLE')): ?>
+  <?php define('STOCKS_DIALOG_STYLE', true); ?>
+  <style>
+    .dialog { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; }
+    .dialog.hidden { display: none; }
+    .dialog-backdrop { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(2px); }
+    .dialog-panel { position: relative; width: min(600px, 92vw); max-height: 90vh; overflow-y: auto; border-radius: 1.25rem; background: rgba(255,255,255,0.98); padding: 1.75rem; box-shadow: 0 35px 60px -25px rgba(15, 23, 42, 0.45); }
+    .dark .dialog-panel { background: rgba(15, 23, 42, 0.92); }
+    .dialog-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+    .dialog-close { width: 2.5rem; height: 2.5rem; border-radius: 9999px; font-size: 1.5rem; line-height: 1; display: inline-flex; align-items: center; justify-content: center; color: rgba(100,116,139,0.8); background: rgba(148,163,184,0.12); }
+    .dialog-close:hover { background: rgba(148,163,184,0.2); }
+  </style>
+<?php endif; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" crossorigin="anonymous"></script>
 <script>
@@ -209,6 +243,7 @@ $signals = $insights['signals'] ?? [];
   const refreshMs = (<?= (int)($settings['refresh_seconds'] ?? 10) ?>) * 1000;
   const currency = <?= json_encode($currency) ?>;
   const initialRange = <?= json_encode(strtoupper($historyRange)) ?>;
+  const baseCurrency = <?= json_encode($baseCurrency) ?>;
 
   const rangeForm = document.getElementById('rangeForm');
   const rangeButtons = rangeForm ? Array.from(rangeForm.querySelectorAll('[data-range-btn]')) : [];
@@ -222,6 +257,14 @@ $signals = $insights['signals'] ?? [];
     }
     const labels = (data || []).map(item => item.date);
     const closes = (data || []).map(item => item.close);
+    const ctx = priceCtx.getContext('2d');
+    if (!ctx) {
+      return;
+    }
+    const gradient = ctx.createLinearGradient(0, 0, 0, priceCtx.height);
+    gradient.addColorStop(0, 'rgba(96, 165, 250, 0.45)');
+    gradient.addColorStop(1, 'rgba(96, 165, 250, 0.08)');
+    const formatPrice = value => new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(value);
     if (!priceChart) {
       priceChart = new Chart(priceCtx, {
         type: 'line',
@@ -230,15 +273,34 @@ $signals = $insights['signals'] ?? [];
           datasets: [{
             data: closes,
             borderColor: '#60a5fa',
-            tension: 0.3,
+            tension: 0.35,
             fill: true,
             pointRadius: 0,
-            backgroundColor: 'rgba(96, 165, 250, 0.15)'
+            spanGaps: true,
+            backgroundColor: gradient
           }]
         },
         options: {
-          plugins: { legend: { display: false } },
-          scales: { x: { display: false } },
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: context => formatPrice(context.parsed.y || 0)
+              }
+            }
+          },
+          scales: {
+            x: { display: false },
+            y: {
+              grid: { color: 'rgba(148, 163, 184, 0.2)' },
+              ticks: {
+                color: 'rgba(100,116,139,0.8)',
+                callback: value => formatPrice(value)
+              }
+            }
+          }
         }
       });
     } else {
@@ -256,6 +318,14 @@ $signals = $insights['signals'] ?? [];
     }
     const labels = (series && Array.isArray(series.labels)) ? series.labels : [];
     const values = (series && Array.isArray(series.series)) ? series.series : [];
+    const ctx = positionCtx.getContext('2d');
+    if (!ctx) {
+      return;
+    }
+    const gradient = ctx.createLinearGradient(0, 0, 0, positionCtx.height);
+    gradient.addColorStop(0, 'rgba(52, 211, 153, 0.45)');
+    gradient.addColorStop(1, 'rgba(52, 211, 153, 0.1)');
+    const formatPosition = value => new Intl.NumberFormat(undefined, { style: 'currency', currency: baseCurrency }).format(value);
     if (!positionChart) {
       positionChart = new Chart(positionCtx, {
         type: 'line',
@@ -264,14 +334,35 @@ $signals = $insights['signals'] ?? [];
           datasets: [{
             data: values,
             borderColor: '#34d399',
-            backgroundColor: 'rgba(52, 211, 153, 0.15)',
+            backgroundColor: gradient,
             fill: true,
-            tension: 0.3,
+            tension: 0.35,
             spanGaps: true,
             pointRadius: 0,
           }]
         },
-        options: { plugins: { legend: { display: false } }, scales: { x: { display: false } } }
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: context => formatPosition(context.parsed.y || 0)
+              }
+            }
+          },
+          scales: {
+            x: { display: false },
+            y: {
+              grid: { color: 'rgba(148, 163, 184, 0.2)' },
+              ticks: {
+                color: 'rgba(100,116,139,0.8)',
+                callback: value => formatPosition(value)
+              }
+            }
+          }
+        }
       });
     } else {
       positionChart.data.labels = labels;
@@ -334,6 +425,54 @@ $signals = $insights['signals'] ?? [];
           rangeForm.submit();
         });
       }
+    });
+  }
+
+  const openDialog = (id) => {
+    const dialog = document.getElementById(id);
+    if (!dialog) return;
+    dialog.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+    if (id === 'detailTradeDialog') {
+      const quantityInput = dialog.querySelector('input[name="quantity"]');
+      if (quantityInput) {
+        setTimeout(() => quantityInput.focus(), 50);
+      }
+    }
+  };
+
+  const closeDialog = (dialog) => {
+    dialog.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+  };
+
+  document.querySelectorAll('[data-dialog-open]').forEach(trigger => {
+    trigger.addEventListener('click', () => openDialog(trigger.getAttribute('data-dialog-open')));
+  });
+
+  document.querySelectorAll('[data-dialog-close]').forEach(closeBtn => {
+    closeBtn.addEventListener('click', () => closeDialog(closeBtn.closest('.dialog')));
+  });
+
+  document.querySelectorAll('.dialog').forEach(dialog => {
+    dialog.addEventListener('click', (evt) => {
+      if (evt.target === dialog.querySelector('.dialog-backdrop')) {
+        closeDialog(dialog);
+      }
+    });
+  });
+
+  const presetButtons = document.querySelectorAll('[data-quantity-preset]');
+  if (presetButtons.length) {
+    const quantityInput = document.querySelector('#detailTradeDialog input[name="quantity"]');
+    presetButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!quantityInput) return;
+        const increment = parseFloat(btn.getAttribute('data-quantity-preset') || '0');
+        const current = parseFloat(quantityInput.value || '0');
+        const result = (isNaN(current) ? 0 : current) + (isNaN(increment) ? 0 : increment);
+        quantityInput.value = (Math.round(result * 10000) / 10000).toString();
+      });
     });
   }
 

@@ -2,6 +2,8 @@
 /** @var array $overview */
 /** @var array $insights */
 /** @var array $portfolioChart */
+/** @var array $chartMeta */
+/** @var string $chartRange */
 /** @var array $filters */
 /** @var int $refreshSeconds */
 /** @var array $userCurrencies */
@@ -12,115 +14,209 @@ $holdings = $overview['holdings'];
 $allocations = $overview['allocations'];
 $watchlist = $overview['watchlist'];
 $cashEntries = $overview['cash'] ?? [];
-$transactions = $overview['trades'] ?? [];
 $baseCurrency = $totals['base_currency'];
+$rangeOptions = ['1M', '3M', '6M', '1Y', '5Y'];
+
+$marketByCurrency = $totals['total_market_value_by_currency'] ?? [];
+$unrealizedByCurrency = $totals['unrealized_by_currency'] ?? [];
+$realizedByCurrency = $totals['realized_by_currency'] ?? [];
+$cashByCurrency = $totals['cash_by_currency'] ?? [];
+$preferredCurrency = array_key_exists('USD', $marketByCurrency) ? 'USD' : (array_key_first($marketByCurrency) ?: $baseCurrency);
+$preferredMarket = $marketByCurrency[$preferredCurrency] ?? null;
+$preferredUnrealized = $unrealizedByCurrency[$preferredCurrency] ?? null;
+$preferredRealized = $realizedByCurrency[$preferredCurrency] ?? null;
+$preferredCash = $cashByCurrency[$preferredCurrency] ?? null;
+
 $formatQuantity = static function ($qty): string {
-  $formatted = number_format((float)$qty, 6, '.', '');
-  $trimmed = rtrim(rtrim($formatted, '0'), '.');
-  return $trimmed === '' ? '0' : $trimmed;
+    $formatted = number_format((float)$qty, 6, '.', '');
+    $trimmed = rtrim(rtrim($formatted, '0'), '.');
+    return $trimmed === '' ? '0' : $trimmed;
 };
 ?>
 
-<section class="space-y-6">
+<section class="space-y-8">
   <?php if (!empty($error) && $error === 'trade'): ?>
-    <div class="rounded-xl border border-amber-200 bg-amber-50 text-amber-800 px-4 py-3 text-sm">
+    <div class="rounded-2xl border border-amber-200 bg-amber-50 text-amber-800 px-4 py-3 text-sm">
       Unable to record the trade. Please ensure the latest database migrations have been run and try again.
     </div>
   <?php endif; ?>
   <?php if (!empty($_SESSION['flash_success'])): ?>
-    <div class="rounded-xl border border-emerald-200 bg-emerald-50/90 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-100">
+    <div class="rounded-2xl border border-emerald-200 bg-emerald-50/90 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-100">
       <?= htmlspecialchars($_SESSION['flash_success']) ?>
     </div>
     <?php unset($_SESSION['flash_success']); ?>
   <?php endif; ?>
   <?php if (!empty($_SESSION['flash'])): ?>
-    <div class="rounded-xl border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-100">
+    <div class="rounded-2xl border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-100">
       <?= htmlspecialchars($_SESSION['flash']) ?>
     </div>
     <?php unset($_SESSION['flash']); ?>
   <?php endif; ?>
-  <header class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-    <div>
+
+  <header class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+    <div class="space-y-2">
       <h1 class="text-3xl font-semibold text-gray-900 dark:text-gray-100">Stocks</h1>
-      <p class="text-sm text-gray-500">Live overview of your equity portfolio across currencies.</p>
+      <p class="text-sm text-gray-500">A live look at your equity exposure, performance, and cash firepower.</p>
     </div>
-    <form method="get" action="/stocks" class="grid grid-cols-1 sm:grid-cols-5 gap-2">
-      <input type="search" name="q" value="<?= htmlspecialchars($filters['search'] ?? '') ?>" placeholder="Search ticker" class="input sm:col-span-2" />
-      <input type="text" name="sector" value="<?= htmlspecialchars($filters['sector'] ?? '') ?>" placeholder="Sector" class="input" />
-      <input type="text" name="currency" value="<?= htmlspecialchars($filters['currency'] ?? '') ?>" placeholder="Currency" class="input" />
-      <select name="period" class="input">
-        <?php $period = strtoupper($filters['realized_period'] ?? 'YTD'); ?>
-        <?php foreach(['YTD','1M','3M','1Y','ALL'] as $opt): ?>
-          <option value="<?= $opt ?>" <?= $period === $opt ? 'selected' : '' ?>>Realized <?= $opt ?></option>
-        <?php endforeach; ?>
-      </select>
-      <label class="inline-flex items-center justify-center rounded-lg bg-white/70 dark:bg-gray-900/40 border border-gray-200/70 px-3 text-sm font-medium text-gray-600 shadow-sm">
-        <input type="checkbox" name="watchlist" value="1" <?= !empty($filters['watchlist_only']) ? 'checked' : '' ?> class="mr-2" />Watchlist only
-      </label>
-      <button class="btn btn-primary sm:col-span-1">Apply</button>
-    </form>
+    <div class="flex flex-wrap gap-2">
+      <a href="/stocks/transactions" class="btn btn-ghost">Transactions</a>
+      <button type="button" class="btn btn-secondary" data-dialog-open="cashDialog">Record cash</button>
+      <button type="button" class="btn btn-primary" data-dialog-open="tradeDialog">New trade</button>
+    </div>
   </header>
 
-  <section class="grid md:grid-cols-4 gap-4">
-    <article class="card p-5 shadow-md bg-white/80 dark:bg-gray-900/40">
-      <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wide">Total Market Value</h2>
-      <p class="text-3xl font-semibold mt-2"><?= moneyfmt($totals['total_market_value'], $baseCurrency) ?></p>
-      <?php if (!empty($totals['total_market_value_by_currency'])): ?>
+  <form method="get" action="/stocks" class="grid grid-cols-1 gap-3 rounded-2xl border border-gray-200/70 bg-white/80 p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900/40 sm:grid-cols-6">
+    <input type="search" name="q" value="<?= htmlspecialchars($filters['search'] ?? '') ?>" placeholder="Search ticker" class="input sm:col-span-2" />
+    <input type="text" name="sector" value="<?= htmlspecialchars($filters['sector'] ?? '') ?>" placeholder="Sector" class="input sm:col-span-1" />
+    <input type="text" name="currency" value="<?= htmlspecialchars($filters['currency'] ?? '') ?>" placeholder="Currency" class="input sm:col-span-1" />
+    <select name="period" class="input">
+      <?php $period = strtoupper($filters['realized_period'] ?? 'YTD'); ?>
+      <?php foreach(['YTD','1M','3M','1Y','ALL'] as $opt): ?>
+        <option value="<?= $opt ?>" <?= $period === $opt ? 'selected' : '' ?>>Realized <?= $opt ?></option>
+      <?php endforeach; ?>
+    </select>
+    <label class="inline-flex items-center justify-center rounded-lg bg-white/70 px-3 text-sm font-medium text-gray-600 shadow-sm dark:bg-gray-900/60 dark:text-gray-300">
+      <input type="checkbox" name="watchlist" value="1" <?= !empty($filters['watchlist_only']) ? 'checked' : '' ?> class="mr-2" />Watchlist only
+    </label>
+    <button class="btn btn-primary sm:col-span-1">Apply</button>
+    <input type="hidden" name="chartRange" value="<?= htmlspecialchars($chartRange) ?>" />
+  </form>
+
+  <section class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-800 p-6 text-white shadow-xl">
+    <div class="absolute -top-20 -right-20 h-60 w-60 rounded-full bg-emerald-500/20 blur-3xl"></div>
+    <div class="absolute bottom-0 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-emerald-400/20 blur-3xl"></div>
+    <div class="relative flex flex-col gap-6 lg:flex-row lg:items-start">
+      <div class="flex-1 space-y-4">
+        <div>
+          <p class="text-xs uppercase tracking-widest text-white/60">Total value</p>
+          <div class="text-4xl font-semibold"><?= moneyfmt($totals['total_market_value'], $baseCurrency) ?></div>
+          <?php if ($preferredMarket !== null): ?>
+            <p class="text-sm text-white/70">≈ <?= moneyfmt($preferredMarket, $preferredCurrency) ?></p>
+          <?php endif; ?>
+        </div>
+        <div class="flex flex-wrap items-center gap-4 text-sm">
+          <div>
+            <span class="text-white/60">Change (<?= htmlspecialchars(strtoupper($chartMeta['range'])) ?>)</span>
+            <div class="text-lg font-medium <?= $chartMeta['change'] >= 0 ? 'text-emerald-300' : 'text-rose-300' ?>">
+              <?= ($chartMeta['change'] >= 0 ? '+' : '') . moneyfmt($chartMeta['change'], $baseCurrency) ?>
+              <span class="text-sm text-white/70">(<?= number_format($chartMeta['change_pct'], 2) ?>%)</span>
+            </div>
+          </div>
+          <div class="hidden sm:block h-10 w-px bg-white/10"></div>
+          <div>
+            <span class="text-white/60">Unrealized P/L</span>
+            <div class="text-lg font-medium <?= $totals['unrealized_pl'] >= 0 ? 'text-emerald-300' : 'text-rose-300' ?>">
+              <?= moneyfmt($totals['unrealized_pl'], $baseCurrency) ?>
+              <?php if ($preferredUnrealized !== null): ?>
+                <span class="text-sm text-white/70">(<?= moneyfmt($preferredUnrealized, $preferredCurrency) ?>)</span>
+              <?php endif; ?>
+            </div>
+          </div>
+        </div>
+        <?php if (!empty($marketByCurrency)): ?>
+          <div class="flex flex-wrap gap-3 text-xs text-white/70">
+            <?php foreach ($marketByCurrency as $currency => $amount): ?>
+              <span class="inline-flex items-center rounded-full bg-white/10 px-2.5 py-1 font-medium">
+                <?= htmlspecialchars($currency) ?> · <?= moneyfmt($amount, $currency) ?>
+              </span>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+      </div>
+      <div class="flex w-full flex-col gap-4 lg:w-1/2">
+        <div class="h-56">
+          <canvas id="portfolioValueChart" height="224"></canvas>
+        </div>
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <label class="inline-flex items-center gap-2 text-xs text-white/70">
+            <input type="checkbox" class="h-4 w-4 rounded border-white/40 bg-transparent text-emerald-300 focus:ring-emerald-200" data-role="chart-contributions" />
+            Show cash contributions
+          </label>
+          <form method="get" action="/stocks" class="flex flex-wrap gap-1" id="portfolioRangeForm">
+            <input type="hidden" name="q" value="<?= htmlspecialchars($filters['search'] ?? '') ?>" />
+            <input type="hidden" name="sector" value="<?= htmlspecialchars($filters['sector'] ?? '') ?>" />
+            <input type="hidden" name="currency" value="<?= htmlspecialchars($filters['currency'] ?? '') ?>" />
+            <input type="hidden" name="period" value="<?= htmlspecialchars($filters['realized_period'] ?? 'YTD') ?>" />
+            <?php if (!empty($filters['watchlist_only'])): ?>
+              <input type="hidden" name="watchlist" value="1" />
+            <?php endif; ?>
+            <?php foreach ($rangeOptions as $option): ?>
+              <?php $isActive = strtoupper($chartRange) === $option; ?>
+              <button
+                type="submit"
+                name="chartRange"
+                value="<?= htmlspecialchars($option) ?>"
+                class="px-3 py-1 text-xs font-medium rounded-full <?= $isActive ? 'bg-white text-slate-900 shadow-sm' : 'bg-white/10 text-white/80 hover:bg-white/20' ?>"
+                aria-pressed="<?= $isActive ? 'true' : 'false' ?>"
+              ><?= htmlspecialchars($option) ?></button>
+            <?php endforeach; ?>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <article class="rounded-2xl border border-gray-200/70 bg-white/80 p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900/40">
+      <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500">Total Market Value</h2>
+      <p class="mt-3 text-2xl font-semibold text-gray-900 dark:text-gray-100"><?= moneyfmt($totals['total_market_value'], $baseCurrency) ?></p>
+      <?php if ($preferredMarket !== null): ?>
+        <p class="text-sm text-gray-500">≈ <?= moneyfmt($preferredMarket, $preferredCurrency) ?></p>
+      <?php endif; ?>
+      <?php if (!empty($marketByCurrency)): ?>
         <ul class="mt-3 space-y-1 text-xs text-gray-500">
-          <?php foreach ($totals['total_market_value_by_currency'] as $currency => $amount): ?>
+          <?php foreach ($marketByCurrency as $currency => $amount): ?>
             <li><?= moneyfmt($amount, $currency) ?></li>
           <?php endforeach; ?>
         </ul>
       <?php endif; ?>
-      <p class="text-xs text-gray-500">Trade cash flow: <?= moneyfmt($totals['cash_impact'], $baseCurrency) ?></p>
     </article>
-    <article class="card p-5 shadow-md bg-white/80 dark:bg-gray-900/40">
-      <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wide">Unrealized P/L</h2>
-      <p class="text-3xl font-semibold mt-2 <?= $totals['unrealized_pl'] >= 0 ? 'text-emerald-500' : 'text-rose-500' ?>">
+    <article class="rounded-2xl border border-gray-200/70 bg-white/80 p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900/40">
+      <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500">Unrealized P/L</h2>
+      <p class="mt-3 text-2xl font-semibold <?= $totals['unrealized_pl'] >= 0 ? 'text-emerald-500' : 'text-rose-500' ?>">
         <?= moneyfmt($totals['unrealized_pl'], $baseCurrency) ?>
       </p>
-      <p class="text-xs text-gray-500"><?= number_format($totals['unrealized_pct'], 2) ?>%</p>
-      <?php if (!empty($totals['unrealized_by_currency'])): ?>
+      <?php if ($preferredUnrealized !== null): ?>
+        <p class="text-sm text-gray-500">≈ <?= moneyfmt($preferredUnrealized, $preferredCurrency) ?></p>
+      <?php endif; ?>
+      <p class="text-xs text-gray-500 mt-1"><?= number_format($totals['unrealized_pct'], 2) ?>%</p>
+      <?php if (!empty($unrealizedByCurrency)): ?>
         <ul class="mt-3 space-y-1 text-xs <?= $totals['unrealized_pl'] >= 0 ? 'text-emerald-500' : 'text-rose-500' ?>">
-          <?php foreach ($totals['unrealized_by_currency'] as $currency => $amount): ?>
+          <?php foreach ($unrealizedByCurrency as $currency => $amount): ?>
             <li><?= moneyfmt($amount, $currency) ?></li>
           <?php endforeach; ?>
         </ul>
       <?php endif; ?>
     </article>
-    <article class="card p-5 shadow-md bg-white/80 dark:bg-gray-900/40">
-      <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wide">Realized P/L (<?= htmlspecialchars($totals['realized_period']) ?>)</h2>
-      <p class="text-3xl font-semibold mt-2 <?= $totals['realized_pl'] >= 0 ? 'text-emerald-500' : 'text-rose-500' ?>">
+    <article class="rounded-2xl border border-gray-200/70 bg-white/80 p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900/40">
+      <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500">Realized P/L (<?= htmlspecialchars($totals['realized_period']) ?>)</h2>
+      <p class="mt-3 text-2xl font-semibold <?= $totals['realized_pl'] >= 0 ? 'text-emerald-500' : 'text-rose-500' ?>">
         <?= moneyfmt($totals['realized_pl'], $baseCurrency) ?>
       </p>
-      <p class="text-xs text-gray-500">Daily P/L: <?= moneyfmt($totals['daily_pl'], $baseCurrency) ?></p>
-      <?php if (!empty($totals['realized_by_currency'])): ?>
+      <?php if ($preferredRealized !== null): ?>
+        <p class="text-sm text-gray-500">≈ <?= moneyfmt($preferredRealized, $preferredCurrency) ?></p>
+      <?php endif; ?>
+      <p class="text-xs text-gray-500 mt-1">Daily P/L: <?= moneyfmt($totals['daily_pl'], $baseCurrency) ?></p>
+      <?php if (!empty($realizedByCurrency)): ?>
         <ul class="mt-3 space-y-1 text-xs <?= $totals['realized_pl'] >= 0 ? 'text-emerald-500' : 'text-rose-500' ?>">
-          <?php foreach ($totals['realized_by_currency'] as $currency => $amount): ?>
+          <?php foreach ($realizedByCurrency as $currency => $amount): ?>
             <li><?= moneyfmt($amount, $currency) ?></li>
           <?php endforeach; ?>
         </ul>
       <?php endif; ?>
     </article>
-    <article class="card p-5 shadow-md bg-white/80 dark:bg-gray-900/40">
-      <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wide">Cash Balance</h2>
-      <p class="text-3xl font-semibold mt-2 text-slate-700 dark:text-slate-100">
+    <article class="rounded-2xl border border-gray-200/70 bg-white/80 p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900/40">
+      <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500">Cash Balance</h2>
+      <p class="mt-3 text-2xl font-semibold text-slate-800 dark:text-slate-100">
         <?= moneyfmt($totals['cash_balance'] ?? 0, $baseCurrency) ?>
       </p>
-      <?php if (!empty($totals['cash_by_currency'])): ?>
-        <ul class="mt-3 space-y-1 text-xs text-gray-500">
-          <?php foreach ($totals['cash_by_currency'] as $currency => $amount): ?>
-            <li><?= moneyfmt($amount, $currency) ?></li>
-          <?php endforeach; ?>
-        </ul>
+      <?php if ($preferredCash !== null): ?>
+        <p class="text-sm text-gray-500">≈ <?= moneyfmt($preferredCash, $preferredCurrency) ?></p>
       <?php endif; ?>
       <?php if (!empty($cashEntries)): ?>
         <ul class="mt-3 space-y-1 text-xs text-gray-500 dark:text-gray-400">
           <?php foreach ($cashEntries as $entry): ?>
-            <li>
-              <?= moneyfmt($entry['amount'], $entry['currency']) ?>
-              <span class="text-[11px] text-gray-400">(<?= moneyfmt($entry['amount_base'], $baseCurrency) ?>)</span>
-            </li>
+            <li><?= moneyfmt($entry['amount'], $entry['currency']) ?> <span class="text-[11px] text-gray-400">(<?= moneyfmt($entry['amount_base'], $baseCurrency) ?>)</span></li>
           <?php endforeach; ?>
         </ul>
       <?php else: ?>
@@ -129,31 +225,34 @@ $formatQuantity = static function ($qty): string {
     </article>
   </section>
 
-  <section class="grid lg:grid-cols-5 gap-6">
-    <div class="lg:col-span-3 card overflow-hidden shadow-md bg-white/80 dark:bg-gray-900/40">
-      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200/70 dark:border-gray-800">
-        <h3 class="text-lg font-semibold">Current holdings</h3>
-        <span class="text-xs text-gray-500">Base currency: <?= htmlspecialchars($baseCurrency) ?></span>
+  <section class="grid gap-6 xl:grid-cols-3">
+    <article class="xl:col-span-2 rounded-2xl border border-gray-200/70 bg-white/80 shadow-sm dark:border-gray-800 dark:bg-gray-900/40">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Current holdings</h3>
+          <p class="text-xs text-gray-500">Base currency: <?= htmlspecialchars($baseCurrency) ?></p>
+        </div>
+        <div class="text-xs text-gray-400">Updated live</div>
       </div>
       <div class="overflow-x-auto">
         <table class="min-w-full text-sm">
-          <thead class="bg-gray-50/70 dark:bg-gray-900/60 text-gray-600 uppercase text-xs tracking-wide">
+          <thead class="bg-gray-50/80 text-gray-600 uppercase text-xs tracking-wide dark:bg-gray-900/60">
             <tr>
-              <th class="px-5 py-3 text-left">Ticker</th>
-              <th class="px-5 py-3 text-right">Qty</th>
-              <th class="px-5 py-3 text-right">Avg Cost</th>
-              <th class="px-5 py-3 text-right">Last</th>
-              <th class="px-5 py-3 text-right">Market Value</th>
-              <th class="px-5 py-3 text-right">Unrealized</th>
-              <th class="px-5 py-3 text-right">Day P/L</th>
-              <th class="px-5 py-3 text-right">Weight</th>
-              <th class="px-5 py-3 text-left">Insights</th>
+              <th class="px-6 py-3 text-left">Ticker</th>
+              <th class="px-6 py-3 text-right">Qty</th>
+              <th class="px-6 py-3 text-right">Avg cost</th>
+              <th class="px-6 py-3 text-right">Last</th>
+              <th class="px-6 py-3 text-right">Market value</th>
+              <th class="px-6 py-3 text-right">Unrealized</th>
+              <th class="px-6 py-3 text-right">Day P/L</th>
+              <th class="px-6 py-3 text-right">Weight</th>
+              <th class="px-6 py-3 text-left">Insights</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
             <?php if (empty($holdings)): ?>
               <tr>
-                <td colspan="9" class="px-5 py-6 text-center text-gray-500">No holdings yet. Record your first trade below.</td>
+                <td colspan="9" class="px-6 py-8 text-center text-gray-500">No holdings yet. Record your first trade to get started.</td>
               </tr>
             <?php endif; ?>
             <?php foreach ($holdings as $holding):
@@ -161,40 +260,40 @@ $formatQuantity = static function ($qty): string {
               $suggestions = $insights[$symbol]['suggestions'] ?? [];
               $signals = $insights[$symbol]['signals'] ?? [];
             ?>
-              <tr class="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50/70 dark:hover:bg-gray-900/40" data-symbol="<?= htmlspecialchars($symbol) ?>" data-qty="<?= htmlspecialchars($holding['qty']) ?>" data-avg="<?= htmlspecialchars($holding['avg_cost']) ?>" data-currency="<?= htmlspecialchars($holding['currency']) ?>">
-                <td class="px-5 py-4 font-semibold text-gray-900 dark:text-gray-100">
+              <tr class="hover:bg-gray-50/80 dark:hover:bg-gray-900/40 transition" data-symbol="<?= htmlspecialchars($symbol) ?>" data-qty="<?= htmlspecialchars($holding['qty']) ?>" data-avg="<?= htmlspecialchars($holding['avg_cost']) ?>" data-currency="<?= htmlspecialchars($holding['currency']) ?>">
+                <td class="px-6 py-4 font-semibold text-gray-900 dark:text-gray-100">
                   <a href="/stocks/<?= urlencode($symbol) ?>" class="hover:text-emerald-500 transition"><?= htmlspecialchars($symbol) ?></a>
                   <span class="block text-xs text-gray-500"><?= htmlspecialchars($holding['name'] ?? '') ?></span>
                 </td>
-                <td class="px-5 py-4 text-right"><?= number_format($holding['qty'], 4) ?></td>
-                <td class="px-5 py-4 text-right">
+                <td class="px-6 py-4 text-right font-mono text-xs sm:text-sm"><?= $formatQuantity($holding['qty']) ?></td>
+                <td class="px-6 py-4 text-right">
                   <?= moneyfmt($holding['avg_cost'], $holding['currency']) ?>
                 </td>
-                <td class="px-5 py-4 text-right" data-role="holding-last">
+                <td class="px-6 py-4 text-right" data-role="holding-last">
                   <?= $holding['last_price'] !== null ? moneyfmt($holding['last_price'], $holding['currency']) : '<span class="text-xs text-gray-400">stale</span>' ?>
                 </td>
-                <td class="px-5 py-4 text-right">
+                <td class="px-6 py-4 text-right">
                   <div data-role="holding-market"><?= moneyfmt($holding['market_value_base'], $baseCurrency) ?></div>
                   <div class="text-xs text-gray-400" data-role="holding-market-ccy"><?= moneyfmt($holding['market_value_ccy'], $holding['currency']) ?></div>
                 </td>
-                <td class="px-5 py-4 text-right <?= $holding['unrealized_base'] >= 0 ? 'text-emerald-500' : 'text-rose-500' ?>">
+                <td class="px-6 py-4 text-right <?= $holding['unrealized_base'] >= 0 ? 'text-emerald-500' : 'text-rose-500' ?>">
                   <div data-role="holding-unrealized"><?= moneyfmt($holding['unrealized_base'], $baseCurrency) ?></div>
                   <div class="text-xs text-gray-400" data-role="holding-unrealized-ccy"><?= moneyfmt($holding['unrealized_ccy'], $holding['currency']) ?></div>
                   <?php if ($holding['unrealized_pct'] !== null): ?>
                     <div class="text-xs font-medium <?= $holding['unrealized_base'] >= 0 ? 'text-emerald-500' : 'text-rose-500' ?>"><?= number_format($holding['unrealized_pct'], 2) ?>%</div>
                   <?php endif; ?>
                 </td>
-                <td class="px-5 py-4 text-right <?= $holding['day_pl_base'] >= 0 ? 'text-emerald-500' : 'text-rose-500' ?>" data-role="holding-day">
+                <td class="px-6 py-4 text-right <?= $holding['day_pl_base'] >= 0 ? 'text-emerald-500' : 'text-rose-500' ?>" data-role="holding-day">
                   <div><?= moneyfmt($holding['day_pl_base'], $baseCurrency) ?></div>
                   <div class="text-xs text-gray-400"><?= moneyfmt($holding['day_pl_ccy'], $holding['currency']) ?></div>
                 </td>
-                <td class="px-5 py-4 text-right">
+                <td class="px-6 py-4 text-right">
                   <?= number_format($holding['weight_pct'], 2) ?>%
                   <?php if (!empty($holding['risk_note'])): ?>
                     <span class="block text-xs text-rose-500"><?= htmlspecialchars($holding['risk_note']) ?></span>
                   <?php endif; ?>
                 </td>
-                <td class="px-5 py-4 text-left">
+                <td class="px-6 py-4 text-left">
                   <?php if (!empty($suggestions)): ?>
                     <ul class="space-y-1 text-xs text-gray-600 dark:text-gray-300">
                       <?php foreach ($suggestions as $suggestion): ?>
@@ -212,175 +311,64 @@ $formatQuantity = static function ($qty): string {
           </tbody>
         </table>
       </div>
-    </div>
-    <div class="lg:col-span-2 space-y-6">
-      <div class="card p-5 shadow-md bg-white/80 dark:bg-gray-900/40">
-        <h3 class="text-lg font-semibold mb-3">Allocation by ticker</h3>
+    </article>
+    <div class="space-y-6">
+      <article class="rounded-2xl border border-gray-200/70 bg-white/80 p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900/40">
+        <h3 class="text-lg font-semibold mb-3 text-gray-900 dark:text-gray-100">Allocation by ticker</h3>
         <canvas id="allocationTickerChart" height="220"></canvas>
-      </div>
-      <div class="card p-5 shadow-md bg-white/80 dark:bg-gray-900/40">
-        <h3 class="text-lg font-semibold mb-3">Portfolio value</h3>
-        <canvas id="portfolioValueChart" height="220"></canvas>
-      </div>
+      </article>
+      <article class="rounded-2xl border border-gray-200/70 bg-white/80 p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900/40">
+        <h3 class="text-lg font-semibold mb-3 text-gray-900 dark:text-gray-100">Quick actions</h3>
+        <p class="text-sm text-gray-500">Need to adjust cash or rebalance? Use the buttons below.</p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <button type="button" class="btn btn-primary" data-dialog-open="tradeDialog">Record trade</button>
+          <button type="button" class="btn btn-secondary" data-dialog-open="cashDialog">Record cash movement</button>
+          <a href="/stocks/transactions" class="btn btn-ghost">View transactions</a>
+        </div>
+      </article>
     </div>
   </section>
 
-  <section class="card p-5 shadow-md bg-white/80 dark:bg-gray-900/40">
-    <div class="flex items-center justify-between mb-4">
+  <?php if (!empty($watchlist)): ?>
+    <section class="rounded-2xl border border-gray-200/70 bg-white/80 p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900/40">
+      <div class="mb-4 flex items-center justify-between">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Watchlist</h3>
+        <span class="text-xs text-gray-400">Auto-refreshing</span>
+      </div>
+      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" id="watchlistStrip">
+        <?php foreach ($watchlist as $item): ?>
+          <article class="flex flex-col gap-1 rounded-2xl border border-gray-100 bg-white/70 p-4 shadow-sm transition dark:border-gray-800 dark:bg-gray-900/40" data-symbol="<?= htmlspecialchars($item['symbol']) ?>">
+            <div class="flex items-center justify-between">
+              <a href="/stocks/<?= urlencode($item['symbol']) ?>" class="font-semibold text-gray-900 dark:text-gray-100"><?= htmlspecialchars($item['symbol']) ?></a>
+              <span class="text-xs text-gray-500"><?= htmlspecialchars($item['currency']) ?></span>
+            </div>
+            <div class="text-xl font-semibold text-gray-800 dark:text-gray-100" data-role="last">
+              <?= $item['last_price'] !== null ? moneyfmt($item['last_price'], $item['currency']) : '—' ?>
+            </div>
+            <div class="text-xs text-gray-500" data-role="change">Prev: <?= $item['prev_close'] !== null ? moneyfmt($item['prev_close'], $item['currency']) : '—' ?></div>
+          </article>
+        <?php endforeach; ?>
+      </div>
+    </section>
+  <?php endif; ?>
+
+  <section class="rounded-2xl border border-gray-200/70 bg-white/80 p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900/40">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div>
-        <h3 class="text-lg font-semibold">All transactions</h3>
-        <p class="text-xs text-gray-500">Newest orders first, including fractional quantities.</p>
-      </div>
-      <span class="text-xs text-gray-400">Total: <?= count($transactions) ?></span>
-    </div>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm">
-        <thead class="bg-gray-50/70 dark:bg-gray-900/60 text-gray-600 uppercase text-xs tracking-wide">
-          <tr>
-            <th class="px-5 py-3 text-left">Date</th>
-            <th class="px-5 py-3 text-left">Ticker</th>
-            <th class="px-5 py-3 text-left">Side</th>
-            <th class="px-5 py-3 text-right">Quantity</th>
-            <th class="px-5 py-3 text-right">Price</th>
-            <th class="px-5 py-3 text-right">Fee</th>
-            <th class="px-5 py-3 text-right">Total</th>
-            <th class="px-5 py-3 text-left">Note</th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php if (empty($transactions)): ?>
-            <tr>
-              <td colspan="8" class="px-5 py-6 text-center text-gray-500">No trades recorded yet.</td>
-            </tr>
-          <?php endif; ?>
-          <?php foreach ($transactions as $trade):
-            $executedAt = $trade['executed_at'] ?? null;
-            $tradeOn = $trade['trade_on'] ?? null;
-            $timestamp = $executedAt ?: $tradeOn;
-            $displayDate = $timestamp ? date('Y-m-d H:i', strtotime($timestamp)) : '—';
-            $side = strtoupper((string)($trade['side'] ?? ''));
-            $quantityDisplay = $formatQuantity($trade['quantity'] ?? 0);
-            $priceDisplay = moneyfmt((float)($trade['price'] ?? 0), $trade['currency'] ?? 'USD');
-            $feeAmount = (float)($trade['fee'] ?? 0);
-            $feeDisplay = $feeAmount !== 0.0 ? moneyfmt($feeAmount, $trade['currency'] ?? 'USD') : '—';
-            $total = (float)($trade['quantity'] ?? 0) * (float)($trade['price'] ?? 0);
-            $totalDisplay = moneyfmt($total, $trade['currency'] ?? 'USD');
-            $note = $trade['note'] ?? '';
-          ?>
-            <tr class="border-t border-gray-100 dark:border-gray-800">
-              <td class="px-5 py-4 whitespace-nowrap text-gray-600 dark:text-gray-300"><?= htmlspecialchars($displayDate) ?></td>
-              <td class="px-5 py-4 font-semibold text-gray-900 dark:text-gray-100">
-                <?= htmlspecialchars($trade['symbol'] ?? '') ?>
-                <?php if (!empty($trade['name'])): ?>
-                  <span class="block text-xs text-gray-500"><?= htmlspecialchars($trade['name']) ?></span>
-                <?php endif; ?>
-              </td>
-              <td class="px-5 py-4">
-                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium <?= $side === 'BUY' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200' : 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200' ?>">
-                  <?= htmlspecialchars($side) ?>
-                </span>
-              </td>
-              <td class="px-5 py-4 text-right font-mono text-xs sm:text-sm"><?= htmlspecialchars($quantityDisplay) ?></td>
-              <td class="px-5 py-4 text-right"><?= $priceDisplay ?></td>
-              <td class="px-5 py-4 text-right"><?= $feeDisplay ?></td>
-              <td class="px-5 py-4 text-right"><?= $totalDisplay ?></td>
-              <td class="px-5 py-4 text-left text-xs text-gray-500">
-                <?= $note !== '' ? htmlspecialchars($note) : '—' ?>
-              </td>
-            </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <section class="grid lg:grid-cols-2 gap-6">
-    <article class="card p-5 shadow-md bg-white/80 dark:bg-gray-900/40">
-      <h3 class="text-lg font-semibold mb-3">Record trade</h3>
-      <form method="post" action="/stocks/trade" class="grid sm:grid-cols-6 gap-3">
-        <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-        <input name="symbol" placeholder="AAPL" class="input" required />
-        <select name="side" class="input">
-          <option value="BUY">Buy</option>
-          <option value="SELL">Sell</option>
-        </select>
-        <input name="quantity" type="number" step="0.0001" placeholder="Qty" class="input" required />
-        <input name="price" type="number" step="0.0001" placeholder="Price" class="input" required />
-        <select name="currency" class="input">
-          <?php if (!empty($userCurrencies)): ?>
-            <?php $hasSelected = false; ?>
-            <?php foreach ($userCurrencies as $index => $c): ?>
-              <?php
-                $code = strtoupper($c['code']);
-                $isSelected = !empty($c['is_main']) || (!$hasSelected && $index === 0);
-                if ($isSelected) { $hasSelected = true; }
-              ?>
-              <option value="<?= htmlspecialchars($code) ?>" <?= $isSelected ? 'selected' : '' ?>>
-                <?= htmlspecialchars($code) ?>
-              </option>
-            <?php endforeach; ?>
-          <?php else: ?>
-            <option value="USD" selected>USD</option>
-          <?php endif; ?>
-        </select>
-        <input name="fee" type="number" step="0.01" placeholder="Fee" class="input" />
-        <input name="trade_date" type="date" value="<?= date('Y-m-d') ?>" class="input" />
-        <input name="trade_time" type="time" value="<?= date('H:i') ?>" class="input" />
-        <input name="note" placeholder="Note" class="input sm:col-span-2" />
-        <button class="btn btn-primary sm:col-span-6">Save trade</button>
-      </form>
-    </article>
-    <article class="card p-5 shadow-md bg-white/80 dark:bg-gray-900/40">
-      <h3 class="text-lg font-semibold mb-3">Record cash movement</h3>
-      <form method="post" action="/stocks/cash" class="grid sm:grid-cols-6 gap-3">
-        <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-        <select name="cash_action" class="input">
-          <option value="deposit">Add cash</option>
-          <option value="withdraw">Withdraw cash</option>
-        </select>
-        <input name="cash_amount" type="number" step="0.01" placeholder="Amount" class="input sm:col-span-2" required />
-        <select name="cash_currency" class="input">
-          <?php if (!empty($userCurrencies)): ?>
-            <?php $hasCashSelected = false; ?>
-            <?php foreach ($userCurrencies as $index => $c): ?>
-              <?php
-                $code = strtoupper($c['code']);
-                $isSelected = !empty($c['is_main']) || (!$hasCashSelected && $index === 0);
-                if ($isSelected) { $hasCashSelected = true; }
-              ?>
-              <option value="<?= htmlspecialchars($code) ?>" <?= $isSelected ? 'selected' : '' ?>>
-                <?= htmlspecialchars($code) ?>
-              </option>
-            <?php endforeach; ?>
-          <?php else: ?>
-            <option value="USD" selected>USD</option>
-          <?php endif; ?>
-        </select>
-        <input name="cash_date" type="date" value="<?= date('Y-m-d') ?>" class="input" />
-        <input name="cash_time" type="time" value="<?= date('H:i') ?>" class="input" />
-        <input name="cash_note" placeholder="Note" class="input sm:col-span-3" />
-        <button class="btn btn-secondary sm:col-span-6">Save cash entry</button>
-      </form>
-    </article>
-  </section>
-
-  <section class="card p-5 shadow-md bg-white/80 dark:bg-gray-900/40">
-    <div class="flex items-start justify-between gap-4 mb-4">
-      <div>
-        <h3 class="text-lg font-semibold">Import trades from CSV</h3>
-        <p class="text-xs text-gray-500">Upload broker exports to backfill BUY/SELL activity. Cash top-ups, withdrawals, and dividends are kept out of positions automatically.</p>
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Import trades from CSV</h3>
+        <p class="text-xs text-gray-500">Upload broker exports to backfill BUY/SELL activity. Cash top-ups, withdrawals, dividends, and fees are reconciled automatically.</p>
       </div>
       <form method="post" action="/stocks/clear" onsubmit="return confirm('Clear all recorded stock trades? This cannot be undone.');" class="shrink-0">
         <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
         <button class="btn btn-danger">Clear history</button>
       </form>
     </div>
-    <form method="post" action="/stocks/import" enctype="multipart/form-data" class="space-y-3" id="stocksCsvForm">
+    <form method="post" action="/stocks/import" enctype="multipart/form-data" class="mt-4 space-y-3" id="stocksCsvForm">
       <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
       <input type="file" name="csv" accept=".csv,text/csv" class="input" required />
       <p class="text-xs text-gray-500">We match columns named Date, Ticker/Symbol, Type, Quantity, Price per share, Total Amount, Currency, and Fee when available.</p>
       <button class="btn btn-secondary">Upload CSV</button>
-      <div class="hidden rounded-lg border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-100" data-role="csv-progress">
+      <div class="hidden rounded-xl border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-100" data-role="csv-progress">
         <div class="flex items-center justify-between mb-2">
           <span data-role="csv-progress-text">Preparing upload…</span>
           <span data-role="csv-progress-value">0%</span>
@@ -389,7 +377,7 @@ $formatQuantity = static function ($qty): string {
           <div class="h-full w-0 rounded-full bg-emerald-500 transition-all duration-300" data-role="csv-progress-bar"></div>
         </div>
       </div>
-      <div class="hidden rounded-lg border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-100" data-role="csv-server-progress">
+      <div class="hidden rounded-xl border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-100" data-role="csv-server-progress">
         <div class="flex items-center justify-between mb-2">
           <span data-role="csv-server-text">Reconciling portfolio…</span>
           <span data-role="csv-server-value">0%</span>
@@ -400,27 +388,95 @@ $formatQuantity = static function ($qty): string {
       </div>
     </form>
   </section>
-
-  <?php if (!empty($watchlist)): ?>
-  <section class="card p-5 shadow-md bg-white/80 dark:bg-gray-900/40">
-    <h3 class="text-lg font-semibold mb-4">Watchlist</h3>
-    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4" id="watchlistStrip">
-      <?php foreach ($watchlist as $item): ?>
-        <article class="p-4 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white/60 dark:bg-gray-900/40 shadow-sm flex flex-col gap-1" data-symbol="<?= htmlspecialchars($item['symbol']) ?>">
-          <div class="flex items-center justify-between">
-            <a href="/stocks/<?= urlencode($item['symbol']) ?>" class="font-semibold text-gray-900 dark:text-gray-100"><?= htmlspecialchars($item['symbol']) ?></a>
-            <span class="text-xs text-gray-500"><?= htmlspecialchars($item['currency']) ?></span>
-          </div>
-          <div class="text-xl font-semibold text-gray-800 dark:text-gray-100" data-role="last">
-            <?= $item['last_price'] !== null ? moneyfmt($item['last_price'], $item['currency']) : '—' ?>
-          </div>
-          <div class="text-xs text-gray-500" data-role="change">Prev: <?= $item['prev_close'] !== null ? moneyfmt($item['prev_close'], $item['currency']) : '—' ?></div>
-        </article>
-      <?php endforeach; ?>
-    </div>
-  </section>
-  <?php endif; ?>
 </section>
+
+<div class="dialog hidden" id="tradeDialog" role="dialog" aria-modal="true" aria-labelledby="tradeDialogTitle">
+  <div class="dialog-backdrop" data-dialog-close></div>
+  <div class="dialog-panel">
+    <div class="dialog-header">
+      <h2 id="tradeDialogTitle" class="text-lg font-semibold text-gray-900 dark:text-gray-100">Record trade</h2>
+      <button type="button" class="dialog-close" data-dialog-close>&times;</button>
+    </div>
+    <form method="post" action="/stocks/trade" class="grid gap-3 sm:grid-cols-6">
+      <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+      <input name="symbol" placeholder="AAPL" class="input sm:col-span-2" required />
+      <select name="side" class="input">
+        <option value="BUY">Buy</option>
+        <option value="SELL">Sell</option>
+      </select>
+      <input name="quantity" type="number" step="0.0001" placeholder="Qty" class="input" required />
+      <input name="price" type="number" step="0.0001" placeholder="Price" class="input" required />
+      <select name="currency" class="input">
+        <?php if (!empty($userCurrencies)): ?>
+          <?php $hasSelected = false; ?>
+          <?php foreach ($userCurrencies as $index => $c): ?>
+            <?php
+              $code = strtoupper($c['code']);
+              $isSelected = !empty($c['is_main']) || (!$hasSelected && $index === 0);
+              if ($isSelected) { $hasSelected = true; }
+            ?>
+            <option value="<?= htmlspecialchars($code) ?>" <?= $isSelected ? 'selected' : '' ?>><?= htmlspecialchars($code) ?></option>
+          <?php endforeach; ?>
+        <?php else: ?>
+          <option value="USD" selected>USD</option>
+        <?php endif; ?>
+      </select>
+      <input name="fee" type="number" step="0.01" placeholder="Fee" class="input" />
+      <input name="trade_date" type="date" value="<?= date('Y-m-d') ?>" class="input" />
+      <input name="trade_time" type="time" value="<?= date('H:i') ?>" class="input" />
+      <input name="note" placeholder="Note" class="input sm:col-span-3" />
+      <button class="btn btn-primary sm:col-span-6">Save trade</button>
+    </form>
+  </div>
+</div>
+
+<div class="dialog hidden" id="cashDialog" role="dialog" aria-modal="true" aria-labelledby="cashDialogTitle">
+  <div class="dialog-backdrop" data-dialog-close></div>
+  <div class="dialog-panel">
+    <div class="dialog-header">
+      <h2 id="cashDialogTitle" class="text-lg font-semibold text-gray-900 dark:text-gray-100">Record cash movement</h2>
+      <button type="button" class="dialog-close" data-dialog-close>&times;</button>
+    </div>
+    <form method="post" action="/stocks/cash" class="grid gap-3 sm:grid-cols-6">
+      <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+      <select name="cash_action" class="input">
+        <option value="deposit">Add cash</option>
+        <option value="withdraw">Withdraw cash</option>
+      </select>
+      <input name="cash_amount" type="number" step="0.01" placeholder="Amount" class="input sm:col-span-2" required />
+      <select name="cash_currency" class="input">
+        <?php if (!empty($userCurrencies)): ?>
+          <?php $hasCashSelected = false; ?>
+          <?php foreach ($userCurrencies as $index => $c): ?>
+            <?php
+              $code = strtoupper($c['code']);
+              $isSelected = !empty($c['is_main']) || (!$hasCashSelected && $index === 0);
+              if ($isSelected) { $hasCashSelected = true; }
+            ?>
+            <option value="<?= htmlspecialchars($code) ?>" <?= $isSelected ? 'selected' : '' ?>><?= htmlspecialchars($code) ?></option>
+          <?php endforeach; ?>
+        <?php else: ?>
+          <option value="USD" selected>USD</option>
+        <?php endif; ?>
+      </select>
+      <input name="cash_date" type="date" value="<?= date('Y-m-d') ?>" class="input" />
+      <input name="cash_time" type="time" value="<?= date('H:i') ?>" class="input" />
+      <input name="cash_note" placeholder="Note" class="input sm:col-span-3" />
+      <button class="btn btn-secondary sm:col-span-6">Save cash entry</button>
+    </form>
+  </div>
+</div>
+
+<style>
+  .dialog { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; }
+  .dialog.hidden { display: none; }
+  .dialog-backdrop { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(2px); }
+  .dialog-panel { position: relative; width: min(600px, 92vw); max-height: 90vh; overflow-y: auto; border-radius: 1.25rem; background: var(--color-surface, rgba(255,255,255,0.98)); padding: 1.75rem; box-shadow: 0 35px 60px -25px rgba(15, 23, 42, 0.45); }
+  .dark .dialog-panel { background: rgba(15, 23, 42, 0.92); }
+  .dialog-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+  .dialog-close { width: 2.5rem; height: 2.5rem; border-radius: 9999px; font-size: 1.5rem; line-height: 1; display: inline-flex; align-items: center; justify-content: center; color: rgba(100,116,139,0.8); background: rgba(148,163,184,0.12); }
+  .dialog-close:hover { background: rgba(148,163,184,0.2); }
+</style>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" crossorigin="anonymous"></script>
 <script>
@@ -428,9 +484,11 @@ $formatQuantity = static function ($qty): string {
   const allocationData = <?= json_encode($allocations['by_ticker']) ?>;
   const portfolioSeries = <?= json_encode($portfolioChart['series']) ?>;
   const portfolioLabels = <?= json_encode($portfolioChart['labels']) ?>;
-  const holdings = <?= json_encode(array_map(fn($h)=>$h['symbol'], $holdings)) ?>;
-  const watchlist = <?= json_encode(array_map(fn($w)=>$w['symbol'], $watchlist)) ?>;
+  const holdings = <?= json_encode(array_map(static fn($h) => $h['symbol'], $holdings)) ?>;
+  const watchlist = <?= json_encode(array_map(static fn($w) => $w['symbol'], $watchlist)) ?>;
   const refreshSeconds = <?= (int)$refreshSeconds ?> * 1000;
+  const chartCurrency = <?= json_encode($baseCurrency) ?>;
+  const cashSeries = <?= json_encode(array_fill(0, count($portfolioChart['series']), (float)$totals['cash_balance'])) ?>;
 
   const allocationCtx = document.getElementById('allocationTickerChart');
   if (allocationCtx && allocationData.length) {
@@ -442,38 +500,116 @@ $formatQuantity = static function ($qty): string {
         labels,
         datasets: [{
           data,
-          backgroundColor: labels.map((_, idx) => `rgba(76, 175, 80, ${0.8 - idx * 0.05})`)
+          backgroundColor: labels.map((_, idx) => `rgba(94, 234, 212, ${0.85 - idx * 0.05})`),
+          borderWidth: 0,
+          hoverOffset: 6
         }]
       },
       options: {
-        plugins: { legend: { position: 'bottom' } }
+        plugins: { legend: { position: 'bottom', labels: { color: '#4b5563' } } }
       }
     });
   }
 
-  const valueCtx = document.getElementById('portfolioValueChart');
-  if (valueCtx && portfolioSeries.length) {
-    new Chart(valueCtx, {
+  const valueCanvas = document.getElementById('portfolioValueChart');
+  let contributionVisible = false;
+  if (valueCanvas && portfolioSeries.length) {
+    const ctx = valueCanvas.getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, valueCanvas.height);
+    gradient.addColorStop(0, 'rgba(16, 185, 129, 0.45)');
+    gradient.addColorStop(1, 'rgba(16, 185, 129, 0.05)');
+    const cashGradient = ctx.createLinearGradient(0, 0, 0, valueCanvas.height);
+    cashGradient.addColorStop(0, 'rgba(59, 130, 246, 0.35)');
+    cashGradient.addColorStop(1, 'rgba(59, 130, 246, 0.05)');
+
+    const formatCurrency = value => new Intl.NumberFormat(undefined, { style: 'currency', currency: chartCurrency }).format(value);
+
+    const chart = new Chart(valueCanvas, {
       type: 'line',
       data: {
         labels: portfolioLabels,
         datasets: [{
+          label: 'Portfolio',
           data: portfolioSeries,
           borderColor: '#34d399',
+          backgroundColor: gradient,
+          tension: 0.35,
+          fill: true,
+          pointRadius: 0,
+          spanGaps: true
+        }, {
+          label: 'Cash',
+          data: cashSeries,
+          borderColor: '#3b82f6',
+          backgroundColor: cashGradient,
           tension: 0.3,
           fill: true,
-          backgroundColor: 'rgba(52, 211, 153, 0.12)'
+          pointRadius: 0,
+          spanGaps: true,
+          hidden: true
         }]
       },
       options: {
+        responsive: true,
         scales: {
           x: { display: false },
-          y: { ticks: { callback: value => new Intl.NumberFormat(undefined, { style: 'currency', currency: '<?= $baseCurrency ?>' }).format(value) } }
+          y: {
+            grid: { color: 'rgba(255,255,255,0.08)' },
+            ticks: {
+              color: 'rgba(255,255,255,0.6)',
+              callback: value => formatCurrency(value)
+            }
+          }
         },
-        plugins: { legend: { display: false } }
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: context => `${context.dataset.label}: ${formatCurrency(context.parsed.y || 0)}`
+            }
+          }
+        }
       }
     });
+
+    const contributionsToggle = document.querySelector('[data-role="chart-contributions"]');
+    if (contributionsToggle) {
+      contributionsToggle.addEventListener('change', () => {
+        contributionVisible = !contributionVisible;
+        chart.data.datasets[1].hidden = !contributionVisible;
+        chart.update();
+      });
+    }
   }
+
+  const openDialog = (id) => {
+    const dialog = document.getElementById(id);
+    if (!dialog) return;
+    dialog.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+  };
+
+  const closeDialog = (dialog) => {
+    dialog.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+  };
+
+  document.querySelectorAll('[data-dialog-open]').forEach(trigger => {
+    trigger.addEventListener('click', () => openDialog(trigger.getAttribute('data-dialog-open')));
+  });
+
+  document.querySelectorAll('[data-dialog-close]').forEach(closeBtn => {
+    closeBtn.addEventListener('click', () => closeDialog(closeBtn.closest('.dialog')));
+  });
+
+  document.querySelectorAll('.dialog').forEach(dialog => {
+    dialog.addEventListener('click', (evt) => {
+      if (evt.target === dialog.querySelector('.dialog-backdrop')) {
+        closeDialog(dialog);
+      }
+    });
+  });
 
   const symbols = Array.from(new Set([...holdings, ...watchlist]));
   const panels = document.querySelectorAll('#watchlistStrip [data-symbol]');
@@ -567,168 +703,91 @@ $formatQuantity = static function ($qty): string {
       }
       serverStarted = false;
       serverGauge = 0;
-      if (serverBox) {
-        serverBox.classList.add('hidden');
-      }
+      if (serverBox) serverBox.classList.add('hidden');
       if (serverBar) {
         serverBar.style.width = '0%';
         serverBar.classList.remove('bg-rose-500');
         serverBar.classList.add('bg-emerald-500');
       }
-      if (serverValue) {
-        serverValue.textContent = '0%';
-      }
-      if (serverText) {
-        serverText.textContent = 'Reconciling portfolio…';
-      }
+      if (serverValue) serverValue.textContent = '0%';
+      if (serverText) serverText.textContent = 'Reconciling portfolio…';
     };
 
     const beginServerProgress = (message) => {
-      if (serverTimer) {
-        clearInterval(serverTimer);
-      }
+      if (serverTimer) clearInterval(serverTimer);
       serverStarted = true;
       serverGauge = 10;
-      if (serverBox) {
-        serverBox.classList.remove('hidden');
-      }
+      if (serverBox) serverBox.classList.remove('hidden');
       if (serverBar) {
         serverBar.style.width = serverGauge + '%';
         serverBar.classList.remove('bg-rose-500');
         serverBar.classList.add('bg-emerald-500');
       }
-      if (serverValue) {
-        serverValue.textContent = serverGauge + '%';
-      }
-      if (serverText) {
-        serverText.textContent = message || 'Reconciling portfolio…';
-      }
-      serverTimer = window.setInterval(() => {
-        if (serverGauge >= 92) {
-          return;
-        }
-        serverGauge = Math.min(92, serverGauge + Math.floor(Math.random() * 6) + 1);
-        if (serverBar) {
-          serverBar.style.width = serverGauge + '%';
-        }
-        if (serverValue) {
-          serverValue.textContent = serverGauge + '%';
+      if (serverValue) serverValue.textContent = serverGauge + '%';
+      if (serverText && message) serverText.textContent = message;
+      serverTimer = setInterval(() => {
+        if (serverGauge < 90) {
+          serverGauge += 3;
+          if (serverBar) serverBar.style.width = serverGauge + '%';
+          if (serverValue) serverValue.textContent = serverGauge + '%';
         }
       }, 500);
     };
 
-    const finishServerProgress = (message, isError, forceShow = false) => {
-      if (!serverStarted && !forceShow) {
-        return;
-      }
-      if (serverTimer) {
-        clearInterval(serverTimer);
-        serverTimer = null;
-      }
-      if (serverBox) {
-        serverBox.classList.remove('hidden');
-      }
-      if (serverBar) {
-        serverBar.style.width = '100%';
-        serverBar.classList.remove('bg-emerald-500', 'bg-rose-500');
-        serverBar.classList.add(isError ? 'bg-rose-500' : 'bg-emerald-500');
-      }
-      if (serverValue) {
-        serverValue.textContent = '100%';
-      }
-      if (serverText) {
-        serverText.textContent = message || (isError ? 'Import failed.' : 'Finishing up…');
-      }
-      serverStarted = true;
-    };
-
-    const setUploadBar = (width, text, isError = false) => {
-      if (uploadBar) {
-        uploadBar.style.width = width;
-        uploadBar.classList.remove('bg-emerald-500', 'bg-rose-500');
-        uploadBar.classList.add(isError ? 'bg-rose-500' : 'bg-emerald-500');
-      }
-      if (uploadValue) {
-        uploadValue.textContent = width;
-      }
-      if (uploadText) {
-        uploadText.textContent = text;
-      }
-    };
-
-    csvForm.addEventListener('submit', (event) => {
-      if (csvForm.dataset.uploading === '1') {
-        event.preventDefault();
-        return;
-      }
-
-      event.preventDefault();
+    csvForm.addEventListener('submit', async (evt) => {
+      evt.preventDefault();
       const formData = new FormData(csvForm);
-      const xhr = new XMLHttpRequest();
-      csvForm.dataset.uploading = '1';
+      if (uploadBox) uploadBox.classList.remove('hidden');
+      if (uploadBar) uploadBar.style.width = '10%';
+      if (uploadValue) uploadValue.textContent = '10%';
+      if (uploadText) uploadText.textContent = 'Uploading…';
 
-      if (uploadBox) {
-        uploadBox.classList.remove('hidden');
-      }
-      resetServerProgress();
-      setUploadBar('5%', 'Uploading CSV…');
-      if (uploadValue) {
-        uploadValue.textContent = '0%';
-      }
-
-      xhr.open('POST', '/stocks/import');
-      xhr.setRequestHeader('Accept', 'application/json');
-
-      xhr.upload.addEventListener('progress', (e) => {
-        if (!e.lengthComputable) {
-          return;
-        }
-        const percent = Math.min(95, Math.round((e.loaded / e.total) * 90));
-        if (uploadBar) {
-          uploadBar.style.width = percent + '%';
-        }
-        if (uploadValue) {
-          uploadValue.textContent = percent + '%';
-        }
-        if (uploadText) {
-          uploadText.textContent = 'Processing trades…';
-        }
-      });
-
-      xhr.upload.addEventListener('load', () => {
+      try {
         beginServerProgress('Reconciling portfolio…');
-      });
-
-      const handleFailure = (message) => {
-        setUploadBar('100%', message || 'Upload failed. Please try again.', true);
-        finishServerProgress(message || 'Import failed.', true, true);
-        csvForm.dataset.uploading = '0';
-      };
-
-      xhr.addEventListener('error', () => handleFailure('Network error while uploading.'));
-
-      xhr.addEventListener('load', () => {
-        let response = null;
-        try {
-          response = xhr.responseText ? JSON.parse(xhr.responseText) : null;
-        } catch (err) {
-          response = null;
+        const resp = await fetch(csvForm.action, {
+          method: 'POST',
+          body: formData,
+          headers: { 'Accept': 'application/json' }
+        });
+        const payload = await resp.json();
+        if (uploadBar) uploadBar.style.width = '100%';
+        if (uploadValue) uploadValue.textContent = '100%';
+        if (serverTimer) {
+          clearInterval(serverTimer);
+          serverTimer = null;
         }
-
-        if (xhr.status < 200 || xhr.status >= 300 || !response || response.success === false) {
-          handleFailure(response && response.message ? response.message : 'Import failed.');
-          return;
-        }
-
-        setUploadBar('100%', response.message || 'Upload complete.', false);
-        finishServerProgress(response.processing_message || 'Rebuilding portfolio…', false, true);
-
-        setTimeout(() => {
+        if (serverBar) serverBar.style.width = '100%';
+        if (serverValue) serverValue.textContent = '100%';
+        if (serverText) serverText.textContent = 'Portfolio updated';
+        if (!resp.ok) {
+          if (serverBar) {
+            serverBar.classList.remove('bg-emerald-500');
+            serverBar.classList.add('bg-rose-500');
+          }
+          alert(payload && payload.message ? payload.message : 'Import failed');
+        } else {
+          alert(payload && payload.message ? payload.message : 'Import completed');
           window.location.reload();
-        }, 800);
-      });
-
-      xhr.send(formData);
+        }
+      } catch (error) {
+        console.error('Import failed', error);
+        if (serverTimer) {
+          clearInterval(serverTimer);
+          serverTimer = null;
+        }
+        if (serverBar) {
+          serverBar.style.width = '100%';
+          serverBar.classList.remove('bg-emerald-500');
+          serverBar.classList.add('bg-rose-500');
+        }
+        if (serverText) serverText.textContent = 'Upload failed';
+        alert('Import failed. Please try again.');
+      } finally {
+        setTimeout(() => {
+          if (uploadBox) uploadBox.classList.add('hidden');
+          resetServerProgress();
+        }, 1500);
+      }
     });
   }
 })();
