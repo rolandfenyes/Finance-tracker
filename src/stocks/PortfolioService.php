@@ -51,6 +51,13 @@ class PortfolioService
      */
     private array $columnCache = [];
 
+    /**
+     * Cached FX rates for the current overview build keyed by "FROM->TO@DATE".
+     *
+     * @var array<string,float>
+     */
+    private array $fxRateCache = [];
+
     public function __construct(PDO $pdo, PriceDataService $priceDataService, ?CashService $cashService = null, ?string $cacheDir = null, ?int $cacheTtl = null)
     {
         $this->pdo = $pdo;
@@ -93,6 +100,8 @@ class PortfolioService
             }
         }
 
+        $this->fxRateCache = [];
+
         $positions = $this->loadPositions($userId, $filters);
         $watchlistRows = $this->loadWatchlistRows($userId);
 
@@ -122,14 +131,14 @@ class PortfolioService
             $last = $quote['last'] ?? null;
             $prevClose = $quote['prev_close'] ?? null;
             $marketValueCcy = $last !== null ? $qty * $last : $qty * $avgCost;
-            $marketValueBase = fx_convert($this->pdo, $marketValueCcy, $currency, $baseCurrency, $today);
+            $marketValueBase = $this->convertCached($marketValueCcy, $currency, $baseCurrency, $today);
             $costCcy = $qty * $avgCost;
-            $costBase = fx_convert($this->pdo, $costCcy, $currency, $baseCurrency, $today);
+            $costBase = $this->convertCached($costCcy, $currency, $baseCurrency, $today);
             $unrealizedCcy = $last !== null ? ($last - $avgCost) * $qty : 0.0;
-            $unrealizedBase = fx_convert($this->pdo, $unrealizedCcy, $currency, $baseCurrency, $today);
+            $unrealizedBase = $this->convertCached($unrealizedCcy, $currency, $baseCurrency, $today);
             $dayPlCcy = ($last !== null && $prevClose !== null) ? ($last - $prevClose) * $qty : 0.0;
-            $dayPlBase = fx_convert($this->pdo, $dayPlCcy, $currency, $baseCurrency, $today);
-            $cashImpactBase += fx_convert($this->pdo, (float)$row['cash_impact_ccy'], $currency, $baseCurrency, $today);
+            $dayPlBase = $this->convertCached($dayPlCcy, $currency, $baseCurrency, $today);
+            $cashImpactBase += $this->convertCached((float)$row['cash_impact_ccy'], $currency, $baseCurrency, $today);
 
             $marketByCurrency[$currency] = ($marketByCurrency[$currency] ?? 0.0) + $marketValueCcy;
             $unrealizedByCurrency[$currency] = ($unrealizedByCurrency[$currency] ?? 0.0) + $unrealizedCcy;
@@ -170,7 +179,7 @@ class PortfolioService
         $cashBalanceBase = 0.0;
         $cashTotals = $this->cashService->sumByCurrency($userId);
         foreach ($cashTotals as $currencyCode => $amount) {
-            $converted = fx_convert($this->pdo, $amount, $currencyCode, $baseCurrency, $today);
+            $converted = $this->convertCached($amount, $currencyCode, $baseCurrency, $today);
             $cashEntries[] = [
                 'currency' => $currencyCode,
                 'amount' => $amount,
@@ -344,6 +353,26 @@ class PortfolioService
         }
 
         file_put_contents($file, $json, LOCK_EX);
+    }
+
+    private function convertCached(float $amount, string $fromCurrency, string $toCurrency, string $date): float
+    {
+        $from = strtoupper($fromCurrency);
+        $to = strtoupper($toCurrency);
+        if ($from === $to) {
+            return $amount;
+        }
+
+        $cacheKey = $from . '->' . $to . '@' . $date;
+        if (!array_key_exists($cacheKey, $this->fxRateCache)) {
+            $rate = fx_rate_from_to($this->pdo, $from, $to, $date);
+            if ($rate === null) {
+                $rate = fx_convert($this->pdo, 1.0, $from, $to, $date);
+            }
+            $this->fxRateCache[$cacheKey] = (float)$rate;
+        }
+
+        return $amount * $this->fxRateCache[$cacheKey];
     }
 
     /**
@@ -679,14 +708,13 @@ class PortfolioService
         if (!$rows) {
             return [];
         }
-        require_once __DIR__ . '/../fx.php';
         $watchlist = [];
         foreach ($rows as $row) {
             $symbol = $row['symbol'];
             $quote = $quotesBySymbol[$symbol] ?? null;
             $last = $quote['last'] ?? null;
             $currency = $row['currency'] ?? 'USD';
-            $lastBase = $last !== null ? fx_convert($this->pdo, $last, $currency, $baseCurrency, $today) : null;
+            $lastBase = $last !== null ? $this->convertCached((float)$last, $currency, $baseCurrency, $today) : null;
             $watchlist[] = [
                 'symbol' => $symbol,
                 'name' => $row['name'] ?? $symbol,
