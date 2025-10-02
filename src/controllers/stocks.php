@@ -195,13 +195,15 @@ function stocks_import(PDO $pdo): void
         return;
     }
 
+    $delimiter = stocks_import_detect_delimiter($tmpName);
+
     $handle = fopen($tmpName, 'r');
     if (!$handle) {
         $_SESSION['flash'] = 'Could not read the uploaded file.';
         return;
     }
 
-    $headerRow = fgetcsv($handle);
+    $headerRow = fgetcsv($handle, 0, $delimiter, '"', '\\');
     if ($headerRow === false) {
         fclose($handle);
         $_SESSION['flash'] = 'The CSV file appears to be empty.';
@@ -222,7 +224,7 @@ function stocks_import(PDO $pdo): void
     $skipSamples = [];
     $ignoreSamples = [];
 
-    while (($row = fgetcsv($handle)) !== false) {
+    while (($row = fgetcsv($handle, 0, $delimiter, '"', '\\')) !== false) {
         if (stocks_import_row_is_empty($row)) {
             continue;
         }
@@ -526,6 +528,34 @@ function stocks_refresh_default(): int
     global $config;
     $value = (int)($config['stocks']['refresh_seconds'] ?? 10);
     return max(5, $value);
+}
+
+function stocks_import_detect_delimiter(string $filePath): string
+{
+    $candidates = [',', ';', "\t", '|'];
+    $handle = @fopen($filePath, 'r');
+    if (!$handle) {
+        return ',';
+    }
+
+    $sample = fgets($handle);
+    fclose($handle);
+
+    if ($sample === false) {
+        return ',';
+    }
+
+    $best = ',';
+    $bestCount = 0;
+    foreach ($candidates as $candidate) {
+        $count = substr_count($sample, $candidate);
+        if ($count > $bestCount) {
+            $best = $candidate;
+            $bestCount = $count;
+        }
+    }
+
+    return $best;
 }
 
 /**
