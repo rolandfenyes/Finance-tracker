@@ -16,6 +16,28 @@ class PortfolioService
     private CashService $cashService;
 
     /**
+     * Directory where serialized overview caches are stored.
+     */
+    private ?string $cacheDir = null;
+
+    /**
+     * Cache lifetime in seconds.
+     */
+    private int $cacheTtl = 0;
+
+    /**
+     * Whether disk-based caching is enabled.
+     */
+    private bool $cacheEnabled = false;
+
+    /**
+     * Simple in-request cache for repeated overview calls.
+     *
+     * @var array<string,array>
+     */
+    private array $runtimeCache = [];
+
+    /**
      * Cached table existence lookups to avoid repeated information_schema hits.
      *
      * @var array<string,bool>
@@ -29,11 +51,22 @@ class PortfolioService
      */
     private array $columnCache = [];
 
-    public function __construct(PDO $pdo, PriceDataService $priceDataService, ?CashService $cashService = null)
+    public function __construct(PDO $pdo, PriceDataService $priceDataService, ?CashService $cashService = null, ?string $cacheDir = null, ?int $cacheTtl = null)
     {
         $this->pdo = $pdo;
         $this->priceDataService = $priceDataService;
         $this->cashService = $cashService ?? new CashService($pdo);
+        if ($cacheDir !== null && $cacheDir !== '') {
+            $normalized = rtrim($cacheDir, DIRECTORY_SEPARATOR);
+            if (!is_dir($normalized)) {
+                @mkdir($normalized, 0775, true);
+            }
+            if (is_dir($normalized) && is_writable($normalized)) {
+                $this->cacheDir = $normalized;
+                $this->cacheTtl = max(0, (int)($cacheTtl ?? 0));
+                $this->cacheEnabled = $this->cacheTtl > 0;
+            }
+        }
     }
 
     /**
@@ -42,8 +75,22 @@ class PortfolioService
      */
     public function buildOverview(int $userId, array $filters = [], bool $includeTransactions = false): array
     {
+        $cacheKey = $this->cacheKey($userId, $filters, $includeTransactions);
+        if (isset($this->runtimeCache[$cacheKey])) {
+            return $this->runtimeCache[$cacheKey];
+        }
+
         $baseCurrency = fx_user_main($this->pdo, $userId) ?: 'EUR';
         $today = (new DateTime())->format('Y-m-d');
+
+        $shouldUseDiskCache = $this->cacheEnabled && !$includeTransactions;
+        if ($shouldUseDiskCache) {
+            $cached = $this->readCache($cacheKey);
+            if ($cached !== null) {
+                $this->runtimeCache[$cacheKey] = $cached;
+                return $cached;
+            }
+        }
 
         $positions = $this->loadPositions($userId, $filters);
         $watchlistRows = $this->loadWatchlistRows($userId);
@@ -156,7 +203,7 @@ class PortfolioService
         $watchlist = $this->buildWatchlist($watchlistRows, $quotesBySymbol, $baseCurrency, $today);
         $transactions = $includeTransactions ? $this->loadTransactions($userId) : [];
 
-        return [
+        $snapshot = [
             'totals' => $overviewTotals,
             'holdings' => $holdings,
             'allocations' => $allocations,
@@ -164,6 +211,13 @@ class PortfolioService
             'cash' => $cashEntries,
             'trades' => $transactions,
         ];
+
+        $this->runtimeCache[$cacheKey] = $snapshot;
+        if ($shouldUseDiskCache) {
+            $this->writeCache($cacheKey, $snapshot);
+        }
+
+        return $snapshot;
     }
 
     /**
@@ -174,6 +228,85 @@ class PortfolioService
     public function listTransactions(int $userId): array
     {
         return $this->loadTransactions($userId);
+    }
+
+    public function invalidateOverviewCache(int $userId): void
+    {
+        $prefix = $this->cacheKeyPrefix($userId);
+        foreach (array_keys($this->runtimeCache) as $key) {
+            if (strpos($key, $prefix) === 0) {
+                unset($this->runtimeCache[$key]);
+            }
+        }
+
+        if ($this->cacheDir === null) {
+            return;
+        }
+
+        $pattern = $this->cacheDir . DIRECTORY_SEPARATOR . $prefix . '*.json';
+        $files = glob($pattern) ?: [];
+        foreach ($files as $file) {
+            if (is_file($file)) {
+                @unlink($file);
+            }
+        }
+    }
+
+    private function cacheKey(int $userId, array $filters, bool $includeTransactions): string
+    {
+        ksort($filters);
+        return sprintf('%s%s_%s', $this->cacheKeyPrefix($userId), $includeTransactions ? 'with_tx' : 'summary', sha1(json_encode($filters)));
+    }
+
+    private function cacheKeyPrefix(int $userId): string
+    {
+        return 'overview_' . $userId . '_';
+    }
+
+    private function cacheFile(string $cacheKey): ?string
+    {
+        if (!$this->cacheEnabled || $this->cacheDir === null) {
+            return null;
+        }
+
+        return $this->cacheDir . DIRECTORY_SEPARATOR . $cacheKey . '.json';
+    }
+
+    private function readCache(string $cacheKey): ?array
+    {
+        $file = $this->cacheFile($cacheKey);
+        if ($file === null || !is_file($file)) {
+            return null;
+        }
+
+        $modified = filemtime($file);
+        if ($modified === false || $modified + $this->cacheTtl <= time()) {
+            @unlink($file);
+            return null;
+        }
+
+        $raw = file_get_contents($file);
+        if ($raw === false || $raw === '') {
+            return null;
+        }
+
+        $data = json_decode($raw, true);
+        return is_array($data) ? $data : null;
+    }
+
+    private function writeCache(string $cacheKey, array $payload): void
+    {
+        $file = $this->cacheFile($cacheKey);
+        if ($file === null) {
+            return;
+        }
+
+        $json = json_encode($payload, JSON_PRESERVE_ZERO_FRACTION);
+        if ($json === false) {
+            return;
+        }
+
+        file_put_contents($file, $json, LOCK_EX);
     }
 
     /**

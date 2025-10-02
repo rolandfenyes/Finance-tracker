@@ -8,6 +8,8 @@ Set the following environment variables (or edit `config/config.php`):
 
 - `STOCKS_PROVIDER` – provider key (`null`, `finnhub`, ...). Defaults to `null` which disables remote quotes.
 - `STOCKS_REFRESH_SECONDS` – polling interval for live quotes (default `10`).
+- `STOCKS_OVERVIEW_CACHE_SECONDS` – how long (in seconds) to reuse the cached `/stocks` overview snapshot before rebuilding it (default `20`, set to `0` to disable).
+- `STOCKS_OVERVIEW_CACHE_DIR` – directory for persisted overview cache files (defaults to `storage/cache/stocks`). Ensure the PHP process can write to it.
 - `FINNHUB_API_KEY` – required when `STOCKS_PROVIDER=finnhub`.
 - `FINNHUB_BASE_URL` – optional override for the Finnhub API base URL.
 

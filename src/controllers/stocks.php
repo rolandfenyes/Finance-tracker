@@ -26,8 +26,7 @@ function stocks_index(PDO $pdo): void
     require_login();
     $userId = uid();
     $priceService = stocks_price_service($pdo);
-    $cashService = new CashService($pdo);
-    $portfolio = new PortfolioService($pdo, $priceService, $cashService);
+    $portfolio = stocks_portfolio_service($pdo);
     $signalsService = new SignalsService($pdo, $priceService);
     $chartsService = new ChartsService($pdo, $priceService);
 
@@ -83,8 +82,7 @@ function stocks_transactions(PDO $pdo): void
     require_login();
     $userId = uid();
     $priceService = stocks_price_service($pdo);
-    $cashService = new CashService($pdo);
-    $portfolio = new PortfolioService($pdo, $priceService, $cashService);
+    $portfolio = stocks_portfolio_service($pdo);
 
     $transactions = $portfolio->listTransactions($userId);
     $baseCurrency = fx_user_main($pdo, $userId) ?: 'EUR';
@@ -196,6 +194,7 @@ function stocks_trade(PDO $pdo): void
     ];
     try {
         $tradeService->recordTrade($userId, $payload);
+        stocks_portfolio_service($pdo)->invalidateOverviewCache($userId);
         $destination = '/stocks/' . urlencode($symbol);
         if (!stocks_table_exists($pdo, 'stocks')) {
             $destination = '/stocks';
@@ -574,6 +573,10 @@ function stocks_import(PDO $pdo): void
         'error' => $_SESSION['flash'] ?? null,
     ]);
     $primaryMessage = $messagesOut['success'] ?? $messagesOut['error'] ?? 'Import complete.';
+    if (($imported + $cashRecorded) > 0) {
+        stocks_portfolio_service($pdo)->invalidateOverviewCache($userId);
+    }
+
     $payload = $responseMeta + ['messages' => $messagesOut];
     $wasSuccessful = ($imported + $cashRecorded) > 0 && $skipped === 0;
     if (!$wasSuccessful && ($imported + $cashRecorded) > 0) {
@@ -623,6 +626,7 @@ function stocks_cash_movement(PDO $pdo): void
         $_SESSION['flash_success'] = $amount >= 0
             ? sprintf('Added %s to your stock cash balance.', moneyfmt($amount, $currency))
             : sprintf('Withdrew %s from your stock cash balance.', moneyfmt(abs($amount), $currency));
+        stocks_portfolio_service($pdo)->invalidateOverviewCache($userId);
     } catch (Throwable $e) {
         error_log('[stocks_cash_movement] ' . $e->getMessage());
         $_SESSION['flash'] = 'Unable to record the cash entry. Please ensure the latest migrations have been applied.';
@@ -641,6 +645,7 @@ function stocks_delete_trade(PDO $pdo): void
     }
     $tradeService = new TradeService($pdo);
     $tradeService->deleteTrade($userId, $tradeId);
+    stocks_portfolio_service($pdo)->invalidateOverviewCache($userId);
     redirect('/stocks');
 }
 
@@ -653,6 +658,7 @@ function stocks_clear_history(PDO $pdo): void
 
     try {
         $stats = $tradeService->clearUserHistory($userId);
+        stocks_portfolio_service($pdo)->invalidateOverviewCache($userId);
         $totalRemoved = array_sum($stats);
         if ($totalRemoved === 0) {
             $_SESSION['flash'] = 'No stock trades were found to clear.';
@@ -706,6 +712,7 @@ function stocks_toggle_watch(PDO $pdo, string $symbol): void
     } else {
         $pdo->prepare('INSERT INTO watchlist(user_id, stock_id, created_at) VALUES(?,?, NOW()) ON CONFLICT DO NOTHING')->execute([$userId, $stock['id']]);
     }
+    stocks_portfolio_service($pdo)->invalidateOverviewCache($userId);
     redirect('/stocks/' . urlencode($symbol));
 }
 
@@ -772,6 +779,43 @@ function stocks_history_bounds(string $range): array
     };
 
     return ['start' => $start, 'end' => $end];
+}
+
+/**
+ * @return array{dir: ?string, ttl: int}
+ */
+function stocks_overview_cache_settings(): array
+{
+    global $config;
+    $root = is_array($config ?? null) ? $config : [];
+    $stocks = $root['stocks'] ?? [];
+    $dir = $stocks['overview_cache_dir'] ?? null;
+    if (is_string($dir)) {
+        $dir = rtrim($dir, DIRECTORY_SEPARATOR);
+    } else {
+        $dir = null;
+    }
+
+    $ttl = (int)($stocks['overview_cache_seconds'] ?? 0);
+    if ($ttl < 0) {
+        $ttl = 0;
+    }
+
+    return ['dir' => $dir, 'ttl' => $ttl];
+}
+
+function stocks_portfolio_service(PDO $pdo): PortfolioService
+{
+    static $service;
+    if ($service instanceof PortfolioService) {
+        return $service;
+    }
+
+    $priceService = stocks_price_service($pdo);
+    $cashService = new CashService($pdo);
+    $settings = stocks_overview_cache_settings();
+    $service = new PortfolioService($pdo, $priceService, $cashService, $settings['dir'], $settings['ttl']);
+    return $service;
 }
 
 function stocks_price_service(PDO $pdo): PriceDataService
