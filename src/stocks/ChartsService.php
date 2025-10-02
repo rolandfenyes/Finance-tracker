@@ -38,19 +38,23 @@ class ChartsService
     public function portfolioValueSeries(int $userId, string $range = '1M'): array
     {
         if (!$this->tableExists('stock_trades')) {
-            return ['labels' => [], 'series' => []];
+            return ['labels' => [], 'series' => [], 'stale' => false];
         }
 
         $dates = $this->dateRangeFor($range);
         $stocks = $this->loadUserStocks($userId);
         if (empty($stocks)) {
-            return ['labels' => [], 'series' => []];
+            return ['labels' => [], 'series' => [], 'stale' => false];
         }
         require_once __DIR__ . '/../fx.php';
         $base = fx_user_main($this->pdo, $userId);
         $historyBySymbol = [];
+        $stale = false;
         foreach ($stocks as $symbol => $info) {
             $historyBySymbol[$symbol] = $this->indexHistory($this->priceDataService->getDailyHistory($symbol, $dates['start'], $dates['end']));
+            if (!$stale && $this->priceDataService->isHistoryRangeStale($symbol, $dates['start'], $dates['end'])) {
+                $stale = true;
+            }
         }
 
         $trades = $this->loadTrades($userId, $dates['end']);
@@ -84,7 +88,7 @@ class ChartsService
             $labels[] = $date;
             $series[] = $portfolioValue;
         }
-        return ['labels' => $labels, 'series' => $series];
+        return ['labels' => $labels, 'series' => $series, 'stale' => $stale];
     }
 
     /**
@@ -93,11 +97,12 @@ class ChartsService
     public function positionValueSeries(int $userId, string $symbol, string $range = '6M'): array
     {
         if (!$this->tableExists('stock_trades')) {
-            return ['labels' => [], 'series' => []];
+            return ['labels' => [], 'series' => [], 'stale' => false];
         }
 
         $dates = $this->dateRangeFor($range);
         $history = $this->indexHistory($this->priceDataService->getDailyHistory($symbol, $dates['start'], $dates['end']));
+        $stale = $this->priceDataService->isHistoryRangeStale($symbol, $dates['start'], $dates['end']);
         $trades = $this->loadTradesForSymbol($userId, $symbol, $dates['end']);
         $currency = $this->lookupCurrency($symbol);
         require_once __DIR__ . '/../fx.php';
@@ -115,7 +120,7 @@ class ChartsService
             $labels[] = $date;
             $series[] = ($close !== null) ? fx_convert($this->pdo, $qty * $close, $currency, $base, $date) : null;
         }
-        return ['labels' => $labels, 'series' => $series];
+        return ['labels' => $labels, 'series' => $series, 'stale' => $stale];
     }
 
     private function dateRangeFor(string $range): array

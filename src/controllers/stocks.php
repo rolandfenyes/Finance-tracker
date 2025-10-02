@@ -135,6 +135,8 @@ function stocks_detail(PDO $pdo, string $symbol): void
     $insights = $signalsService->analyze($userId, $holdingLike, ['prev_close' => $quoteRow['prev_close'] ?? null], $totals);
 
     $positionSeries = $chartsService->positionValueSeries($userId, $symbol, $historyRange);
+    $historyStale = $priceService->isHistoryRangeStale($symbol, $historyBounds['start'], $historyBounds['end'])
+        || !empty($positionSeries['stale']);
 
     $realizedStmt = $pdo->prepare('SELECT COALESCE(SUM(realized_pl_base),0) FROM stock_realized_pl WHERE user_id=? AND stock_id=? AND DATE_TRUNC(\'year\', closed_at)=DATE_TRUNC(\'year\', CURRENT_DATE)');
     $realizedStmt->execute([$userId, $stockRow['id']]);
@@ -158,6 +160,7 @@ function stocks_detail(PDO $pdo, string $symbol): void
         'historyRange' => $historyRange,
         'baseCurrency' => $baseCurrency,
         'userCurrencies' => $userCurrencies,
+        'historyStale' => $historyStale,
     ]);
 }
 
@@ -755,6 +758,7 @@ function stocks_refresh_overview(PDO $pdo): ?string
                     'series' => $portfolioChart['series'],
                     'cashSeries' => array_fill(0, count($portfolioChart['series']), (float)($totals['cash_balance'] ?? 0)),
                 ],
+                'stale' => !empty($portfolioChart['stale']),
                 'allocations' => [
                     'labels' => array_map(static fn($row) => $row['label'], $allocationByTicker),
                     'weights' => array_map(static fn($row) => $row['weight_pct'], $allocationByTicker),
@@ -958,9 +962,12 @@ function stocks_history_api(PDO $pdo, string $symbol): void
     $priceHistory = $priceService->getDailyHistory(strtoupper($symbol), $bounds['start'], $bounds['end']);
     $chartsService = new ChartsService($pdo, $priceService);
     $series = $chartsService->positionValueSeries(uid(), strtoupper($symbol), $range);
+    $isStale = $priceService->isHistoryRangeStale(strtoupper($symbol), $bounds['start'], $bounds['end'])
+        || !empty($series['stale']);
     json_response([
         'price' => $priceHistory,
         'position' => $series,
+        'stale' => $isStale,
     ]);
 }
 

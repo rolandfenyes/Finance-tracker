@@ -11,6 +11,7 @@
 /** @var string $historyRange */
 /** @var string $baseCurrency */
 /** @var array $userCurrencies */
+/** @var bool $historyStale */
 
 $rangeOptions = ['1D', '5D', '1M', '6M', '1Y', '5Y'];
 
@@ -244,10 +245,37 @@ $signals = $insights['signals'] ?? [];
   const currency = <?= json_encode($currency) ?>;
   const initialRange = <?= json_encode(strtoupper($historyRange)) ?>;
   const baseCurrency = <?= json_encode($baseCurrency) ?>;
+  const initialHistoryStale = <?= $historyStale ? 'true' : 'false' ?>;
 
   const rangeForm = document.getElementById('rangeForm');
   const rangeButtons = rangeForm ? Array.from(rangeForm.querySelectorAll('[data-range-btn]')) : [];
   const rangeHidden = rangeForm ? rangeForm.querySelector('input[name="range"]') : null;
+
+  let historyRetryTimer = null;
+  let historyRetryAttempts = 0;
+  const maxHistoryRetries = 5;
+
+  function scheduleHistoryRetry(range, delay = 2000) {
+    if (historyRetryAttempts >= maxHistoryRetries) {
+      return;
+    }
+    historyRetryAttempts += 1;
+    if (historyRetryTimer) {
+      clearTimeout(historyRetryTimer);
+    }
+    historyRetryTimer = setTimeout(() => {
+      historyRetryTimer = null;
+      loadRange(range).catch(() => {});
+    }, delay);
+  }
+
+  function resetHistoryRetry() {
+    historyRetryAttempts = 0;
+    if (historyRetryTimer) {
+      clearTimeout(historyRetryTimer);
+      historyRetryTimer = null;
+    }
+  }
 
   const priceCtx = document.getElementById('priceHistoryChart');
   let priceChart = null;
@@ -388,6 +416,10 @@ $signals = $insights['signals'] ?? [];
   ensurePositionChart(initialPositionSeries);
   setActiveRange(initialRange);
 
+  if (initialHistoryStale || (initialPositionSeries && initialPositionSeries.stale)) {
+    scheduleHistoryRetry(initialRange, 1500);
+  }
+
   async function loadRange(range) {
     if (!rangeForm) {
       return;
@@ -404,6 +436,12 @@ $signals = $insights['signals'] ?? [];
       }
       if (payload && payload.position) {
         ensurePositionChart(payload.position);
+      }
+      const needsRetry = payload && (payload.stale || (payload.position && payload.position.stale));
+      if (needsRetry) {
+        scheduleHistoryRetry(range, 2000);
+      } else {
+        resetHistoryRetry();
       }
     } finally {
       rangeForm.classList.remove('opacity-60', 'pointer-events-none');

@@ -16,6 +16,7 @@ $watchlist = $overview['watchlist'];
 $cashEntries = $overview['cash'] ?? [];
 $baseCurrency = $totals['base_currency'];
 $rangeOptions = ['1M', '3M', '6M', '1Y', '5Y'];
+$portfolioChartStale = !empty($portfolioChart['stale']);
 
 $currencyContext = $currencyContext ?? [
     'marketByCurrency' => [],
@@ -325,6 +326,8 @@ $formatQuantity = static function ($qty): string {
   let holdingsSymbols = <?= json_encode(array_map(static fn($h) => $h['symbol'], $holdings)) ?>;
   let watchlistSymbols = <?= json_encode(array_map(static fn($w) => $w['symbol'], $watchlist)) ?>;
   const refreshSeconds = <?= (int)$refreshSeconds ?> * 1000;
+  const initialPortfolioStale = <?= $portfolioChartStale ? 'true' : 'false' ?>;
+  const refreshForm = document.querySelector('[data-role="refresh-form"]');
   let chartCurrency = <?= json_encode($baseCurrency) ?>;
   let baseCurrencyCode = <?= json_encode($baseCurrency) ?>;
   let baseFormatter = new Intl.NumberFormat(undefined, { style: 'currency', currency: baseCurrencyCode });
@@ -347,6 +350,36 @@ $formatQuantity = static function ($qty): string {
     if (!Number.isFinite(amount)) return;
     element.classList.add(amount >= 0 ? 'text-emerald-500' : 'text-rose-500');
   };
+
+  let overviewRefreshTimer = null;
+  let overviewRefreshAttempts = 0;
+  const maxOverviewRefreshAttempts = 4;
+  let overviewAutoPending = false;
+
+  function scheduleOverviewRefresh(delay = 2000) {
+    if (overviewRefreshAttempts >= maxOverviewRefreshAttempts) {
+      return;
+    }
+    overviewRefreshAttempts += 1;
+    if (overviewRefreshTimer) {
+      clearTimeout(overviewRefreshTimer);
+    }
+    overviewRefreshTimer = setTimeout(() => {
+      overviewRefreshTimer = null;
+      if (refreshForm) {
+        overviewAutoPending = true;
+        refreshForm.requestSubmit();
+      }
+    }, delay);
+  }
+
+  function resetOverviewRefresh() {
+    overviewRefreshAttempts = 0;
+    if (overviewRefreshTimer) {
+      clearTimeout(overviewRefreshTimer);
+      overviewRefreshTimer = null;
+    }
+  }
 
   const updateBaseFormatter = (currency) => {
     if (!currency) return;
@@ -703,10 +736,22 @@ $formatQuantity = static function ($qty): string {
     }
   });
 
-  const refreshForm = document.querySelector('[data-role="refresh-form"]');
   if (refreshForm) {
     refreshForm.addEventListener('submit', async (event) => {
       event.preventDefault();
+      if (overviewRefreshTimer) {
+        clearTimeout(overviewRefreshTimer);
+        overviewRefreshTimer = null;
+      }
+      const triggeredByAuto = overviewAutoPending;
+      overviewAutoPending = false;
+      if (!triggeredByAuto) {
+        overviewRefreshAttempts = 0;
+      }
+      if (refreshForm.dataset.loading === '1') {
+        return;
+      }
+      refreshForm.dataset.loading = '1';
       const submitBtn = refreshForm.querySelector('[data-role="refresh-submit"]');
       const statusEl = refreshForm.querySelector('[data-role="refresh-status"]');
       if (submitBtn) {
@@ -766,6 +811,11 @@ $formatQuantity = static function ($qty): string {
           chartCurrency = payload.baseCurrency;
           updateBaseFormatter(payload.baseCurrency);
         }
+        if (payload.stale) {
+          scheduleOverviewRefresh(Math.min(refreshSeconds, 4000));
+        } else {
+          resetOverviewRefresh();
+        }
         if (statusEl) {
           statusEl.textContent = payload.message || 'Quotes refreshed.';
         }
@@ -781,12 +831,17 @@ $formatQuantity = static function ($qty): string {
           submitBtnFinal.disabled = false;
           submitBtnFinal.textContent = 'Refresh quotes';
         }
+        delete refreshForm.dataset.loading;
         setTimeout(() => {
           const status = refreshForm.querySelector('[data-role="refresh-status"]');
           if (status) status.textContent = '';
         }, 4000);
       }
     });
+  }
+
+  if (refreshForm && initialPortfolioStale) {
+    scheduleOverviewRefresh(1500);
   }
 
   const csvForm = document.getElementById('stocksCsvForm');

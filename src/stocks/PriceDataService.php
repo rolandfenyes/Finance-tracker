@@ -19,6 +19,14 @@ class PriceDataService
     private array $historyCache = [];
     /** @var array<string,array{stock_id:int,currency:?string}> */
     private array $deferredRefreshMap = [];
+    /** @var array<string,bool> */
+    private array $historyStaleFlags = [];
+    /**
+     * Deferred history refresh queue keyed by cache key so the same range is only enqueued once per request.
+     *
+     * @var array<string,array{cache_key:string,symbol:string,stock_id:int,from:string,to:string}>
+     */
+    private array $deferredHistoryQueue = [];
     private bool $deferredRegistered = false;
     private bool $responseFinished = false;
 
@@ -161,19 +169,18 @@ class PriceDataService
         $stockId = $this->lookupStockId($symbol);
         if (!$stockId) {
             $this->historyCache[$cacheKey] = [];
+            $this->historyStaleFlags[$cacheKey] = false;
             return [];
         }
         $stmt = $this->pdo->prepare('SELECT date, open, high, low, close, volume FROM price_daily WHERE stock_id=? AND date BETWEEN ?::date AND ?::date ORDER BY date ASC');
         $stmt->execute([$stockId, $from, $to]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        if (!$this->coversRange($rows, $from, $to)) {
-            $candles = $this->adapter->fetchDailyHistory($symbol, $from, $to);
-            foreach ($candles as $candle) {
-                $this->storeDailyCandle($stockId, $candle);
-            }
-            $stmt->execute([$stockId, $from, $to]);
-            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $needsRefresh = !$this->coversRange($rows, $from, $to);
+        if ($needsRefresh) {
+            $this->queueDeferredHistoryFetch($cacheKey, $symbol, $stockId, $from, $to);
         }
+
         $mapped = array_map(static function ($row) {
             return [
                 'date' => $row['date'],
@@ -183,11 +190,19 @@ class PriceDataService
                 'close' => $row['close'] !== null ? (float)$row['close'] : null,
                 'volume' => $row['volume'] !== null ? (float)$row['volume'] : null,
             ];
-        }, $rows);
+        }, $rows ?: []);
 
         $this->historyCache[$cacheKey] = $mapped;
+        $this->historyStaleFlags[$cacheKey] = $needsRefresh;
 
         return $mapped;
+    }
+
+    public function isHistoryRangeStale(string $symbol, string $from, string $to): bool
+    {
+        $cacheKey = $this->historyCacheKey(strtoupper(trim($symbol)), $from, $to);
+
+        return (bool)($this->historyStaleFlags[$cacheKey] ?? false);
     }
 
     public function refreshMetadata(string $symbol): array
@@ -382,15 +397,12 @@ class PriceDataService
             ];
         }
 
-        if (!$this->deferredRegistered) {
-            register_shutdown_function([$this, 'processDeferredRefresh']);
-            $this->deferredRegistered = true;
-        }
+        $this->registerDeferredProcessor();
     }
 
     public function processDeferredRefresh(): void
     {
-        if (empty($this->deferredRefreshMap)) {
+        if (empty($this->deferredRefreshMap) && empty($this->deferredHistoryQueue)) {
             return;
         }
 
@@ -398,16 +410,24 @@ class PriceDataService
 
         $payload = $this->deferredRefreshMap;
         $this->deferredRefreshMap = [];
-        $symbols = array_keys($payload);
-        $index = [];
-        $currencies = [];
+        if (!empty($payload)) {
+            $symbols = array_keys($payload);
+            $index = [];
+            $currencies = [];
 
-        foreach ($payload as $symbol => $info) {
-            $index[$symbol] = $info['stock_id'];
-            $currencies[$symbol] = $info['currency'];
+            foreach ($payload as $symbol => $info) {
+                $index[$symbol] = $info['stock_id'];
+                $currencies[$symbol] = $info['currency'];
+            }
+
+            $this->fetchAndApply($symbols, $index, $currencies);
         }
 
-        $this->fetchAndApply($symbols, $index, $currencies);
+        $historyPayload = $this->deferredHistoryQueue;
+        $this->deferredHistoryQueue = [];
+        if (!empty($historyPayload)) {
+            $this->processDeferredHistory($historyPayload);
+        }
     }
 
     private function finishResponseForDeferredWork(): void
@@ -442,6 +462,94 @@ class PriceDataService
         if (function_exists('flush')) {
             @flush();
         }
+    }
+
+    /**
+     * @param array<string,array{cache_key:string,symbol:string,stock_id:int,from:string,to:string}> $payload
+     */
+    private function processDeferredHistory(array $payload): void
+    {
+        if (empty($payload)) {
+            return;
+        }
+
+        $grouped = [];
+        foreach ($payload as $job) {
+            $symbol = $job['symbol'];
+            if (!isset($grouped[$symbol])) {
+                $grouped[$symbol] = [
+                    'stock_id' => $job['stock_id'],
+                    'symbol' => $symbol,
+                    'from' => $job['from'],
+                    'to' => $job['to'],
+                    'ranges' => [$job],
+                ];
+            } else {
+                if ($job['from'] < $grouped[$symbol]['from']) {
+                    $grouped[$symbol]['from'] = $job['from'];
+                }
+                if ($job['to'] > $grouped[$symbol]['to']) {
+                    $grouped[$symbol]['to'] = $job['to'];
+                }
+                $grouped[$symbol]['ranges'][] = $job;
+            }
+        }
+
+        $stmt = $this->pdo->prepare('SELECT date, open, high, low, close, volume FROM price_daily WHERE stock_id=? AND date BETWEEN ?::date AND ?::date ORDER BY date ASC');
+
+        foreach ($grouped as $symbol => $bundle) {
+            $candles = $this->adapter->fetchDailyHistory($symbol, $bundle['from'], $bundle['to']);
+            if (!empty($candles)) {
+                foreach ($candles as $candle) {
+                    $this->storeDailyCandle($bundle['stock_id'], $candle);
+                }
+            }
+
+            foreach ($bundle['ranges'] as $range) {
+                $stmt->execute([$bundle['stock_id'], $range['from'], $range['to']]);
+                $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                $mapped = array_map(static function ($row) {
+                    return [
+                        'date' => $row['date'],
+                        'open' => $row['open'] !== null ? (float)$row['open'] : null,
+                        'high' => $row['high'] !== null ? (float)$row['high'] : null,
+                        'low' => $row['low'] !== null ? (float)$row['low'] : null,
+                        'close' => $row['close'] !== null ? (float)$row['close'] : null,
+                        'volume' => $row['volume'] !== null ? (float)$row['volume'] : null,
+                    ];
+                }, $rows);
+
+                $this->historyCache[$range['cache_key']] = $mapped;
+                $this->historyStaleFlags[$range['cache_key']] = !$this->coversRange($rows, $range['from'], $range['to']);
+            }
+        }
+    }
+
+    private function queueDeferredHistoryFetch(string $cacheKey, string $symbol, int $stockId, string $from, string $to): void
+    {
+        if (isset($this->deferredHistoryQueue[$cacheKey])) {
+            return;
+        }
+
+        $this->deferredHistoryQueue[$cacheKey] = [
+            'cache_key' => $cacheKey,
+            'symbol' => $symbol,
+            'stock_id' => $stockId,
+            'from' => $from,
+            'to' => $to,
+        ];
+
+        $this->registerDeferredProcessor();
+    }
+
+    private function registerDeferredProcessor(): void
+    {
+        if ($this->deferredRegistered) {
+            return;
+        }
+
+        register_shutdown_function([$this, 'processDeferredRefresh']);
+        $this->deferredRegistered = true;
     }
 
     private function emptyQuote(string $symbol, int $stockId, ?string $currency): array
