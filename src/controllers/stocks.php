@@ -209,7 +209,7 @@ function stocks_import(PDO $pdo): void
     }
 
     $columnMap = stocks_import_header_map($headerRow);
-    if (empty($columnMap['date']) || empty($columnMap['type'])) {
+    if (!array_key_exists('date', $columnMap) || !array_key_exists('type', $columnMap)) {
         fclose($handle);
         $_SESSION['flash'] = 'The CSV is missing required headers (Date / Type).';
         return;
