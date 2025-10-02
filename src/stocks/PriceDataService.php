@@ -20,6 +20,7 @@ class PriceDataService
     /** @var array<string,array{stock_id:int,currency:?string}> */
     private array $deferredRefreshMap = [];
     private bool $deferredRegistered = false;
+    private bool $responseFinished = false;
 
     public function __construct(PDO $pdo, ?PriceProviderAdapter $adapter = null, int $ttlSeconds = 10, ?int $maxProviderBatch = null)
     {
@@ -393,6 +394,8 @@ class PriceDataService
             return;
         }
 
+        $this->finishResponseForDeferredWork();
+
         $payload = $this->deferredRefreshMap;
         $this->deferredRefreshMap = [];
         $symbols = array_keys($payload);
@@ -405,6 +408,40 @@ class PriceDataService
         }
 
         $this->fetchAndApply($symbols, $index, $currencies);
+    }
+
+    private function finishResponseForDeferredWork(): void
+    {
+        if ($this->responseFinished || PHP_SAPI === 'cli') {
+            return;
+        }
+
+        $this->responseFinished = true;
+
+        if (function_exists('ignore_user_abort')) {
+            ignore_user_abort(true);
+        }
+
+        if (function_exists('session_write_close')) {
+            @session_write_close();
+        }
+
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+            return;
+        }
+
+        if (function_exists('ob_get_level')) {
+            while (ob_get_level() > 0) {
+                @ob_end_flush();
+            }
+        } elseif (function_exists('ob_flush')) {
+            @ob_flush();
+        }
+
+        if (function_exists('flush')) {
+            @flush();
+        }
     }
 
     private function emptyQuote(string $symbol, int $stockId, ?string $currency): array
