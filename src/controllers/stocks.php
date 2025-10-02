@@ -667,8 +667,13 @@ function stocks_refresh_overview(PDO $pdo): ?string
     $chartRange = strtoupper($_POST['chartRange'] ?? '6M');
 
     try {
+        $symbols = $portfolio->collectSymbols($userId, $filters);
+        if (!empty($symbols)) {
+            $priceService->refreshSymbols($symbols);
+        }
+
         $portfolio->invalidateOverviewCache($userId);
-        $overview = $portfolio->buildOverview($userId, $filters, false, true);
+        $overview = $portfolio->buildOverview($userId, $filters, false, false);
         $holdings = $overview['holdings'];
         $totals = $overview['totals'] + ['user_id' => $userId, 'default_target' => 10.0];
         $currencyContext = stocks_currency_breakdown($totals);

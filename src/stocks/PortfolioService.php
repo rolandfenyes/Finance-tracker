@@ -231,6 +231,42 @@ class PortfolioService
         return $this->loadTransactions($userId);
     }
 
+    /**
+     * Collect the unique symbols referenced by the user's current positions and watchlist.
+     *
+     * @param array<string,mixed> $filters
+     * @return string[]
+     */
+    public function collectSymbols(int $userId, array $filters = []): array
+    {
+        $positions = $this->loadPositions($userId, $filters);
+        $watchlistRows = $this->loadWatchlistRows($userId);
+
+        $symbols = [];
+        foreach ($positions as $row) {
+            $symbol = strtoupper((string)($row['symbol'] ?? ''));
+            if ($symbol !== '') {
+                $symbols[] = $symbol;
+            }
+        }
+
+        foreach ($watchlistRows as $row) {
+            $symbol = strtoupper((string)($row['symbol'] ?? ''));
+            if ($symbol !== '') {
+                $symbols[] = $symbol;
+            }
+        }
+
+        if (empty($symbols)) {
+            return [];
+        }
+
+        $symbols = array_values(array_unique($symbols));
+        sort($symbols);
+
+        return $symbols;
+    }
+
     public function invalidateOverviewCache(int $userId): void
     {
         $prefix = $this->cacheKeyPrefix($userId);

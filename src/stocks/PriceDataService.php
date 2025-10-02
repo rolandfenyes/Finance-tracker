@@ -163,6 +163,21 @@ class PriceDataService
     }
 
     /**
+     * Force refresh quotes for the provided symbols and persist them to caches.
+     *
+     * @param string[] $symbols
+     * @return array<int, array{stock_id:int,symbol:string,last:?float,prev_close:?float,day_high:?float,day_low:?float,volume:?float,currency:?string,provider_ts:?string,stale:bool}>
+     */
+    public function refreshSymbols(array $symbols): array
+    {
+        if (empty($symbols)) {
+            return [];
+        }
+
+        return $this->getLiveQuotes($symbols, true);
+    }
+
+    /**
      * @return array<int, array{date:string,open:?float,high:?float,low:?float,close:?float,volume:?float}>
      */
     public function getDailyHistory(string $symbol, string $from, string $to): array
