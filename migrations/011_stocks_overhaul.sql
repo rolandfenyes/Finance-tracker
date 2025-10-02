@@ -1,5 +1,8 @@
 BEGIN;
 
+-- Drop legacy view early so subsequent column alterations don't fail
+DROP VIEW IF EXISTS v_stock_positions;
+
 -- Core stocks master data
 CREATE TABLE IF NOT EXISTS stocks (
   id SERIAL PRIMARY KEY,
@@ -45,6 +48,8 @@ ALTER TABLE stock_trades ALTER COLUMN executed_at SET NOT NULL;
 ALTER TABLE stock_trades ALTER COLUMN side TYPE TEXT;
 ALTER TABLE stock_trades ALTER COLUMN side SET NOT NULL;
 ALTER TABLE stock_trades ALTER COLUMN stock_id SET NOT NULL;
+
+-- Legacy view is intentionally left removed; the new services replace it
 
 -- Richer portfolio state tables
 CREATE TABLE IF NOT EXISTS stock_positions (
@@ -142,8 +147,5 @@ CREATE TABLE IF NOT EXISTS stock_portfolio_snapshots (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id, snapshot_on)
 );
-
--- Drop legacy view replaced by service managed tables
-DROP VIEW IF EXISTS v_stock_positions;
 
 COMMIT;
