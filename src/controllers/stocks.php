@@ -25,10 +25,6 @@ function stocks_index(PDO $pdo): void
 {
     require_login();
     $userId = uid();
-    $priceService = stocks_price_service($pdo);
-    $portfolio = stocks_portfolio_service($pdo);
-    $signalsService = new SignalsService($pdo, $priceService);
-    $chartsService = new ChartsService($pdo, $priceService);
 
     $filters = [
         'search' => $_GET['q'] ?? null,
@@ -37,45 +33,29 @@ function stocks_index(PDO $pdo): void
         'watchlist_only' => !empty($_GET['watchlist']),
         'realized_period' => $_GET['period'] ?? null,
     ];
-    $overview = $portfolio->buildOverview($userId, $filters, false);
-    $holdings = $overview['holdings'];
-    $totals = $overview['totals'] + ['user_id' => $userId, 'default_target' => 10.0];
-    $currencyContext = stocks_currency_breakdown($totals);
-
-    $insights = [];
-    foreach ($holdings as $holding) {
-        $insights[$holding['symbol']] = $signalsService->analyze($userId, $holding, ['prev_close' => $holding['prev_close'] ?? null], $totals);
-    }
-
     $chartRange = strtoupper($_GET['chartRange'] ?? '6M');
-    $portfolioChart = $chartsService->portfolioValueSeries($userId, $chartRange);
-    $series = array_values(array_filter($portfolioChart['series'], static fn($value) => $value !== null));
-    $startValue = $series ? (float)$series[0] : 0.0;
-    $endValue = $series ? (float)$series[count($series) - 1] : $startValue;
-    $changeValue = $endValue - $startValue;
-    $changePct = ($startValue > 0) ? ($changeValue / $startValue) * 100 : 0.0;
-    $chartMeta = [
-        'range' => $chartRange,
-        'start' => $startValue,
-        'end' => $endValue,
-        'change' => $changeValue,
-        'change_pct' => $changePct,
-    ];
     $refreshSeconds = stocks_refresh_seconds($userId, $pdo);
-
     $userCurrencies = stocks_user_currencies($pdo, $userId);
+    $baseCurrency = fx_user_main($pdo, $userId) ?: 'USD';
 
     view('stocks/index', [
-        'overview' => $overview,
-        'insights' => $insights,
-        'portfolioChart' => $portfolioChart,
-        'chartMeta' => $chartMeta,
+        'overview' => null,
+        'insights' => [],
+        'portfolioChart' => ['labels' => [], 'series' => []],
+        'chartMeta' => [
+            'range' => $chartRange,
+            'start' => 0.0,
+            'end' => 0.0,
+            'change' => 0.0,
+            'change_pct' => 0.0,
+        ],
         'chartRange' => $chartRange,
         'filters' => $filters,
         'refreshSeconds' => $refreshSeconds,
         'userCurrencies' => $userCurrencies,
         'error' => $_GET['error'] ?? null,
-        'currencyContext' => $currencyContext,
+        'currencyContext' => null,
+        'baseCurrency' => $baseCurrency,
     ]);
 }
 
@@ -743,6 +723,10 @@ function stocks_refresh_overview(PDO $pdo): ?string
                 'formatQuantity' => $formatQuantity,
             ]);
 
+            $watchlistHtml = stocks_render_partial('stocks/partials/watchlist_section', [
+                'watchlist' => $overview['watchlist'] ?? [],
+            ]);
+
             $allocationByTicker = $overview['allocations']['by_ticker'] ?? [];
 
             json_response([
@@ -750,6 +734,7 @@ function stocks_refresh_overview(PDO $pdo): ?string
                 'hero' => $heroHtml,
                 'cards' => $cardsHtml,
                 'holdings' => $holdingsHtml,
+                'watchlist' => $watchlistHtml,
                 'portfolioChart' => [
                     'labels' => $portfolioChart['labels'],
                     'series' => $portfolioChart['series'],
