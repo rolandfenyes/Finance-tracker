@@ -326,12 +326,33 @@ $formatQuantity = static function ($qty): string {
   let watchlistSymbols = <?= json_encode(array_map(static fn($w) => $w['symbol'], $watchlist)) ?>;
   const refreshSeconds = <?= (int)$refreshSeconds ?> * 1000;
   let chartCurrency = <?= json_encode($baseCurrency) ?>;
+  let baseCurrencyCode = <?= json_encode($baseCurrency) ?>;
+  let baseFormatter = new Intl.NumberFormat(undefined, { style: 'currency', currency: baseCurrencyCode });
   let cashSeries = <?= json_encode(array_fill(0, count($portfolioChart['series']), (float)$totals['cash_balance'])) ?>;
   let allocationChart = null;
   let portfolioChartInstance = null;
   let contributionVisible = false;
   let contributionsToggle = null;
   let contributionListener = null;
+
+  const parseNumber = (value) => {
+    if (value === null || value === undefined || value === '') return 0;
+    const parsed = parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const applyGainClass = (element, amount) => {
+    if (!element) return;
+    element.classList.remove('text-emerald-500', 'text-rose-500');
+    if (!Number.isFinite(amount)) return;
+    element.classList.add(amount >= 0 ? 'text-emerald-500' : 'text-rose-500');
+  };
+
+  const updateBaseFormatter = (currency) => {
+    if (!currency) return;
+    baseCurrencyCode = currency;
+    baseFormatter = new Intl.NumberFormat(undefined, { style: 'currency', currency: baseCurrencyCode });
+  };
 
   const allocationCtx = document.getElementById('allocationTickerChart');
   if (allocationCtx && allocationData.length) {
@@ -496,10 +517,11 @@ $formatQuantity = static function ($qty): string {
       const quote = quotes[symbol];
       if (!quote) return;
       const currency = quote.currency || chartCurrency;
+      const formatter = new Intl.NumberFormat(undefined, { style: 'currency', currency });
       const lastEl = panel.querySelector('[data-role="last"]');
       const changeEl = panel.querySelector('[data-role="change"]');
       if (lastEl && quote.last !== null) {
-        lastEl.textContent = new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(quote.last);
+        lastEl.textContent = formatter.format(quote.last);
       }
       if (changeEl && quote.prev_close !== null && quote.last !== null) {
         const diff = quote.last - quote.prev_close;
@@ -509,25 +531,126 @@ $formatQuantity = static function ($qty): string {
         changeEl.classList.toggle('text-rose-500', diff < 0);
       }
     });
+
+    const weightRows = [];
     document.querySelectorAll('#holdingsTableBody tr[data-symbol]').forEach(row => {
       const symbol = row.getAttribute('data-symbol');
       const quote = quotes[symbol];
-      if (!quote) return;
-      const currency = row.getAttribute('data-currency') || quote.currency || chartCurrency;
-      const qty = parseFloat(row.getAttribute('data-qty') || '0');
-      const avg = parseFloat(row.getAttribute('data-avg') || '0');
+      const currency = row.getAttribute('data-currency') || (quote && quote.currency) || chartCurrency;
+      const qty = parseNumber(row.getAttribute('data-qty'));
+      const avg = parseNumber(row.getAttribute('data-avg'));
+      let fxRate = parseNumber(row.getAttribute('data-fx'));
+      const costBase = parseNumber(row.getAttribute('data-cost-base'));
+      const formatter = new Intl.NumberFormat(undefined, { style: 'currency', currency });
+
+      if (quote && quote.last !== null) {
+        row.setAttribute('data-last', quote.last);
+      }
+      if (quote && quote.prev_close !== null) {
+        row.setAttribute('data-prev', quote.prev_close);
+      }
+
+      const lastPrice = parseNumber(row.getAttribute('data-last'));
+      const prevClose = parseNumber(row.getAttribute('data-prev'));
+
+      if (!Number.isFinite(fxRate) || fxRate <= 0) {
+        const storedMarketCcy = parseNumber(row.getAttribute('data-market-ccy'));
+        const storedMarketBase = parseNumber(row.getAttribute('data-market-base'));
+        fxRate = storedMarketCcy !== 0 ? storedMarketBase / storedMarketCcy : 1;
+      }
+      if (!Number.isFinite(fxRate) || fxRate <= 0) {
+        fxRate = 1;
+      }
+      if (currency === baseCurrencyCode) {
+        fxRate = 1;
+      }
+
       const lastCell = row.querySelector('[data-role="holding-last"]');
-      if (lastCell && quote.last !== null) {
-        lastCell.textContent = new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(quote.last);
+      if (lastCell && Number.isFinite(lastPrice)) {
+        lastCell.textContent = formatter.format(lastPrice);
       }
+
+      let marketCcyValue = parseNumber(row.getAttribute('data-market-ccy'));
+      if (quote && quote.last !== null) {
+        marketCcyValue = qty * quote.last;
+      } else if (Number.isFinite(lastPrice)) {
+        marketCcyValue = qty * lastPrice;
+      }
+
       const marketCcy = row.querySelector('[data-role="holding-market-ccy"]');
-      if (marketCcy && quote.last !== null) {
-        marketCcy.textContent = new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(qty * quote.last);
+      if (marketCcy && Number.isFinite(marketCcyValue)) {
+        marketCcy.textContent = formatter.format(marketCcyValue);
       }
+
+      const marketBaseValue = Number.isFinite(marketCcyValue) ? marketCcyValue * fxRate : parseNumber(row.getAttribute('data-market-base'));
+      const marketBase = row.querySelector('[data-role="holding-market-base"]');
+      if (marketBase && Number.isFinite(marketBaseValue)) {
+        marketBase.textContent = baseFormatter.format(marketBaseValue);
+      }
+      row.setAttribute('data-market-ccy', marketCcyValue);
+      row.setAttribute('data-market-base', marketBaseValue);
+      row.setAttribute('data-fx', fxRate);
+
+      const diffCcy = Number.isFinite(lastPrice) ? (lastPrice - avg) * qty : parseNumber(row.getAttribute('data-unrealized-ccy'));
+      const diffBase = Number.isFinite(diffCcy) ? diffCcy * fxRate : parseNumber(row.getAttribute('data-unrealized-base'));
       const unrealizedCcy = row.querySelector('[data-role="holding-unrealized-ccy"]');
-      if (unrealizedCcy && quote.last !== null) {
-        const diffCcy = (quote.last - avg) * qty;
-        unrealizedCcy.textContent = new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(diffCcy);
+      if (unrealizedCcy && Number.isFinite(diffCcy)) {
+        unrealizedCcy.textContent = formatter.format(diffCcy);
+      }
+      const unrealizedBase = row.querySelector('[data-role="holding-unrealized-base"]');
+      if (unrealizedBase && Number.isFinite(diffBase)) {
+        unrealizedBase.textContent = baseFormatter.format(diffBase);
+      }
+      const unrealizedCell = row.querySelector('[data-role="holding-unrealized-cell"]');
+      applyGainClass(unrealizedCell, diffBase);
+      const pctEl = row.querySelector('[data-role="holding-unrealized-pct"]');
+      if (pctEl) {
+        const pctValue = costBase > 0 && Number.isFinite(diffBase) ? (diffBase / costBase) * 100 : 0;
+        pctEl.textContent = `${pctValue.toFixed(2)}%`;
+        applyGainClass(pctEl, diffBase);
+      }
+      row.setAttribute('data-unrealized-ccy', diffCcy);
+      row.setAttribute('data-unrealized-base', diffBase);
+
+      let dayDiffCcy = parseNumber(row.getAttribute('data-day-ccy'));
+      if (quote && quote.last !== null && quote.prev_close !== null) {
+        dayDiffCcy = (quote.last - quote.prev_close) * qty;
+      } else if (Number.isFinite(lastPrice) && Number.isFinite(prevClose)) {
+        dayDiffCcy = (lastPrice - prevClose) * qty;
+      }
+      const dayBaseValue = Number.isFinite(dayDiffCcy) ? dayDiffCcy * fxRate : parseNumber(row.getAttribute('data-day-base'));
+      const dayCcy = row.querySelector('[data-role="holding-day-ccy"]');
+      if (dayCcy && Number.isFinite(dayDiffCcy)) {
+        dayCcy.textContent = formatter.format(dayDiffCcy);
+      }
+      const dayBase = row.querySelector('[data-role="holding-day-base"]');
+      if (dayBase && Number.isFinite(dayBaseValue)) {
+        dayBase.textContent = baseFormatter.format(dayBaseValue);
+      }
+      const dayCell = row.querySelector('[data-role="holding-day-cell"]');
+      applyGainClass(dayCell, dayBaseValue);
+      row.setAttribute('data-day-ccy', dayDiffCcy);
+      row.setAttribute('data-day-base', dayBaseValue);
+
+      weightRows.push({ row, marketBase: Number.isFinite(marketBaseValue) ? marketBaseValue : 0 });
+    });
+
+    const totalMarketBase = weightRows.reduce((sum, item) => sum + (Number.isFinite(item.marketBase) ? item.marketBase : 0), 0);
+    weightRows.forEach(({ row, marketBase }) => {
+      const weightEl = row.querySelector('[data-role="holding-weight"]');
+      const pct = totalMarketBase > 0 ? (marketBase / totalMarketBase) * 100 : 0;
+      if (weightEl) {
+        weightEl.textContent = pct.toFixed(2);
+      }
+      const riskEl = row.querySelector('[data-role="holding-risk"]');
+      if (riskEl) {
+        if (pct > 15) {
+          riskEl.textContent = 'High concentration';
+          riskEl.classList.remove('hidden');
+        } else {
+          riskEl.textContent = '';
+          riskEl.classList.add('hidden');
+        }
       }
     });
   };
@@ -620,6 +743,7 @@ $formatQuantity = static function ($qty): string {
         }
         if (payload.baseCurrency) {
           chartCurrency = payload.baseCurrency;
+          updateBaseFormatter(payload.baseCurrency);
         }
         if (statusEl) {
           statusEl.textContent = payload.message || 'Quotes refreshed.';
