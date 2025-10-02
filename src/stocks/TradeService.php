@@ -2,6 +2,8 @@
 
 namespace Stocks;
 
+require_once __DIR__ . '/CashService.php';
+
 use DateTime;
 use PDO;
 use PDOException;
@@ -11,6 +13,8 @@ use Throwable;
 class TradeService
 {
     private PDO $pdo;
+
+    private ?CashService $cashService = null;
 
     /**
      * Cached table existence lookups keyed by lower-case table name.
@@ -98,6 +102,7 @@ class TradeService
             ]);
             $tradeId = (int)$stmt->fetchColumn();
 
+            $this->recordTradeCashFlow($userId, $symbol, $side, $quantity, $price, $fee, $currency, $executedTs);
             $this->rebuildPositions($userId, $stockId);
             if ($startedTransaction) {
                 $this->pdo->commit();
@@ -113,6 +118,12 @@ class TradeService
 
     private function recordTradeLegacy(int $userId, string $symbol, string $side, float $quantity, float $price, string $currency, DateTime $executedAt, float $fee): int
     {
+        $startedTransaction = false;
+        if (!$this->pdo->inTransaction()) {
+            $this->pdo->beginTransaction();
+            $startedTransaction = true;
+        }
+
         $adjustedPrice = $price;
         if ($fee > 0 && $quantity > 0) {
             if (strtoupper($side) === 'BUY') {
@@ -122,18 +133,31 @@ class TradeService
             }
         }
 
-        $stmt = $this->pdo->prepare('INSERT INTO stock_trades(user_id, symbol, trade_on, side, quantity, price, currency)
-            VALUES(?,?,?,?,?,?,?) RETURNING id');
-        $stmt->execute([
-            $userId,
-            $symbol,
-            $executedAt->format('Y-m-d'),
-            strtolower($side),
-            $quantity,
-            $adjustedPrice,
-            $currency,
-        ]);
-        return (int)$stmt->fetchColumn();
+        try {
+            $stmt = $this->pdo->prepare('INSERT INTO stock_trades(user_id, symbol, trade_on, side, quantity, price, currency)
+                VALUES(?,?,?,?,?,?,?) RETURNING id');
+            $stmt->execute([
+                $userId,
+                $symbol,
+                $executedAt->format('Y-m-d'),
+                strtolower($side),
+                $quantity,
+                $adjustedPrice,
+                $currency,
+            ]);
+            $tradeId = (int)$stmt->fetchColumn();
+
+            $this->recordTradeCashFlow($userId, $symbol, $side, $quantity, $price, $fee, $currency, $executedAt);
+            if ($startedTransaction) {
+                $this->pdo->commit();
+            }
+            return $tradeId;
+        } catch (Throwable $e) {
+            if ($startedTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
     }
 
     public function deleteTrade(int $userId, int $tradeId): void
@@ -167,12 +191,18 @@ class TradeService
             'lots' => 0,
             'realized' => 0,
             'snapshots' => 0,
+            'cash' => 0,
         ];
 
         if ($this->usesLegacySchema()) {
             $stmt = $this->pdo->prepare('DELETE FROM stock_trades WHERE user_id=?');
             $stmt->execute([$userId]);
             $stats['trades'] = $stmt->rowCount();
+            if ($this->tableExists('stock_cash_movements')) {
+                $stmtCash = $this->pdo->prepare('DELETE FROM stock_cash_movements WHERE user_id=?');
+                $stmtCash->execute([$userId]);
+                $stats['cash'] = $stmtCash->rowCount();
+            }
             return $stats;
         }
 
@@ -200,6 +230,12 @@ class TradeService
                 $stmtSnapshots = $this->pdo->prepare('DELETE FROM stock_portfolio_snapshots WHERE user_id=?');
                 $stmtSnapshots->execute([$userId]);
                 $stats['snapshots'] = $stmtSnapshots->rowCount();
+            }
+
+            if ($this->tableExists('stock_cash_movements')) {
+                $stmtCash = $this->pdo->prepare('DELETE FROM stock_cash_movements WHERE user_id=?');
+                $stmtCash->execute([$userId]);
+                $stats['cash'] = $stmtCash->rowCount();
             }
 
             $stmtTrades = $this->pdo->prepare('DELETE FROM stock_trades WHERE user_id=?');
@@ -414,6 +450,54 @@ class TradeService
         }
 
         return false;
+    }
+
+    private function resolveCashService(): ?CashService
+    {
+        if (!$this->tableExists('stock_cash_movements')) {
+            return null;
+        }
+
+        if ($this->cashService === null) {
+            $this->cashService = new CashService($this->pdo);
+        }
+
+        return $this->cashService;
+    }
+
+    private function recordTradeCashFlow(int $userId, string $symbol, string $side, float $quantity, float $price, float $fee, string $currency, DateTime $executedAt): void
+    {
+        if ($quantity <= 0 || $price < 0) {
+            return;
+        }
+
+        $cashService = $this->resolveCashService();
+        if ($cashService === null) {
+            return;
+        }
+
+        $normalizedSide = strtoupper($side);
+        $fee = max(0.0, $fee);
+        $notional = $quantity * $price;
+
+        if ($normalizedSide === 'BUY') {
+            $amount = -($notional + $fee);
+        } else {
+            $amount = $notional - $fee;
+        }
+
+        $amount = round($amount, 2);
+        if ($amount === 0.0) {
+            return;
+        }
+
+        $note = sprintf('Trade %s %s', strtolower($normalizedSide), $symbol);
+
+        try {
+            $cashService->recordMovement($userId, $amount, $currency, $executedAt, $note);
+        } catch (Throwable $e) {
+            error_log('[TradeService] Failed to record trade cash flow: ' . $e->getMessage());
+        }
     }
 
     private function tableExists(string $table): bool

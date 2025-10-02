@@ -506,6 +506,7 @@ function stocks_clear_history(PDO $pdo): void
             'lots' => 'lot',
             'realized' => 'realized P/L entry',
             'snapshots' => 'snapshot',
+            'cash' => 'cash ledger entry',
         ];
 
         $parts = [];
