@@ -605,6 +605,14 @@ switch ($path) {
         }
         redirect('/stocks');
         break;
+    case '/stocks/cash':
+        require_login();
+        require __DIR__ . '/src/controllers/stocks.php';
+        if ($method === 'POST') {
+            stocks_cash_movement($pdo);
+        }
+        redirect('/stocks');
+        break;
     case '/stocks/clear':
         require_login();
         require __DIR__ . '/src/controllers/stocks.php';

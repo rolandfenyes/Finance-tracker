@@ -28,6 +28,7 @@ Run migrations to create the new tables:
 
 ```sh
 psql "$DATABASE_URL" -f migrations/011_stocks_overhaul.sql
+psql "$DATABASE_URL" -f migrations/012_stock_cash_movements.sql
 ```
 
 The migration introduces:
@@ -37,6 +38,7 @@ The migration introduces:
 - `price_daily` historical candles
 - `stock_positions`, `stock_lots`, `stock_realized_pl` for cost basis tracking
 - `watchlist` and `user_settings_stocks`
+- `stock_cash_movements` to track deposits, withdrawals, dividends, and other cash ledger entries tied to the stock module
 
 Existing trade history is preserved. New trades should be recorded through the `Stocks\TradeService` which rebuilds lots and realized P/L.
 
@@ -58,10 +60,16 @@ php scripts/stocks_backfill.php --symbol=AAPL --from=2023-01-01 --to=2023-12-31
 
 - From `/stocks` you can upload a broker export to backfill historical trades.
 - The importer looks for headers named **Date**, **Ticker/Symbol**, **Type**, **Quantity**, **Price per share**, **Total Amount**, **Currency**, and **Fee** (case-insensitive; extra columns are ignored).
-- Rows whose type includes `BUY` or `SELL` become trades; cash top-ups/withdrawals, dividends, and interest rows are skipped automatically.
+- Rows whose type includes `BUY` or `SELL` become trades; cash top-ups, withdrawals, dividends, fees, and interest rows are recorded in the stock cash ledger instead of being ignored.
 - Fees are taken from the `Fee` column when present, otherwise we infer them from the difference between `Total Amount` and `Quantity × Price`.
-- After uploading, the page flashes a summary including any skipped rows so you can reconcile what was imported.
+- After uploading, the page flashes a summary including any skipped rows so you can reconcile what was imported. Cash rows include a short sample describing how much was added or withdrawn.
 - If you need to start over, use the **Clear history** button on the import card to wipe all recorded trades, positions, realized P/L entries, and portfolio snapshots for the signed-in user.
+
+## Cash ledger
+
+- The overview page shows the aggregated stock cash balance in the base currency plus a per-currency breakdown.
+- Use the **Record cash movement** form to add deposits (top-ups, dividends, interest) or withdrawals (fees, transfers out).
+- Cash movements require the `stock_cash_movements` table; apply migration `012_stock_cash_movements.sql` before using the ledger or CSV importer with cash rows.
 
 ## Cost-basis preferences
 

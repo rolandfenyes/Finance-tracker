@@ -11,6 +11,7 @@ $totals = $overview['totals'];
 $holdings = $overview['holdings'];
 $allocations = $overview['allocations'];
 $watchlist = $overview['watchlist'];
+$cashEntries = $overview['cash'] ?? [];
 $baseCurrency = $totals['base_currency'];
 ?>
 
@@ -54,11 +55,11 @@ $baseCurrency = $totals['base_currency'];
     </form>
   </header>
 
-  <section class="grid md:grid-cols-3 gap-4">
+  <section class="grid md:grid-cols-4 gap-4">
     <article class="card p-5 shadow-md bg-white/80 dark:bg-gray-900/40">
       <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wide">Total Market Value</h2>
       <p class="text-3xl font-semibold mt-2"><?= moneyfmt($totals['total_market_value'], $baseCurrency) ?></p>
-      <p class="text-xs text-gray-500">Cash impact: <?= moneyfmt($totals['cash_impact'], $baseCurrency) ?></p>
+      <p class="text-xs text-gray-500">Trade cash flow: <?= moneyfmt($totals['cash_impact'], $baseCurrency) ?></p>
     </article>
     <article class="card p-5 shadow-md bg-white/80 dark:bg-gray-900/40">
       <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wide">Unrealized P/L</h2>
@@ -73,6 +74,24 @@ $baseCurrency = $totals['base_currency'];
         <?= moneyfmt($totals['realized_pl'], $baseCurrency) ?>
       </p>
       <p class="text-xs text-gray-500">Daily P/L: <?= moneyfmt($totals['daily_pl'], $baseCurrency) ?></p>
+    </article>
+    <article class="card p-5 shadow-md bg-white/80 dark:bg-gray-900/40">
+      <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wide">Cash Balance</h2>
+      <p class="text-3xl font-semibold mt-2 text-slate-700 dark:text-slate-100">
+        <?= moneyfmt($totals['cash_balance'] ?? 0, $baseCurrency) ?>
+      </p>
+      <?php if (!empty($cashEntries)): ?>
+        <ul class="mt-3 space-y-1 text-xs text-gray-500 dark:text-gray-400">
+          <?php foreach ($cashEntries as $entry): ?>
+            <li>
+              <?= moneyfmt($entry['amount'], $entry['currency']) ?>
+              <span class="text-[11px] text-gray-400">(<?= moneyfmt($entry['amount_base'], $baseCurrency) ?>)</span>
+            </li>
+          <?php endforeach; ?>
+        </ul>
+      <?php else: ?>
+        <p class="text-xs text-gray-500 mt-3">No cash entries yet.</p>
+      <?php endif; ?>
     </article>
   </section>
 
@@ -168,40 +187,74 @@ $baseCurrency = $totals['base_currency'];
     </div>
   </section>
 
-  <section class="card p-5 shadow-md bg-white/80 dark:bg-gray-900/40">
-    <h3 class="text-lg font-semibold mb-3">Record trade</h3>
-    <form method="post" action="/stocks/trade" class="grid sm:grid-cols-6 gap-3">
-      <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-      <input name="symbol" placeholder="AAPL" class="input" required />
-      <select name="side" class="input">
-        <option value="BUY">Buy</option>
-        <option value="SELL">Sell</option>
-      </select>
-      <input name="quantity" type="number" step="0.0001" placeholder="Qty" class="input" required />
-      <input name="price" type="number" step="0.0001" placeholder="Price" class="input" required />
-      <select name="currency" class="input">
-        <?php if (!empty($userCurrencies)): ?>
-          <?php $hasSelected = false; ?>
-          <?php foreach ($userCurrencies as $index => $c): ?>
-            <?php
-              $code = strtoupper($c['code']);
-              $isSelected = !empty($c['is_main']) || (!$hasSelected && $index === 0);
-              if ($isSelected) { $hasSelected = true; }
-            ?>
-            <option value="<?= htmlspecialchars($code) ?>" <?= $isSelected ? 'selected' : '' ?>>
-              <?= htmlspecialchars($code) ?>
-            </option>
-          <?php endforeach; ?>
-        <?php else: ?>
-          <option value="USD" selected>USD</option>
-        <?php endif; ?>
-      </select>
-      <input name="fee" type="number" step="0.01" placeholder="Fee" class="input" />
-      <input name="trade_date" type="date" value="<?= date('Y-m-d') ?>" class="input" />
-      <input name="trade_time" type="time" value="<?= date('H:i') ?>" class="input" />
-      <input name="note" placeholder="Note" class="input sm:col-span-2" />
-      <button class="btn btn-primary sm:col-span-2">Submit trade</button>
-    </form>
+  <section class="grid lg:grid-cols-2 gap-6">
+    <article class="card p-5 shadow-md bg-white/80 dark:bg-gray-900/40">
+      <h3 class="text-lg font-semibold mb-3">Record trade</h3>
+      <form method="post" action="/stocks/trade" class="grid sm:grid-cols-6 gap-3">
+        <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+        <input name="symbol" placeholder="AAPL" class="input" required />
+        <select name="side" class="input">
+          <option value="BUY">Buy</option>
+          <option value="SELL">Sell</option>
+        </select>
+        <input name="quantity" type="number" step="0.0001" placeholder="Qty" class="input" required />
+        <input name="price" type="number" step="0.0001" placeholder="Price" class="input" required />
+        <select name="currency" class="input">
+          <?php if (!empty($userCurrencies)): ?>
+            <?php $hasSelected = false; ?>
+            <?php foreach ($userCurrencies as $index => $c): ?>
+              <?php
+                $code = strtoupper($c['code']);
+                $isSelected = !empty($c['is_main']) || (!$hasSelected && $index === 0);
+                if ($isSelected) { $hasSelected = true; }
+              ?>
+              <option value="<?= htmlspecialchars($code) ?>" <?= $isSelected ? 'selected' : '' ?>>
+                <?= htmlspecialchars($code) ?>
+              </option>
+            <?php endforeach; ?>
+          <?php else: ?>
+            <option value="USD" selected>USD</option>
+          <?php endif; ?>
+        </select>
+        <input name="fee" type="number" step="0.01" placeholder="Fee" class="input" />
+        <input name="trade_date" type="date" value="<?= date('Y-m-d') ?>" class="input" />
+        <input name="trade_time" type="time" value="<?= date('H:i') ?>" class="input" />
+        <input name="note" placeholder="Note" class="input sm:col-span-2" />
+        <button class="btn btn-primary sm:col-span-6">Save trade</button>
+      </form>
+    </article>
+    <article class="card p-5 shadow-md bg-white/80 dark:bg-gray-900/40">
+      <h3 class="text-lg font-semibold mb-3">Record cash movement</h3>
+      <form method="post" action="/stocks/cash" class="grid sm:grid-cols-6 gap-3">
+        <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+        <select name="cash_action" class="input">
+          <option value="deposit">Add cash</option>
+          <option value="withdraw">Withdraw cash</option>
+        </select>
+        <input name="cash_amount" type="number" step="0.01" placeholder="Amount" class="input sm:col-span-2" required />
+        <select name="cash_currency" class="input">
+          <?php if (!empty($userCurrencies)): ?>
+            <?php $hasCashSelected = false; ?>
+            <?php foreach ($userCurrencies as $index => $c): ?>
+              <?php
+                $code = strtoupper($c['code']);
+                $isSelected = !empty($c['is_main']) || (!$hasCashSelected && $index === 0);
+                if ($isSelected) { $hasCashSelected = true; }
+              ?>
+              <option value="<?= htmlspecialchars($code) ?>" <?= $isSelected ? 'selected' : '' ?>>
+                <?= htmlspecialchars($code) ?>
+              </option>
+            <?php endforeach; ?>
+          <?php else: ?>
+            <option value="USD" selected>USD</option>
+          <?php endif; ?>
+        </select>
+        <input name="cash_date" type="date" value="<?= date('Y-m-d') ?>" class="input" />
+        <input name="cash_time" type="time" value="<?= date('H:i') ?>" class="input" />
+        <input name="cash_note" placeholder="Note" class="input sm:col-span-3" />
+        <button class="btn btn-secondary sm:col-span-6">Save cash entry</button>
+      </form>
+    </article>
   </section>
 
   <section class="card p-5 shadow-md bg-white/80 dark:bg-gray-900/40">

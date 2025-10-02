@@ -2,6 +2,9 @@
 
 namespace Stocks;
 
+require_once __DIR__ . '/CashService.php';
+require_once __DIR__ . '/../fx.php';
+
 use DateInterval;
 use DateTime;
 use PDO;
@@ -10,6 +13,7 @@ class PortfolioService
 {
     private PDO $pdo;
     private PriceDataService $priceDataService;
+    private CashService $cashService;
 
     /**
      * Cached table existence lookups to avoid repeated information_schema hits.
@@ -18,10 +22,11 @@ class PortfolioService
      */
     private array $schemaCache = [];
 
-    public function __construct(PDO $pdo, PriceDataService $priceDataService)
+    public function __construct(PDO $pdo, PriceDataService $priceDataService, ?CashService $cashService = null)
     {
         $this->pdo = $pdo;
         $this->priceDataService = $priceDataService;
+        $this->cashService = $cashService ?? new CashService($pdo);
     }
 
     /**
@@ -30,7 +35,6 @@ class PortfolioService
      */
     public function buildOverview(int $userId, array $filters = []): array
     {
-        require_once __DIR__ . '/../fx.php';
         $baseCurrency = fx_user_main($this->pdo, $userId) ?: 'EUR';
         $today = (new DateTime())->format('Y-m-d');
 
@@ -97,6 +101,19 @@ class PortfolioService
             $holdings[$idx]['risk_note'] = ($holdings[$idx]['weight_pct'] > 15) ? 'High concentration' : null;
         }
 
+        $cashEntries = [];
+        $cashBalanceBase = 0.0;
+        $cashTotals = $this->cashService->sumByCurrency($userId);
+        foreach ($cashTotals as $currencyCode => $amount) {
+            $converted = fx_convert($this->pdo, $amount, $currencyCode, $baseCurrency, $today);
+            $cashEntries[] = [
+                'currency' => $currencyCode,
+                'amount' => $amount,
+                'amount_base' => $converted,
+            ];
+            $cashBalanceBase += $converted;
+        }
+
         $realizedPeriod = $filters['realized_period'] ?? 'YTD';
         [$from, $to] = $this->resolvePeriodRange($realizedPeriod);
         $realizedBase = $this->sumRealized($userId, $from, $to);
@@ -109,6 +126,7 @@ class PortfolioService
             'unrealized_pct' => ($totalCostBase > 0) ? (($totalMarketBase - $totalCostBase) / $totalCostBase) * 100 : 0.0,
             'daily_pl' => $totalDailyBase,
             'cash_impact' => $cashImpactBase,
+            'cash_balance' => $cashBalanceBase,
             'realized_pl' => $realizedBase,
             'realized_period' => $realizedPeriod,
         ];
@@ -121,6 +139,7 @@ class PortfolioService
             'holdings' => $holdings,
             'allocations' => $allocations,
             'watchlist' => $watchlist,
+            'cash' => $cashEntries,
         ];
     }
 

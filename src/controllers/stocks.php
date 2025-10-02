@@ -10,10 +10,12 @@ require_once __DIR__ . '/../stocks/PortfolioService.php';
 require_once __DIR__ . '/../stocks/TradeService.php';
 require_once __DIR__ . '/../stocks/SignalsService.php';
 require_once __DIR__ . '/../stocks/ChartsService.php';
+require_once __DIR__ . '/../stocks/CashService.php';
 
 use Stocks\Adapters\FinnhubAdapter;
 use Stocks\Adapters\NullPriceProvider;
 use Stocks\ChartsService;
+use Stocks\CashService;
 use Stocks\PortfolioService;
 use Stocks\PriceDataService;
 use Stocks\SignalsService;
@@ -24,7 +26,8 @@ function stocks_index(PDO $pdo): void
     require_login();
     $userId = uid();
     $priceService = stocks_price_service($pdo);
-    $portfolio = new PortfolioService($pdo, $priceService);
+    $cashService = new CashService($pdo);
+    $portfolio = new PortfolioService($pdo, $priceService, $cashService);
     $signalsService = new SignalsService($pdo, $priceService);
     $chartsService = new ChartsService($pdo, $priceService);
 
@@ -218,11 +221,14 @@ function stocks_import(PDO $pdo): void
     }
 
     $tradeService = new TradeService($pdo);
+    $cashService = new CashService($pdo);
     $imported = 0;
     $skipped = 0;
     $ignored = 0;
+    $cashRecorded = 0;
     $skipSamples = [];
     $ignoreSamples = [];
+    $cashSamples = [];
 
     while (($row = fgetcsv($handle, 0, $delimiter, '"', '\\')) !== false) {
         if (stocks_import_row_is_empty($row)) {
@@ -235,7 +241,44 @@ function stocks_import(PDO $pdo): void
         $side = stocks_import_detect_side($type);
 
         if ($side === null || $symbol === '') {
-            if (stocks_import_is_non_trade($type)) {
+            if (stocks_import_is_cash_like($type)) {
+                $currency = strtoupper(trim((string)($record['currency'] ?? 'USD')));
+                if ($currency === '') {
+                    $currency = 'USD';
+                }
+                $executedAtRaw = trim((string)($record['date'] ?? ''));
+                try {
+                    $executedAt = $executedAtRaw !== '' ? new DateTime($executedAtRaw) : new DateTime();
+                } catch (Throwable $e) {
+                    $skipped++;
+                    if (count($skipSamples) < 3) {
+                        $skipSamples[] = 'Cash row (bad date)';
+                    }
+                    continue;
+                }
+
+                $amount = stocks_import_cash_amount($record, $type);
+                if ($amount === 0.0) {
+                    $skipped++;
+                    if (count($skipSamples) < 3) {
+                        $skipSamples[] = 'Cash row (missing amount)';
+                    }
+                    continue;
+                }
+
+                try {
+                    $cashService->recordMovement($userId, $amount, $currency, $executedAt, $type !== '' ? ('CSV import: ' . $type) : 'CSV import');
+                    $cashRecorded++;
+                    if (count($cashSamples) < 3) {
+                        $cashSamples[] = sprintf('%s %s', moneyfmt(abs($amount), $currency), $amount > 0 ? 'added' : 'withdrawn');
+                    }
+                } catch (Throwable $e) {
+                    $skipped++;
+                    if (count($skipSamples) < 3) {
+                        $skipSamples[] = 'Cash row (' . $e->getMessage() . ')';
+                    }
+                }
+            } elseif (stocks_import_is_non_trade($type)) {
                 $ignored++;
                 if (count($ignoreSamples) < 3) {
                     $ignoreSamples[] = $type !== '' ? $type : 'Non-trade row';
@@ -312,8 +355,18 @@ function stocks_import(PDO $pdo): void
 
     fclose($handle);
 
-    if ($imported > 0) {
-        $_SESSION['flash_success'] = sprintf('Imported %d trade%s from CSV.', $imported, $imported === 1 ? '' : 's');
+    if ($imported > 0 || $cashRecorded > 0) {
+        $messages = [];
+        if ($imported > 0) {
+            $messages[] = sprintf('Imported %d trade%s', $imported, $imported === 1 ? '' : 's');
+        }
+        if ($cashRecorded > 0) {
+            $messages[] = sprintf('Recorded %d cash movement%s', $cashRecorded, $cashRecorded === 1 ? '' : 's');
+        }
+        $_SESSION['flash_success'] = implode(' and ', $messages) . ' from CSV.';
+        if ($cashRecorded > 0 && !empty($cashSamples)) {
+            $_SESSION['flash_success'] .= ' Examples: ' . implode('; ', $cashSamples);
+        }
     }
 
     if ($ignored > 0) {
@@ -334,8 +387,55 @@ function stocks_import(PDO $pdo): void
         $_SESSION['flash'] = $message;
     }
 
-    if ($imported === 0 && $ignored === 0 && $skipped === 0) {
+    if ($imported === 0 && $ignored === 0 && $skipped === 0 && $cashRecorded === 0) {
         $_SESSION['flash'] = 'No data rows were detected in the CSV file.';
+    }
+}
+
+function stocks_cash_movement(PDO $pdo): void
+{
+    verify_csrf();
+    require_login();
+    $userId = uid();
+
+    $action = strtolower(trim((string)($_POST['cash_action'] ?? 'deposit')));
+    $currency = strtoupper(trim((string)($_POST['cash_currency'] ?? 'USD')));
+    if ($currency === '') {
+        $currency = 'USD';
+    }
+
+    $amount = stocks_import_to_float($_POST['cash_amount'] ?? null);
+    if ($amount <= 0) {
+        $_SESSION['flash'] = 'Please enter a cash amount greater than zero.';
+        return;
+    }
+
+    $date = trim((string)($_POST['cash_date'] ?? date('Y-m-d')));
+    $time = trim((string)($_POST['cash_time'] ?? date('H:i')));
+    try {
+        $executedAt = new DateTime(trim($date . ' ' . $time));
+    } catch (Throwable $e) {
+        $_SESSION['flash'] = 'Invalid date or time for the cash entry.';
+        return;
+    }
+
+    $noteRaw = trim((string)($_POST['cash_note'] ?? ''));
+    $note = $noteRaw !== '' ? $noteRaw : null;
+
+    $amount = abs($amount);
+    if ($action === 'withdraw') {
+        $amount = -$amount;
+    }
+
+    $cashService = new CashService($pdo);
+    try {
+        $cashService->recordMovement($userId, $amount, $currency, $executedAt, $note);
+        $_SESSION['flash_success'] = $amount >= 0
+            ? sprintf('Added %s to your stock cash balance.', moneyfmt($amount, $currency))
+            : sprintf('Withdrew %s from your stock cash balance.', moneyfmt(abs($amount), $currency));
+    } catch (Throwable $e) {
+        error_log('[stocks_cash_movement] ' . $e->getMessage());
+        $_SESSION['flash'] = 'Unable to record the cash entry. Please ensure the latest migrations have been applied.';
     }
 }
 
@@ -728,5 +828,49 @@ function stocks_import_detect_side(string $type): ?string
 function stocks_import_is_non_trade(string $type): bool
 {
     $upper = strtoupper($type);
-    return str_contains($upper, 'CASH') || str_contains($upper, 'DIVIDEND') || str_contains($upper, 'INTEREST');
+    return str_contains($upper, 'SPLIT') || str_contains($upper, 'MERGER') || str_contains($upper, 'TRANSFER')
+        || str_contains($upper, 'REORG');
+}
+
+function stocks_import_is_cash_like(string $type): bool
+{
+    $upper = strtoupper($type);
+    if ($upper === '') {
+        return false;
+    }
+    return str_contains($upper, 'CASH')
+        || str_contains($upper, 'DIVIDEND')
+        || str_contains($upper, 'INTEREST')
+        || str_contains($upper, 'FEE')
+        || str_contains($upper, 'TAX');
+}
+
+/**
+ * @param array<string,mixed> $record
+ */
+function stocks_import_cash_amount(array $record, string $type): float
+{
+    $total = stocks_import_to_float($record['total'] ?? null);
+    if ($total === 0.0) {
+        $alt = stocks_import_to_float($record['price'] ?? null);
+        if ($alt !== 0.0) {
+            $total = $alt;
+        }
+    }
+    if ($total === 0.0) {
+        $qty = stocks_import_to_float($record['quantity'] ?? null);
+        $price = stocks_import_to_float($record['price'] ?? null);
+        if ($qty !== 0.0 && $price !== 0.0) {
+            $total = $qty * $price;
+        }
+    }
+
+    $upper = strtoupper($type);
+    if ($total > 0 && (str_contains($upper, 'WITHDRAW') || str_contains($upper, 'FEE') || str_contains($upper, 'TAX'))) {
+        return -abs($total);
+    }
+    if ($total < 0 && (str_contains($upper, 'TOP') || str_contains($upper, 'DEPOSIT') || str_contains($upper, 'DIVIDEND') || str_contains($upper, 'INTEREST'))) {
+        return abs($total);
+    }
+    return $total;
 }
