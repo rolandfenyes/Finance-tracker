@@ -55,10 +55,14 @@ if ($method === 'POST' && !empty($_POST['_method'])) {
 
 // Dynamic routes for stocks module
 if ($method === 'GET' && preg_match('#^/stocks/([A-Za-z0-9\.-:]+)$#', $path, $m)) {
-    require_login();
-    require __DIR__ . '/src/controllers/stocks.php';
-    stocks_detail($pdo, $m[1]);
-    return;
+    $slug = strtolower($m[1]);
+    $reserved = ['transactions', 'trade', 'import', 'cash', 'refresh', 'clear'];
+    if (!in_array($slug, $reserved, true)) {
+        require_login();
+        require __DIR__ . '/src/controllers/stocks.php';
+        stocks_detail($pdo, $m[1]);
+        return;
+    }
 }
 
 if (preg_match('#^/stocks/([A-Za-z0-9\.-:]+)/watch$#', $path, $m)) {

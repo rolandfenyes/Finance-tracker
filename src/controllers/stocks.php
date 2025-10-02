@@ -214,6 +214,9 @@ function stocks_import(PDO $pdo): void
     require_login();
     $userId = uid();
     $wantsJson = stocks_request_wants_json();
+    if (!$wantsJson && isset($_POST['format']) && strtolower((string)$_POST['format']) === 'json') {
+        $wantsJson = true;
+    }
     $responseMeta = [
         'imported' => 0,
         'cash_recorded' => 0,

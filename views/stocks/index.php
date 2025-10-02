@@ -77,6 +77,7 @@ $formatQuantity = static function ($qty): string {
         <input type="hidden" name="sector" value="<?= htmlspecialchars($filters['sector'] ?? '') ?>" />
         <input type="hidden" name="currency" value="<?= htmlspecialchars($filters['currency'] ?? '') ?>" />
         <input type="hidden" name="period" value="<?= htmlspecialchars($filters['realized_period'] ?? 'YTD') ?>" />
+        <input type="hidden" name="format" value="json" />
         <?php if (!empty($filters['watchlist_only'])): ?>
           <input type="hidden" name="watchlist" value="1" />
         <?php endif; ?>
@@ -575,8 +576,16 @@ $formatQuantity = static function ($qty): string {
         const resp = await fetch(refreshForm.action, {
           method: 'POST',
           body: new FormData(refreshForm),
-          headers: { 'Accept': 'application/json' }
+          credentials: 'same-origin',
+          headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          }
         });
+        const contentType = resp.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+          throw new Error('Unexpected response from server.');
+        }
         const payload = await resp.json();
         if (!resp.ok || !payload.success) {
           throw new Error(payload && payload.message ? payload.message : 'Unable to refresh quotes');
