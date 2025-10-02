@@ -152,6 +152,67 @@ class TradeService
         }
     }
 
+    /**
+     * Remove all stock-related history for the given user.
+     *
+     * @return array{trades:int,positions:int,lots:int,realized:int,snapshots:int}
+     */
+    public function clearUserHistory(int $userId): array
+    {
+        $stats = [
+            'trades' => 0,
+            'positions' => 0,
+            'lots' => 0,
+            'realized' => 0,
+            'snapshots' => 0,
+        ];
+
+        if ($this->usesLegacySchema()) {
+            $stmt = $this->pdo->prepare('DELETE FROM stock_trades WHERE user_id=?');
+            $stmt->execute([$userId]);
+            $stats['trades'] = $stmt->rowCount();
+            return $stats;
+        }
+
+        $this->pdo->beginTransaction();
+        try {
+            if ($this->tableExists('stock_lots')) {
+                $stmtLots = $this->pdo->prepare('DELETE FROM stock_lots WHERE position_id IN (SELECT id FROM stock_positions WHERE user_id=?)');
+                $stmtLots->execute([$userId]);
+                $stats['lots'] = $stmtLots->rowCount();
+            }
+
+            if ($this->tableExists('stock_realized_pl')) {
+                $stmtRealized = $this->pdo->prepare('DELETE FROM stock_realized_pl WHERE user_id=?');
+                $stmtRealized->execute([$userId]);
+                $stats['realized'] = $stmtRealized->rowCount();
+            }
+
+            if ($this->tableExists('stock_positions')) {
+                $stmtPositions = $this->pdo->prepare('DELETE FROM stock_positions WHERE user_id=?');
+                $stmtPositions->execute([$userId]);
+                $stats['positions'] = $stmtPositions->rowCount();
+            }
+
+            if ($this->tableExists('stock_portfolio_snapshots')) {
+                $stmtSnapshots = $this->pdo->prepare('DELETE FROM stock_portfolio_snapshots WHERE user_id=?');
+                $stmtSnapshots->execute([$userId]);
+                $stats['snapshots'] = $stmtSnapshots->rowCount();
+            }
+
+            $stmtTrades = $this->pdo->prepare('DELETE FROM stock_trades WHERE user_id=?');
+            $stmtTrades->execute([$userId]);
+            $stats['trades'] = $stmtTrades->rowCount();
+
+            $this->pdo->commit();
+        } catch (PDOException $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+
+        return $stats;
+    }
+
     public function rebuildPositions(int $userId, ?int $stockId = null): void
     {
         if ($this->usesLegacySchema()) {

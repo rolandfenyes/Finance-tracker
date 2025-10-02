@@ -354,6 +354,49 @@ function stocks_delete_trade(PDO $pdo): void
     redirect('/stocks');
 }
 
+function stocks_clear_history(PDO $pdo): void
+{
+    verify_csrf();
+    require_login();
+    $userId = uid();
+    $tradeService = new TradeService($pdo);
+
+    try {
+        $stats = $tradeService->clearUserHistory($userId);
+        $totalRemoved = array_sum($stats);
+        if ($totalRemoved === 0) {
+            $_SESSION['flash'] = 'No stock trades were found to clear.';
+            return;
+        }
+
+        $labels = [
+            'trades' => 'trade',
+            'positions' => 'position',
+            'lots' => 'lot',
+            'realized' => 'realized P/L entry',
+            'snapshots' => 'snapshot',
+        ];
+
+        $parts = [];
+        foreach ($stats as $key => $count) {
+            if ($count <= 0) {
+                continue;
+            }
+            $label = $labels[$key] ?? $key;
+            $parts[] = sprintf('%d %s%s', $count, $label, $count === 1 ? '' : 's');
+        }
+
+        if (!empty($parts)) {
+            $_SESSION['flash_success'] = 'Cleared ' . implode(', ', $parts) . '.';
+        } else {
+            $_SESSION['flash_success'] = 'Stock trade history cleared.';
+        }
+    } catch (Throwable $e) {
+        error_log('[stocks_clear_history] ' . $e->getMessage());
+        $_SESSION['flash'] = 'Unable to clear stock history. Please try again.';
+    }
+}
+
 function stocks_toggle_watch(PDO $pdo, string $symbol): void
 {
     verify_csrf();

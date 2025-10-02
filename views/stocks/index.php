@@ -210,6 +210,10 @@ $baseCurrency = $totals['base_currency'];
         <h3 class="text-lg font-semibold">Import trades from CSV</h3>
         <p class="text-xs text-gray-500">Upload broker exports to backfill BUY/SELL activity. Cash top-ups, withdrawals, and dividends are kept out of positions automatically.</p>
       </div>
+      <form method="post" action="/stocks/clear" onsubmit="return confirm('Clear all recorded stock trades? This cannot be undone.');" class="shrink-0">
+        <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+        <button class="btn btn-danger">Clear history</button>
+      </form>
     </div>
     <form method="post" action="/stocks/import" enctype="multipart/form-data" class="space-y-3">
       <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />

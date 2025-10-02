@@ -61,6 +61,7 @@ php scripts/stocks_backfill.php --symbol=AAPL --from=2023-01-01 --to=2023-12-31
 - Rows whose type includes `BUY` or `SELL` become trades; cash top-ups/withdrawals, dividends, and interest rows are skipped automatically.
 - Fees are taken from the `Fee` column when present, otherwise we infer them from the difference between `Total Amount` and `Quantity × Price`.
 - After uploading, the page flashes a summary including any skipped rows so you can reconcile what was imported.
+- If you need to start over, use the **Clear history** button on the import card to wipe all recorded trades, positions, realized P/L entries, and portfolio snapshots for the signed-in user.
 
 ## Cost-basis preferences
 
