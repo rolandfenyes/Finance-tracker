@@ -53,6 +53,36 @@ if ($method === 'POST' && !empty($_POST['_method'])) {
     }
 }
 
+// Dynamic routes for stocks module
+if ($method === 'GET' && preg_match('#^/stocks/([A-Za-z0-9\.-:]+)$#', $path, $m)) {
+    $slug = strtolower($m[1]);
+    $reserved = ['transactions', 'trade', 'import', 'cash', 'refresh', 'clear'];
+    if (!in_array($slug, $reserved, true)) {
+        require_login();
+        require __DIR__ . '/src/controllers/stocks.php';
+        stocks_detail($pdo, $m[1]);
+        return;
+    }
+}
+
+if (preg_match('#^/stocks/([A-Za-z0-9\.-:]+)/watch$#', $path, $m)) {
+    require_login();
+    require __DIR__ . '/src/controllers/stocks.php';
+    if ($method === 'POST') {
+        stocks_toggle_watch($pdo, $m[1]);
+    } else {
+        redirect('/stocks/' . urlencode($m[1]));
+    }
+    return;
+}
+
+if (preg_match('#^/api/stocks/([A-Za-z0-9\.-:]+)/history$#', $path, $m)) {
+    require_login();
+    require __DIR__ . '/src/controllers/stocks.php';
+    stocks_history_api($pdo, $m[1]);
+    return;
+}
+
 // Simple routing
 switch ($path) {
     case '/':
@@ -562,23 +592,68 @@ switch ($path) {
         require __DIR__ . '/src/controllers/stocks.php';
         stocks_index($pdo);
         break;
-    case '/stocks/buy':
+    case '/stocks/transactions':
         require_login();
         require __DIR__ . '/src/controllers/stocks.php';
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') { trade_buy($pdo); }
+        stocks_transactions($pdo);
+        break;
+    case '/stocks/trade':
+        require_login();
+        require __DIR__ . '/src/controllers/stocks.php';
+        if ($method === 'POST') {
+            stocks_trade($pdo);
+        } else {
+            redirect('/stocks');
+        }
+        break;
+    case '/stocks/import':
+        require_login();
+        require __DIR__ . '/src/controllers/stocks.php';
+        if ($method === 'POST') {
+            stocks_import($pdo);
+        }
         redirect('/stocks');
         break;
-    case '/stocks/sell':
+    case '/stocks/cash':
         require_login();
         require __DIR__ . '/src/controllers/stocks.php';
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') { trade_sell($pdo); }
+        if ($method === 'POST') {
+            stocks_cash_movement($pdo);
+        }
+        redirect('/stocks');
+        break;
+    case '/stocks/refresh':
+        require_login();
+        require __DIR__ . '/src/controllers/stocks.php';
+        if ($method === 'POST') {
+            $target = stocks_refresh_overview($pdo);
+            if ($target !== null) {
+                redirect($target);
+            }
+        } else {
+            redirect('/stocks');
+        }
+        break;
+    case '/stocks/clear':
+        require_login();
+        require __DIR__ . '/src/controllers/stocks.php';
+        if ($method === 'POST') {
+            stocks_clear_history($pdo);
+        }
         redirect('/stocks');
         break;
     case '/stocks/trade/delete':
         require_login();
         require __DIR__ . '/src/controllers/stocks.php';
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') { trade_delete($pdo); }
+        if ($method === 'POST') {
+            stocks_delete_trade($pdo);
+        }
         redirect('/stocks');
+        break;
+    case '/api/stocks/live':
+        require_login();
+        require __DIR__ . '/src/controllers/stocks.php';
+        stocks_live_api($pdo);
         break;
 
     // Scheduled
