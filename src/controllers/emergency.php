@@ -39,6 +39,11 @@ function emergency_index(PDO $pdo){
     $dtstart = $s['next_due'];       // DTSTART for the RRULE
     $rr = trim($s['rrule'] ?? '');
 
+    // Skip malformed schedules (no next_due or rule)
+    if (!$dtstart || !is_string($dtstart)) {
+      continue;
+    }
+
     // expand into the next month range
     $dates = rrule_expand($dtstart, $rr, $firstNext, $lastNext); // array of 'Y-m-d'
     if (!$dates || !count($dates)) continue;
