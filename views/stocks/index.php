@@ -655,8 +655,12 @@ $formatQuantity = static function ($qty): string {
     });
   };
 
+  let pollInFlight = false;
+  let stalePollTimer = null;
+
   async function pollQuotes(){
-    if (!symbols.length) return;
+    if (!symbols.length || pollInFlight) return;
+    pollInFlight = true;
     try {
       const resp = await fetch(`/api/stocks/live?symbols=${symbols.join(',')}`, { headers: { 'Accept': 'application/json' } });
       if (!resp.ok) return;
@@ -665,9 +669,22 @@ $formatQuantity = static function ($qty): string {
         const lookup = {};
         data.quotes.forEach(q => { lookup[q.symbol] = q; });
         updatePanels(lookup);
+        const hasStale = data.quotes.some(q => q.stale);
+        if (hasStale) {
+          if (stalePollTimer) clearTimeout(stalePollTimer);
+          stalePollTimer = setTimeout(() => {
+            stalePollTimer = null;
+            pollQuotes();
+          }, Math.min(refreshSeconds, 3000));
+        } else if (stalePollTimer) {
+          clearTimeout(stalePollTimer);
+          stalePollTimer = null;
+        }
       }
     } catch (err) {
       console.warn('Live quotes polling failed', err);
+    } finally {
+      pollInFlight = false;
     }
   }
 
@@ -676,6 +693,10 @@ $formatQuantity = static function ($qty): string {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       clearInterval(pollTimer);
+      if (stalePollTimer) {
+        clearTimeout(stalePollTimer);
+        stalePollTimer = null;
+      }
     } else {
       pollQuotes();
       pollTimer = setInterval(pollQuotes, refreshSeconds);

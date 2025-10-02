@@ -476,7 +476,12 @@ $signals = $insights['signals'] ?? [];
     });
   }
 
+  let refreshInFlight = false;
+  let staleQuoteTimer = null;
+
   async function refreshQuote(){
+    if (refreshInFlight) return;
+    refreshInFlight = true;
     try {
       const resp = await fetch(`/api/stocks/live?symbols=${symbol}`);
       if (!resp.ok) return;
@@ -516,8 +521,20 @@ $signals = $insights['signals'] ?? [];
       if (quote.day_high !== null) document.getElementById('quoteHigh').textContent = formatter.format(quote.day_high);
       if (quote.day_low !== null) document.getElementById('quoteLow').textContent = formatter.format(quote.day_low);
       if (quote.volume !== null) document.getElementById('quoteVol').textContent = new Intl.NumberFormat().format(quote.volume);
+      if (quote.stale) {
+        if (staleQuoteTimer) clearTimeout(staleQuoteTimer);
+        staleQuoteTimer = setTimeout(() => {
+          staleQuoteTimer = null;
+          refreshQuote();
+        }, Math.min(refreshMs, 3000));
+      } else if (staleQuoteTimer) {
+        clearTimeout(staleQuoteTimer);
+        staleQuoteTimer = null;
+      }
     } catch (err) {
       console.warn('Quote refresh failed', err);
+    } finally {
+      refreshInFlight = false;
     }
   }
 
@@ -526,6 +543,10 @@ $signals = $insights['signals'] ?? [];
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       clearInterval(timer);
+      if (staleQuoteTimer) {
+        clearTimeout(staleQuoteTimer);
+        staleQuoteTimer = null;
+      }
     } else {
       refreshQuote();
       timer = setInterval(refreshQuote, refreshMs);
