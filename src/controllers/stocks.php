@@ -239,6 +239,7 @@ function stocks_import(PDO $pdo): void
     $skipped = 0;
     $ignored = 0;
     $cashRecorded = 0;
+    $pendingReorg = [];
     $skipSamples = [];
     $ignoreSamples = [];
     $cashSamples = [];
@@ -249,11 +250,114 @@ function stocks_import(PDO $pdo): void
         }
 
         $record = stocks_import_build_record($row, $columnMap);
-        $type = strtoupper(trim((string)($record['type'] ?? '')));
+        $typeRaw = trim((string)($record['type'] ?? ''));
+        $type = strtoupper($typeRaw);
         $symbol = strtoupper(trim((string)($record['ticker'] ?? '')));
         $side = stocks_import_detect_side($type);
 
         if ($side === null || $symbol === '') {
+            if ($symbol !== '' && str_contains($type, 'MERGER') && str_contains($type, 'STOCK')) {
+                $quantity = abs(stocks_import_to_float($record['quantity'] ?? null));
+                if ($quantity <= 0) {
+                    $skipped++;
+                    if (count($skipSamples) < 3) {
+                        $skipSamples[] = $symbol . ' (merger quantity missing)';
+                    }
+                    continue;
+                }
+
+                $currency = strtoupper(trim((string)($record['currency'] ?? 'USD')));
+                if ($currency === '') {
+                    $currency = 'USD';
+                }
+
+                $executedAtRaw = trim((string)($record['date'] ?? ''));
+                try {
+                    $executedAt = $executedAtRaw !== '' ? new DateTime($executedAtRaw) : new DateTime();
+                } catch (Throwable $e) {
+                    $skipped++;
+                    if (count($skipSamples) < 3) {
+                        $skipSamples[] = $symbol . ' (merger date invalid)';
+                    }
+                    continue;
+                }
+
+                $pendingReorg[$symbol] = [
+                    'quantity' => $quantity,
+                    'currency' => $currency,
+                    'executed_at' => $executedAt,
+                    'note' => $type !== '' ? ('CSV import: ' . $type) : 'CSV import',
+                ];
+                continue;
+            }
+
+            if ($symbol !== '' && str_contains($type, 'MERGER') && str_contains($type, 'CASH') && isset($pendingReorg[$symbol])) {
+                $pending = $pendingReorg[$symbol];
+                unset($pendingReorg[$symbol]);
+
+                $currency = strtoupper(trim((string)($record['currency'] ?? '')));
+                if ($currency === '') {
+                    $currency = $pending['currency'];
+                }
+
+                $executedAtRaw = trim((string)($record['date'] ?? ''));
+                try {
+                    $executedAt = $executedAtRaw !== '' ? new DateTime($executedAtRaw) : clone $pending['executed_at'];
+                } catch (Throwable $e) {
+                    $executedAt = clone $pending['executed_at'];
+                }
+
+                $amount = abs(stocks_import_cash_amount($record, $type));
+                if ($amount <= 0) {
+                    $skipped++;
+                    if (count($skipSamples) < 3) {
+                        $skipSamples[] = $symbol . ' (merger cash missing)';
+                    }
+                    continue;
+                }
+
+                $quantity = (float)$pending['quantity'];
+                if ($quantity <= 0) {
+                    $skipped++;
+                    if (count($skipSamples) < 3) {
+                        $skipSamples[] = $symbol . ' (merger quantity missing)';
+                    }
+                    continue;
+                }
+
+                $price = $amount / $quantity;
+                if ($price <= 0) {
+                    $skipped++;
+                    if (count($skipSamples) < 3) {
+                        $skipSamples[] = $symbol . ' (merger cash insufficient)';
+                    }
+                    continue;
+                }
+
+                $payload = [
+                    'symbol' => $symbol,
+                    'side' => 'SELL',
+                    'quantity' => $quantity,
+                    'price' => $price,
+                    'currency' => $currency,
+                    'executed_at' => $executedAt->format('Y-m-d H:i:sP'),
+                    'note' => $pending['note'],
+                    'cash_total' => $amount,
+                ];
+
+                try {
+                    $tradeService->recordTrade($userId, $payload);
+                    $imported++;
+                } catch (Throwable $e) {
+                    $skipped++;
+                    if (count($skipSamples) < 3) {
+                        $skipSamples[] = $symbol . ' (' . $e->getMessage() . ')';
+                    }
+                }
+
+                continue;
+            }
+
             if (stocks_import_is_cash_like($type)) {
                 $currency = strtoupper(trim((string)($record['currency'] ?? 'USD')));
                 if ($currency === '') {
@@ -376,6 +480,15 @@ function stocks_import(PDO $pdo): void
             $skipped++;
             if (count($skipSamples) < 3) {
                 $skipSamples[] = $symbol . ' (' . $e->getMessage() . ')';
+            }
+        }
+    }
+
+    if (!empty($pendingReorg)) {
+        foreach ($pendingReorg as $symbol => $pending) {
+            $skipped++;
+            if (count($skipSamples) < 3) {
+                $skipSamples[] = $symbol . ' (merger cash leg missing)';
             }
         }
     }
