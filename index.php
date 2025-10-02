@@ -30,9 +30,14 @@ require $root . '/src/helpers.php';
 require $root . '/src/auth.php';
 require $root . '/src/webauthn.php';
 require $root . '/src/fx.php';
+require $root . '/src/scheduled_runner.php';
 
 if (isset($pdo) && $pdo instanceof PDO) {
     attempt_remembered_login($pdo);
+}
+
+if (isset($pdo) && $pdo instanceof PDO && is_logged_in()) {
+    scheduled_process_linked($pdo, uid());
 }
 
 $rawPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
