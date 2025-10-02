@@ -172,6 +172,171 @@ function stocks_trade(PDO $pdo): void
     }
 }
 
+function stocks_import(PDO $pdo): void
+{
+    verify_csrf();
+    require_login();
+    $userId = uid();
+
+    if (empty($_FILES['csv']) || !isset($_FILES['csv']['tmp_name'])) {
+        $_SESSION['flash'] = 'Please choose a CSV file to upload.';
+        return;
+    }
+
+    $file = $_FILES['csv'];
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        $_SESSION['flash'] = 'Upload failed. Please try again.';
+        return;
+    }
+
+    $tmpName = $file['tmp_name'];
+    if (!is_uploaded_file($tmpName)) {
+        $_SESSION['flash'] = 'Invalid upload. Please try again.';
+        return;
+    }
+
+    $handle = fopen($tmpName, 'r');
+    if (!$handle) {
+        $_SESSION['flash'] = 'Could not read the uploaded file.';
+        return;
+    }
+
+    $headerRow = fgetcsv($handle);
+    if ($headerRow === false) {
+        fclose($handle);
+        $_SESSION['flash'] = 'The CSV file appears to be empty.';
+        return;
+    }
+
+    $columnMap = stocks_import_header_map($headerRow);
+    if (empty($columnMap['date']) || empty($columnMap['type'])) {
+        fclose($handle);
+        $_SESSION['flash'] = 'The CSV is missing required headers (Date / Type).';
+        return;
+    }
+
+    $tradeService = new TradeService($pdo);
+    $imported = 0;
+    $skipped = 0;
+    $ignored = 0;
+    $skipSamples = [];
+    $ignoreSamples = [];
+
+    while (($row = fgetcsv($handle)) !== false) {
+        if (stocks_import_row_is_empty($row)) {
+            continue;
+        }
+
+        $record = stocks_import_build_record($row, $columnMap);
+        $type = strtoupper(trim((string)($record['type'] ?? '')));
+        $symbol = strtoupper(trim((string)($record['ticker'] ?? '')));
+        $side = stocks_import_detect_side($type);
+
+        if ($side === null || $symbol === '') {
+            if (stocks_import_is_non_trade($type)) {
+                $ignored++;
+                if (count($ignoreSamples) < 3) {
+                    $ignoreSamples[] = $type !== '' ? $type : 'Non-trade row';
+                }
+            } else {
+                $skipped++;
+                if (count($skipSamples) < 3) {
+                    $skipSamples[] = ($symbol ?: 'Unknown symbol') . ' (' . ($type ?: 'Unknown type') . ')';
+                }
+            }
+            continue;
+        }
+
+        $quantity = stocks_import_to_float($record['quantity'] ?? null);
+        $price = stocks_import_to_float($record['price'] ?? null);
+        if ($quantity <= 0 || $price <= 0) {
+            $skipped++;
+            if (count($skipSamples) < 3) {
+                $skipSamples[] = $symbol . ' (missing qty/price)';
+            }
+            continue;
+        }
+
+        $currency = strtoupper(trim((string)($record['currency'] ?? 'USD')));
+        if ($currency === '') {
+            $currency = 'USD';
+        }
+
+        $executedAtRaw = trim((string)($record['date'] ?? ''));
+        try {
+            $executedAt = $executedAtRaw !== '' ? new DateTime($executedAtRaw) : new DateTime();
+        } catch (Throwable $e) {
+            $skipped++;
+            if (count($skipSamples) < 3) {
+                $skipSamples[] = $symbol . ' (bad date)';
+            }
+            continue;
+        }
+
+        $payload = [
+            'symbol' => $symbol,
+            'side' => $side,
+            'quantity' => $quantity,
+            'price' => $price,
+            'currency' => $currency,
+            'executed_at' => $executedAt->format('Y-m-d H:i:sP'),
+            'note' => $type !== '' ? ('CSV import: ' . $type) : 'CSV import',
+        ];
+
+        $feeFromFile = stocks_import_to_float($record['fee'] ?? null);
+        if ($feeFromFile > 0) {
+            $payload['fee'] = $feeFromFile;
+        }
+
+        $totalAmount = stocks_import_to_float($record['total'] ?? null);
+        if ($totalAmount !== 0.0 && !isset($payload['fee'])) {
+            $notional = abs($quantity * $price);
+            $feeGuess = abs(abs($totalAmount) - $notional);
+            if ($feeGuess > 0.005) {
+                $payload['fee'] = round($feeGuess, 2);
+            }
+        }
+
+        try {
+            $tradeService->recordTrade($userId, $payload);
+            $imported++;
+        } catch (Throwable $e) {
+            $skipped++;
+            if (count($skipSamples) < 3) {
+                $skipSamples[] = $symbol . ' (' . $e->getMessage() . ')';
+            }
+        }
+    }
+
+    fclose($handle);
+
+    if ($imported > 0) {
+        $_SESSION['flash_success'] = sprintf('Imported %d trade%s from CSV.', $imported, $imported === 1 ? '' : 's');
+    }
+
+    if ($ignored > 0) {
+        $details = $ignoreSamples ? ' Examples: ' . implode('; ', $ignoreSamples) : '';
+        $_SESSION['flash_success'] = ($_SESSION['flash_success'] ?? '')
+            ? $_SESSION['flash_success'] . sprintf(' Skipped %d cash/dividend row%s.', $ignored, $ignored === 1 ? '' : 's')
+            : sprintf('Skipped %d cash/dividend row%s.', $ignored, $ignored === 1 ? '' : 's');
+        if ($details !== '') {
+            $_SESSION['flash_success'] .= $details;
+        }
+    }
+
+    if ($skipped > 0) {
+        $message = sprintf('Skipped %d row%s due to validation issues.', $skipped, $skipped === 1 ? '' : 's');
+        if (!empty($skipSamples)) {
+            $message .= ' Examples: ' . implode('; ', $skipSamples);
+        }
+        $_SESSION['flash'] = $message;
+    }
+
+    if ($imported === 0 && $ignored === 0 && $skipped === 0) {
+        $_SESSION['flash'] = 'No data rows were detected in the CSV file.';
+    }
+}
+
 function stocks_delete_trade(PDO $pdo): void
 {
     verify_csrf();
@@ -361,4 +526,134 @@ function stocks_refresh_default(): int
     global $config;
     $value = (int)($config['stocks']['refresh_seconds'] ?? 10);
     return max(5, $value);
+}
+
+/**
+ * @param list<string> $header
+ * @return array<string,int>
+ */
+function stocks_import_header_map(array $header): array
+{
+    $aliases = [
+        'date' => 'date',
+        'timestamp' => 'date',
+        'executed at' => 'date',
+        'time' => 'date',
+        'ticker' => 'ticker',
+        'symbol' => 'ticker',
+        'asset' => 'ticker',
+        'type' => 'type',
+        'action' => 'type',
+        'side' => 'type',
+        'quantity' => 'quantity',
+        'qty' => 'quantity',
+        'shares' => 'quantity',
+        'price per share' => 'price',
+        'price/share' => 'price',
+        'price' => 'price',
+        'trade price' => 'price',
+        'total amount' => 'total',
+        'amount' => 'total',
+        'gross amount' => 'total',
+        'net amount' => 'total',
+        'currency' => 'currency',
+        'fx currency' => 'currency',
+        'fx rate' => 'fx_rate',
+        'exchange rate' => 'fx_rate',
+        'note' => 'note',
+        'memo' => 'note',
+        'fee' => 'fee',
+        'commission' => 'fee',
+    ];
+
+    $map = [];
+    foreach ($header as $index => $label) {
+        $normalized = stocks_import_normalize_header((string)$label);
+        if ($normalized === '') {
+            continue;
+        }
+        if (isset($aliases[$normalized])) {
+            $key = $aliases[$normalized];
+            if (!array_key_exists($key, $map)) {
+                $map[$key] = $index;
+            }
+        }
+    }
+
+    return $map;
+}
+
+function stocks_import_normalize_header(string $value): string
+{
+    $value = preg_replace('/^\xEF\xBB\xBF/', '', $value); // remove BOM if present
+    $value = strtolower(trim($value));
+    $value = preg_replace('/\s+/', ' ', $value);
+    if (!is_string($value)) {
+        return '';
+    }
+    return $value;
+}
+
+/**
+ * @param list<string|null> $row
+ * @param array<string,int> $columnMap
+ * @return array<string,string|null>
+ */
+function stocks_import_build_record(array $row, array $columnMap): array
+{
+    $record = [];
+    foreach ($columnMap as $key => $index) {
+        $record[$key] = isset($row[$index]) ? trim((string)$row[$index]) : null;
+    }
+    return $record;
+}
+
+/**
+ * @param mixed $value
+ */
+function stocks_import_to_float($value): float
+{
+    if ($value === null) {
+        return 0.0;
+    }
+    if (is_numeric($value)) {
+        return (float)$value;
+    }
+    $normalized = preg_replace('/[^0-9\-\.,]/', '', (string)$value);
+    if ($normalized === '' || $normalized === '-' || $normalized === '--') {
+        return 0.0;
+    }
+    $normalized = str_replace(',', '', $normalized);
+    return (float)$normalized;
+}
+
+/**
+ * @param list<string|null> $row
+ */
+function stocks_import_row_is_empty(array $row): bool
+{
+    foreach ($row as $cell) {
+        if (trim((string)$cell) !== '') {
+            return false;
+        }
+    }
+    return true;
+}
+
+function stocks_import_detect_side(string $type): ?string
+{
+    $upper = strtoupper($type);
+    if (str_contains($upper, 'BUY')) {
+        return 'BUY';
+    }
+    if (str_contains($upper, 'SELL')) {
+        return 'SELL';
+    }
+    return null;
+}
+
+function stocks_import_is_non_trade(string $type): bool
+{
+    $upper = strtoupper($type);
+    return str_contains($upper, 'CASH') || str_contains($upper, 'DIVIDEND') || str_contains($upper, 'INTEREST');
 }

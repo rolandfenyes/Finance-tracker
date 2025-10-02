@@ -20,6 +20,18 @@ $baseCurrency = $totals['base_currency'];
       Unable to record the trade. Please ensure the latest database migrations have been run and try again.
     </div>
   <?php endif; ?>
+  <?php if (!empty($_SESSION['flash_success'])): ?>
+    <div class="rounded-xl border border-emerald-200 bg-emerald-50/90 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-100">
+      <?= htmlspecialchars($_SESSION['flash_success']) ?>
+    </div>
+    <?php unset($_SESSION['flash_success']); ?>
+  <?php endif; ?>
+  <?php if (!empty($_SESSION['flash'])): ?>
+    <div class="rounded-xl border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-100">
+      <?= htmlspecialchars($_SESSION['flash']) ?>
+    </div>
+    <?php unset($_SESSION['flash']); ?>
+  <?php endif; ?>
   <header class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
     <div>
       <h1 class="text-3xl font-semibold text-gray-900 dark:text-gray-100">Stocks</h1>
@@ -189,6 +201,21 @@ $baseCurrency = $totals['base_currency'];
       <input name="trade_time" type="time" value="<?= date('H:i') ?>" class="input" />
       <input name="note" placeholder="Note" class="input sm:col-span-2" />
       <button class="btn btn-primary sm:col-span-2">Submit trade</button>
+    </form>
+  </section>
+
+  <section class="card p-5 shadow-md bg-white/80 dark:bg-gray-900/40">
+    <div class="flex items-start justify-between gap-4 mb-4">
+      <div>
+        <h3 class="text-lg font-semibold">Import trades from CSV</h3>
+        <p class="text-xs text-gray-500">Upload broker exports to backfill BUY/SELL activity. Cash top-ups, withdrawals, and dividends are kept out of positions automatically.</p>
+      </div>
+    </div>
+    <form method="post" action="/stocks/import" enctype="multipart/form-data" class="space-y-3">
+      <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+      <input type="file" name="csv" accept=".csv,text/csv" class="input" required />
+      <p class="text-xs text-gray-500">We match columns named Date, Ticker/Symbol, Type, Quantity, Price per share, Total Amount, Currency, and Fee when available.</p>
+      <button class="btn btn-secondary">Upload CSV</button>
     </form>
   </section>
 

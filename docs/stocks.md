@@ -54,6 +54,14 @@ php scripts/stocks_backfill.php --symbol=AAPL --from=2023-01-01 --to=2023-12-31
 
 - On the stock detail page you can switch the price chart range (1D/5D/1M/6M/1Y/5Y). The buttons fetch `/api/stocks/{symbol}/history?range=...` via AJAX and refresh both the price line and the position value chart without a full page reload.
 
+## Bulk import via CSV
+
+- From `/stocks` you can upload a broker export to backfill historical trades.
+- The importer looks for headers named **Date**, **Ticker/Symbol**, **Type**, **Quantity**, **Price per share**, **Total Amount**, **Currency**, and **Fee** (case-insensitive; extra columns are ignored).
+- Rows whose type includes `BUY` or `SELL` become trades; cash top-ups/withdrawals, dividends, and interest rows are skipped automatically.
+- Fees are taken from the `Fee` column when present, otherwise we infer them from the difference between `Total Amount` and `Quantity × Price`.
+- After uploading, the page flashes a summary including any skipped rows so you can reconcile what was imported.
+
 ## Cost-basis preferences
 
 User preferences are stored in `user_settings_stocks`:
