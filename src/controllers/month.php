@@ -198,6 +198,11 @@ function month_show(PDO $pdo, ?int $year = null, ?int $month = null) {
     $dtstart = $s['next_due'];             // DTSTART
     $rr = trim($s['rrule'] ?? '');
 
+    // Skip malformed schedules (no next_due or rule)
+    if (!$dtstart || !is_string($dtstart)) {
+      continue;
+    }
+
     // Expand occurrences for current month window
     $dates = rrule_expand($dtstart, $rr, $first, $last); // returns array of 'Y-m-d'
     if (!$dates) continue;
