@@ -124,6 +124,101 @@
   </script>
   <script>
     (function() {
+      const root = document.documentElement;
+      const init = () => {
+        if (!root.classList.contains('is-ios')) {
+          return;
+        }
+
+        const safeAreaVar = '--mm-safe-area-baseline';
+        const keyboardVar = '--mm-ios-keyboard-offset';
+        const probe = document.createElement('div');
+        probe.style.position = 'absolute';
+        probe.style.top = '0';
+        probe.style.left = '0';
+        probe.style.width = '0';
+        probe.style.height = '0';
+        probe.style.visibility = 'hidden';
+        probe.style.pointerEvents = 'none';
+        probe.style.paddingBottom = 'env(safe-area-inset-bottom)';
+        (document.body || root).appendChild(probe);
+        const sampleSafeArea = () => {
+          root.style.removeProperty(safeAreaVar);
+          const computed = getComputedStyle(probe).paddingBottom;
+          const numeric = parseFloat(computed);
+          const value = Number.isFinite(numeric) ? numeric : 0;
+          root.style.setProperty(safeAreaVar, `${value}px`);
+          return value;
+        };
+
+        sampleSafeArea();
+        let lastKeyboardOffset = 0;
+        let rafId = 0;
+
+        const applyKeyboardOffset = () => {
+          rafId = 0;
+          const viewport = window.visualViewport;
+          if (!viewport) {
+            return;
+          }
+          const rawOffset = window.innerHeight - (viewport.height + viewport.offsetTop);
+          const offset = rawOffset > 1 ? rawOffset : 0;
+          if (offset !== lastKeyboardOffset) {
+            root.style.setProperty(keyboardVar, `${offset}px`);
+            root.classList.toggle('ios-keyboard-open', offset > 0);
+            lastKeyboardOffset = offset;
+          }
+          if (offset === 0) {
+            sampleSafeArea();
+          }
+        };
+
+        const queueKeyboardUpdate = () => {
+          if (rafId) {
+            cancelAnimationFrame(rafId);
+          }
+          rafId = requestAnimationFrame(applyKeyboardOffset);
+        };
+
+        const refreshSafeArea = () => {
+          if (lastKeyboardOffset > 0) {
+            return;
+          }
+          sampleSafeArea();
+        };
+
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener('resize', queueKeyboardUpdate);
+          window.visualViewport.addEventListener('scroll', queueKeyboardUpdate);
+          queueKeyboardUpdate();
+        }
+
+        window.addEventListener('orientationchange', () => {
+          setTimeout(() => {
+            refreshSafeArea();
+            queueKeyboardUpdate();
+          }, 200);
+        });
+
+        window.addEventListener('resize', () => {
+          if (!window.visualViewport) {
+            refreshSafeArea();
+          }
+        });
+
+        document.addEventListener('focusin', queueKeyboardUpdate);
+        document.addEventListener('focusout', queueKeyboardUpdate);
+      };
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init, { once: true });
+      } else {
+        init();
+      }
+    })();
+  </script>
+  <script>
+    (function() {
       const storageKey = 'mymoneymap-theme';
       const root = document.documentElement;
       const getStored = () => {
@@ -182,6 +277,9 @@
     @layer base {
       :root {
         color-scheme: light;
+        --mm-safe-area-bottom: env(safe-area-inset-bottom);
+        --mm-safe-area-baseline: env(safe-area-inset-bottom);
+        --mm-ios-keyboard-offset: 0px;
       }
       :root[data-theme='dark'] {
         color-scheme: dark;
@@ -195,15 +293,21 @@
         background-image: var(--mm-mesh-background);
         background-attachment: fixed;
         background-size: cover;
-        padding-bottom: env(safe-area-inset-bottom);
+        padding-bottom: var(--mm-safe-area-bottom, env(safe-area-inset-bottom));
+      }
+      html.is-ios body {
+        padding-bottom: var(--mm-safe-area-baseline, 0px);
       }
       @media (max-width: 767px) {
         body.has-mobile-nav {
-          padding-bottom: calc(env(safe-area-inset-bottom) + 5.5rem);
+          padding-bottom: calc(var(--mm-safe-area-bottom, env(safe-area-inset-bottom)) + 5.5rem);
+        }
+        html.is-ios body.has-mobile-nav {
+          padding-bottom: calc(var(--mm-safe-area-baseline, 0px) + 5.5rem);
         }
         @supports (bottom: env(keyboard-inset-height)) {
           html:not(.is-ios) body.has-mobile-nav {
-            padding-bottom: calc(env(safe-area-inset-bottom) + env(keyboard-inset-height) + 5.5rem);
+            padding-bottom: calc(var(--mm-safe-area-bottom, env(safe-area-inset-bottom)) + env(keyboard-inset-height) + 5.5rem);
           }
         }
       }
@@ -752,7 +856,7 @@
         bottom: 0;
         padding-top: 0.4rem;
         padding-bottom: 0.6rem;
-        padding-bottom: calc(env(safe-area-inset-bottom) + 0.6rem);
+        padding-bottom: calc(var(--mm-safe-area-bottom, env(safe-area-inset-bottom)) + 0.6rem);
         box-shadow: 0 -20px 36px -24px rgba(17, 36, 29, 0.45);
         transition: transform 0.3s ease, opacity 0.3s ease;
         transform: translateZ(0);
@@ -762,8 +866,12 @@
       }
       @supports (bottom: env(keyboard-inset-height)) {
         html:not(.is-ios) .mobile-nav {
-          padding-bottom: calc(env(safe-area-inset-bottom) + env(keyboard-inset-height) + 0.6rem);
+          padding-bottom: calc(var(--mm-safe-area-bottom, env(safe-area-inset-bottom)) + env(keyboard-inset-height) + 0.6rem);
         }
+      }
+      html.is-ios .mobile-nav {
+        bottom: var(--mm-ios-keyboard-offset, 0px);
+        padding-bottom: calc(var(--mm-safe-area-baseline, 0px) + 0.6rem);
       }
       .dark .mobile-nav {
         box-shadow: 0 -20px 40px -26px rgba(0, 0, 0, 0.65);
