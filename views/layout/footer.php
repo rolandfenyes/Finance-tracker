@@ -308,42 +308,60 @@
       const cancel = window.cancelAnimationFrame || clearTimeout;
 
       let rafId = null;
-      let lastOffset = '';
+      let lastShift = '';
+      let baseHeight = Math.max(
+        window.innerHeight || 0,
+        document.documentElement ? document.documentElement.clientHeight || 0 : 0
+      );
 
-      const readLayoutHeight = () => {
-        return window.innerHeight || document.documentElement.clientHeight || 0;
+      const OFFSET_EPSILON = 2; // px
+
+      const refreshBaseHeight = () => {
+        const candidate = Math.max(
+          window.innerHeight || 0,
+          document.documentElement ? document.documentElement.clientHeight || 0 : 0
+        );
+
+        if (candidate > baseHeight) {
+          baseHeight = candidate;
+        }
+
+        return baseHeight;
       };
 
-      const OFFSET_EPSILON = 4; // px
-
-      const computeOffset = () => {
-        const layoutHeight = readLayoutHeight();
+      const computeShift = () => {
+        const layoutHeight = refreshBaseHeight();
         if (!layoutHeight) {
           return '0px';
         }
 
-        const heightDiff = Math.round(layoutHeight - viewport.height - viewport.offsetTop);
-        if (!Number.isFinite(heightDiff) || heightDiff <= OFFSET_EPSILON) {
+        const viewportBottom = viewport.height + viewport.offsetTop;
+        if (!Number.isFinite(viewportBottom)) {
           return '0px';
         }
 
-        return `${heightDiff}px`;
+        const delta = Math.round(layoutHeight - viewportBottom);
+        if (delta <= OFFSET_EPSILON) {
+          return '0px';
+        }
+
+        return `${delta}px`;
       };
 
-      const applyOffset = () => {
+      const applyShift = () => {
         rafId = null;
-        const nextOffset = computeOffset();
-        if (nextOffset === lastOffset) {
+        const nextShift = computeShift();
+        if (nextShift === lastShift) {
           return;
         }
 
-        if (nextOffset === '0px') {
-          nav.style.removeProperty('--mobile-nav-offset');
+        if (nextShift === '0px') {
+          nav.style.removeProperty('--mobile-nav-shift');
         } else {
-          nav.style.setProperty('--mobile-nav-offset', nextOffset);
+          nav.style.setProperty('--mobile-nav-shift', nextShift);
         }
 
-        lastOffset = nextOffset;
+        lastShift = nextShift;
       };
 
       const scheduleUpdate = () => {
@@ -351,25 +369,33 @@
           cancel(rafId);
         }
 
-        rafId = frame(applyOffset);
+        rafId = frame(applyShift);
       };
 
       const settleUpdate = () => {
         scheduleUpdate();
-        window.setTimeout(applyOffset, 120);
-        window.setTimeout(applyOffset, 320);
+        window.setTimeout(scheduleUpdate, 120);
+        window.setTimeout(scheduleUpdate, 320);
+      };
+
+      const resetBaseAndUpdate = () => {
+        baseHeight = Math.max(
+          window.innerHeight || 0,
+          document.documentElement ? document.documentElement.clientHeight || 0 : 0
+        );
+        settleUpdate();
       };
 
       viewport.addEventListener('resize', settleUpdate);
       viewport.addEventListener('scroll', settleUpdate);
-      window.addEventListener('orientationchange', settleUpdate);
+      window.addEventListener('orientationchange', resetBaseAndUpdate);
       window.addEventListener('resize', settleUpdate);
       window.addEventListener('focusin', settleUpdate, true);
       window.addEventListener('focusout', settleUpdate, true);
-      window.addEventListener('pageshow', settleUpdate);
+      window.addEventListener('pageshow', resetBaseAndUpdate);
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
-          settleUpdate();
+          resetBaseAndUpdate();
         }
       });
 
