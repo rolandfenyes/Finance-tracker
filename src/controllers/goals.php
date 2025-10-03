@@ -40,6 +40,19 @@ function goals_index(PDO $pdo){
   $sp->execute([$u]);
   $scheduledList = $sp->fetchAll(PDO::FETCH_ASSOC);
 
+  // Manual contributions for each goal (ordered newest first)
+  $gc = $pdo->prepare("SELECT gc.id, gc.goal_id, gc.amount, gc.currency, gc.occurred_on, gc.note
+                         FROM goal_contributions gc
+                         JOIN goals g ON g.id = gc.goal_id AND g.user_id = ?
+                        ORDER BY gc.occurred_on DESC, gc.id DESC");
+  $gc->execute([$u]);
+  $goalTransactions = [];
+  foreach ($gc->fetchAll(PDO::FETCH_ASSOC) as $tx) {
+    $goalId = (int)($tx['goal_id'] ?? 0);
+    if (!$goalId) { continue; }
+    $goalTransactions[$goalId][] = $tx;
+  }
+
   // currencies (if you show currency selectors on the page)
   $uc = $pdo->prepare("SELECT code,is_main FROM user_currencies WHERE user_id=? ORDER BY is_main DESC, code");
   $uc->execute([$u]);
@@ -50,7 +63,7 @@ function goals_index(PDO $pdo){
   $cs->execute([$u]);
   $categories = $cs->fetchAll(PDO::FETCH_ASSOC);
 
-  view('goals/index', compact('rows','scheduledList','userCurrencies','categories'));
+  view('goals/index', compact('rows','scheduledList','userCurrencies','categories','goalTransactions'));
 }
 
 /** Create a goal */
@@ -283,6 +296,67 @@ function goals_tx_add(PDO $pdo){
     $pdo->rollBack();
     // throw $e; // uncomment to debug
     $_SESSION['flash'] = 'Could not add contribution.';
+  }
+
+  redirect('/goals');
+}
+
+function goals_tx_update(PDO $pdo){
+  verify_csrf(); require_login();
+  $u = uid();
+
+  $id        = (int)($_POST['id'] ?? 0);
+  $amount    = (float)($_POST['amount'] ?? 0);
+  $currency  = strtoupper(trim($_POST['currency'] ?? ''));
+  $occurred  = $_POST['occurred_on'] ?: date('Y-m-d');
+  $note      = trim($_POST['note'] ?? '');
+
+  if (!$id || $amount <= 0 || !$occurred) {
+    $_SESSION['flash'] = 'Goal, amount and date are required.';
+    redirect('/goals');
+  }
+
+  $q = $pdo->prepare('SELECT gc.*, g.currency AS goal_currency, g.user_id, g.id AS goal_id
+                       FROM goal_contributions gc
+                       JOIN goals g ON g.id = gc.goal_id
+                      WHERE gc.id=? AND g.user_id=?');
+  $q->execute([$id,$u]);
+  $row = $q->fetch(PDO::FETCH_ASSOC);
+  if (!$row) { redirect('/goals'); }
+
+  if ($currency === '') {
+    $currency = $row['goal_currency']
+      ?: ($row['currency'] ?: (function_exists('fx_user_main') ? fx_user_main($pdo, $u) : 'HUF'));
+  }
+
+  $goalCur = $row['goal_currency'] ?: $currency;
+
+  $pdo->beginTransaction();
+  try {
+    $oldDelta = ($row['currency'] === $goalCur)
+      ? (float)$row['amount']
+      : fx_convert($pdo, (float)$row['amount'], $row['currency'], $goalCur, $row['occurred_on']);
+
+    $newDelta = ($currency === $goalCur)
+      ? $amount
+      : fx_convert($pdo, $amount, $currency, $goalCur, $occurred);
+
+    $upd = $pdo->prepare('UPDATE goal_contributions
+                             SET amount=?, currency=?, occurred_on=?, note=?
+                           WHERE id=?');
+    $upd->execute([$amount,$currency,$occurred,$note,$id]);
+
+    $pdo->prepare('UPDATE goals
+                      SET current_amount = GREATEST(0, COALESCE(current_amount,0) - ? + ?),
+                          currency = COALESCE(currency, ?)
+                    WHERE id=? AND user_id=?')
+        ->execute([$oldDelta,$newDelta,$goalCur,(int)$row['goal_id'],$u]);
+
+    $pdo->commit();
+    $_SESSION['flash'] = 'Contribution updated.';
+  } catch (Throwable $e) {
+    $pdo->rollBack();
+    $_SESSION['flash'] = 'Could not update contribution.';
   }
 
   redirect('/goals');

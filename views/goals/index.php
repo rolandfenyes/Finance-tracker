@@ -1,3 +1,5 @@
+<?php $goalTransactions = $goalTransactions ?? []; ?>
+
 <section class="card">
   <h1 class="text-xl font-semibold"><?= __('Goals') ?></h1>
   <?php if (!empty($_SESSION['flash'])): ?>
@@ -175,7 +177,7 @@
   </div>
 </section>
 
-<?php foreach ($rows as $g): $goalId=(int)$g['id']; $cur=$g['currency'] ?: 'HUF'; ?>
+<?php foreach ($rows as $g): $goalId=(int)$g['id']; $cur=$g['currency'] ?: 'HUF'; $goalTxList = $goalTransactions[$goalId] ?? []; ?>
 <div id="goal-edit-<?= $goalId ?>" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="goal-edit-title-<?= $goalId ?>">
   <div class="modal-backdrop" data-close></div>
 
@@ -457,6 +459,10 @@
           <label class="label"><?= __('Amount (:currency)', ['currency' => htmlspecialchars($cur)]) ?></label>
           <input name="amount" type="number" step="0.01" class="input" placeholder="0.00" required />
         </div>
+        <div class="sm:col-span-12">
+          <label class="label"><?= __('Note (optional)') ?></label>
+          <input name="note" class="input" placeholder="<?= __('e.g., Transfer from savings') ?>" />
+        </div>
       </form>
     </div>
 
@@ -466,8 +472,111 @@
         <button class="btn btn-primary" form="goal-add-form-<?= $goalId ?>"><?= __('Add money') ?></button>
       </div>
     </div>
+
+    <div class="px-6 pb-6">
+      <div class="mt-6">
+        <h4 class="font-semibold mb-3"><?= __('Transactions') ?></h4>
+        <?php if ($goalTxList): ?>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <thead>
+                <tr class="text-left text-xs uppercase tracking-wide text-gray-500">
+                  <th class="py-2 pr-3"><?= __('Date') ?></th>
+                  <th class="py-2 pr-3"><?= __('Amount') ?></th>
+                  <th class="py-2 pr-3"><?= __('Note') ?></th>
+                  <th class="py-2 pr-0 text-right"><?= __('Actions') ?></th>
+                </tr>
+              </thead>
+              <tbody>
+              <?php foreach ($goalTxList as $tx): $txId=(int)$tx['id']; $txCur = $tx['currency'] ?: $cur; ?>
+                <tr class="border-t">
+                  <td class="py-2 pr-3 align-middle text-sm"><?= htmlspecialchars($tx['occurred_on']) ?></td>
+                  <td class="py-2 pr-3 align-middle text-sm">
+                    <?= moneyfmt((float)$tx['amount'], $txCur) ?>
+                    <?php if ($txCur && strtoupper($txCur) !== strtoupper($cur)): ?>
+                      <span class="text-xs text-gray-500">(<?= htmlspecialchars($txCur) ?>)</span>
+                    <?php endif; ?>
+                  </td>
+                  <td class="py-2 pr-3 align-middle text-sm">
+                    <?php if ($tx['note'] !== null && $tx['note'] !== ''): ?>
+                      <?= htmlspecialchars($tx['note']) ?>
+                    <?php else: ?>
+                      <span class="text-gray-400"><?= __('No note') ?></span>
+                    <?php endif; ?>
+                  </td>
+                  <td class="py-2 pr-0 align-middle text-right">
+                    <div class="flex justify-end gap-2">
+                      <button type="button" class="btn !px-3" data-open="#goal-tx-edit-<?= $txId ?>"><?= __('Edit') ?></button>
+                      <form method="post" action="/goals/tx/delete" onsubmit="return confirm('<?= __('Delete this transaction?') ?>');">
+                        <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+                        <input type="hidden" name="id" value="<?= $txId ?>" />
+                        <button class="btn btn-danger !px-3" type="submit"><?= __('Delete') ?></button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              <?php endforeach; ?>
+              </tbody>
+            </table>
+          </div>
+        <?php else: ?>
+          <p class="text-sm text-gray-500"><?= __('No transactions yet.') ?></p>
+        <?php endif; ?>
+      </div>
+    </div>
   </div>
 </div>
+<?php endforeach; ?>
+
+<?php foreach ($rows as $g): $goalId=(int)$g['id']; $cur=$g['currency'] ?: 'HUF'; $goalTxList = $goalTransactions[$goalId] ?? []; ?>
+  <?php foreach ($goalTxList as $tx): $txId=(int)$tx['id']; $txCur = $tx['currency'] ?: $cur; ?>
+    <div id="goal-tx-edit-<?= $txId ?>" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="goal-tx-edit-title-<?= $txId ?>">
+      <div class="modal-backdrop" data-close></div>
+      <div class="modal-panel">
+        <div class="modal-header">
+          <h3 id="goal-tx-edit-title-<?= $txId ?>" class="font-semibold"><?= __('Edit transaction') ?></h3>
+          <button type="button" class="icon-btn" aria-label="<?= __('Close') ?>" data-close>
+            <i data-lucide="x" class="h-5 w-5"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form method="post" action="/goals/tx/update" id="goal-tx-form-<?= $txId ?>" class="grid gap-3 sm:grid-cols-12">
+            <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+            <input type="hidden" name="id" value="<?= $txId ?>" />
+            <div class="sm:col-span-5">
+              <label class="label"><?= __('Date') ?></label>
+              <input name="occurred_on" type="date" class="input" value="<?= htmlspecialchars($tx['occurred_on']) ?>" required />
+            </div>
+            <div class="sm:col-span-5">
+              <label class="label"><?= __('Amount') ?></label>
+              <input name="amount" type="number" step="0.01" class="input" value="<?= htmlspecialchars($tx['amount']) ?>" required />
+            </div>
+            <div class="sm:col-span-4">
+              <label class="label"><?= __('Currency') ?></label>
+              <select name="currency" class="select">
+                <option value=""><?= __('Default') ?></option>
+                <?php foreach ($userCurrencies as $uc): $code=$uc['code']; ?>
+                  <option value="<?= htmlspecialchars($code) ?>" <?= strtoupper($code)===strtoupper($txCur)?'selected':'' ?>>
+                    <?= htmlspecialchars($code) ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="sm:col-span-12">
+              <label class="label"><?= __('Note (optional)') ?></label>
+              <input name="note" class="input" value="<?= htmlspecialchars($tx['note'] ?? '') ?>" />
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <div class="flex flex-row flex-wrap gap-2 justify-end">
+            <button type="button" class="btn" data-close><?= __('Cancel') ?></button>
+            <button class="btn btn-primary" form="goal-tx-form-<?= $txId ?>"><?= __('Save changes') ?></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  <?php endforeach; ?>
 <?php endforeach; ?>
 
 <script>
