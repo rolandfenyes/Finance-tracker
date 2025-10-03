@@ -292,6 +292,32 @@
     };
   </script>
 
+  <script>
+    (function () {
+      const nav = document.querySelector('.mobile-nav');
+      if (!nav) {
+        return;
+      }
+
+      const viewport = window.visualViewport;
+      if (!viewport) {
+        return;
+      }
+
+      const updateOffset = () => {
+        const heightDiff = Math.max(0, Math.round(window.innerHeight - viewport.height - viewport.offsetTop));
+        nav.style.setProperty('--mobile-nav-offset', heightDiff > 0 ? `${heightDiff}px` : '0px');
+      };
+
+      viewport.addEventListener('resize', updateOffset);
+      viewport.addEventListener('scroll', updateOffset);
+      window.addEventListener('orientationchange', updateOffset);
+      window.addEventListener('resize', updateOffset);
+
+      updateOffset();
+    })();
+  </script>
+
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>
     lucide.createIcons();

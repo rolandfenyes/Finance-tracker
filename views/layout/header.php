@@ -735,12 +735,13 @@
         left: 0;
         right: 0;
         bottom: 0;
+        --mobile-nav-offset: 0px;
         padding-top: 0.4rem;
         padding-bottom: 0.6rem;
         padding-bottom: calc(env(safe-area-inset-bottom) + 0.6rem);
         box-shadow: 0 -20px 36px -24px rgba(17, 36, 29, 0.45);
         transition: transform 0.3s ease, opacity 0.3s ease;
-        transform: translateZ(0);
+        transform: translate3d(0, var(--mobile-nav-offset), 0);
         will-change: transform;
         contain: layout paint;
         backface-visibility: hidden;
