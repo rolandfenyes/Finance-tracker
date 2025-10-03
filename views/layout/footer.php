@@ -314,6 +314,8 @@
         return window.innerHeight || document.documentElement.clientHeight || 0;
       };
 
+      const OFFSET_EPSILON = 4; // px
+
       const computeOffset = () => {
         const layoutHeight = readLayoutHeight();
         if (!layoutHeight) {
@@ -321,7 +323,7 @@
         }
 
         const heightDiff = Math.round(layoutHeight - viewport.height - viewport.offsetTop);
-        if (!Number.isFinite(heightDiff) || heightDiff <= 0) {
+        if (!Number.isFinite(heightDiff) || heightDiff <= OFFSET_EPSILON) {
           return '0px';
         }
 
