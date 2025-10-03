@@ -105,8 +105,22 @@ function loans_index(PDO $pdo){
   $sp->execute([$u]);
   $scheduledList = $sp->fetchAll(PDO::FETCH_ASSOC);
 
+  // Recorded payments per loan (newest first)
+  $lp = $pdo->prepare("SELECT lp.id, lp.loan_id, lp.paid_on, lp.amount, lp.principal_component,
+                              lp.interest_component, lp.currency
+                         FROM loan_payments lp
+                         JOIN loans l ON l.id = lp.loan_id AND l.user_id = ?
+                        ORDER BY lp.paid_on DESC, lp.id DESC");
+  $lp->execute([$u]);
+  $loanPayments = [];
+  foreach ($lp->fetchAll(PDO::FETCH_ASSOC) as $pay) {
+    $loanId = (int)($pay['loan_id'] ?? 0);
+    if (!$loanId) { continue; }
+    $loanPayments[$loanId][] = $pay;
+  }
 
-  view('loans/index', compact('rows','userCurrencies','scheduledList'));
+
+  view('loans/index', compact('rows','userCurrencies','scheduledList','loanPayments'));
 }
 
 
@@ -294,6 +308,85 @@ function loan_payment_add(PDO $pdo){ verify_csrf(); require_login(); $u=uid();
   $pdo->prepare('INSERT INTO loan_payments(loan_id,paid_on,amount,principal_component,interest_component,currency) VALUES(?,?,?,?,?,?)')
       ->execute([$loanId, $_POST['paid_on'], $amount, $principal, $interest, $_POST['currency']??'HUF']);
   $pdo->prepare('UPDATE loans SET balance = GREATEST(0,balance-?) WHERE id=? AND user_id=?')->execute([$principal,$loanId,$u]);
+  $_SESSION['flash'] = 'Payment recorded.';
+}
+
+function loan_payment_update(PDO $pdo){ verify_csrf(); require_login(); $u = uid();
+  $id = (int)($_POST['id'] ?? 0);
+  $amount = (float)($_POST['amount'] ?? 0);
+  $interest = max(0.0, (float)($_POST['interest_component'] ?? 0));
+  $paid_on = $_POST['paid_on'] ?: date('Y-m-d');
+  $currency = strtoupper(trim($_POST['currency'] ?? ''));
+
+  if (!$id || $amount <= 0 || !$paid_on) {
+    $_SESSION['flash'] = 'Payment amount and date are required.';
+    redirect('/loans');
+  }
+
+  $q = $pdo->prepare('SELECT lp.*, l.user_id, l.currency AS loan_currency, l.id AS loan_id
+                        FROM loan_payments lp
+                        JOIN loans l ON l.id = lp.loan_id
+                       WHERE lp.id=? AND l.user_id=?');
+  $q->execute([$id,$u]);
+  $row = $q->fetch(PDO::FETCH_ASSOC);
+  if (!$row) { redirect('/loans'); }
+
+  if ($currency === '') {
+    $currency = $row['currency'] ?: ($row['loan_currency'] ?: 'HUF');
+  }
+
+  if ($interest > $amount) {
+    $interest = $amount;
+  }
+  $principal = max(0.0, $amount - $interest);
+
+  $pdo->beginTransaction();
+  try {
+    $pdo->prepare('UPDATE loan_payments
+                      SET paid_on=?, amount=?, interest_component=?, principal_component=?, currency=?
+                    WHERE id=?')
+        ->execute([$paid_on,$amount,$interest,$principal,$currency,$id]);
+
+    $pdo->prepare('UPDATE loans SET balance = GREATEST(0, COALESCE(balance,0) + ? - ?)
+                    WHERE id=? AND user_id=?')
+        ->execute([(float)$row['principal_component'],$principal,(int)$row['loan_id'],$u]);
+
+    $pdo->commit();
+    $_SESSION['flash'] = 'Payment updated.';
+  } catch (Throwable $e) {
+    $pdo->rollBack();
+    $_SESSION['flash'] = 'Could not update payment.';
+  }
+
+  redirect('/loans');
+}
+
+function loan_payment_delete(PDO $pdo){ verify_csrf(); require_login(); $u = uid();
+  $id = (int)($_POST['id'] ?? 0);
+  if (!$id) { redirect('/loans'); }
+
+  $q = $pdo->prepare('SELECT lp.*, l.user_id, l.id AS loan_id
+                        FROM loan_payments lp
+                        JOIN loans l ON l.id = lp.loan_id
+                       WHERE lp.id=? AND l.user_id=?');
+  $q->execute([$id,$u]);
+  $row = $q->fetch(PDO::FETCH_ASSOC);
+  if (!$row) { redirect('/loans'); }
+
+  $pdo->beginTransaction();
+  try {
+    $pdo->prepare('DELETE FROM loan_payments WHERE id=?')->execute([$id]);
+    $pdo->prepare('UPDATE loans SET balance = GREATEST(0, COALESCE(balance,0) + ?)
+                    WHERE id=? AND user_id=?')
+        ->execute([(float)$row['principal_component'], (int)$row['loan_id'], $u]);
+    $pdo->commit();
+    $_SESSION['flash'] = 'Payment removed.';
+  } catch (Throwable $e) {
+    $pdo->rollBack();
+    $_SESSION['flash'] = 'Could not remove payment.';
+  }
+
+  redirect('/loans');
 }
 
 function loan_monthly_payment(float $principal, float $annualRatePct, int $months): float {

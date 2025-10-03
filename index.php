@@ -549,6 +549,12 @@ switch ($path) {
             goals_tx_add($pdo);
         }
         break;
+    case '/goals/tx/update':
+        if ($method === 'POST') {
+            require __DIR__ . '/src/controllers/goals.php';
+            goals_tx_update($pdo);
+        }
+        break;
     case '/goals/tx/delete':
         require __DIR__ . '/src/controllers/goals.php';
         goals_tx_delete($pdo);
@@ -582,6 +588,18 @@ switch ($path) {
         require_login();
         require __DIR__ . '/src/controllers/loans.php';
         if ($_SERVER['REQUEST_METHOD'] === 'POST') { loan_payment_add($pdo); }
+        redirect('/loans');
+        break;
+    case '/loans/payment/update':
+        require_login();
+        require __DIR__ . '/src/controllers/loans.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { loan_payment_update($pdo); }
+        redirect('/loans');
+        break;
+    case '/loans/payment/delete':
+        require_login();
+        require __DIR__ . '/src/controllers/loans.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { loan_payment_delete($pdo); }
         redirect('/loans');
         break;
     case '/loals/unlink-schedule':
