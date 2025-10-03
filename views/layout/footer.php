@@ -304,17 +304,74 @@
         return;
       }
 
-      const updateOffset = () => {
-        const heightDiff = Math.max(0, Math.round(window.innerHeight - viewport.height - viewport.offsetTop));
-        nav.style.setProperty('--mobile-nav-offset', heightDiff > 0 ? `${heightDiff}px` : '0px');
+      const frame = window.requestAnimationFrame || function (cb) { return setTimeout(cb, 16); };
+      const cancel = window.cancelAnimationFrame || clearTimeout;
+
+      let rafId = null;
+      let lastOffset = '';
+
+      const readLayoutHeight = () => {
+        return window.innerHeight || document.documentElement.clientHeight || 0;
       };
 
-      viewport.addEventListener('resize', updateOffset);
-      viewport.addEventListener('scroll', updateOffset);
-      window.addEventListener('orientationchange', updateOffset);
-      window.addEventListener('resize', updateOffset);
+      const computeOffset = () => {
+        const layoutHeight = readLayoutHeight();
+        if (!layoutHeight) {
+          return '0px';
+        }
 
-      updateOffset();
+        const heightDiff = Math.round(layoutHeight - viewport.height - viewport.offsetTop);
+        if (!Number.isFinite(heightDiff) || heightDiff <= 0) {
+          return '0px';
+        }
+
+        return `${heightDiff}px`;
+      };
+
+      const applyOffset = () => {
+        rafId = null;
+        const nextOffset = computeOffset();
+        if (nextOffset === lastOffset) {
+          return;
+        }
+
+        if (nextOffset === '0px') {
+          nav.style.removeProperty('--mobile-nav-offset');
+        } else {
+          nav.style.setProperty('--mobile-nav-offset', nextOffset);
+        }
+
+        lastOffset = nextOffset;
+      };
+
+      const scheduleUpdate = () => {
+        if (rafId !== null) {
+          cancel(rafId);
+        }
+
+        rafId = frame(applyOffset);
+      };
+
+      const settleUpdate = () => {
+        scheduleUpdate();
+        window.setTimeout(applyOffset, 120);
+        window.setTimeout(applyOffset, 320);
+      };
+
+      viewport.addEventListener('resize', settleUpdate);
+      viewport.addEventListener('scroll', settleUpdate);
+      window.addEventListener('orientationchange', settleUpdate);
+      window.addEventListener('resize', settleUpdate);
+      window.addEventListener('focusin', settleUpdate, true);
+      window.addEventListener('focusout', settleUpdate, true);
+      window.addEventListener('pageshow', settleUpdate);
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+          settleUpdate();
+        }
+      });
+
+      settleUpdate();
     })();
   </script>
 
