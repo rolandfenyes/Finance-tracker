@@ -114,6 +114,16 @@
   </script>
   <script>
     (function() {
+      const nav = window.navigator || {};
+      const ua = nav.userAgent || '';
+      const platform = nav.platform || '';
+      const maxTouchPoints = typeof nav.maxTouchPoints === 'number' ? nav.maxTouchPoints : 0;
+      const isIOS = /iPad|iPhone|iPod/.test(ua) || (platform === 'MacIntel' && maxTouchPoints > 1);
+      document.documentElement.classList.toggle('is-ios', Boolean(isIOS));
+    })();
+  </script>
+  <script>
+    (function() {
       const storageKey = 'mymoneymap-theme';
       const root = document.documentElement;
       const getStored = () => {
@@ -190,6 +200,11 @@
       @media (max-width: 767px) {
         body.has-mobile-nav {
           padding-bottom: calc(env(safe-area-inset-bottom) + 5.5rem);
+        }
+        @supports (bottom: env(keyboard-inset-height)) {
+          html:not(.is-ios) body.has-mobile-nav {
+            padding-bottom: calc(env(safe-area-inset-bottom) + env(keyboard-inset-height) + 5.5rem);
+          }
         }
       }
       :root[data-theme='dark'] body {
@@ -744,6 +759,11 @@
         will-change: transform;
         contain: layout paint;
         backface-visibility: hidden;
+      }
+      @supports (bottom: env(keyboard-inset-height)) {
+        html:not(.is-ios) .mobile-nav {
+          padding-bottom: calc(env(safe-area-inset-bottom) + env(keyboard-inset-height) + 0.6rem);
+        }
       }
       .dark .mobile-nav {
         box-shadow: 0 -20px 40px -26px rgba(0, 0, 0, 0.65);
