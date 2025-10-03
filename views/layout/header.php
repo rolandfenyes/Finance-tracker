@@ -187,9 +187,22 @@
         background-size: cover;
         padding-bottom: env(safe-area-inset-bottom);
       }
+      @supports (height: 100dvh) {
+        body {
+          min-height: 100dvh;
+        }
+      }
       @media (max-width: 767px) {
         body.has-mobile-nav {
           padding-bottom: calc(env(safe-area-inset-bottom) + 5.5rem);
+        }
+        @supports (padding-bottom: max(0px, 0px)) {
+          body.has-mobile-nav {
+            padding-bottom: max(
+              calc(env(safe-area-inset-bottom) + 5.5rem),
+              calc(env(keyboard-inset-height, 0px) + 5.5rem)
+            );
+          }
         }
       }
       :root[data-theme='dark'] body {
@@ -735,16 +748,26 @@
         left: 0;
         right: 0;
         bottom: 0;
-        --mobile-nav-shift: 0px;
         padding-top: 0.4rem;
         padding-bottom: 0.6rem;
         padding-bottom: calc(env(safe-area-inset-bottom) + 0.6rem);
         box-shadow: 0 -20px 36px -24px rgba(17, 36, 29, 0.45);
-        transition: transform 0.3s ease, opacity 0.3s ease;
-        transform: translate3d(0, var(--mobile-nav-shift, 0px), 0);
-        will-change: transform;
+        transition: bottom 0.3s ease, padding-bottom 0.3s ease, opacity 0.3s ease;
         contain: layout paint;
         backface-visibility: hidden;
+      }
+      @supports (bottom: env(keyboard-inset-height)) {
+        .mobile-nav {
+          bottom: env(keyboard-inset-height, 0px);
+        }
+      }
+      @supports (padding-bottom: max(0px, 0px)) {
+        .mobile-nav {
+          padding-bottom: max(
+            calc(env(safe-area-inset-bottom) + 0.6rem),
+            calc(env(keyboard-inset-height, 0px) + 0.6rem)
+          );
+        }
       }
       .dark .mobile-nav {
         box-shadow: 0 -20px 40px -26px rgba(0, 0, 0, 0.65);
