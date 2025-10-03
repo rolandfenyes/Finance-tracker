@@ -111,6 +111,10 @@
 
           <td class="py-3 pr-0 align-middle" style="text-align:right;">
             <div class="flex justify-end gap-2">
+              <button class="icon-action" data-open="#goal-history-<?= (int)$g['id'] ?>" title="<?= __('View history') ?>">
+                <i data-lucide="history" class="h-4 w-4"></i>
+                <span class="sr-only"><?= __('View history') ?></span>
+              </button>
               <button class="btn btn-primary !px-3"
                       data-open="#goal-add-<?= (int)$g['id'] ?>"><?= __('Add money') ?></button>
               <button class="btn !px-3"
@@ -145,10 +149,16 @@
             <div class="font-medium"><?= htmlspecialchars($g['title']) ?></div>
             <div class="text-xs text-gray-500"><?= $statusLabel ?> · <?= htmlspecialchars($cur) ?></div>
           </div>
-          <button class="icon-action icon-action--primary" data-open="#goal-edit-<?= (int)$g['id'] ?>" title="<?= __('Edit') ?>">
-            <i data-lucide="pencil" class="h-4 w-4"></i>
-            <span class="sr-only"><?= __('Edit') ?></span>
-          </button>
+          <div class="flex items-center gap-2">
+            <button class="icon-action" data-open="#goal-history-<?= (int)$g['id'] ?>" title="<?= __('View history') ?>">
+              <i data-lucide="history" class="h-4 w-4"></i>
+              <span class="sr-only"><?= __('View history') ?></span>
+            </button>
+            <button class="icon-action icon-action--primary" data-open="#goal-edit-<?= (int)$g['id'] ?>" title="<?= __('Edit') ?>">
+              <i data-lucide="pencil" class="h-4 w-4"></i>
+              <span class="sr-only"><?= __('Edit') ?></span>
+            </button>
+          </div>
         </div>
         <div class="mt-3">
           <div class="h-2 bg-brand-100/60 rounded-full">
@@ -472,56 +482,71 @@
         <button class="btn btn-primary" form="goal-add-form-<?= $goalId ?>"><?= __('Add money') ?></button>
       </div>
     </div>
+  </div>
+</div>
+<div id="goal-history-<?= $goalId ?>" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="goal-history-title-<?= $goalId ?>">
+  <div class="modal-backdrop" data-close></div>
 
-    <div class="px-6 pb-6">
-      <div class="mt-6">
-        <h4 class="font-semibold mb-3"><?= __('Transactions') ?></h4>
-        <?php if ($goalTxList): ?>
-          <div class="overflow-x-auto">
-            <table class="min-w-full text-sm">
-              <thead>
-                <tr class="text-left text-xs uppercase tracking-wide text-gray-500">
-                  <th class="py-2 pr-3"><?= __('Date') ?></th>
-                  <th class="py-2 pr-3"><?= __('Amount') ?></th>
-                  <th class="py-2 pr-3"><?= __('Note') ?></th>
-                  <th class="py-2 pr-0 text-right"><?= __('Actions') ?></th>
-                </tr>
-              </thead>
-              <tbody>
-              <?php foreach ($goalTxList as $tx): $txId=(int)$tx['id']; $txCur = $tx['currency'] ?: $cur; ?>
-                <tr class="border-t">
-                  <td class="py-2 pr-3 align-middle text-sm"><?= htmlspecialchars($tx['occurred_on']) ?></td>
-                  <td class="py-2 pr-3 align-middle text-sm">
-                    <?= moneyfmt((float)$tx['amount'], $txCur) ?>
-                    <?php if ($txCur && strtoupper($txCur) !== strtoupper($cur)): ?>
-                      <span class="text-xs text-gray-500">(<?= htmlspecialchars($txCur) ?>)</span>
-                    <?php endif; ?>
-                  </td>
-                  <td class="py-2 pr-3 align-middle text-sm">
-                    <?php if ($tx['note'] !== null && $tx['note'] !== ''): ?>
-                      <?= htmlspecialchars($tx['note']) ?>
-                    <?php else: ?>
-                      <span class="text-gray-400"><?= __('No note') ?></span>
-                    <?php endif; ?>
-                  </td>
-                  <td class="py-2 pr-0 align-middle text-right">
-                    <div class="flex justify-end gap-2">
-                      <button type="button" class="btn !px-3" data-open="#goal-tx-edit-<?= $txId ?>"><?= __('Edit') ?></button>
-                      <form method="post" action="/goals/tx/delete" onsubmit="return confirm('<?= __('Delete this transaction?') ?>');">
-                        <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-                        <input type="hidden" name="id" value="<?= $txId ?>" />
-                        <button class="btn btn-danger !px-3" type="submit"><?= __('Delete') ?></button>
-                      </form>
-                    </div>
-                  </td>
-                </tr>
-              <?php endforeach; ?>
-              </tbody>
-            </table>
-          </div>
-        <?php else: ?>
-          <p class="text-sm text-gray-500"><?= __('No transactions yet.') ?></p>
-        <?php endif; ?>
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h3 id="goal-history-title-<?= $goalId ?>" class="font-semibold"><?= __('Transactions') ?></h3>
+      <button type="button" class="icon-btn" aria-label="<?= __('Close') ?>" data-close>
+        <i data-lucide="x" class="h-5 w-5"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <?php if ($goalTxList): ?>
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead>
+              <tr class="text-left text-xs uppercase tracking-wide text-gray-500">
+                <th class="py-2 pr-3"><?= __('Date') ?></th>
+                <th class="py-2 pr-3"><?= __('Amount') ?></th>
+                <th class="py-2 pr-3"><?= __('Note') ?></th>
+                <th class="py-2 pr-0 text-right"><?= __('Actions') ?></th>
+              </tr>
+            </thead>
+            <tbody>
+            <?php foreach ($goalTxList as $tx): $txId=(int)$tx['id']; $txCur = $tx['currency'] ?: $cur; ?>
+              <tr class="border-t">
+                <td class="py-2 pr-3 align-middle text-sm"><?= htmlspecialchars($tx['occurred_on']) ?></td>
+                <td class="py-2 pr-3 align-middle text-sm">
+                  <?= moneyfmt((float)$tx['amount'], $txCur) ?>
+                  <?php if ($txCur && strtoupper($txCur) !== strtoupper($cur)): ?>
+                    <span class="text-xs text-gray-500">(<?= htmlspecialchars($txCur) ?>)</span>
+                  <?php endif; ?>
+                </td>
+                <td class="py-2 pr-3 align-middle text-sm">
+                  <?php if ($tx['note'] !== null && $tx['note'] !== ''): ?>
+                    <?= htmlspecialchars($tx['note']) ?>
+                  <?php else: ?>
+                    <span class="text-gray-400"><?= __('No note') ?></span>
+                  <?php endif; ?>
+                </td>
+                <td class="py-2 pr-0 align-middle text-right">
+                  <div class="flex justify-end gap-2">
+                    <button type="button" class="btn !px-3" data-open="#goal-tx-edit-<?= $txId ?>"><?= __('Edit') ?></button>
+                    <form method="post" action="/goals/tx/delete" onsubmit="return confirm('<?= __('Delete this transaction?') ?>');">
+                      <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+                      <input type="hidden" name="id" value="<?= $txId ?>" />
+                      <button class="btn btn-danger !px-3" type="submit"><?= __('Delete') ?></button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+      <?php else: ?>
+        <p class="text-sm text-gray-500"><?= __('No transactions yet.') ?></p>
+      <?php endif; ?>
+    </div>
+
+    <div class="modal-footer">
+      <div class="flex justify-end">
+        <button type="button" class="btn" data-close><?= __('Close') ?></button>
       </div>
     </div>
   </div>

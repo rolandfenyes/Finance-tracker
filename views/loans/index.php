@@ -241,6 +241,10 @@
 
           <td class="py-3 pr-3 text-right align-middle">
             <div class="flex justify-end gap-2">
+              <button class="icon-action" data-open="#loan-history-<?= (int)$l['id'] ?>" title="<?= __('View history') ?>">
+                <i data-lucide="history" class="h-4 w-4"></i>
+                <span class="sr-only"><?= __('View history') ?></span>
+              </button>
               <button type="button"
                       class="btn btn-primary !px-3"
                       data-open="#loan-pay-<?= (int)$l['id'] ?>">
@@ -276,10 +280,16 @@
             <div class="font-medium"><?= htmlspecialchars($l['name']) ?></div>
             <div class="text-xs text-gray-500"><?= __('APR :rate%', ['rate' => (float)$l['interest_rate']]) ?></div>
           </div>
-          <button type="button" class="icon-action icon-action--primary" data-open="#loan-edit-<?= (int)$l['id'] ?>" title="<?= __('Edit') ?>">
-            <i data-lucide="pencil" class="h-4 w-4"></i>
-            <span class="sr-only"><?= __('Edit') ?></span>
-          </button>
+          <div class="flex items-center gap-2">
+            <button type="button" class="icon-action" data-open="#loan-history-<?= (int)$l['id'] ?>" title="<?= __('View history') ?>">
+              <i data-lucide="history" class="h-4 w-4"></i>
+              <span class="sr-only"><?= __('View history') ?></span>
+            </button>
+            <button type="button" class="icon-action icon-action--primary" data-open="#loan-edit-<?= (int)$l['id'] ?>" title="<?= __('Edit') ?>">
+              <i data-lucide="pencil" class="h-4 w-4"></i>
+              <span class="sr-only"><?= __('Edit') ?></span>
+            </button>
+          </div>
         </div>
 
         <div class="mt-2 text-xs text-gray-500">
@@ -653,53 +663,68 @@
         <button class="btn btn-primary" form="loan-pay-form-<?= (int)$l['id'] ?>"><?= __('Record Payment') ?></button>
       </div>
     </div>
+  </div>
+</div>
+<div id="loan-history-<?= (int)$l['id'] ?>" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="loan-history-title-<?= (int)$l['id'] ?>">
+  <div class="modal-backdrop" data-close></div>
 
-    <div class="px-6 pb-6">
-      <div class="mt-6">
-        <h4 class="font-semibold mb-3"><?= __('Payment history') ?></h4>
-        <?php if ($loanTxList): ?>
-          <div class="overflow-x-auto">
-            <table class="min-w-full text-sm">
-              <thead>
-                <tr class="text-left text-xs uppercase tracking-wide text-gray-500">
-                  <th class="py-2 pr-3"><?= __('Date') ?></th>
-                  <th class="py-2 pr-3"><?= __('Amount') ?></th>
-                  <th class="py-2 pr-3"><?= __('Breakdown') ?></th>
-                  <th class="py-2 pr-0 text-right"><?= __('Actions') ?></th>
-                </tr>
-              </thead>
-              <tbody>
-              <?php foreach ($loanTxList as $tx): $txId=(int)$tx['id']; $txCur = $tx['currency'] ?: $loanCurrency; ?>
-                <tr class="border-t">
-                  <td class="py-2 pr-3 align-middle text-sm"><?= htmlspecialchars($tx['paid_on']) ?></td>
-                  <td class="py-2 pr-3 align-middle text-sm">
-                    <?= moneyfmt((float)$tx['amount'], $txCur) ?>
-                    <?php if ($txCur && strtoupper($txCur) !== strtoupper($loanCurrency)): ?>
-                      <span class="text-xs text-gray-500">(<?= htmlspecialchars($txCur) ?>)</span>
-                    <?php endif; ?>
-                  </td>
-                  <td class="py-2 pr-3 align-middle text-xs text-gray-600">
-                    <?= __('Principal: :amount', ['amount' => moneyfmt((float)$tx['principal_component'], $txCur)]) ?> ·
-                    <?= __('Interest: :amount', ['amount' => moneyfmt((float)$tx['interest_component'], $txCur)]) ?>
-                  </td>
-                  <td class="py-2 pr-0 align-middle text-right">
-                    <div class="flex justify-end gap-2">
-                      <button type="button" class="btn !px-3" data-open="#loan-payment-edit-<?= $txId ?>"><?= __('Edit') ?></button>
-                      <form method="post" action="/loans/payment/delete" onsubmit="return confirm('<?= __('Delete this payment?') ?>');">
-                        <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-                        <input type="hidden" name="id" value="<?= $txId ?>" />
-                        <button class="btn btn-danger !px-3" type="submit"><?= __('Delete') ?></button>
-                      </form>
-                    </div>
-                  </td>
-                </tr>
-              <?php endforeach; ?>
-              </tbody>
-            </table>
-          </div>
-        <?php else: ?>
-          <p class="text-sm text-gray-500"><?= __('No payments recorded yet.') ?></p>
-        <?php endif; ?>
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h3 id="loan-history-title-<?= (int)$l['id'] ?>" class="font-semibold"><?= __('Payment history') ?></h3>
+      <button type="button" class="icon-btn" aria-label="<?= __('Close') ?>" data-close>
+        <i data-lucide="x" class="h-5 w-5"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <?php if ($loanTxList): ?>
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead>
+              <tr class="text-left text-xs uppercase tracking-wide text-gray-500">
+                <th class="py-2 pr-3"><?= __('Date') ?></th>
+                <th class="py-2 pr-3"><?= __('Amount') ?></th>
+                <th class="py-2 pr-3"><?= __('Breakdown') ?></th>
+                <th class="py-2 pr-0 text-right"><?= __('Actions') ?></th>
+              </tr>
+            </thead>
+            <tbody>
+            <?php foreach ($loanTxList as $tx): $txId=(int)$tx['id']; $txCur = $tx['currency'] ?: $loanCurrency; ?>
+              <tr class="border-t">
+                <td class="py-2 pr-3 align-middle text-sm"><?= htmlspecialchars($tx['paid_on']) ?></td>
+                <td class="py-2 pr-3 align-middle text-sm">
+                  <?= moneyfmt((float)$tx['amount'], $txCur) ?>
+                  <?php if ($txCur && strtoupper($txCur) !== strtoupper($loanCurrency)): ?>
+                    <span class="text-xs text-gray-500">(<?= htmlspecialchars($txCur) ?>)</span>
+                  <?php endif; ?>
+                </td>
+                <td class="py-2 pr-3 align-middle text-xs text-gray-600">
+                  <?= __('Principal: :amount', ['amount' => moneyfmt((float)$tx['principal_component'], $txCur)]) ?> ·
+                  <?= __('Interest: :amount', ['amount' => moneyfmt((float)$tx['interest_component'], $txCur)]) ?>
+                </td>
+                <td class="py-2 pr-0 align-middle text-right">
+                  <div class="flex justify-end gap-2">
+                    <button type="button" class="btn !px-3" data-open="#loan-payment-edit-<?= $txId ?>"><?= __('Edit') ?></button>
+                    <form method="post" action="/loans/payment/delete" onsubmit="return confirm('<?= __('Delete this payment?') ?>');">
+                      <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+                      <input type="hidden" name="id" value="<?= $txId ?>" />
+                      <button class="btn btn-danger !px-3" type="submit"><?= __('Delete') ?></button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+      <?php else: ?>
+        <p class="text-sm text-gray-500"><?= __('No payments recorded yet.') ?></p>
+      <?php endif; ?>
+    </div>
+
+    <div class="modal-footer">
+      <div class="flex justify-end">
+        <button type="button" class="btn" data-close><?= __('Close') ?></button>
       </div>
     </div>
   </div>
