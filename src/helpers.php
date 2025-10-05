@@ -259,6 +259,31 @@ function app_config(?string $section = null)
     return $config[$section] ?? null;
 }
 
+function app_url(string $path = ''): string
+{
+    $app = app_config('app') ?? [];
+    $root = rtrim((string)($app['url'] ?? ''), '/');
+    $base = rtrim((string)($app['base_url'] ?? ''), '/');
+
+    $url = $root;
+    if ($base !== '' && $base !== '/') {
+        $url .= $base;
+    }
+
+    $path = (string)$path;
+    if ($path !== '') {
+        if ($path[0] !== '/' && $path[0] !== '?') {
+            $path = '/' . $path;
+        }
+    }
+
+    if ($url === '') {
+        return $path !== '' ? $path : '/';
+    }
+
+    return $url . $path;
+}
+
 function available_locales(): array
 {
     $app = app_config('app') ?? [];
