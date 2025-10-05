@@ -60,5 +60,10 @@ Modern, mobile‑first personal finance tracker using Tailwind CSS and Chart.js.
     php scripts/send_user_emails.php weekly
     php scripts/send_user_emails.php monthly
     ```
+    To resend verification emails to every account without `email_verified_at`, run:
+    ```bash
+    php scripts/send_verification_emails.php
+    # Use --refresh-token to generate new tokens for each user if needed.
+    ```
 
 ```
