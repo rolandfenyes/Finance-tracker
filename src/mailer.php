@@ -24,7 +24,7 @@ function mailer_encode_header(string $value): string
     }
 
     if (function_exists('mb_encode_mimeheader')) {
-        return mb_encode_mimeheader($value, 'UTF-8', 'B', "\r\n", 'UTF-8');
+        return mb_encode_mimeheader($value, 'UTF-8', 'B', "\r\n", 0);
     }
 
     return '=?UTF-8?B?' . base64_encode($value) . '?=';
