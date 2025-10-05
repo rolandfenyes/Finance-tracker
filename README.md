@@ -47,7 +47,23 @@ Modern, mobile‑first personal finance tracker using Tailwind CSS and Chart.js.
     ```bash
     php scripts/encrypt_full_names.php
     ```
--   **Database connection** – Credentials are read from the environment. For production deployments consider using managed secrets stores and enforcing TLS connections to PostgreSQL.
+-   **Database connection** – Credentials are read from the environment. For production deployments consider using managed secrets stores and enforcing TLS connections to PostgreSQL. When running the CLI helpers locally, make sure `MM_DB_USER`/`MM_DB_PASS` in `.env` match an existing PostgreSQL role so the scripts can connect.
 -   **Dave Ramsey support** – use `baby_steps` for status + `emergency_fund`, `goals`, `loans` to reflect progress.
+
+## Email notifications
+
+-   Configure sender details in `.env` using the `MM_MAIL_*` variables. By default, messages are written to `storage/logs/mail.log` so you can test locally without an SMTP server.
+-   Set `MM_MAIL_TRANSPORT=smtp` and provide the SMTP host, port, credentials, and encryption to deliver messages from production (e.g. Nethely).
+-   The application automatically sends verification and welcome emails after registration. Additional digests can be sent via CLI:
+    ```bash
+    php scripts/send_user_emails.php tips
+    php scripts/send_user_emails.php weekly
+    php scripts/send_user_emails.php monthly
+    ```
+    To resend verification emails to every account without `email_verified_at`, run:
+    ```bash
+    php scripts/send_verification_emails.php
+    # Use --refresh-token to generate new tokens for each user if needed.
+    ```
 
 ```

@@ -102,6 +102,11 @@ switch ($path) {
         register_step1_form(); // GET
         break;
 
+    case '/verify-email':
+        require __DIR__ . '/src/controllers/email_verification.php';
+        email_verification_handle($pdo);
+        break;
+
     // Onboarding
     case '/onboard/next':
         require_login();

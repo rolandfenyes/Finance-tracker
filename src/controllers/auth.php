@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../helpers.php';
+require_once __DIR__ . '/../services/email_notifications.php';
 
 function register_step1_form() {
   view('auth/register_step1', []); // use your new pretty form UI
@@ -39,6 +40,13 @@ function register_step1_submit(PDO $pdo) {
 
   // Log in + jump to step 1
   $uid = (int)$pdo->lastInsertId();
+
+  email_send_registration_bundle($pdo, [
+    'id' => $uid,
+    'email' => $email,
+    'full_name_plain' => $name,
+  ]);
+
   $_SESSION['uid'] = $uid;
   redirect('/onboard/theme');
 }
