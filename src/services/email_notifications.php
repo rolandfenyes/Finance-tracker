@@ -420,13 +420,13 @@ function email_collect_period_summary(PDO $pdo, int $userId, DateTimeImmutable $
         $currency = $row['currency'] ?: $mainCurrency;
         $date = $row['occurred_on'] ?: $end->format('Y-m-d');
         $converted = $currency === $mainCurrency ? $amount : fx_convert($pdo, $amount, $currency, $mainCurrency, $date);
+        $kind = strtolower(trim((string)($row['kind'] ?? '')));
+        $absolute = abs($converted);
 
-        if ($row['kind'] === 'income') {
-            $absolute = abs($converted);
+        if ($kind === 'income') {
             $incomeTotal += $absolute;
             $incomeCount++;
-        } else {
-            $absolute = abs($converted);
+        } elseif ($kind === 'spending') {
             $spendingTotal += $absolute;
             $spendingCount++;
             $label = $row['category_label'] ?? 'Other';
