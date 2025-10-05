@@ -153,14 +153,18 @@ function email_wrap_html(string $title, string $content, array $palette): string
     $logo = email_brand_logo_image();
     $titleSafe = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
 
-    $background = $palette['muted'] ?? '#f8fafc';
+    $background = $palette['muted'] ?? '#f3f4f6';
     $cardBorder = $palette['accent'] ?? '#1d4ed8';
     $headerBg = $palette['base'] ?? '#2563eb';
-    $headerAccent = $palette['accent'] ?? email_mix_hex($headerBg, '#000000', 0.15);
+    $headerAccent = $palette['accent'] ?? email_mix_hex($headerBg, '#000000', 0.12);
+    $headerGlow = email_mix_hex($headerBg, '#ffffff', 0.28);
     $headerText = email_contrast_color($headerAccent);
-    $footerBg = $palette['accent'] ?? '#1d4ed8';
-    $footerText = email_contrast_color($footerBg);
     $bodyText = $palette['deep'] ?? '#0f172a';
+    $contentBg = email_mix_hex($background, '#ffffff', 0.55);
+    $contentBorder = email_mix_hex($cardBorder, '#ffffff', 0.35);
+    $contentAccent = email_mix_hex($cardBorder, $headerBg, 0.24);
+    $footerBg = email_mix_hex($palette['accent'] ?? '#1d4ed8', '#0f172a', 0.08);
+    $footerText = email_contrast_color($footerBg);
     $linkColor = $palette['base'] ?? '#2563eb';
     $shadow = email_hex_to_rgba($palette['deep'] ?? '#0f172a', 0.18);
 
@@ -169,12 +173,14 @@ function email_wrap_html(string $title, string $content, array $palette): string
     $logoWidth = (int)($logo['width'] ?? 112);
     $logoHeight = (int)($logo['height'] ?? 112);
     $paletteName = htmlspecialchars((string)($palette['name'] ?? 'MyMoneyMap'), ENT_QUOTES, 'UTF-8');
-    $headerGradientStart = htmlspecialchars(email_mix_hex($headerBg, '#ffffff', 0.18), ENT_QUOTES, 'UTF-8');
-    $headerGradientEnd = htmlspecialchars(email_mix_hex($headerAccent, '#0f172a', 0.08), ENT_QUOTES, 'UTF-8');
-    $headerGlow = htmlspecialchars(email_mix_hex($headerAccent, '#ffffff', 0.32), ENT_QUOTES, 'UTF-8');
-    $headerOverlay = htmlspecialchars(email_hex_to_rgba($headerGlow, 0.32), ENT_QUOTES, 'UTF-8');
-    $borderAccent = htmlspecialchars(email_mix_hex($cardBorder, $headerAccent, 0.35), ENT_QUOTES, 'UTF-8');
-    $footerAccent = htmlspecialchars(email_mix_hex($footerBg, '#000000', 0.12), ENT_QUOTES, 'UTF-8');
+    $headerGradientStart = htmlspecialchars(email_mix_hex($headerBg, $headerGlow, 0.32), ENT_QUOTES, 'UTF-8');
+    $headerGradientEnd = htmlspecialchars(email_mix_hex($headerAccent, '#0f172a', 0.18), ENT_QUOTES, 'UTF-8');
+    $headerBeam = htmlspecialchars(email_hex_to_rgba($headerGlow, 0.22), ENT_QUOTES, 'UTF-8');
+    $headerHalo = htmlspecialchars(email_hex_to_rgba($headerAccent, 0.35), ENT_QUOTES, 'UTF-8');
+    $contentBgSafe = htmlspecialchars($contentBg, ENT_QUOTES, 'UTF-8');
+    $contentBorderSafe = htmlspecialchars($contentBorder, ENT_QUOTES, 'UTF-8');
+    $contentAccentSafe = htmlspecialchars($contentAccent, ENT_QUOTES, 'UTF-8');
+    $footerAccent = htmlspecialchars(email_mix_hex($footerBg, '#000000', 0.1), ENT_QUOTES, 'UTF-8');
 
     $profileUrl = htmlspecialchars(app_url('/settings/profile'), ENT_QUOTES, 'UTF-8');
     $privacyCenterUrl = htmlspecialchars(app_url('/settings/privacy'), ENT_QUOTES, 'UTF-8');
@@ -197,35 +203,48 @@ function email_wrap_html(string $title, string $content, array $palette): string
         '<tr><td align="center">' .
         '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:640px;">' .
         '<tr><td>' .
-        '<div style="background:#ffffff;border:1px solid ' . htmlspecialchars($cardBorder, ENT_QUOTES, 'UTF-8') . ';border-radius:28px;overflow:hidden;box-shadow:0 32px 64px ' . htmlspecialchars($shadow, ENT_QUOTES, 'UTF-8') . ';">' .
-        '<div style="background:linear-gradient(135deg,' . $headerGradientStart . ',' . $headerGradientEnd . ');color:' . htmlspecialchars($headerText, ENT_QUOTES, 'UTF-8') . ';padding:40px 44px 38px;text-align:left;position:relative;">' .
-        '<div style="position:absolute;inset:0;background:' . $headerOverlay . ';pointer-events:none;"></div>' .
+        '<div style="background:#ffffff;border:1px solid ' . htmlspecialchars($cardBorder, ENT_QUOTES, 'UTF-8') . ';border-radius:30px;overflow:hidden;box-shadow:0 32px 64px ' . htmlspecialchars($shadow, ENT_QUOTES, 'UTF-8') . ';">' .
+        '<div style="padding:46px 48px;background:linear-gradient(135deg,' . $headerGradientStart . ',' . $headerGradientEnd . ');color:' . htmlspecialchars($headerText, ENT_QUOTES, 'UTF-8') . ';position:relative;">' .
+        '<div style="position:absolute;inset:0;background:' . $headerHalo . ';mix-blend-mode:soft-light;opacity:0.7;"></div>' .
+        '<div style="position:absolute;left:0;right:0;top:0;height:100%;background:radial-gradient(circle at 15% 20%,' . $headerBeam . ',rgba(255,255,255,0));opacity:1;"></div>' .
         '<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="position:relative;z-index:1;">' .
         '<tr>' .
-        '<td style="width:92px;vertical-align:middle;padding-right:20px;">' .
-        '<div style="display:inline-block;padding:14px;border-radius:24px;background:rgba(255,255,255,0.16);backdrop-filter:blur(6px);">' .
-        '<img src="' . $logoSrc . '" alt="' . $logoAlt . '" width="' . $logoWidth . '" height="' . $logoHeight . '" style="display:block;height:56px;width:auto;" />' .
+        '<td style="width:120px;vertical-align:middle;padding-right:24px;">' .
+        '<div style="display:inline-block;padding:18px;border-radius:28px;background:rgba(255,255,255,0.18);backdrop-filter:blur(8px);">' .
+        '<img src="' . $logoSrc . '" alt="' . $logoAlt . '" width="' . $logoWidth . '" height="' . $logoHeight . '" style="display:block;height:60px;width:auto;" />' .
         '</div>' .
         '</td>' .
         '<td style="vertical-align:middle;">' .
-        '<p style="margin:0;font-size:13px;font-weight:600;letter-spacing:0.26em;text-transform:uppercase;opacity:0.88;">MyMoneyMap Digest</p>' .
-        '<p style="margin:10px 0 0;font-size:26px;font-weight:700;letter-spacing:-0.01em;">' . $paletteName . ' theme in action</p>' .
-        '<p style="margin:14px 0 0;font-size:15px;line-height:1.6;max-width:420px;opacity:0.92;">Tailored insights styled with your chosen palette—bringing clarity and momentum to every update.</p>' .
+        '<p style="margin:0;font-size:12px;font-weight:600;letter-spacing:0.3em;text-transform:uppercase;opacity:0.86;">MyMoneyMap</p>' .
+        '<p style="margin:12px 0 0;font-size:30px;font-weight:700;letter-spacing:-0.02em;">' . $paletteName . ' Experience</p>' .
+        '<p style="margin:16px 0 0;font-size:16px;line-height:1.7;max-width:420px;opacity:0.9;">Personal finance intelligence curated to match your selected theme—precision insights, delivered with polish.</p>' .
         '</td>' .
         '</tr>' .
         '</table>' .
-        '<div style="margin-top:26px;height:1px;background:' . $borderAccent . ';position:relative;z-index:1;"></div>' .
         '</div>' .
-        '<div style="padding:32px;color:' . htmlspecialchars($bodyText, ENT_QUOTES, 'UTF-8') . ';font-size:15px;line-height:1.6;">' .
-        '<h1 style="margin:0 0 18px;font-size:24px;font-weight:700;letter-spacing:-0.01em;color:' . htmlspecialchars($bodyText, ENT_QUOTES, 'UTF-8') . ';">' . $titleSafe . '</h1>' .
+        '<div style="padding:40px 44px;background:' . $contentBgSafe . ';color:' . htmlspecialchars($bodyText, ENT_QUOTES, 'UTF-8') . ';font-size:15px;line-height:1.75;">' .
+        '<div style="padding:24px 28px;border:1px solid ' . $contentBorderSafe . ';border-radius:22px;background:#ffffff;box-shadow:0 14px 32px ' . htmlspecialchars(email_hex_to_rgba($palette['deep'] ?? '#0f172a', 0.06), ENT_QUOTES, 'UTF-8') . ';">' .
+        '<h1 style="margin:0 0 22px;font-size:26px;font-weight:700;letter-spacing:-0.015em;color:' . htmlspecialchars($bodyText, ENT_QUOTES, 'UTF-8') . ';">' . $titleSafe . '</h1>' .
+        '<div style="border-left:4px solid ' . $contentAccentSafe . ';padding-left:18px;margin:0 0 22px;font-size:14px;letter-spacing:0.08em;text-transform:uppercase;color:' . htmlspecialchars(email_mix_hex($bodyText, '#64748b', 0.45), ENT_QUOTES, 'UTF-8') . ';">Your personalised briefing</div>' .
+        '<div style="font-size:15px;line-height:1.75;color:' . htmlspecialchars($bodyText, ENT_QUOTES, 'UTF-8') . ';">' .
         $content .
         '</div>' .
-        '<div style="background:' . htmlspecialchars($footerBg, ENT_QUOTES, 'UTF-8') . ';color:' . htmlspecialchars($footerText, ENT_QUOTES, 'UTF-8') . ';padding:26px 36px;text-align:left;border-top:1px solid ' . $footerAccent . ';">' .
-        '<p style="margin:0 0 10px;font-size:13px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;">Trust & Transparency</p>' .
-        '<p style="margin:0 0 12px;font-size:12px;line-height:1.6;max-width:520px;">You are receiving this service email because notifications are enabled for your MyMoneyMap account. We safeguard your data as the controller under GDPR and process it solely to provide the features you use.</p>' .
-        '<p style="margin:0 0 12px;font-size:12px;line-height:1.6;max-width:520px;">Update your communication choices at <a href="' . $profileUrl . '" style="color:' . htmlspecialchars($headerText, ENT_QUOTES, 'UTF-8') . ';font-weight:600;">Settings → Profile</a> or manage data rights in the <a href="' . $privacyCenterUrl . '" style="color:' . htmlspecialchars($headerText, ENT_QUOTES, 'UTF-8') . ';font-weight:600;">Data & Privacy Centre</a>. You can also reach our Data Protection Officer at <a href="mailto:privacy@mymoneymap.local" style="color:' . htmlspecialchars($headerText, ENT_QUOTES, 'UTF-8') . ';font-weight:600;">privacy@mymoneymap.local</a>.</p>' .
-        '<p style="margin:0 0 12px;font-size:11px;line-height:1.6;opacity:0.85;">MyMoneyMap Labs Ltd · 221 Innovation Way · Dublin D02 · Ireland · VAT IE1234567A</p>' .
-        '<p style="margin:0;font-size:11px;line-height:1.6;opacity:0.85;">© ' . $year . ' MyMoneyMap Labs Ltd. <a href="' . $privacyUrl . '" style="color:' . htmlspecialchars($headerText, ENT_QUOTES, 'UTF-8') . ';font-weight:600;">Privacy Policy</a> · <a href="' . $termsUrl . '" style="color:' . htmlspecialchars($headerText, ENT_QUOTES, 'UTF-8') . ';font-weight:600;">Terms of Service</a></p>' .
+        '</div>' .
+        '</div>' .
+        '<div style="background:' . htmlspecialchars($footerBg, ENT_QUOTES, 'UTF-8') . ';color:' . htmlspecialchars($footerText, ENT_QUOTES, 'UTF-8') . ';padding:30px 44px;text-align:left;border-top:1px solid ' . $footerAccent . ';">' .
+        '<p style="margin:0 0 12px;font-size:14px;font-weight:600;letter-spacing:0.24em;text-transform:uppercase;">Stay in control</p>' .
+        '<p style="margin:0 0 12px;font-size:13px;line-height:1.7;max-width:520px;">You are receiving this tailored update because notifications are enabled for your MyMoneyMap account. Adjust delivery or refresh your profile preferences whenever you need.</p>' .
+        '<p style="margin:0;font-size:12px;line-height:1.7;">Access <a href="' . $profileUrl . '" style="color:' . htmlspecialchars($footerText, ENT_QUOTES, 'UTF-8') . ';font-weight:600;">Profile Settings</a> · Visit the <a href="' . $privacyCenterUrl . '" style="color:' . htmlspecialchars($footerText, ENT_QUOTES, 'UTF-8') . ';font-weight:600;">Privacy Centre</a></p>' .
+        '</div>' .
+        '<div style="padding:24px 44px;background:#ffffff;border-top:1px solid ' . htmlspecialchars(email_mix_hex($cardBorder, '#94a3b8', 0.3), ENT_QUOTES, 'UTF-8') . ';">' .
+        '<p style="margin:0 0 10px;font-size:12px;line-height:1.6;color:' . htmlspecialchars(email_mix_hex($bodyText, '#475569', 0.35), ENT_QUOTES, 'UTF-8') . ';">MyMoneyMap Labs Ltd · 221 Innovation Way · Dublin D02 · Ireland · VAT IE1234567A</p>' .
+        '<p style="margin:0;font-size:12px;line-height:1.6;color:' . htmlspecialchars(email_mix_hex($bodyText, '#475569', 0.35), ENT_QUOTES, 'UTF-8') . ';">© ' . $year . ' MyMoneyMap Labs Ltd. <a href="' . $privacyUrl . '" style="color:' . htmlspecialchars($linkColor, ENT_QUOTES, 'UTF-8') . ';font-weight:600;">Privacy Policy</a> · <a href="' . $termsUrl . '" style="color:' . htmlspecialchars($linkColor, ENT_QUOTES, 'UTF-8') . ';font-weight:600;">Terms of Service</a></p>' .
+        '</div>' .
+        '</div>' .
+        '<div style="max-width:640px;margin:18px auto 0;font-size:11px;line-height:1.6;color:' . htmlspecialchars(email_mix_hex($bodyText, '#475569', 0.55), ENT_QUOTES, 'UTF-8') . ';">' .
+        '<div style="background:#ffffff;border:1px solid ' . htmlspecialchars(email_mix_hex($cardBorder, '#cbd5f5', 0.4), ENT_QUOTES, 'UTF-8') . ';border-radius:20px;padding:18px 22px;box-shadow:0 12px 22px ' . htmlspecialchars(email_hex_to_rgba($palette['deep'] ?? '#0f172a', 0.05), ENT_QUOTES, 'UTF-8') . ';">' .
+        '<strong style="display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.18em;font-size:10px;color:' . htmlspecialchars(email_mix_hex($bodyText, '#475569', 0.4), ENT_QUOTES, 'UTF-8') . ';">GDPR Notice</strong>' .
+        '<span style="display:block;">We process your personal data as the controller under GDPR solely to provide MyMoneyMap services and essential communications. Manage your data rights from the Privacy Centre or contact our Data Protection Officer at <a href="mailto:privacy@mymoneymap.local" style="color:' . htmlspecialchars($linkColor, ENT_QUOTES, 'UTF-8') . ';font-weight:600;">privacy@mymoneymap.local</a>.</span>' .
         '</div>' .
         '</div>' .
         '</td></tr>' .
