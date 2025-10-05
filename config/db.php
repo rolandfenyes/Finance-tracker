@@ -9,6 +9,13 @@ try {
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
 } catch (PDOException $e) {
+    $message = 'DB connection failed: ' . $e->getMessage();
+
+    if (PHP_SAPI === 'cli') {
+        fwrite(STDERR, $message . PHP_EOL);
+        exit(1);
+    }
+
     http_response_code(500);
-    die('DB connection failed: ' . htmlspecialchars($e->getMessage()));
+    die('DB connection failed: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'));
 }
