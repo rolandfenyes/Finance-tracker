@@ -3,15 +3,121 @@ require_once __DIR__ . '/../helpers.php';
 require_once __DIR__ . '/../mailer.php';
 require_once __DIR__ . '/../fx.php';
 
-function email_brand_logo_url(): string
+function email_brand_logo_image(): array
 {
-    return app_url('/logo.png');
+    static $cache = null;
+
+    if ($cache !== null) {
+        return $cache;
+    }
+
+    $logoPath = dirname(__DIR__, 2) . '/logo.png';
+    if (is_file($logoPath)) {
+        $data = base64_encode((string)file_get_contents($logoPath));
+        if ($data !== '') {
+            return $cache = [
+                'src' => 'data:image/png;base64,' . $data,
+                'alt' => 'MyMoneyMap',
+            ];
+        }
+    }
+
+    return $cache = [
+        'src' => app_url('/logo.png'),
+        'alt' => 'MyMoneyMap',
+    ];
 }
 
-function email_wrap_html(string $title, string $content): string
+function email_theme_palette(?array $user = null): array
 {
-    $logoUrl = htmlspecialchars(email_brand_logo_url(), ENT_QUOTES, 'UTF-8');
+    $defaults = [
+        'slug' => default_theme_slug(),
+        'name' => 'MyMoneyMap',
+        'base' => '#2563eb',
+        'accent' => '#1d4ed8',
+        'muted' => '#eef2ff',
+        'deep' => '#0f172a',
+    ];
+
+    $catalog = available_themes();
+    $slug = '';
+
+    if (is_array($user)) {
+        $slug = trim((string)($user['theme'] ?? ''));
+    }
+
+    if ($slug === '' || !isset($catalog[$slug])) {
+        $slug = $defaults['slug'];
+    }
+
+    $meta = $catalog[$slug] ?? null;
+    if (!is_array($meta)) {
+        return $defaults;
+    }
+
+    return array_merge($defaults, $meta, ['slug' => $slug]);
+}
+
+function email_hex_luminance(string $hex): float
+{
+    $hex = ltrim($hex, '#');
+    if (strlen($hex) === 3) {
+        $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+    }
+
+    if (strlen($hex) !== 6) {
+        return 0.0;
+    }
+
+    $r = hexdec(substr($hex, 0, 2)) / 255;
+    $g = hexdec(substr($hex, 2, 2)) / 255;
+    $b = hexdec(substr($hex, 4, 2)) / 255;
+
+    return 0.299 * $r + 0.587 * $g + 0.114 * $b;
+}
+
+function email_contrast_color(string $hex, string $light = '#0f172a', string $dark = '#ffffff'): string
+{
+    return email_hex_luminance($hex) > 0.55 ? $light : $dark;
+}
+
+function email_hex_to_rgba(string $hex, float $alpha): string
+{
+    $alpha = max(0.0, min(1.0, $alpha));
+    $hex = ltrim($hex, '#');
+    if (strlen($hex) === 3) {
+        $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+    }
+
+    if (strlen($hex) !== 6) {
+        return 'rgba(15,23,42,' . $alpha . ')';
+    }
+
+    $r = hexdec(substr($hex, 0, 2));
+    $g = hexdec(substr($hex, 2, 2));
+    $b = hexdec(substr($hex, 4, 2));
+
+    return 'rgba(' . $r . ',' . $g . ',' . $b . ',' . $alpha . ')';
+}
+
+function email_wrap_html(string $title, string $content, array $palette): string
+{
+    $logo = email_brand_logo_image();
     $titleSafe = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
+
+    $background = $palette['muted'] ?? '#f8fafc';
+    $cardBorder = $palette['accent'] ?? '#1d4ed8';
+    $headerBg = $palette['base'] ?? '#2563eb';
+    $headerText = email_contrast_color($headerBg);
+    $footerBg = $palette['accent'] ?? '#1d4ed8';
+    $footerText = email_contrast_color($footerBg);
+    $bodyText = $palette['deep'] ?? '#0f172a';
+    $linkColor = $palette['base'] ?? '#2563eb';
+    $shadow = email_hex_to_rgba($palette['deep'] ?? '#0f172a', 0.18);
+
+    $logoSrc = htmlspecialchars($logo['src'], ENT_QUOTES, 'UTF-8');
+    $logoAlt = htmlspecialchars($logo['alt'], ENT_QUOTES, 'UTF-8');
+    $paletteName = htmlspecialchars((string)($palette['name'] ?? 'MyMoneyMap'), ENT_QUOTES, 'UTF-8');
 
     return '<!DOCTYPE html>' .
         '<html lang="en">' .
@@ -20,34 +126,37 @@ function email_wrap_html(string $title, string $content): string
         '<meta name="viewport" content="width=device-width,initial-scale=1" />' .
         '<title>' . $titleSafe . '</title>' .
         '<style>' .
-        'body{margin:0;background:#f8fafc;color:#0f172a;font-family:\'Inter\',\'Segoe UI\',Helvetica,Arial,sans-serif;}' .
-        'a{color:#2563eb;}' .
-        '@media (prefers-color-scheme:dark){body{background:#0f172a;color:#e2e8f0;}' .
-        '.email-card{background:#0b1120 !important;border-color:#1e293b !important;}' .
-        '.email-title{color:#38bdf8 !important;}' .
-        '.email-paragraph{color:#e2e8f0 !important;}' .
-        '.email-muted{color:#94a3b8 !important;}' .
-        '.email-button{background:#38bdf8 !important;color:#0b1120 !important;}' .
-        '}' .
+        'a{color:' . htmlspecialchars($linkColor, ENT_QUOTES, 'UTF-8') . ';}' .
         '</style>' .
         '</head>' .
-        '<body>' .
-        '<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="padding:32px 0;">' .
+        '<body style="margin:0;background:' . htmlspecialchars($background, ENT_QUOTES, 'UTF-8') . ';color:' . htmlspecialchars($bodyText, ENT_QUOTES, 'UTF-8') . ';font-family:\'Inter\',\'Segoe UI\',Helvetica,Arial,sans-serif;">' .
+        '<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="padding:32px 12px;">' .
         '<tr><td align="center">' .
-        '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;padding:0 20px;">' .
-        '<tr><td style="text-align:center;padding-bottom:20px;">' .
-        '<img src="' . $logoUrl . '" alt="MyMoneyMap" style="height:48px;width:auto;" />' .
-        '</td></tr>' .
+        '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:640px;">' .
         '<tr><td>' .
-        '<div class="email-card" style="background:#ffffff;border:1px solid #e2e8f0;border-radius:24px;padding:32px;box-shadow:0 20px 40px rgba(15,23,42,0.08);">' .
-        '<h1 class="email-title" style="margin:0 0 16px;font-size:24px;font-weight:600;color:#0f172a;">' . $titleSafe . '</h1>' .
-        '<div class="email-paragraph" style="font-size:15px;line-height:1.6;color:#1e293b;">' .
+        '<div style="background:#ffffff;border:1px solid ' . htmlspecialchars($cardBorder, ENT_QUOTES, 'UTF-8') . ';border-radius:28px;overflow:hidden;box-shadow:0 24px 48px ' . htmlspecialchars($shadow, ENT_QUOTES, 'UTF-8') . ';">' .
+        '<div style="background:' . htmlspecialchars($headerBg, ENT_QUOTES, 'UTF-8') . ';color:' . htmlspecialchars($headerText, ENT_QUOTES, 'UTF-8') . ';padding:28px 32px;text-align:left;">' .
+        '<table role="presentation" cellpadding="0" cellspacing="0" width="100%">' .
+        '<tr>' .
+        '<td style="width:56px;vertical-align:middle;padding-right:16px;">' .
+        '<img src="' . $logoSrc . '" alt="' . $logoAlt . '" style="display:block;height:48px;width:auto;" />' .
+        '</td>' .
+        '<td style="vertical-align:middle;">' .
+        '<p style="margin:0;font-size:18px;font-weight:600;letter-spacing:0.02em;">' . $paletteName . '</p>' .
+        '<p style="margin:4px 0 0;font-size:14px;opacity:0.9;">Financial clarity for every milestone.</p>' .
+        '</td>' .
+        '</tr>' .
+        '</table>' .
+        '</div>' .
+        '<div style="padding:32px;color:' . htmlspecialchars($bodyText, ENT_QUOTES, 'UTF-8') . ';font-size:15px;line-height:1.6;">' .
+        '<h1 style="margin:0 0 18px;font-size:24px;font-weight:700;letter-spacing:-0.01em;color:' . htmlspecialchars($bodyText, ENT_QUOTES, 'UTF-8') . ';">' . $titleSafe . '</h1>' .
         $content .
         '</div>' .
+        '<div style="background:' . htmlspecialchars($footerBg, ENT_QUOTES, 'UTF-8') . ';color:' . htmlspecialchars($footerText, ENT_QUOTES, 'UTF-8') . ';padding:20px 32px;text-align:center;">' .
+        '<p style="margin:0 0 6px;font-size:13px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;">Stay in sync with MyMoneyMap</p>' .
+        '<p style="margin:0;font-size:12px;line-height:1.5;">You are receiving this email because you have a MyMoneyMap account. Keep your preferences up to date in the app at any time.</p>' .
         '</div>' .
-        '</td></tr>' .
-        '<tr><td style="text-align:center;padding:28px 12px 0;">' .
-        '<p class="email-muted" style="margin:0;font-size:13px;line-height:1.5;color:#64748b;">You are receiving this email because you have a MyMoneyMap account.</p>' .
+        '</div>' .
         '</td></tr>' .
         '</table>' .
         '</td></tr>' .
@@ -56,10 +165,13 @@ function email_wrap_html(string $title, string $content): string
         '</html>';
 }
 
-function email_render_button(string $href, string $label): string
+function email_render_button(string $href, string $label, array $palette): string
 {
+    $background = htmlspecialchars($palette['base'] ?? '#2563eb', ENT_QUOTES, 'UTF-8');
+    $color = htmlspecialchars(email_contrast_color($palette['base'] ?? '#2563eb'), ENT_QUOTES, 'UTF-8');
+
     return '<a href="' . htmlspecialchars($href, ENT_QUOTES, 'UTF-8') . '" ' .
-        'class="email-button" style="display:inline-block;padding:12px 24px;margin:12px 0;border-radius:999px;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:600;">' .
+        'style="display:inline-block;padding:12px 24px;margin:12px 0;border-radius:999px;background:' . $background . ';color:' . $color . ';text-decoration:none;font-weight:600;">' .
         htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</a>';
 }
 
@@ -102,13 +214,16 @@ function email_send_verification(PDO $pdo, array $user, bool $refreshToken = tru
     $link = app_url('/verify-email?token=' . urlencode($token));
     $name = email_user_display_name($user);
 
+    $palette = email_theme_palette($user);
+    $linkColor = htmlspecialchars($palette['base'] ?? '#2563eb', ENT_QUOTES, 'UTF-8');
+
     $body = '<p style="margin:0 0 16px;">Hi ' . htmlspecialchars($name) . ',</p>' .
         '<p style="margin:0 0 16px;">Thanks for creating a MyMoneyMap account. Please confirm your email address so we can keep your data safe and share updates with you.</p>' .
-        '<p style="margin:0 0 16px;text-align:center;">' . email_render_button($link, 'Verify my email') . '</p>' .
-        '<p style="margin:0 0 16px;">If the button does not work, copy and paste this link into your browser:<br /><a href="' . htmlspecialchars($link) . '" style="word-break:break-all;color:#2563eb;">' . htmlspecialchars($link) . '</a></p>' .
+        '<p style="margin:0 0 16px;text-align:center;">' . email_render_button($link, 'Verify my email', $palette) . '</p>' .
+        '<p style="margin:0 0 16px;">If the button does not work, copy and paste this link into your browser:<br /><a href="' . htmlspecialchars($link) . '" style="word-break:break-all;color:' . $linkColor . ';">' . htmlspecialchars($link) . '</a></p>' .
         '<p style="margin:0;">See you soon,<br />The MyMoneyMap team</p>';
 
-    $html = email_wrap_html('Verify your email', $body);
+    $html = email_wrap_html('Verify your email', $body, $palette);
 
     $text = "Hi {$name},\n\n" .
         "Thanks for creating a MyMoneyMap account. Please confirm your email address so we can keep your data safe and share updates with you.\n\n" .
@@ -123,6 +238,8 @@ function email_send_verification(PDO $pdo, array $user, bool $refreshToken = tru
 function email_send_welcome(array $user): bool
 {
     $name = email_user_display_name($user);
+    $palette = email_theme_palette($user);
+
     $body = '<p style="margin:0 0 16px;">Hi ' . htmlspecialchars($name) . ',</p>' .
         '<p style="margin:0 0 16px;">Your MyMoneyMap registration was successful. You can start tracking your finances right away — add accounts, record transactions, and set your goals.</p>' .
         '<ul style="margin:0 0 16px;padding-left:20px;">' .
@@ -132,7 +249,7 @@ function email_send_welcome(array $user): bool
         '</ul>' .
         '<p style="margin:0;">We\'re thrilled to have you on board!<br />— The MyMoneyMap team</p>';
 
-    $html = email_wrap_html('Welcome to MyMoneyMap', $body);
+    $html = email_wrap_html('Welcome to MyMoneyMap', $body, $palette);
 
     $text = "Hi {$name},\n\n" .
         "Your MyMoneyMap registration was successful. Start tracking your finances right away: add transactions, review budgets, and set meaningful goals.\n\n" .
@@ -171,6 +288,7 @@ function email_send_tips(array $user, ?array $tips = null): bool
 {
     $tips = $tips && is_array($tips) ? $tips : email_default_tips();
     $name = email_user_display_name($user);
+    $palette = email_theme_palette($user);
 
     $body = '<p style="margin:0 0 16px;">Hi ' . htmlspecialchars($name) . ',</p>' .
         '<p style="margin:0 0 16px;">Here are a few tips to help you get even more value from MyMoneyMap:</p>' .
@@ -180,7 +298,7 @@ function email_send_tips(array $user, ?array $tips = null): bool
     }
     $body .= '</ul><p style="margin:0;">Happy tracking!<br />— The MyMoneyMap team</p>';
 
-    $html = email_wrap_html('Tips & tricks for MyMoneyMap', $body);
+    $html = email_wrap_html('Tips & tricks for MyMoneyMap', $body, $palette);
 
     $text = "Hi {$name},\n\n" .
         "Here are a few tips to help you get more value from MyMoneyMap:\n" .
@@ -258,6 +376,12 @@ function email_send_period_results(PDO $pdo, array $user, DateTimeImmutable $sta
     $name = email_user_display_name($user);
     $rangeLabel = email_period_label($start, $end);
     $currency = $summary['currency'];
+    $palette = email_theme_palette($user);
+    $tableBorder = htmlspecialchars($palette['accent'] ?? '#cbd5f5', ENT_QUOTES, 'UTF-8');
+    $tableHeadingBg = htmlspecialchars($palette['muted'] ?? '#f1f5f9', ENT_QUOTES, 'UTF-8');
+    $tableHeadingText = htmlspecialchars($palette['deep'] ?? '#0f172a', ENT_QUOTES, 'UTF-8');
+    $tableAltBg = '#ffffff';
+    $tableRowText = $tableHeadingText;
 
     $body = '<p style="margin:0 0 16px;">Hi ' . htmlspecialchars($name) . ',</p>' .
         '<p style="margin:0 0 16px;">Here is your ' . htmlspecialchars($label) . ' summary for ' . htmlspecialchars($rangeLabel) . '.</p>';
@@ -265,14 +389,22 @@ function email_send_period_results(PDO $pdo, array $user, DateTimeImmutable $sta
     if ($summary['transaction_count'] === 0) {
         $body .= '<p style="margin:0 0 16px;">No transactions were recorded during this period. Add new entries from your dashboard to keep your finances up to date.</p>';
     } else {
-        $body .= '<table style="border-collapse:collapse;width:100%;max-width:480px;margin:16px 0;border-radius:16px;overflow:hidden;">'
-            . '<tr style="background:#f1f5f9;"><td style="padding:12px 16px;font-weight:600;color:#0f172a;border:1px solid #e2e8f0;">Income</td><td style="padding:12px 16px;text-align:right;color:#0f172a;border:1px solid #e2e8f0;">'
-            . htmlspecialchars(email_format_amount($summary['income_total'], $currency)) . '</td></tr>'
-            . '<tr><td style="padding:12px 16px;font-weight:600;color:#0f172a;border:1px solid #e2e8f0;">Spending</td><td style="padding:12px 16px;text-align:right;color:#0f172a;border:1px solid #e2e8f0;">'
-            . htmlspecialchars(email_format_amount($summary['spending_total'], $currency)) . '</td></tr>'
-            . '<tr style="background:#f8fafc;"><td style="padding:12px 16px;font-weight:600;color:#0f172a;border:1px solid #e2e8f0;">Net</td><td style="padding:12px 16px;text-align:right;color:#0f172a;border:1px solid #e2e8f0;">'
-            . htmlspecialchars(email_format_amount($summary['net'], $currency)) . '</td></tr>'
+        $body .= '<table style="border-collapse:collapse;width:100%;max-width:520px;margin:16px 0;border-radius:18px;overflow:hidden;border:1px solid ' . $tableBorder . ';">'
+            . '<tr style="background:' . $tableHeadingBg . ';">'
+            . '<td style="padding:14px 18px;font-weight:600;color:' . $tableHeadingText . ';border-bottom:1px solid ' . $tableBorder . ';">Income</td>'
+            . '<td style="padding:14px 18px;text-align:right;color:' . $tableHeadingText . ';border-bottom:1px solid ' . $tableBorder . ';">' . htmlspecialchars(email_format_amount($summary['income_total'], $currency)) . '</td>'
+            . '</tr>'
+            . '<tr style="background:' . $tableAltBg . ';">'
+            . '<td style="padding:14px 18px;font-weight:600;color:' . $tableRowText . ';border-bottom:1px solid ' . $tableBorder . ';">Spending</td>'
+            . '<td style="padding:14px 18px;text-align:right;color:' . $tableRowText . ';border-bottom:1px solid ' . $tableBorder . ';">' . htmlspecialchars(email_format_amount($summary['spending_total'], $currency)) . '</td>'
+            . '</tr>'
+            . '<tr style="background:' . $tableHeadingBg . ';">'
+            . '<td style="padding:14px 18px;font-weight:700;color:' . $tableHeadingText . ';">Net</td>'
+            . '<td style="padding:14px 18px;text-align:right;color:' . $tableHeadingText . ';">' . htmlspecialchars(email_format_amount($summary['net'], $currency)) . '</td>'
+            . '</tr>'
             . '</table>';
+
+        $body .= '<p style="margin:0 0 16px;font-size:14px;color:' . $tableRowText . ';">You logged ' . $summary['transaction_count'] . ' transactions during this period — ' . $summary['income_count'] . ' income and ' . $summary['spending_count'] . ' spending entries.</p>';
 
         if ($summary['top_categories']) {
             $body .= '<p style="margin:0 0 8px;">Top spending categories:</p><ul style="margin:0 0 16px;padding-left:20px;">';
@@ -285,7 +417,7 @@ function email_send_period_results(PDO $pdo, array $user, DateTimeImmutable $sta
 
     $body .= '<p style="margin:0;">Keep going — every entry moves you closer to your goals.<br />— The MyMoneyMap team</p>';
 
-    $html = email_wrap_html('Your ' . ucfirst($label) . ' MyMoneyMap summary', $body);
+    $html = email_wrap_html('Your ' . ucfirst($label) . ' MyMoneyMap summary', $body, $palette);
 
     $textLines = [
         "Hi {$name},",
@@ -305,6 +437,10 @@ function email_send_period_results(PDO $pdo, array $user, DateTimeImmutable $sta
                 $textLines[] = ' • ' . $category . ' — ' . email_format_amount($amount, $currency);
             }
         }
+    }
+    if ($summary['transaction_count'] > 0) {
+        $textLines[] = '';
+        $textLines[] = 'Entries logged: ' . $summary['transaction_count'] . ' total (' . $summary['income_count'] . ' income / ' . $summary['spending_count'] . ' spending).';
     }
     $textLines[] = '';
     $textLines[] = 'Keep going — every entry moves you closer to your goals.';
