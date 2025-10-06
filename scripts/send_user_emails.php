@@ -9,13 +9,13 @@ require __DIR__ . '/../src/helpers.php';
 require __DIR__ . '/../src/services/email_notifications.php';
 
 $type = $argv[1] ?? '';
-$validTypes = ['tips', 'weekly', 'monthly'];
+$validTypes = ['tips', 'weekly', 'monthly', 'yearly'];
 if (!in_array($type, $validTypes, true)) {
     fwrite(STDERR, "Usage: php scripts/send_user_emails.php [" . implode('|', $validTypes) . "]\n");
     exit(1);
 }
 
-$requiresVerification = in_array($type, ['tips', 'weekly', 'monthly'], true);
+$requiresVerification = in_array($type, ['tips', 'weekly', 'monthly', 'yearly'], true);
 
 $stmt = $pdo->query("SELECT id, email, full_name, email_verified_at, email_verification_token FROM users WHERE email IS NOT NULL AND email <> '' ORDER BY id");
 $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -51,6 +51,9 @@ foreach ($users as $user) {
             break;
         case 'monthly':
             $ok = email_send_monthly_results($pdo, $user);
+            break;
+        case 'yearly':
+            $ok = email_send_yearly_results($pdo, $user);
             break;
         default:
             $ok = false;
