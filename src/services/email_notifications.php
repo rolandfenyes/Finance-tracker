@@ -324,6 +324,27 @@ function email_render_button(string $href, string $label, array $palette): strin
         htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</a>';
 }
 
+function email_load_user_profile(PDO $pdo, int $userId): ?array
+{
+    $stmt = $pdo->prepare('SELECT id, email, full_name, email_verified_at FROM users WHERE id = ?');
+    $stmt->execute([$userId]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$user) {
+        return null;
+    }
+
+    $email = trim((string)($user['email'] ?? ''));
+    if ($email === '') {
+        return null;
+    }
+
+    $user['email'] = $email;
+    $user['full_name_plain'] = $user['full_name'] ? pii_decrypt($user['full_name']) : '';
+
+    return $user;
+}
+
 function email_user_display_name(array $user): string
 {
     $name = trim((string)($user['full_name_plain'] ?? ''));
@@ -737,6 +758,318 @@ function email_collect_budget_rows(PDO $pdo, int $userId, array $summary): array
     }, $rows), 0, 3);
 }
 
+function email_collect_emergency_status(PDO $pdo, int $userId, string $defaultCurrency): array
+{
+    $stmt = $pdo->prepare('SELECT total, target_amount, currency FROM emergency_fund WHERE user_id = ?');
+    $stmt->execute([$userId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$row) {
+        return [
+            'status' => 'No emergency fund yet.',
+            'note' => 'Set a target to start building your safety net.',
+            'total' => 0.0,
+            'target' => 0.0,
+            'currency' => $defaultCurrency,
+        ];
+    }
+
+    $currency = trim((string)($row['currency'] ?? ''));
+    if ($currency === '') {
+        $currency = $defaultCurrency;
+    }
+
+    $total = max(0.0, (float)($row['total'] ?? 0.0));
+    $target = max(0.0, (float)($row['target_amount'] ?? 0.0));
+    $statusCurrency = $currency !== '' ? $currency : $defaultCurrency;
+
+    if ($target > 0.0) {
+        $percent = min(100.0, ($total / max($target, 1e-9)) * 100.0);
+        $status = email_format_amount($total, $statusCurrency) . ' of ' . email_format_amount($target, $statusCurrency);
+        $status .= ' (' . round($percent) . '%)';
+
+        if ($percent >= 100.0) {
+            $note = 'Emergency fund goal achieved—keep it topped up.';
+        } else {
+            $gap = max(0.0, $target - $total);
+            $note = $gap > 0.0
+                ? email_format_amount($gap, $statusCurrency) . ' to reach your target.'
+                : 'Stay consistent to build an extra buffer.';
+        }
+    } else {
+        $status = email_format_amount($total, $statusCurrency) . ' saved.';
+        $note = $total > 0.0
+            ? 'Set a target to track progress automatically.'
+            : 'Set a target to start building your safety net.';
+    }
+
+    return [
+        'status' => $status,
+        'note' => $note,
+        'total' => $total,
+        'target' => $target,
+        'currency' => $statusCurrency,
+    ];
+}
+
+function email_collect_goal_status(PDO $pdo, int $userId, string $defaultCurrency): array
+{
+    $stmt = $pdo->prepare('SELECT title, status, target_amount, current_amount, currency FROM goals WHERE user_id = ?');
+    $stmt->execute([$userId]);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (!$rows) {
+        return [
+            'status' => 'Goal tracking ready.',
+            'note' => 'Create a goal to give your savings a mission.',
+        ];
+    }
+
+    $active = 0;
+    $paused = 0;
+    $completed = 0;
+    $topActive = null;
+    $recentCompleted = null;
+
+    foreach ($rows as $row) {
+        $status = strtolower((string)($row['status'] ?? ''));
+        $target = max(0.0, (float)($row['target_amount'] ?? 0.0));
+        $current = max(0.0, (float)($row['current_amount'] ?? 0.0));
+        $progress = $target > 0.0 ? min(100.0, ($current / max($target, 1e-9)) * 100.0) : null;
+
+        if (in_array($status, ['done', 'completed'], true) || ($progress !== null && $progress >= 100.0)) {
+            $completed++;
+            if ($recentCompleted === null) {
+                $recentCompleted = trim((string)($row['title'] ?? ''));
+            }
+            continue;
+        }
+
+        if ($status === 'paused') {
+            $paused++;
+        } else {
+            $active++;
+        }
+
+        if ($progress !== null) {
+            if ($topActive === null || $progress > $topActive['progress']) {
+                $topActive = [
+                    'title' => trim((string)($row['title'] ?? '')),
+                    'progress' => $progress,
+                ];
+            }
+        }
+    }
+
+    $parts = [];
+    if ($active > 0) {
+        $parts[] = $active . ' active';
+    }
+    if ($paused > 0) {
+        $parts[] = $paused . ' paused';
+    }
+    if ($completed > 0) {
+        $parts[] = $completed . ' done';
+    }
+
+    $statusLine = $parts ? implode(' · ', $parts) : 'Goal tracking ready.';
+
+    if ($recentCompleted) {
+        $note = 'Recent win: ' . $recentCompleted;
+    } elseif ($topActive) {
+        $note = 'Closest to target: ' . $topActive['title'] . ' at ' . round($topActive['progress']) . '%.';
+    } elseif ($paused > 0) {
+        $note = 'Paused goals are waiting for your attention.';
+    } else {
+        $note = 'Create a goal to give your savings a mission.';
+    }
+
+    return [
+        'status' => $statusLine,
+        'note' => $note,
+    ];
+}
+
+function email_collect_loan_status(PDO $pdo, int $userId, string $defaultCurrency): array
+{
+    $stmt = $pdo->prepare('SELECT name, principal, balance, currency FROM loans WHERE user_id = ?');
+    $stmt->execute([$userId]);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (!$rows) {
+        return [
+            'status' => 'No loans tracked.',
+            'note' => 'Add your loans to monitor payoff progress.',
+        ];
+    }
+
+    $active = 0;
+    $closed = 0;
+    $totalBalance = 0.0;
+    $currency = '';
+    $topLoan = null;
+
+    foreach ($rows as $row) {
+        $balance = $row['balance'];
+        $principal = max(0.0, (float)($row['principal'] ?? 0.0));
+        $currentBalance = $balance !== null ? max(0.0, (float)$balance) : $principal;
+        $loanCurrency = trim((string)($row['currency'] ?? ''));
+        if ($currency === '' && $loanCurrency !== '') {
+            $currency = $loanCurrency;
+        }
+
+        if ($currentBalance <= 0.01) {
+            $closed++;
+            continue;
+        }
+
+        $active++;
+        $totalBalance += $currentBalance;
+
+        if ($principal > 0.0) {
+            $progress = max(0.0, min(100.0, 100.0 - ($currentBalance / max($principal, 1e-9)) * 100.0));
+            if ($topLoan === null || $progress > $topLoan['progress']) {
+                $topLoan = [
+                    'title' => trim((string)($row['name'] ?? '')),
+                    'progress' => $progress,
+                ];
+            }
+        }
+    }
+
+    if ($active === 0) {
+        $status = 'All loans are paid off.';
+        $note = $closed > 0 ? $closed . ' loan(s) fully repaid.' : 'Add your loans to monitor payoff progress.';
+    } else {
+        $statusCurrency = $currency !== '' ? $currency : $defaultCurrency;
+        $status = 'Outstanding: ' . email_format_amount($totalBalance, $statusCurrency) . ' across ' . $active . ' loan(s).';
+        if ($topLoan) {
+            $note = 'Best progress: ' . $topLoan['title'] . ' ' . round($topLoan['progress']) . '% repaid.';
+        } elseif ($closed > 0) {
+            $note = $closed . ' loan(s) already cleared.';
+        } else {
+            $note = 'Plan extra payments to accelerate progress.';
+        }
+    }
+
+    return [
+        'status' => $status,
+        'note' => $note,
+    ];
+}
+
+function email_collect_financial_focus(PDO $pdo, int $userId, string $defaultCurrency): array
+{
+    return [
+        'emergency' => email_collect_emergency_status($pdo, $userId, $defaultCurrency),
+        'goals' => email_collect_goal_status($pdo, $userId, $defaultCurrency),
+        'loans' => email_collect_loan_status($pdo, $userId, $defaultCurrency),
+    ];
+}
+
+function email_goal_is_completed_state(array $goal): bool
+{
+    $status = strtolower((string)($goal['status'] ?? ''));
+    if (in_array($status, ['done', 'completed'], true)) {
+        return true;
+    }
+
+    $target = max(0.0, (float)($goal['target_amount'] ?? 0.0));
+    $current = max(0.0, (float)($goal['current_amount'] ?? 0.0));
+
+    return $target > 0.0 && $current >= $target;
+}
+
+function email_maybe_send_goal_completion(PDO $pdo, int $userId, int $goalId, ?array $previous = null): void
+{
+    $stmt = $pdo->prepare('SELECT title, target_amount, current_amount, currency, status FROM goals WHERE id = ? AND user_id = ?');
+    $stmt->execute([$goalId, $userId]);
+    $current = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$current) {
+        return;
+    }
+
+    $wasCompleted = $previous ? email_goal_is_completed_state($previous) : false;
+    $isCompleted = email_goal_is_completed_state($current);
+
+    if (!$isCompleted || $wasCompleted) {
+        return;
+    }
+
+    $user = email_load_user_profile($pdo, $userId);
+    if (!$user) {
+        return;
+    }
+
+    $context = [
+        'type' => 'goal',
+        'name' => (string)($current['title'] ?? 'Savings goal'),
+        'target_amount' => (float)($current['target_amount'] ?? 0.0),
+        'achieved_amount' => (float)($current['current_amount'] ?? 0.0),
+        'currency' => (string)($current['currency'] ?? ''),
+    ];
+
+    email_send_completion_notification($pdo, $user, $context);
+}
+
+function email_maybe_send_loan_completion(PDO $pdo, int $userId, int $loanId, float $previousBalance): void
+{
+    $stmt = $pdo->prepare('SELECT name, principal, balance, currency FROM loans WHERE id = ? AND user_id = ?');
+    $stmt->execute([$loanId, $userId]);
+    $loan = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$loan) {
+        return;
+    }
+
+    $currentBalance = max(0.0, (float)($loan['balance'] ?? 0.0));
+    if ($currentBalance > 0.01 || $previousBalance <= 0.01) {
+        return;
+    }
+
+    $user = email_load_user_profile($pdo, $userId);
+    if (!$user) {
+        return;
+    }
+
+    $context = [
+        'type' => 'loan',
+        'name' => (string)($loan['name'] ?? 'Loan'),
+        'target_amount' => (float)($loan['principal'] ?? 0.0),
+        'achieved_amount' => max(0.0, (float)($loan['principal'] ?? 0.0)),
+        'currency' => (string)($loan['currency'] ?? ''),
+    ];
+
+    email_send_completion_notification($pdo, $user, $context);
+}
+
+function email_maybe_send_emergency_completion(PDO $pdo, int $userId, float $previousTotal, float $newTotal, float $target, string $currency): void
+{
+    if ($target <= 0.0) {
+        return;
+    }
+
+    if (!($previousTotal < $target && $newTotal >= $target)) {
+        return;
+    }
+
+    $user = email_load_user_profile($pdo, $userId);
+    if (!$user) {
+        return;
+    }
+
+    $context = [
+        'type' => 'emergency',
+        'name' => 'Emergency Fund',
+        'target_amount' => $target,
+        'achieved_amount' => $newTotal,
+        'currency' => $currency,
+    ];
+
+    email_send_completion_notification($pdo, $user, $context);
+}
+
 function email_fetch_primary_goal(PDO $pdo, int $userId): ?array
 {
     $stmt = $pdo->prepare("SELECT title, target_amount, current_amount, currency, status FROM goals WHERE user_id = ? ORDER BY CASE WHEN status = 'active' THEN 0 WHEN status = 'completed' THEN 1 ELSE 2 END, priority NULLS LAST, id LIMIT 1");
@@ -906,6 +1239,13 @@ function email_send_monthly_results(PDO $pdo, array $user, ?DateTimeImmutable $r
     }
 
     $budgets = email_collect_budget_rows($pdo, (int)$user['id'], $summary);
+    $focus = email_collect_financial_focus($pdo, (int)$user['id'], $currency);
+    $emergencyStatus = $focus['emergency']['status'] ?? 'Emergency fund ready.';
+    $emergencyNote = $focus['emergency']['note'] ?? 'Track your emergency fund progress in the app.';
+    $goalsStatus = $focus['goals']['status'] ?? 'Goals overview available in the app.';
+    $goalsNote = $focus['goals']['note'] ?? 'Review your goals to stay on course.';
+    $loansStatus = $focus['loans']['status'] ?? 'Loan overview available in the app.';
+    $loansNote = $focus['loans']['note'] ?? 'Review your payoff plan for more detail.';
 
     $tokens = [
         'user_first_name' => $firstName,
@@ -919,6 +1259,12 @@ function email_send_monthly_results(PDO $pdo, array $user, ?DateTimeImmutable $r
         'milestone_3' => $milestones[2] ?? 'Celebrate progress and adjust goals',
         'savings_progress' => $savingsProgress,
         'savings_goal_name' => $savingsGoalName,
+        'ef_status' => $emergencyStatus,
+        'ef_status_note' => $emergencyNote,
+        'goals_status' => $goalsStatus,
+        'goals_status_note' => $goalsNote,
+        'loans_status' => $loansStatus,
+        'loans_status_note' => $loansNote,
         'app_url' => app_url(sprintf(
             '/years/%d/%d',
             (int)$start->format('Y'),
@@ -952,6 +1298,19 @@ function email_send_monthly_results(PDO $pdo, array $user, ?DateTimeImmutable $r
 
     $textLines[] = '';
     $textLines[] = 'Savings focus: ' . $savingsProgress . ' toward ' . $savingsGoalName . '.';
+    $textLines[] = 'Emergency fund: ' . $emergencyStatus;
+    if ($emergencyNote !== '') {
+        $textLines[] = '  ' . $emergencyNote;
+    }
+    $textLines[] = 'Goals: ' . $goalsStatus;
+    if ($goalsNote !== '') {
+        $textLines[] = '  ' . $goalsNote;
+    }
+    $textLines[] = 'Loans: ' . $loansStatus;
+    if ($loansNote !== '') {
+        $textLines[] = '  ' . $loansNote;
+    }
+    $textLines[] = '';
     $textLines[] = '— The MyMoneyMap team';
 
     return send_app_email((string)$user['email'], 'Your monthly MyMoneyMap report', $html, implode("\n", $textLines), [
@@ -1086,3 +1445,235 @@ function email_send_yearly_results(PDO $pdo, array $user, ?DateTimeImmutable $re
         'to_name' => $name,
     ]);
 }
+
+function email_send_completion_notification(PDO $pdo, array $user, array $achievement): bool
+{
+    $type = strtolower((string)($achievement['type'] ?? 'goal'));
+    $name = email_user_display_name($user);
+    $firstName = email_user_first_name($user);
+    $achievementName = trim((string)($achievement['name'] ?? ''));
+    $currency = (string)($achievement['currency'] ?? '');
+    $achievedValue = (float)($achievement['achieved_amount'] ?? 0.0);
+    $targetValue = (float)($achievement['target_amount'] ?? 0.0);
+    $achievedAmount = email_format_amount($achievedValue, $currency);
+    $targetAmount = $targetValue > 0.0 ? email_format_amount($targetValue, $currency) : '';
+
+    $headline = 'Goal achieved';
+    $subheadline = 'You reached your goal.';
+    $summary = 'You completed this milestone with ' . $achievedAmount . '.';
+    $highlights = [
+        'Lock in the win by recording a quick reflection.',
+        'Reassign your budget toward the next priority.',
+        'Share the news with anyone cheering you on.',
+    ];
+    $ctaLabel = 'Review your goals';
+    $ctaUrl = app_url('/goals');
+    $celebrationNote = 'Keep the momentum going—your next milestone is within reach.';
+    $subject = 'Goal complete!';
+
+    if ($achievementName !== '') {
+        $subject = 'Goal complete: ' . $achievementName;
+    }
+
+    switch ($type) {
+        case 'loan':
+            $subject = $achievementName !== '' ? 'Loan paid off: ' . $achievementName : 'Loan paid off!';
+            $headline = 'Loan freedom achieved';
+            $subheadline = 'You paid off ' . ($achievementName !== '' ? $achievementName : 'your loan') . '.';
+            $summary = 'Principal cleared: ' . $achievedAmount . '.';
+            $highlights = [
+                'Redirect the retired payment toward savings or investing.',
+                'Update the loan record with any closing notes or documents.',
+                'Celebrate the milestone—you earned this moment.',
+            ];
+            $ctaLabel = 'Review loan history';
+            $ctaUrl = app_url('/loans');
+            $celebrationNote = 'Keep the momentum by pointing that cashflow at your next priority.';
+            break;
+        case 'emergency':
+            $subject = 'Emergency fund goal reached!';
+            if ($achievementName !== '') {
+                $subject = 'Emergency fund ready: ' . $achievementName;
+            }
+            $headline = 'Emergency fund secured';
+            $subheadline = 'You filled your safety net to the brim.';
+            $summary = 'Emergency fund total: ' . $achievedAmount . ($targetAmount !== '' ? ' (target ' . $targetAmount . ')' : '') . '.';
+            $highlights = [
+                'Celebrate hitting full strength—this is your peace-of-mind fund.',
+                'Schedule a quarterly check-in to keep balances topped up.',
+                'Decide which goal to focus on next with your new momentum.',
+            ];
+            $ctaLabel = 'View emergency fund';
+            $ctaUrl = app_url('/emergency');
+            $celebrationNote = 'Maintain the habit—redirect fresh savings to your next mission while keeping this buffer full.';
+            break;
+        default:
+            if ($achievementName !== '') {
+                $headline = 'Goal complete: ' . $achievementName;
+                $subheadline = 'You reached ' . $achievementName . '.';
+            }
+            $summary = 'Final amount saved: ' . $achievedAmount . ($targetAmount !== '' ? ' (target ' . $targetAmount . ')' : '') . '.';
+            $highlights = [
+                'Record what worked so you can repeat it.',
+                'Take a moment to celebrate the dedication it took.',
+                'Pick your next goal while the energy is high.',
+            ];
+            $ctaLabel = 'Review your goals';
+            $ctaUrl = app_url('/goals');
+            $celebrationNote = 'Roll that winning streak into your next milestone—your plan is working.';
+            break;
+    }
+
+    $tokens = [
+        'user_first_name' => $firstName,
+        'achievement_headline' => $headline,
+        'achievement_subheadline' => $subheadline,
+        'achievement_summary' => $summary,
+        'highlight_1' => $highlights[0] ?? 'Keep tracking your progress inside MyMoneyMap.',
+        'highlight_2' => $highlights[1] ?? 'Adjust your plan to reflect the new milestone.',
+        'highlight_3' => $highlights[2] ?? 'Share the win with your accountability partner.',
+        'cta_label' => $ctaLabel,
+        'cta_url' => $ctaUrl,
+        'celebration_note' => $celebrationNote,
+    ];
+
+    $html = email_template_render('email_goal_congratulations', $tokens);
+
+    $textLines = [
+        "Hi {$name},",
+        '',
+        $subheadline,
+        $summary,
+        '',
+        'Next steps:',
+    ];
+    foreach ($highlights as $line) {
+        $textLines[] = ' • ' . $line;
+    }
+    $textLines[] = '';
+    $textLines[] = $celebrationNote;
+    $textLines[] = '— The MyMoneyMap team';
+
+    return send_app_email((string)$user['email'], $subject, $html, implode("\n", $textLines), [
+        'to_name' => $name,
+    ]);
+}
+
+function email_send_emergency_motivation(PDO $pdo, array $user): bool
+{
+    $userId = (int)($user['id'] ?? 0);
+    if ($userId <= 0) {
+        return false;
+    }
+
+    $displayName = email_user_display_name($user);
+    $firstName = email_user_first_name($user);
+
+    $stmt = $pdo->prepare('SELECT total, target_amount, currency FROM emergency_fund WHERE user_id = ?');
+    $stmt->execute([$userId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+
+    $currency = trim((string)($row['currency'] ?? ''));
+    if ($currency === '' && function_exists('fx_user_main')) {
+        $currency = (string)(fx_user_main($pdo, $userId) ?: '');
+    }
+
+    $total = max(0.0, (float)($row['total'] ?? 0.0));
+    $target = max(0.0, (float)($row['target_amount'] ?? 0.0));
+
+    if ($target > 0.0 && $total >= $target) {
+        // Already complete; skip motivational nudge.
+        return false;
+    }
+
+    $gap = $target > 0.0 ? max(0.0, $target - $total) : 0.0;
+    $percent = $target > 0.0 ? min(99.0, ($total / max($target, 1e-9)) * 100.0) : 0.0;
+
+    if ($target <= 0.0 && $total <= 0.0) {
+        $progressStage = 'setup';
+    } elseif ($percent < 25.0) {
+        $progressStage = 'early';
+    } elseif ($percent < 75.0) {
+        $progressStage = 'mid';
+    } else {
+        $progressStage = 'close';
+    }
+
+    $tipsByStage = [
+        'setup' => [
+            'Set a target that covers 3–6 months of essentials.',
+            'Schedule a starter transfer so the fund exists by this weekend.',
+            'Label the fund clearly so you protect it from impulse spending.',
+        ],
+        'early' => [
+            'Automate deposits the day after payday to stay consistent.',
+            'Trim one discretionary category to free up an extra contribution.',
+            'Track your weekly streak in MyMoneyMap to stay accountable.',
+        ],
+        'mid' => [
+            'Redirect any windfalls—refunds, bonuses, side gigs—straight to the fund.',
+            'Review subscriptions and insurance for quick wins you can reallocate.',
+            'Keep surplus cash parked in this account before moving to other goals.',
+        ],
+        'close' => [
+            'Lock in your finish line with one more scheduled transfer.',
+            'Plan how you will maintain the fund once it is fully topped up.',
+            'Pick the next goal that will receive these automatic contributions.',
+        ],
+    ];
+
+    $progressNotes = [
+        'setup' => 'Set a clear target to unlock richer guidance and tracking.',
+        'early' => 'You are off the mark—stay consistent and the fund will grow quickly.',
+        'mid' => 'You are over halfway there. Keep tightening the sails for a strong finish.',
+        'close' => 'You are within striking distance. One more push will finish the job.',
+    ];
+
+    $tips = $tipsByStage[$progressStage];
+    $progressNote = $progressNotes[$progressStage];
+
+    $tokens = [
+        'user_first_name' => $firstName,
+        'ef_current' => email_format_amount($total, $currency),
+        'ef_target' => $target > 0.0 ? email_format_amount($target, $currency) : 'Set your target',
+        'ef_gap' => $target > 0.0 ? email_format_amount($gap, $currency) : 'Define a target to calculate your gap.',
+        'ef_percent' => $target > 0.0 ? round($percent) . '%' : 'Start now',
+        'progress_note' => $progressNote,
+        'motivation_tip_1' => $tips[0] ?? 'Automate transfers so the fund grows on autopilot.',
+        'motivation_tip_2' => $tips[1] ?? 'Review your categories to keep cash flowing in the right direction.',
+        'motivation_tip_3' => $tips[2] ?? 'Protect the fund by separating it from everyday spending.',
+        'cta_label' => 'Update Emergency Fund',
+        'cta_url' => app_url('/emergency'),
+    ];
+
+    $html = email_template_render('email_emergency_motivation', $tokens);
+
+    $textLines = [
+        'Hi ' . $displayName . ',',
+        '',
+        $progressNote,
+        'Current balance: ' . email_plaintext_amount($total, $currency),
+    ];
+    if ($target > 0.0) {
+        $textLines[] = 'Target: ' . email_plaintext_amount($target, $currency) . ' (' . round($percent) . '% complete)';
+        $textLines[] = 'Gap remaining: ' . email_plaintext_amount($gap, $currency);
+    } else {
+        $textLines[] = 'Set your target to start measuring progress.';
+    }
+    $textLines[] = '';
+    $textLines[] = 'Try these next:';
+    foreach ($tips as $tip) {
+        $textLines[] = ' • ' . $tip;
+    }
+    $textLines[] = '';
+    $textLines[] = 'You have got this—keep your safety net growing.';
+    $textLines[] = '— The MyMoneyMap team';
+
+    $subject = 'Keep building your emergency fund';
+
+    return send_app_email((string)$user['email'], $subject, $html, implode("\n", $textLines), [
+        'to_name' => $displayName,
+    ]);
+}
+
+

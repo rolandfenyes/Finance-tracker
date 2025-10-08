@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../helpers.php';
+require_once __DIR__ . '/../services/email_notifications.php';
 
 function loans_index(PDO $pdo){
   require_login(); $u=uid();
@@ -305,10 +306,20 @@ function loans_delete(PDO $pdo){ verify_csrf(); require_login(); $u=uid();
 function loan_payment_add(PDO $pdo){ verify_csrf(); require_login(); $u=uid();
   $loanId=(int)$_POST['loan_id'];
   $amount=(float)$_POST['amount']; $interest=(float)($_POST['interest_component']??0); $principal=max(0,$amount-$interest);
+  $loanMeta = $pdo->prepare('SELECT name, balance, principal FROM loans WHERE id=? AND user_id=?');
+  $loanMeta->execute([$loanId,$u]);
+  $loanRow = $loanMeta->fetch(PDO::FETCH_ASSOC);
+  if (!$loanRow) {
+    $_SESSION['flash'] = 'Loan not found.';
+    redirect('/loans');
+  }
+  $previousBalance = max(0.0, (float)($loanRow['balance'] ?? $loanRow['principal'] ?? 0.0));
   $pdo->prepare('INSERT INTO loan_payments(loan_id,paid_on,amount,principal_component,interest_component,currency) VALUES(?,?,?,?,?,?)')
       ->execute([$loanId, $_POST['paid_on'], $amount, $principal, $interest, $_POST['currency']??'HUF']);
   $pdo->prepare('UPDATE loans SET balance = GREATEST(0,balance-?) WHERE id=? AND user_id=?')->execute([$principal,$loanId,$u]);
   $_SESSION['flash'] = 'Payment recorded.';
+  email_maybe_send_loan_completion($pdo, $u, $loanId, $previousBalance);
+  redirect('/loans');
 }
 
 function loan_payment_update(PDO $pdo){ verify_csrf(); require_login(); $u = uid();
@@ -323,7 +334,8 @@ function loan_payment_update(PDO $pdo){ verify_csrf(); require_login(); $u = uid
     redirect('/loans');
   }
 
-  $q = $pdo->prepare('SELECT lp.*, l.user_id, l.currency AS loan_currency, l.id AS loan_id
+  $q = $pdo->prepare('SELECT lp.*, l.user_id, l.currency AS loan_currency, l.id AS loan_id,
+                         l.name AS loan_name, l.balance, l.principal
                         FROM loan_payments lp
                         JOIN loans l ON l.id = lp.loan_id
                        WHERE lp.id=? AND l.user_id=?');
@@ -340,6 +352,8 @@ function loan_payment_update(PDO $pdo){ verify_csrf(); require_login(); $u = uid
   }
   $principal = max(0.0, $amount - $interest);
 
+  $previousBalance = max(0.0, (float)($row['balance'] ?? $row['principal'] ?? 0.0));
+
   $pdo->beginTransaction();
   try {
     $pdo->prepare('UPDATE loan_payments
@@ -353,6 +367,7 @@ function loan_payment_update(PDO $pdo){ verify_csrf(); require_login(); $u = uid
 
     $pdo->commit();
     $_SESSION['flash'] = 'Payment updated.';
+    email_maybe_send_loan_completion($pdo, $u, (int)$row['loan_id'], $previousBalance);
   } catch (Throwable $e) {
     $pdo->rollBack();
     $_SESSION['flash'] = 'Could not update payment.';

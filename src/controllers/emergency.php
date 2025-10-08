@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../helpers.php';
 require_once __DIR__ . '/../fx.php';
 require_once __DIR__ . '/../recurrence.php'; // for rrule_expand
+require_once __DIR__ . '/../services/email_notifications.php';
 
 
 function emergency_index(PDO $pdo){
@@ -199,8 +200,13 @@ function emergency_add(PDO $pdo){
   if ($amount <= 0) { $_SESSION['flash']='Amount must be positive.'; redirect('/emergency'); }
 
   // EF & main currencies
-  $row = $pdo->prepare('SELECT currency FROM emergency_fund WHERE user_id=?');
-  $row->execute([$u]); $efCur = $row->fetchColumn() ?: (fx_user_main($pdo,$u) ?: 'HUF');
+  $row = $pdo->prepare('SELECT total, target_amount, currency FROM emergency_fund WHERE user_id=?');
+  $row->execute([$u]);
+  $fund = $row->fetch(PDO::FETCH_ASSOC) ?: null;
+  $efCur = $fund['currency'] ?? null;
+  if (!$efCur) { $efCur = fx_user_main($pdo,$u) ?: 'HUF'; }
+  $previousTotal = max(0.0, (float)($fund['total'] ?? 0.0));
+  $targetAmount = max(0.0, (float)($fund['target_amount'] ?? 0.0));
   $main = fx_user_main($pdo,$u) ?: $efCur;
 
   // FX snapshot
@@ -243,6 +249,7 @@ function emergency_add(PDO $pdo){
 
     $pdo->commit();
     $_SESSION['flash']='Money added.';
+    email_maybe_send_emergency_completion($pdo, $u, $previousTotal, $previousTotal + $amount, $targetAmount, $efCur);
   } catch(Throwable $e){
     $pdo->rollBack();
     $_SESSION['flash']='Could not add.';
