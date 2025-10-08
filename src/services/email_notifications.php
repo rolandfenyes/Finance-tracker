@@ -1894,4 +1894,140 @@ function email_send_emergency_motivation(PDO $pdo, array $user): bool
     ]);
 }
 
+function email_send_emergency_withdrawal(PDO $pdo, int $userId, float $amount, string $currency, string $occurredOn, string $note = ''): bool
+{
+    if ($userId <= 0 || $amount <= 0.0) {
+        return false;
+    }
+
+    $user = email_load_user_profile($pdo, $userId);
+    if (!$user) {
+        return false;
+    }
+
+    $displayName = email_user_display_name($user);
+    $firstName = email_user_first_name($user);
+
+    $currency = trim($currency);
+    if ($currency === '') {
+        $mainCurrency = fx_user_main($pdo, $userId);
+        if (is_string($mainCurrency) && $mainCurrency !== '') {
+            $currency = $mainCurrency;
+        }
+    }
+    if ($currency === '') {
+        $currency = 'USD';
+    }
+
+    try {
+        $occurred = new DateTimeImmutable($occurredOn !== '' ? $occurredOn : 'now');
+    } catch (Exception $e) {
+        $occurred = new DateTimeImmutable();
+    }
+
+    $occurredFormatted = $occurred->format('F j, Y');
+    $nextMonth = $occurred->modify('first day of next month');
+    if (!$nextMonth) {
+        $nextMonth = $occurred->modify('+1 month');
+    }
+    $repayCandidate = $nextMonth ?: $occurred->modify('+1 month');
+    if ($repayCandidate instanceof DateTimeImmutable) {
+        $repayMonth = $repayCandidate->format('F Y');
+    } else {
+        $repayMonth = date('F Y', strtotime('+1 month'));
+    }
+
+    $withdrawFormatted = email_format_amount($amount, $currency);
+    $withdrawPlain = email_plaintext_amount($amount, $currency);
+
+    $defaultCurrency = $currency !== '' ? $currency : ((string)(fx_user_main($pdo, $userId) ?: 'USD'));
+    $status = email_collect_emergency_status($pdo, $userId, $defaultCurrency);
+    $statusCurrency = (string)($status['currency'] ?? $defaultCurrency);
+
+    $totalAfter = (float)($status['total'] ?? 0.0);
+    $balanceAfter = email_format_amount($totalAfter, $statusCurrency);
+    $targetValue = max(0.0, (float)($status['target'] ?? 0.0));
+    $targetFormatted = $targetValue > 0.0 ? email_format_amount($targetValue, $statusCurrency) : '';
+    $targetRowStyle = $targetValue > 0.0
+        ? 'background-color:#F9FAFB;'
+        : 'display:none; mso-hide:all; line-height:0; font-size:0; height:0; overflow:hidden;';
+
+    $statusSummaryRaw = (string)($status['status'] ?? '');
+    $statusSummary = $statusSummaryRaw !== '' ? $statusSummaryRaw : 'Track your emergency fund progress in the app.';
+    $statusNoteRaw = (string)($status['note'] ?? '');
+    $statusNote = trim($statusNoteRaw) !== '' ? $statusNoteRaw : 'Keep your safety net padded for the unexpected.';
+
+    $noteText = trim($note);
+    $noteVisibility = $noteText !== ''
+        ? ''
+        : 'display:none; mso-hide:all; line-height:0; font-size:0; height:0; overflow:hidden;';
+
+    $repayReminder = 'Plan to move ' . $withdrawFormatted . ' back into your emergency fund during ' . $repayMonth . ' to restore your safety net.';
+    $nextSteps = [
+        'Schedule a transfer at the start of ' . $repayMonth . '.',
+        'Trim discretionary spending this month to free up ' . $withdrawFormatted . '.',
+        'Log the repayment in MyMoneyMap so your progress updates automatically.',
+    ];
+
+    $tokens = [
+        'user_first_name' => $firstName,
+        'withdraw_amount' => $withdrawFormatted,
+        'withdraw_date' => $occurredFormatted,
+        'withdraw_note_visibility' => $noteVisibility,
+        'withdraw_note' => $noteText !== '' ? $noteText : '—',
+        'ef_status_summary' => $statusSummary,
+        'ef_status_note' => $statusNote,
+        'ef_balance' => $balanceAfter,
+        'ef_target_row_style' => $targetRowStyle,
+        'ef_target' => $targetFormatted,
+        'repay_month' => $repayMonth,
+        'repay_reminder' => $repayReminder,
+        'cta_label' => 'Replenish emergency fund',
+        'cta_url' => app_url('/emergency'),
+        'next_step_1' => $nextSteps[0],
+        'next_step_2' => $nextSteps[1],
+        'next_step_3' => $nextSteps[2],
+    ];
+
+    $html = email_template_render('email_emergency_withdrawal', $tokens);
+
+    $statusSummaryPlain = trim(str_replace("\xc2\xa0", ' ', html_entity_decode($statusSummary, ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+    if ($statusSummaryPlain === '') {
+        $statusSummaryPlain = 'Track your emergency fund progress in the app.';
+    }
+    $statusNotePlain = trim(str_replace("\xc2\xa0", ' ', html_entity_decode($statusNote, ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+
+    $textLines = [
+        'Hi ' . $displayName . ',',
+        '',
+        'We recorded your emergency fund withdrawal of ' . $withdrawPlain . ' on ' . $occurredFormatted . '.',
+    ];
+    if ($noteText !== '') {
+        $textLines[] = 'Note: ' . $noteText;
+        $textLines[] = '';
+    }
+    $textLines[] = 'Balance after withdrawal: ' . email_plaintext_amount($totalAfter, $statusCurrency);
+    if ($targetValue > 0.0) {
+        $textLines[] = 'Target: ' . email_plaintext_amount($targetValue, $statusCurrency) . '.';
+    }
+    $textLines[] = 'Status: ' . $statusSummaryPlain;
+    if ($statusNotePlain !== '') {
+        $textLines[] = $statusNotePlain;
+    }
+    $textLines[] = '';
+    $textLines[] = 'Repayment plan:';
+    $textLines[] = $repayReminder;
+    foreach ($nextSteps as $step) {
+        $textLines[] = ' • ' . $step;
+    }
+    $textLines[] = '';
+    $textLines[] = 'Keep your emergency fund ready for the unexpected.';
+    $textLines[] = '— The MyMoneyMap team';
+
+    $subject = 'Emergency fund withdrawal: ' . $withdrawFormatted;
+
+    return send_app_email((string)$user['email'], $subject, $html, implode("\n", $textLines), [
+        'to_name' => $displayName,
+    ]);
+}
 

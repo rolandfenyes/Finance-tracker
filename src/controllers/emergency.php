@@ -265,8 +265,11 @@ function emergency_withdraw(PDO $pdo){
   $note   = trim($_POST['note'] ?? '');
   if ($amount <= 0) { $_SESSION['flash']='Amount must be positive.'; redirect('/emergency'); }
 
-  $row = $pdo->prepare('SELECT currency FROM emergency_fund WHERE user_id=?');
-  $row->execute([$u]); $efCur = $row->fetchColumn() ?: (fx_user_main($pdo,$u) ?: 'HUF');
+  $row = $pdo->prepare('SELECT total, target_amount, currency FROM emergency_fund WHERE user_id=?');
+  $row->execute([$u]);
+  $fund = $row->fetch(PDO::FETCH_ASSOC) ?: null;
+  $efCur = $fund['currency'] ?? null;
+  if (!$efCur) { $efCur = fx_user_main($pdo,$u) ?: 'HUF'; }
   $main = fx_user_main($pdo,$u) ?: $efCur;
 
   $amtMain = ($efCur === $main) ? $amount : fx_convert($pdo, $amount, $efCur, $main, $date);
@@ -303,6 +306,7 @@ function emergency_withdraw(PDO $pdo){
 
     $pdo->commit();
     $_SESSION['flash']='Withdrawal recorded.';
+    email_send_emergency_withdrawal($pdo, $u, $amount, $efCur, $date, $note);
   } catch(Throwable $e){
     $pdo->rollBack();
     $_SESSION['flash']='Could not withdraw.';
