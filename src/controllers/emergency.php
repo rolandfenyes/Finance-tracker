@@ -248,11 +248,20 @@ function emergency_add(PDO $pdo){
     $tins->execute([$u, $date, $amount, $efCur, (int)$cats['ef_add'], $txNote, $efTxId, $efTxId]);
 
     $pdo->commit();
-    $_SESSION['flash']='Money added.';
-    email_maybe_send_emergency_completion($pdo, $u, $previousTotal, $previousTotal + $amount, $targetAmount, $efCur);
   } catch(Throwable $e){
-    $pdo->rollBack();
+    if ($pdo->inTransaction()) {
+      $pdo->rollBack();
+    }
     $_SESSION['flash']='Could not add.';
+    error_log('Emergency add failed: '.$e->getMessage());
+    redirect('/emergency');
+  }
+
+  $_SESSION['flash']='Money added.';
+  try {
+    email_maybe_send_emergency_completion($pdo, $u, $previousTotal, $previousTotal + $amount, $targetAmount, $efCur);
+  } catch (Throwable $mailError) {
+    error_log('Emergency add email failed: '.$mailError->getMessage());
   }
   redirect('/emergency');
 }
@@ -305,11 +314,20 @@ function emergency_withdraw(PDO $pdo){
     $tins->execute([$u, $date, $amount, $efCur, (int)$cats['ef_withdraw'], $txNote, $efTxId, $efTxId]);
 
     $pdo->commit();
-    $_SESSION['flash']='Withdrawal recorded.';
-    email_send_emergency_withdrawal($pdo, $u, $amount, $efCur, $date, $note);
   } catch(Throwable $e){
-    $pdo->rollBack();
+    if ($pdo->inTransaction()) {
+      $pdo->rollBack();
+    }
     $_SESSION['flash']='Could not withdraw.';
+    error_log('Emergency withdraw failed: '.$e->getMessage());
+    redirect('/emergency');
+  }
+
+  $_SESSION['flash']='Withdrawal recorded.';
+  try {
+    email_send_emergency_withdrawal($pdo, $u, $amount, $efCur, $date, $note);
+  } catch (Throwable $mailError) {
+    error_log('Emergency withdraw email failed: '.$mailError->getMessage());
   }
   redirect('/emergency');
 }
@@ -346,8 +364,11 @@ function emergency_tx_delete(PDO $pdo){
     $pdo->commit();
     $_SESSION['flash']='Entry removed.';
   } catch(Throwable $e){
-    $pdo->rollBack();
+    if ($pdo->inTransaction()) {
+      $pdo->rollBack();
+    }
     $_SESSION['flash']='Could not delete entry.';
+    error_log('Emergency entry delete failed: '.$e->getMessage());
   }
   redirect('/emergency');
 }
