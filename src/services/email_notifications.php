@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../helpers.php';
 require_once __DIR__ . '/../mailer.php';
 require_once __DIR__ . '/../fx.php';
+require_once __DIR__ . '/../recurrence.php';
 
 function email_brand_logo_image(): array
 {
@@ -812,6 +813,156 @@ function email_collect_emergency_status(PDO $pdo, int $userId, string $defaultCu
     ];
 }
 
+function email_calculate_next_emergency_goal(PDO $pdo, int $userId, float $currentTarget, string $currency): array
+{
+    $efCurrency = strtoupper(trim($currency));
+    $mainCurrency = fx_user_main($pdo, $userId);
+
+    if ($mainCurrency === '') {
+        $mainCurrency = $efCurrency !== '' ? $efCurrency : 'USD';
+    }
+
+    if ($efCurrency === '') {
+        $efCurrency = $mainCurrency;
+    }
+
+    $firstNextMonth = date('Y-m-01', strtotime('first day of next month'));
+    $lastNextMonth = date('Y-m-t', strtotime($firstNextMonth));
+
+    $stmt = $pdo->prepare('SELECT amount, currency, next_due, rrule FROM scheduled_payments WHERE user_id = ?');
+    $stmt->execute([$userId]);
+
+    $monthlyNeedsEf = 0.0;
+    $monthlyNeedsMain = 0.0;
+
+    foreach ($stmt as $row) {
+        $amount = (float)($row['amount'] ?? 0.0);
+        if ($amount <= 0.0) {
+            continue;
+        }
+
+        $rowCurrency = strtoupper(trim((string)($row['currency'] ?? '')));
+        if ($rowCurrency === '') {
+            $rowCurrency = $efCurrency;
+        }
+
+        $dtstart = trim((string)($row['next_due'] ?? ''));
+        if ($dtstart === '') {
+            continue;
+        }
+
+        $rrule = trim((string)($row['rrule'] ?? ''));
+        $occurrences = rrule_expand($dtstart, $rrule, $firstNextMonth, $lastNextMonth);
+        if (!$occurrences) {
+            continue;
+        }
+
+        foreach ($occurrences as $dueDate) {
+            $monthlyNeedsEf += $rowCurrency === $efCurrency
+                ? $amount
+                : fx_convert($pdo, $amount, $rowCurrency, $efCurrency, $dueDate);
+            $monthlyNeedsMain += $rowCurrency === $mainCurrency
+                ? $amount
+                : fx_convert($pdo, $amount, $rowCurrency, $mainCurrency, $dueDate);
+        }
+    }
+
+    $today = date('Y-m-d');
+    $usd1kEf = fx_convert($pdo, 1000.0, 'USD', $efCurrency, $today);
+    $usd1kMain = fx_convert($pdo, 1000.0, 'USD', $mainCurrency, $today);
+
+    $approx = static function (float $x, float $y): bool {
+        if ($x <= 0.0 || $y <= 0.0) {
+            return false;
+        }
+
+        return (abs($x - $y) / max($x, $y)) <= 0.15;
+    };
+
+    if ($currentTarget <= 0.0) {
+        return [
+            'label' => 'Set your starter cushion',
+            'note' => '≈ $1,000 gets your emergency fund off the ground.',
+            'amount' => $usd1kEf,
+            'amount_currency' => $efCurrency,
+            'amount_formatted' => email_format_amount($usd1kEf, $efCurrency),
+            'equivalent' => $usd1kMain,
+            'equivalent_currency' => $mainCurrency,
+            'equivalent_formatted' => $mainCurrency !== $efCurrency ? email_format_amount($usd1kMain, $mainCurrency) : '',
+            'months' => null,
+        ];
+    }
+
+    $months = null;
+    if ($monthlyNeedsEf > 0.0) {
+        if ($approx($currentTarget, $usd1kEf)) {
+            $months = 3;
+        } else {
+            $asMonths = (int)floor(($currentTarget / max($monthlyNeedsEf, 1e-9)) + 0.00001);
+            $months = max(4, $asMonths + 1);
+        }
+    }
+
+    if ($months !== null && $months > 0 && $monthlyNeedsEf > 0.0) {
+        if ($months > 9) {
+            return [
+                'label' => 'You\'re covered',
+                'note' => 'You already have roughly 9 months saved—shift focus to investing.',
+                'amount' => null,
+                'amount_currency' => $efCurrency,
+                'amount_formatted' => '',
+                'equivalent' => null,
+                'equivalent_currency' => $mainCurrency,
+                'equivalent_formatted' => '',
+                'months' => $months,
+            ];
+        }
+
+        $amountEf = $monthlyNeedsEf * $months;
+        $amountMain = $monthlyNeedsMain * $months;
+
+        return [
+            'label' => sprintf('%d months of needs', $months),
+            'note' => sprintf('%d× your scheduled bills (run-rate)', $months),
+            'amount' => $amountEf,
+            'amount_currency' => $efCurrency,
+            'amount_formatted' => email_format_amount($amountEf, $efCurrency),
+            'equivalent' => $amountMain,
+            'equivalent_currency' => $mainCurrency,
+            'equivalent_formatted' => ($mainCurrency !== $efCurrency && $amountMain > 0.0)
+                ? email_format_amount($amountMain, $mainCurrency)
+                : '',
+            'months' => $months,
+        ];
+    }
+
+    if ($monthlyNeedsEf <= 0.0) {
+        return [
+            'label' => 'Estimate your essentials next',
+            'note' => 'Add scheduled bills to calculate the next months-of-expenses target automatically.',
+            'amount' => null,
+            'amount_currency' => $efCurrency,
+            'amount_formatted' => '',
+            'equivalent' => null,
+            'equivalent_currency' => $mainCurrency,
+            'equivalent_formatted' => '',
+            'months' => null,
+        ];
+    }
+
+    return [
+        'label' => 'Keep building momentum',
+        'note' => 'Stay consistent this month—we will refresh your next milestone after the latest activity settles.',
+        'amount' => null,
+        'amount_currency' => $efCurrency,
+        'amount_formatted' => '',
+        'equivalent' => null,
+        'equivalent_currency' => $mainCurrency,
+        'equivalent_formatted' => '',
+        'months' => $months,
+    ];
+}
+
 function email_collect_goal_status(PDO $pdo, int $userId, string $defaultCurrency): array
 {
     $stmt = $pdo->prepare('SELECT title, status, target_amount, current_amount, currency FROM goals WHERE user_id = ?');
@@ -1449,6 +1600,7 @@ function email_send_yearly_results(PDO $pdo, array $user, ?DateTimeImmutable $re
 function email_send_completion_notification(PDO $pdo, array $user, array $achievement): bool
 {
     $type = strtolower((string)($achievement['type'] ?? 'goal'));
+    $userId = (int)($user['id'] ?? 0);
     $name = email_user_display_name($user);
     $firstName = email_user_first_name($user);
     $achievementName = trim((string)($achievement['name'] ?? ''));
@@ -1457,6 +1609,14 @@ function email_send_completion_notification(PDO $pdo, array $user, array $achiev
     $targetValue = (float)($achievement['target_amount'] ?? 0.0);
     $achievedAmount = email_format_amount($achievedValue, $currency);
     $targetAmount = $targetValue > 0.0 ? email_format_amount($targetValue, $currency) : '';
+
+    $nextEfVisibility = 'display:none; mso-hide:all; line-height:0; font-size:0; height:0; overflow:hidden;';
+    $nextEfLabel = '';
+    $nextEfAmount = '';
+    $nextEfEquivalent = '';
+    $nextEfEquivalentVisibility = 'display:none;';
+    $nextEfNote = '';
+    $nextEmergencyGoal = null;
 
     $headline = 'Goal achieved';
     $subheadline = 'You reached your goal.';
@@ -1506,6 +1666,36 @@ function email_send_completion_notification(PDO $pdo, array $user, array $achiev
             $ctaLabel = 'View emergency fund';
             $ctaUrl = app_url('/emergency');
             $celebrationNote = 'Maintain the habit—redirect fresh savings to your next mission while keeping this buffer full.';
+            if ($userId > 0) {
+                $nextEmergencyGoal = email_calculate_next_emergency_goal($pdo, $userId, $targetValue, $currency);
+                if ($nextEmergencyGoal) {
+                    $nextEfVisibility = '';
+                    $nextEfLabel = trim((string)($nextEmergencyGoal['label'] ?? ''));
+                    $nextEfAmount = trim((string)($nextEmergencyGoal['amount_formatted'] ?? ''));
+                    $nextEfNote = trim((string)($nextEmergencyGoal['note'] ?? ''));
+                    $nextEfEquivalent = trim((string)($nextEmergencyGoal['equivalent_formatted'] ?? ''));
+                    if ($nextEfEquivalent !== '') {
+                        $nextEfEquivalentVisibility = 'display:block;';
+                    }
+
+                    if ($nextEfLabel !== '') {
+                        $celebrationNote .= ' Next target: ' . $nextEfLabel;
+                        if ($nextEfAmount !== '') {
+                            $celebrationNote .= ' (' . $nextEfAmount;
+                            if ($nextEfEquivalent !== '') {
+                                $celebrationNote .= ' ≈ ' . $nextEfEquivalent;
+                            }
+                            $celebrationNote .= ')';
+                        }
+                        $celebrationNote .= '.';
+                    }
+
+                    $trimmedNote = trim($nextEfNote);
+                    if ($trimmedNote !== '') {
+                        $celebrationNote .= ' ' . $trimmedNote;
+                    }
+                }
+            }
             break;
         default:
             if ($achievementName !== '') {
@@ -1535,6 +1725,12 @@ function email_send_completion_notification(PDO $pdo, array $user, array $achiev
         'cta_label' => $ctaLabel,
         'cta_url' => $ctaUrl,
         'celebration_note' => $celebrationNote,
+        'next_ef_goal_visibility' => $nextEfVisibility,
+        'next_ef_goal_label' => $nextEfLabel,
+        'next_ef_goal_amount' => $nextEfAmount,
+        'next_ef_goal_equivalent' => $nextEfEquivalent,
+        'next_ef_goal_equivalent_visibility' => $nextEfEquivalentVisibility,
+        'next_ef_goal_note' => $nextEfNote,
     ];
 
     $html = email_template_render('email_goal_congratulations', $tokens);
@@ -1551,6 +1747,28 @@ function email_send_completion_notification(PDO $pdo, array $user, array $achiev
         $textLines[] = ' • ' . $line;
     }
     $textLines[] = '';
+    if ($type === 'emergency' && is_array($nextEmergencyGoal)) {
+        $label = trim((string)($nextEmergencyGoal['label'] ?? ''));
+        $amountValue = $nextEmergencyGoal['amount'] ?? null;
+        $amountCurrency = (string)($nextEmergencyGoal['amount_currency'] ?? $currency);
+        $equivalentValue = $nextEmergencyGoal['equivalent'] ?? null;
+        $equivalentCurrency = (string)($nextEmergencyGoal['equivalent_currency'] ?? '');
+        $note = trim((string)($nextEmergencyGoal['note'] ?? ''));
+
+        if ($label !== '') {
+            $textLines[] = 'Next emergency fund target: ' . $label;
+        }
+        if ($amountValue !== null) {
+            $textLines[] = 'Amount: ' . email_plaintext_amount((float)$amountValue, $amountCurrency);
+        }
+        if ($equivalentValue !== null && $equivalentCurrency !== '') {
+            $textLines[] = 'Equivalent: ' . email_plaintext_amount((float)$equivalentValue, $equivalentCurrency);
+        }
+        if ($note !== '') {
+            $textLines[] = $note;
+        }
+        $textLines[] = '';
+    }
     $textLines[] = $celebrationNote;
     $textLines[] = '— The MyMoneyMap team';
 
