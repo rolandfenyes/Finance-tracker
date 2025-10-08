@@ -816,6 +816,13 @@ function email_send_weekly_results(PDO $pdo, array $user, ?DateTimeImmutable $re
         'total_income' => email_format_amount($summary['income_total'], $currency),
         'net_change' => email_format_amount($summary['net'], $currency),
         'top_category' => $topCategory,
+        'app_url' => app_url(sprintf(
+            '/years/%d/%d?from=%s&to=%s',
+            (int)$start->format('Y'),
+            (int)$start->format('n'),
+            $start->format('Y-m-d'),
+            $end->format('Y-m-d')
+        )),
     ];
 
     for ($i = 1; $i <= 5; $i++) {
@@ -912,6 +919,11 @@ function email_send_monthly_results(PDO $pdo, array $user, ?DateTimeImmutable $r
         'milestone_3' => $milestones[2] ?? 'Celebrate progress and adjust goals',
         'savings_progress' => $savingsProgress,
         'savings_goal_name' => $savingsGoalName,
+        'app_url' => app_url(sprintf(
+            '/years/%d/%d',
+            (int)$start->format('Y'),
+            (int)$start->format('n')
+        )),
     ];
 
     for ($i = 1; $i <= 3; $i++) {
@@ -1039,6 +1051,7 @@ function email_send_yearly_results(PDO $pdo, array $user, ?DateTimeImmutable $re
         'savings_achievement_1' => $savingsAchievements[0] ?? 'Celebrate your wins in the app',
         'savings_achievement_2' => $savingsAchievements[1] ?? 'Stay consistent with contributions',
         'savings_achievement_3' => $savingsAchievements[2] ?? 'Plan your next milestone',
+        'app_url' => app_url(sprintf('/years/%d', $year)),
     ];
 
     $html = email_template_render('email_report_yearly', $tokens);
