@@ -2258,9 +2258,26 @@ function email_send_emergency_withdrawal(PDO $pdo, int $userId, float $amount, s
     $withdrawPlain = email_plaintext_amount($amount, $currency);
 
     $defaultCurrency = $currency !== '' ? $currency : ((string)(fx_user_main($pdo, $userId) ?: 'USD'));
-    $status = email_collect_emergency_status($pdo, $userId, $defaultCurrency);
-    $statusCurrency = (string)($status['currency'] ?? $defaultCurrency);
 
+    try {
+        $status = email_collect_emergency_status($pdo, $userId, $defaultCurrency);
+    } catch (Throwable $statusError) {
+        error_log('Emergency withdraw status failed for user ' . $userId . ': ' . $statusError->getMessage());
+        $status = [];
+    }
+
+    if (!is_array($status)) {
+        $status = [];
+    }
+
+    $statusCurrency = (string)($status['currency'] ?? $defaultCurrency);
+    if ($statusCurrency === '') {
+        $statusCurrency = $defaultCurrency;
+    }
+    if ($statusCurrency === '') {
+        $statusCurrency = 'USD';
+    }
+    
     $totalAfter = (float)($status['total'] ?? 0.0);
     $balanceAfter = email_format_amount($totalAfter, $statusCurrency);
     $targetValue = max(0.0, (float)($status['target'] ?? 0.0));
@@ -2304,7 +2321,43 @@ function email_send_emergency_withdrawal(PDO $pdo, int $userId, float $amount, s
         // keep original reference if formatting fails
     }
 
-    $replenishmentPlan = email_prepare_emergency_replenishment_plan($pdo, $userId, $amount, $statusCurrency, $planStart);
+    try {
+        $replenishmentPlan = email_prepare_emergency_replenishment_plan($pdo, $userId, $amount, $statusCurrency, $planStart);
+    } catch (Throwable $planError) {
+        error_log('Emergency withdraw plan failed for user ' . $userId . ': ' . $planError->getMessage());
+        $replenishmentPlan = [
+            'headline' => 'Plan your repayment',
+            'summary' => 'Review your emergency fund dashboard to rebuild this withdrawal.',
+            'detail' => '',
+            'detail_style' => 'color:#555555;',
+            'detail_visible' => false,
+            'rows' => [],
+            'plan_months' => 0,
+            'feasible' => false,
+            'shortfall' => $amount,
+            'allocated' => 0.0,
+            'monthly_amount' => $amount,
+            'month_labels' => [],
+        ];
+    }
+
+    if (!is_array($replenishmentPlan)) {
+        $replenishmentPlan = [
+            'headline' => 'Plan your repayment',
+            'summary' => 'Review your emergency fund dashboard to rebuild this withdrawal.',
+            'detail' => '',
+            'detail_style' => 'color:#555555;',
+            'detail_visible' => false,
+            'rows' => [],
+            'plan_months' => 0,
+            'feasible' => false,
+            'shortfall' => $amount,
+            'allocated' => 0.0,
+            'monthly_amount' => $amount,
+            'month_labels' => [],
+        ];
+    }
+
     $planRows = $replenishmentPlan['rows'] ?? [];
     $planRowCount = count($planRows);
     $planMonthLabels = $replenishmentPlan['month_labels'] ?? [];

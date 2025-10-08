@@ -325,7 +325,10 @@ function emergency_withdraw(PDO $pdo){
 
   $_SESSION['flash']='Withdrawal recorded.';
   try {
-    email_send_emergency_withdrawal($pdo, $u, $amount, $efCur, $date, $note);
+    $sent = email_send_emergency_withdrawal($pdo, $u, $amount, $efCur, $date, $note);
+    if (!$sent) {
+      error_log('Emergency withdraw email not dispatched for user '.$u.' (withdraw '.$amount.' '.$efCur.')');
+    }
   } catch (Throwable $mailError) {
     error_log('Emergency withdraw email failed: '.$mailError->getMessage());
   }
