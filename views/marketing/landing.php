@@ -125,7 +125,7 @@ $faqItems = [
         <span class="text-xl font-semibold">MyMoneyMap</span>
       </a>
       <div class="flex items-center gap-3">
-        <div x-data="{ open:false }" class="relative">
+        <div x-data="{ open:false }" class="relative z-20">
           <button
             @click="open = !open"
             @keydown.escape.window="open=false"
@@ -146,7 +146,7 @@ $faqItems = [
             x-show="open"
             x-transition.origin.top.right
             @click.outside="open=false"
-            class="absolute right-0 mt-3 w-56 rounded-2xl border border-emerald-100 bg-white/95 p-2 shadow-2xl backdrop-blur"
+            class="absolute right-0 z-30 mt-3 w-56 rounded-2xl border border-emerald-100 bg-white/95 p-2 shadow-2xl backdrop-blur"
           >
             <div class="grid gap-1 text-sm">
               <?php foreach ($localeOptions as $code => $label): ?>
