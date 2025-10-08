@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../helpers.php';
 require_once __DIR__ . '/../fx.php';
 require_once __DIR__ . '/../recurrence.php'; // for rrule_expand
+require_once __DIR__ . '/../services/email_notifications.php';
 
 
 function emergency_index(PDO $pdo){
@@ -199,8 +200,13 @@ function emergency_add(PDO $pdo){
   if ($amount <= 0) { $_SESSION['flash']='Amount must be positive.'; redirect('/emergency'); }
 
   // EF & main currencies
-  $row = $pdo->prepare('SELECT currency FROM emergency_fund WHERE user_id=?');
-  $row->execute([$u]); $efCur = $row->fetchColumn() ?: (fx_user_main($pdo,$u) ?: 'HUF');
+  $row = $pdo->prepare('SELECT total, target_amount, currency FROM emergency_fund WHERE user_id=?');
+  $row->execute([$u]);
+  $fund = $row->fetch(PDO::FETCH_ASSOC) ?: null;
+  $efCur = $fund['currency'] ?? null;
+  if (!$efCur) { $efCur = fx_user_main($pdo,$u) ?: 'HUF'; }
+  $previousTotal = max(0.0, (float)($fund['total'] ?? 0.0));
+  $targetAmount = max(0.0, (float)($fund['target_amount'] ?? 0.0));
   $main = fx_user_main($pdo,$u) ?: $efCur;
 
   // FX snapshot
@@ -242,10 +248,20 @@ function emergency_add(PDO $pdo){
     $tins->execute([$u, $date, $amount, $efCur, (int)$cats['ef_add'], $txNote, $efTxId, $efTxId]);
 
     $pdo->commit();
-    $_SESSION['flash']='Money added.';
   } catch(Throwable $e){
-    $pdo->rollBack();
+    if ($pdo->inTransaction()) {
+      $pdo->rollBack();
+    }
     $_SESSION['flash']='Could not add.';
+    error_log('Emergency add failed: '.$e->getMessage());
+    redirect('/emergency');
+  }
+
+  $_SESSION['flash']='Money added.';
+  try {
+    email_maybe_send_emergency_completion($pdo, $u, $previousTotal, $previousTotal + $amount, $targetAmount, $efCur);
+  } catch (Throwable $mailError) {
+    error_log('Emergency add email failed: '.$mailError->getMessage());
   }
   redirect('/emergency');
 }
@@ -258,8 +274,11 @@ function emergency_withdraw(PDO $pdo){
   $note   = trim($_POST['note'] ?? '');
   if ($amount <= 0) { $_SESSION['flash']='Amount must be positive.'; redirect('/emergency'); }
 
-  $row = $pdo->prepare('SELECT currency FROM emergency_fund WHERE user_id=?');
-  $row->execute([$u]); $efCur = $row->fetchColumn() ?: (fx_user_main($pdo,$u) ?: 'HUF');
+  $row = $pdo->prepare('SELECT total, target_amount, currency FROM emergency_fund WHERE user_id=?');
+  $row->execute([$u]);
+  $fund = $row->fetch(PDO::FETCH_ASSOC) ?: null;
+  $efCur = $fund['currency'] ?? null;
+  if (!$efCur) { $efCur = fx_user_main($pdo,$u) ?: 'HUF'; }
   $main = fx_user_main($pdo,$u) ?: $efCur;
 
   $amtMain = ($efCur === $main) ? $amount : fx_convert($pdo, $amount, $efCur, $main, $date);
@@ -295,10 +314,23 @@ function emergency_withdraw(PDO $pdo){
     $tins->execute([$u, $date, $amount, $efCur, (int)$cats['ef_withdraw'], $txNote, $efTxId, $efTxId]);
 
     $pdo->commit();
-    $_SESSION['flash']='Withdrawal recorded.';
   } catch(Throwable $e){
-    $pdo->rollBack();
+    if ($pdo->inTransaction()) {
+      $pdo->rollBack();
+    }
     $_SESSION['flash']='Could not withdraw.';
+    error_log('Emergency withdraw failed: '.$e->getMessage());
+    redirect('/emergency');
+  }
+
+  $_SESSION['flash']='Withdrawal recorded.';
+  try {
+    $sent = email_send_emergency_withdrawal($pdo, $u, $amount, $efCur, $date, $note);
+    if (!$sent) {
+      error_log('Emergency withdraw email not dispatched for user '.$u.' (withdraw '.$amount.' '.$efCur.')');
+    }
+  } catch (Throwable $mailError) {
+    error_log('Emergency withdraw email failed: '.$mailError->getMessage());
   }
   redirect('/emergency');
 }
@@ -335,8 +367,11 @@ function emergency_tx_delete(PDO $pdo){
     $pdo->commit();
     $_SESSION['flash']='Entry removed.';
   } catch(Throwable $e){
-    $pdo->rollBack();
+    if ($pdo->inTransaction()) {
+      $pdo->rollBack();
+    }
     $_SESSION['flash']='Could not delete entry.';
+    error_log('Emergency entry delete failed: '.$e->getMessage());
   }
   redirect('/emergency');
 }

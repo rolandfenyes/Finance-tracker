@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../helpers.php';
+require_once __DIR__ . '/../services/email_notifications.php';
 
 function feedback_index(PDO $pdo){
   require_login(); 
@@ -86,6 +87,24 @@ function feedback_add(PDO $pdo){
     VALUES (?,?,?,?,?)
   ")->execute([$u,$kind,$title,$message,$severity]);
 
+  $feedbackId = (int)$pdo->lastInsertId('feedback_id_seq');
+  if ($feedbackId <= 0) {
+    $feedbackId = (int)$pdo->lastInsertId();
+  }
+  if ($feedbackId <= 0) {
+    $fetch = $pdo->prepare('SELECT id FROM feedback WHERE user_id=? ORDER BY id DESC LIMIT 1');
+    $fetch->execute([$u]);
+    $feedbackId = (int)($fetch->fetchColumn() ?: 0);
+  }
+
+  if ($feedbackId > 0) {
+    try {
+      email_send_feedback_new_alert($pdo, $feedbackId);
+    } catch (Throwable $mailError) {
+      error_log('Failed to send feedback alert for feedback #' . $feedbackId . ': ' . $mailError->getMessage());
+    }
+  }
+
   $_SESSION['flash_success'] = 'Thanks for the feedback!';
   redirect('/feedback');
 }
@@ -108,6 +127,15 @@ function feedback_update_status(PDO $pdo){
   }
 
   $pdo->prepare("UPDATE feedback SET status=?, updated_at=NOW() WHERE id=?")->execute([$status,$id]);
+
+  if ($status === 'resolved') {
+    try {
+      email_send_feedback_resolved($pdo, $id);
+    } catch (Throwable $mailError) {
+      error_log('Failed to send feedback resolution email for #' . $id . ': ' . $mailError->getMessage());
+    }
+  }
+
   $_SESSION['flash_success'] = 'Status updated.';
 }
 

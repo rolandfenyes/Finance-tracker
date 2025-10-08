@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../helpers.php';
 require_once __DIR__ . '/../fx.php';
+require_once __DIR__ . '/../services/email_notifications.php';
 
 function goals_index(PDO $pdo){
   require_login(); $u = uid();
@@ -93,6 +94,13 @@ function goals_edit(PDO $pdo){
   $id       = (int)($_POST['id'] ?? 0);
   if (!$id) redirect('/goals');
 
+  $existing = $pdo->prepare('SELECT title, target_amount, current_amount, currency, status FROM goals WHERE id=? AND user_id=?');
+  $existing->execute([$id,$u]);
+  $previous = $existing->fetch(PDO::FETCH_ASSOC);
+  if (!$previous) {
+    redirect('/goals');
+  }
+
   $title    = trim($_POST['title'] ?? '');
   $target   = (float)($_POST['target_amount'] ?? 0);
   $currency = strtoupper(trim($_POST['currency'] ?? 'HUF'));
@@ -102,6 +110,7 @@ function goals_edit(PDO $pdo){
       ->execute([$title,$target,$currency,$status,$id,$u]);
 
   $_SESSION['flash'] = 'Goal updated.';
+  email_maybe_send_goal_completion($pdo, $u, $id, $previous);
   redirect('/goals');
 }
 
@@ -256,7 +265,7 @@ function goals_tx_add(PDO $pdo){
   }
 
   // Load goal + its currency and ownership
-  $g = $pdo->prepare('SELECT id, user_id, currency, COALESCE(current_amount,0) AS cur
+  $g = $pdo->prepare('SELECT id, user_id, title, target_amount, current_amount, currency, status
                       FROM goals WHERE id=? AND user_id=?');
   $g->execute([$goalId,$u]);
   $goal = $g->fetch(PDO::FETCH_ASSOC);
@@ -271,6 +280,13 @@ function goals_tx_add(PDO $pdo){
   }
 
   $goalCur = $goal['currency'] ?: $currency;
+  $previousState = [
+    'title' => (string)($goal['title'] ?? ''),
+    'target_amount' => (float)($goal['target_amount'] ?? 0.0),
+    'current_amount' => max(0.0, (float)($goal['current_amount'] ?? 0.0)),
+    'currency' => (string)($goalCur ?: $currency),
+    'status' => (string)($goal['status'] ?? ''),
+  ];
 
   $pdo->beginTransaction();
   try {
@@ -292,6 +308,7 @@ function goals_tx_add(PDO $pdo){
 
     $pdo->commit();
     $_SESSION['flash'] = 'Contribution added.';
+    email_maybe_send_goal_completion($pdo, $u, $goalId, $previousState);
   } catch(Throwable $e){
     $pdo->rollBack();
     // throw $e; // uncomment to debug
@@ -316,7 +333,8 @@ function goals_tx_update(PDO $pdo){
     redirect('/goals');
   }
 
-  $q = $pdo->prepare('SELECT gc.*, g.currency AS goal_currency, g.user_id, g.id AS goal_id
+  $q = $pdo->prepare('SELECT gc.*, g.currency AS goal_currency, g.user_id, g.id AS goal_id,
+                             g.title AS goal_title, g.target_amount, g.current_amount, g.status AS goal_status
                        FROM goal_contributions gc
                        JOIN goals g ON g.id = gc.goal_id
                       WHERE gc.id=? AND g.user_id=?');
@@ -330,6 +348,13 @@ function goals_tx_update(PDO $pdo){
   }
 
   $goalCur = $row['goal_currency'] ?: $currency;
+  $previousState = [
+    'title' => (string)($row['goal_title'] ?? ''),
+    'target_amount' => (float)($row['target_amount'] ?? 0.0),
+    'current_amount' => max(0.0, (float)($row['current_amount'] ?? 0.0)),
+    'currency' => (string)($goalCur ?: $currency),
+    'status' => (string)($row['goal_status'] ?? ''),
+  ];
 
   $pdo->beginTransaction();
   try {
@@ -354,6 +379,7 @@ function goals_tx_update(PDO $pdo){
 
     $pdo->commit();
     $_SESSION['flash'] = 'Contribution updated.';
+    email_maybe_send_goal_completion($pdo, $u, (int)$row['goal_id'], $previousState);
   } catch (Throwable $e) {
     $pdo->rollBack();
     $_SESSION['flash'] = 'Could not update contribution.';
