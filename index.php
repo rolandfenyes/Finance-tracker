@@ -95,6 +95,14 @@ switch ($path) {
         view('dashboard');
         break;
 
+    case '/subscriptions':
+        if (!is_logged_in()) {
+            view('marketing/subscriptions');
+            break;
+        }
+        view('marketing/subscriptions');
+        break;
+
     // Registration
     case '/register':
         require __DIR__ . '/src/controllers/auth.php';
