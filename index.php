@@ -91,7 +91,7 @@ if (preg_match('#^/api/stocks/([A-Za-z0-9\.-:]+)/history$#', $path, $m)) {
 // Simple routing
 switch ($path) {
     case '/':
-        if (!is_logged_in()) { view('auth/login'); break; }
+        if (!is_logged_in()) { view('marketing/landing'); break; }
         view('dashboard');
         break;
 
