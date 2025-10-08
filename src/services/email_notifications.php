@@ -81,6 +81,16 @@ function email_support_address(): string
     return 'support@mymoneymap.local';
 }
 
+function email_feedback_inbox_address(): string
+{
+    $env = getenv('MM_FEEDBACK_INBOX');
+    if (is_string($env) && $env !== '') {
+        return $env;
+    }
+
+    return 'feedback@mymoneymap.hu';
+}
+
 function email_template_base_tokens(): array
 {
     return [
@@ -552,6 +562,313 @@ function email_send_tips(array $user, ?array $tips = null): bool
 }
 
 
+function email_send_cashflow_overspend(PDO $pdo, int $userId, array $status, DateTimeImmutable $periodStart, DateTimeImmutable $periodEnd, float $previousSpent): bool
+{
+    $budget = max(0.0, (float)($status['budget'] ?? 0.0));
+    $spent = max(0.0, (float)($status['spent'] ?? 0.0));
+    if ($spent <= 0.0) {
+        return false;
+    }
+
+    $user = email_load_user_profile($pdo, $userId);
+    if (!$user) {
+        return false;
+    }
+
+    $currency = (string)($status['currency'] ?? '');
+    if ($currency === '') {
+        $main = fx_user_main($pdo, $userId);
+        $currency = $main !== '' ? $main : 'HUF';
+    }
+
+    $tolerance = 0.5;
+    if ($budget > 0.0) {
+        if ($spent <= $budget + $tolerance) {
+            return false;
+        }
+
+        if ($previousSpent > $budget + $tolerance) {
+            return false;
+        }
+    } else {
+        if ($previousSpent > $tolerance) {
+            return false;
+        }
+    }
+
+    $ruleLabel = trim((string)($status['label'] ?? 'Cashflow rule'));
+    if ($ruleLabel === '') {
+        $ruleLabel = 'Cashflow rule';
+    }
+
+    $percent = max(0.0, (float)($status['percent'] ?? 0.0));
+    $overAmount = $spent - $budget;
+    if ($overAmount <= 0.01 && $budget > 0.0) {
+        return false;
+    }
+
+    if ($overAmount < 0.0) {
+        $overAmount = 0.0;
+    }
+
+    $periodLabel = $periodStart->format('F Y');
+    if ($periodStart->format('Y-m') !== $periodEnd->format('Y-m')) {
+        $periodLabel = email_format_period_label($periodStart, $periodEnd);
+    }
+
+    $displayName = email_user_display_name($user);
+    $firstName = email_user_first_name($user);
+
+    $percentFormatted = rtrim(rtrim(number_format($percent, 2, '.', ''), '0'), '.');
+    if ($percentFormatted === '') {
+        $percentFormatted = '0';
+    }
+    $percentFormatted .= '%';
+
+    $budgetFormatted = email_format_amount($budget, $currency);
+    $spentFormatted = email_format_amount($spent, $currency);
+    $overFormatted = email_format_amount($overAmount, $currency);
+
+    $overPlain = email_plaintext_amount($overAmount, $currency);
+    $budgetPlain = email_plaintext_amount($budget, $currency);
+    $spentPlain = email_plaintext_amount($spent, $currency);
+
+    $overRatio = $budget > 0.0 ? ($overAmount / max($budget, 0.01)) : 1.0;
+
+    if ($budget <= 0.0) {
+        $primaryTip = 'Set a percentage for this rule so spending has a target each month.';
+        $secondaryTip = 'Move purchases into categories with room or update the cashflow rule for a safer plan.';
+    } elseif ($overRatio >= 0.25) {
+        $primaryTip = 'Pause optional spending tied to this rule for the rest of the month to rebalance it.';
+        $secondaryTip = 'Shift large one-off expenses into next month or another rule with available budget.';
+    } elseif ($overRatio >= 0.1) {
+        $primaryTip = 'Trim at least ' . $overFormatted . ' from upcoming discretionary spending to get back on plan.';
+        $secondaryTip = 'Schedule a mid-month review and reallocate from rules that are still under budget.';
+    } else {
+        $primaryTip = 'Monitor the remaining days closely and log adjustments immediately to stay in control.';
+        $secondaryTip = 'Check for subscriptions or renewals you can postpone until next month.';
+    }
+
+    $primaryTipText = html_entity_decode($primaryTip, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $secondaryTipText = html_entity_decode($secondaryTip, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+    $topCategories = $status['top_categories'] ?? [];
+    $hiddenStyle = 'display:none; mso-hide:all; line-height:0; font-size:0; height:0; overflow:hidden;';
+
+    $tokens = [
+        'user_first_name' => $firstName,
+        'period_label' => $periodLabel,
+        'rule_label' => $ruleLabel,
+        'rule_percent' => $percentFormatted,
+        'budget_amount' => $budgetFormatted,
+        'spent_amount' => $spentFormatted,
+        'over_amount' => $overFormatted,
+        'primary_tip' => $primaryTip,
+        'secondary_tip' => $secondaryTip,
+        'cta_url' => app_url('/cashflow'),
+        'cta_label' => 'Review cashflow plan',
+        'top_category_fallback_visibility' => $topCategories ? $hiddenStyle : '',
+    ];
+
+    for ($i = 1; $i <= 3; $i++) {
+        $row = $topCategories[$i - 1] ?? null;
+        if ($row) {
+            $tokens['top_category_' . $i . '_label'] = (string)$row['label'];
+            $tokens['top_category_' . $i . '_amount'] = email_format_amount((float)$row['amount'], $currency);
+            $tokens['top_category_' . $i . '_visibility'] = '';
+        } else {
+            $tokens['top_category_' . $i . '_label'] = '—';
+            $tokens['top_category_' . $i . '_amount'] = '—';
+            $tokens['top_category_' . $i . '_visibility'] = $hiddenStyle;
+        }
+    }
+
+    $html = email_template_render('email_cashflow_overspend', $tokens);
+
+    $textLines = [
+        'Hi ' . $displayName . ',',
+        '',
+        'Your ' . $ruleLabel . ' cashflow rule for ' . $periodLabel . ' is over budget.',
+        'Planned (' . $percentFormatted . '): ' . $budgetPlain,
+        'Spent so far: ' . $spentPlain,
+        'Over by: ' . $overPlain,
+        '',
+        'Top categories:',
+    ];
+
+    if ($topCategories) {
+        foreach (array_slice($topCategories, 0, 3) as $cat) {
+            $textLines[] = '- ' . $cat['label'] . ': ' . email_plaintext_amount((float)$cat['amount'], $currency);
+        }
+    } else {
+        $textLines[] = '- Track spending by category in the app to see more detail.';
+    }
+
+    $textLines[] = '';
+    $textLines[] = 'Next steps:';
+    $textLines[] = '1. ' . $primaryTipText;
+    $textLines[] = '2. ' . $secondaryTipText;
+    $textLines[] = '';
+    $textLines[] = 'Review your cashflow plan: ' . app_url('/cashflow');
+    $textLines[] = '';
+    $textLines[] = 'Stay focused,';
+    $textLines[] = 'The MyMoneyMap team';
+
+    $subject = 'Heads-up: ' . $ruleLabel . ' is over budget';
+
+    return send_app_email((string)$user['email'], $subject, $html, implode("\n", $textLines), [
+        'to_name' => $displayName,
+    ]);
+}
+
+function email_send_feedback_new_alert(PDO $pdo, int $feedbackId): bool
+{
+    if ($feedbackId <= 0) {
+        return false;
+    }
+
+    $stmt = $pdo->prepare('SELECT f.id, f.user_id, f.title, f.message, f.kind, f.severity, f.created_at, u.email, u.full_name FROM feedback f JOIN users u ON u.id = f.user_id WHERE f.id = ?');
+    $stmt->execute([$feedbackId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$row) {
+        return false;
+    }
+
+    $userRecord = [
+        'email' => (string)($row['email'] ?? ''),
+        'full_name' => $row['full_name'] ?? null,
+        'full_name_plain' => ($row['full_name'] ?? null) ? pii_decrypt($row['full_name']) : '',
+    ];
+
+    $userName = email_user_display_name($userRecord);
+    if ($userName === '') {
+        $userName = 'Unknown user';
+    }
+
+    $userEmail = trim((string)($row['email'] ?? ''));
+    if ($userEmail === '') {
+        $userEmail = 'not provided';
+    }
+
+    $title = trim((string)($row['title'] ?? 'Feedback'));
+    if ($title === '') {
+        $title = 'Feedback';
+    }
+
+    $kind = ucfirst(strtolower((string)($row['kind'] ?? 'Idea')));
+    $severityRaw = (string)($row['severity'] ?? '');
+    $severity = $severityRaw !== '' ? ucfirst(strtolower($severityRaw)) : 'Not set';
+    $message = trim((string)($row['message'] ?? ''));
+    if ($message === '') {
+        $message = '—';
+    }
+
+    $createdAt = (string)($row['created_at'] ?? 'now');
+    try {
+        $created = new DateTimeImmutable($createdAt);
+    } catch (Exception $e) {
+        $created = new DateTimeImmutable();
+    }
+    $submittedAt = $created->format('F j, Y H:i');
+
+    $feedbackUrl = app_url('/feedback?highlight=' . $feedbackId);
+
+    $tokens = [
+        'user_display_name' => $userName,
+        'user_email' => $userEmail,
+        'feedback_title' => $title,
+        'feedback_kind' => $kind,
+        'feedback_severity' => $severity,
+        'feedback_message' => $message,
+        'feedback_url' => $feedbackUrl,
+        'submitted_at' => $submittedAt,
+    ];
+
+    $html = email_template_render('email_feedback_new', $tokens);
+
+    $text = "New feedback submitted by {$userName} ({$userEmail}).\n\n"
+        . "Title: {$title}\n"
+        . "Type: {$kind}\n"
+        . "Severity: {$severity}\n"
+        . "Received: {$submittedAt}\n\n"
+        . "Message:\n{$message}\n\n"
+        . 'Open in MyMoneyMap: ' . $feedbackUrl . "\n";
+
+    return send_app_email(email_feedback_inbox_address(), 'New feedback: ' . $title, $html, $text, [
+        'to_name' => 'Feedback team',
+    ]);
+}
+
+function email_send_feedback_resolved(PDO $pdo, int $feedbackId): bool
+{
+    if ($feedbackId <= 0) {
+        return false;
+    }
+
+    $stmt = $pdo->prepare('SELECT id, user_id, title, updated_at FROM feedback WHERE id = ?');
+    $stmt->execute([$feedbackId]);
+    $feedback = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$feedback) {
+        return false;
+    }
+
+    $user = email_load_user_profile($pdo, (int)$feedback['user_id']);
+    if (!$user) {
+        return false;
+    }
+
+    $displayName = email_user_display_name($user);
+    $firstName = email_user_first_name($user);
+    $title = trim((string)($feedback['title'] ?? 'Your feedback'));
+    if ($title === '') {
+        $title = 'Your feedback';
+    }
+
+    $updatedAt = (string)($feedback['updated_at'] ?? 'now');
+    try {
+        $resolved = new DateTimeImmutable($updatedAt);
+    } catch (Exception $e) {
+        $resolved = new DateTimeImmutable();
+    }
+
+    $resolvedLabel = $resolved->format('F j, Y');
+
+    $resolutionSummary = 'We applied changes that address the issue you reported.';
+    $resolutionNextStep = 'Open MyMoneyMap to confirm everything works as expected. Reopen the feedback if you need more help.';
+
+    $tokens = [
+        'user_first_name' => $firstName,
+        'feedback_title' => $title,
+        'resolution_summary' => $resolutionSummary,
+        'resolution_next_step' => $resolutionNextStep,
+        'cta_url' => app_url('/feedback?highlight=' . (int)$feedback['id']),
+        'cta_label' => 'View feedback',
+        'resolved_at' => $resolvedLabel,
+    ];
+
+    $html = email_template_render('email_feedback_resolved', $tokens);
+
+    $textLines = [
+        'Hi ' . $displayName . ',',
+        '',
+        'We resolved your feedback: ' . $title . '.',
+        'Completed: ' . $resolvedLabel,
+        '',
+        'What we fixed: ' . $resolutionSummary,
+        'Next step: ' . $resolutionNextStep,
+        '',
+        'Review the update: ' . app_url('/feedback?highlight=' . (int)$feedback['id']),
+        '',
+        'Thanks for helping us improve MyMoneyMap!',
+    ];
+
+    return send_app_email((string)$user['email'], 'We resolved your feedback: ' . $title, $html, implode("\n", $textLines), [
+        'to_name' => $displayName,
+    ]);
+}
+
 function email_collect_period_summary(PDO $pdo, int $userId, DateTimeImmutable $start, DateTimeImmutable $end): array
 {
     $stmt = $pdo->prepare('SELECT t.kind, t.amount, t.currency, t.occurred_on, t.category_id, c.label AS category_label ' .
@@ -781,6 +1098,98 @@ function email_collect_budget_rows(PDO $pdo, int $userId, array $summary): array
         unset($row['actual_value']);
         return $row;
     }, $rows), 0, 3);
+}
+
+function email_collect_cashflow_rule_status(PDO $pdo, int $userId, int $ruleId, DateTimeImmutable $start, DateTimeImmutable $end): ?array
+{
+    if ($ruleId <= 0) {
+        return null;
+    }
+
+    $ruleStmt = $pdo->prepare('SELECT id, label, percent FROM cashflow_rules WHERE id = ? AND user_id = ?');
+    $ruleStmt->execute([$ruleId, $userId]);
+    $rule = $ruleStmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$rule) {
+        return null;
+    }
+
+    $label = trim((string)($rule['label'] ?? ''));
+    if ($label === '') {
+        $label = 'Cashflow rule';
+    }
+
+    $percent = max(0.0, (float)($rule['percent'] ?? 0.0));
+
+    $mainCurrency = fx_user_main($pdo, $userId);
+    if (!is_string($mainCurrency) || $mainCurrency === '') {
+        $mainCurrency = 'HUF';
+    }
+
+    $startDate = $start->format('Y-m-d');
+    $endDate = $end->format('Y-m-d');
+
+    $incomeStmt = $pdo->prepare('SELECT amount, currency, occurred_on FROM transactions WHERE user_id = ? AND kind = ? AND occurred_on BETWEEN ?::date AND ?::date');
+    $incomeStmt->execute([$userId, 'income', $startDate, $endDate]);
+    $incomeTotal = 0.0;
+    foreach ($incomeStmt->fetchAll(PDO::FETCH_ASSOC) as $incomeRow) {
+        $amount = (float)($incomeRow['amount'] ?? 0.0);
+        $currency = (string)($incomeRow['currency'] ?? '');
+        $occurred = (string)($incomeRow['occurred_on'] ?? $startDate);
+
+        if ($currency === '' || strtoupper($currency) === strtoupper($mainCurrency)) {
+            $incomeTotal += max(0.0, abs($amount));
+        } else {
+            $converted = fx_convert($pdo, $amount, $currency, $mainCurrency, $occurred);
+            $incomeTotal += max(0.0, abs($converted));
+        }
+    }
+
+    $planned = $percent > 0.0 ? round(($percent / 100.0) * $incomeTotal, 2) : 0.0;
+
+    $spentStmt = $pdo->prepare('SELECT t.amount, t.currency, t.occurred_on, c.label FROM transactions t JOIN categories c ON c.id = t.category_id WHERE t.user_id = ? AND t.kind = ? AND c.cashflow_rule_id = ? AND t.occurred_on BETWEEN ?::date AND ?::date');
+    $spentStmt->execute([$userId, 'spending', $ruleId, $startDate, $endDate]);
+    $spentTotal = 0.0;
+    $categories = [];
+
+    foreach ($spentStmt->fetchAll(PDO::FETCH_ASSOC) as $spentRow) {
+        $amount = (float)($spentRow['amount'] ?? 0.0);
+        $currency = (string)($spentRow['currency'] ?? '');
+        $occurred = (string)($spentRow['occurred_on'] ?? $startDate);
+        $labelRaw = trim((string)($spentRow['label'] ?? ''));
+        $catLabel = $labelRaw !== '' ? $labelRaw : 'Other';
+
+        if ($currency === '' || strtoupper($currency) === strtoupper($mainCurrency)) {
+            $converted = $amount;
+        } else {
+            $converted = fx_convert($pdo, $amount, $currency, $mainCurrency, $occurred);
+        }
+
+        $absolute = max(0.0, abs($converted));
+        $spentTotal += $absolute;
+        $categories[$catLabel] = ($categories[$catLabel] ?? 0.0) + $absolute;
+    }
+
+    $topCategories = [];
+    if ($categories) {
+        arsort($categories);
+        foreach (array_slice($categories, 0, 5, true) as $catLabel => $amount) {
+            $topCategories[] = [
+                'label' => $catLabel,
+                'amount' => $amount,
+            ];
+        }
+    }
+
+    return [
+        'rule_id' => (int)$rule['id'],
+        'label' => $label,
+        'percent' => $percent,
+        'budget' => max(0.0, $planned),
+        'spent' => $spentTotal,
+        'currency' => $mainCurrency,
+        'top_categories' => $topCategories,
+    ];
 }
 
 function email_collect_emergency_status(PDO $pdo, int $userId, string $defaultCurrency): array
