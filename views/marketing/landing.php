@@ -460,7 +460,7 @@ $faqItems = [
     <div class="relative grid gap-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:items-center">
       <div class="space-y-6">
         <h2 class="text-4xl font-bold tracking-tight text-white">Financial calm starts here.</h2>
-        <p class="text-lg text-white/90">Take control of your money today with MyMoneyMap. Your goals, cashflow, and peace of mind—together.</p>
+        <p class="text-lg text-emerald-50">Take control of your money today with MyMoneyMap. Your goals, cashflow, and peace of mind—together.</p>
         <div class="flex flex-wrap items-center gap-4">
           <a href="/register?plan=free" class="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-base font-semibold text-emerald-700 shadow-md hover:bg-emerald-50">Start Free</a>
           <a href="/register?plan=pro" class="inline-flex items-center gap-2 rounded-full border border-white/70 px-6 py-3 text-base font-semibold text-white hover:bg-white/10">Get Pro (14-day trial)</a>
@@ -468,22 +468,22 @@ $faqItems = [
         </div>
       </div>
       <div class="rounded-3xl border border-white/40 bg-white/10 p-6 text-white backdrop-blur">
-        <p class="text-sm uppercase tracking-[0.3em] text-white/80">You’ll love the calm</p>
+        <p class="text-sm uppercase tracking-[0.3em] text-emerald-100">You’ll love the calm</p>
         <div class="mt-4 space-y-3">
           <div class="flex items-center gap-3 rounded-2xl bg-white/10 px-4 py-3">
-            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-white">
+            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-emerald-50">
               <i data-lucide="check-circle" class="h-4 w-4"></i>
             </span>
             <span>Cancel anytime</span>
           </div>
           <div class="flex items-center gap-3 rounded-2xl bg-white/10 px-4 py-3">
-            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-white">
+            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-emerald-50">
               <i data-lucide="shield-check" class="h-4 w-4"></i>
             </span>
             <span>Private key encryption</span>
           </div>
           <div class="flex items-center gap-3 rounded-2xl bg-white/10 px-4 py-3">
-            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-white">
+            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-emerald-50">
               <i data-lucide="globe-2" class="h-4 w-4"></i>
             </span>
             <span>Works everywhere</span>
