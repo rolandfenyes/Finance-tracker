@@ -1,4 +1,4 @@
-<!-- Test Data: {"user_first_name":"Jordan","withdraw_amount":"1 200.00\u00a0USD","withdraw_date":"October 5, 2025","withdraw_note":"Covering a medical bill","ef_status_summary":"3 800.00\u00a0USD of 6 000.00\u00a0USD (63%)","ef_balance":"3 800.00\u00a0USD","ef_target":"6 000.00\u00a0USD","ef_status_note":"Rebuild the buffer to stay on track.","repay_month":"November 2025","repay_reminder":"Plan to move 1 200.00\u00a0USD back into your emergency fund next month to restore your safety net.","withdraw_note_visibility":"","ef_target_row_style":"","cta_label":"Replenish emergency fund","cta_url":"https://app.mymoneymap.com/emergency","next_step_1":"Schedule a transfer for the start of November.","next_step_2":"Trim discretionary spending to free up cash.","next_step_3":"Log any repayments so your progress updates automatically."} -->
+<!-- Test Data: {"user_first_name":"Jordan","withdraw_amount":"1 200.00\u00a0USD","withdraw_date":"October 5, 2025","withdraw_note":"Covering a medical bill","ef_status_summary":"3 800.00\u00a0USD of 6 000.00\u00a0USD (63%)","ef_balance":"3 800.00\u00a0USD","ef_target":"6 000.00\u00a0USD","ef_status_note":"Rebuild the buffer to stay on track.","repay_headline":"Rebuild over 3 months","repay_summary":"Set aside 400.00\u00a0USD per month to replace the 1 200.00\u00a0USD by January 2026.","repay_detail":"We estimate at least 410.00\u00a0USD left after bills in each month of this plan.","repay_detail_style":"color:#555555;","repay_detail_visibility":"","plan_month_1_label":"November 2025","plan_month_1_available":"450.00\u00a0USD","plan_month_1_suggested":"400.00\u00a0USD","plan_month_1_visibility":"","plan_month_2_label":"December 2025","plan_month_2_available":"420.00\u00a0USD","plan_month_2_suggested":"400.00\u00a0USD","plan_month_2_visibility":"","plan_month_3_label":"January 2026","plan_month_3_available":"410.00\u00a0USD","plan_month_3_suggested":"400.00\u00a0USD","plan_month_3_visibility":"","withdraw_note_visibility":"","ef_target_row_style":"","cta_label":"Replenish emergency fund","cta_url":"https://app.mymoneymap.com/emergency","next_step_1":"Schedule transfers for November, December, and January now.","next_step_2":"Keep discretionary spending aligned so 400.00\u00a0USD stays free each month.","next_step_3":"Log every repayment so your progress updates automatically."} -->
 <!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
   <head>
@@ -83,9 +83,32 @@
                   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#F5F5F5; border-radius:12px; border:1px solid #E5E7EB;">
                     <tr>
                       <td style="padding:16px; font-size:16px; line-height:24px; color:#1F1F1F;">
-                        <strong style="display:block; font-size:18px; line-height:26px; color:#1F1F1F;">Plan your repayment</strong>
-                        <p style="margin:12px 0 16px 0; font-size:16px; line-height:24px; color:#1F1F1F;">{{repay_reminder}}</p>
-                        <p style="margin:0 0 12px 0; font-size:16px; line-height:24px; color:#555555;">Focus for {{repay_month}}:</p>
+                        <strong style="display:block; font-size:18px; line-height:26px; color:#1F1F1F;">{{repay_headline}}</strong>
+                        <p style="margin:12px 0 16px 0; font-size:16px; line-height:24px; color:#1F1F1F;">{{repay_summary}}</p>
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 16px 0; border-collapse:collapse;">
+                          <tr>
+                            <th align="left" style="padding:8px 12px; font-size:14px; line-height:20px; color:#555555; border-bottom:1px solid #E5E7EB;">Month</th>
+                            <th align="right" style="padding:8px 12px; font-size:14px; line-height:20px; color:#555555; border-bottom:1px solid #E5E7EB;">After bills</th>
+                            <th align="right" style="padding:8px 12px; font-size:14px; line-height:20px; color:#555555; border-bottom:1px solid #E5E7EB;">Suggested deposit</th>
+                          </tr>
+                          <tr style="{{plan_month_1_visibility}}">
+                            <td style="padding:10px 12px; font-size:16px; line-height:24px; color:#1F1F1F;">{{plan_month_1_label}}</td>
+                            <td style="padding:10px 12px; font-size:16px; line-height:24px; color:#1F1F1F;" align="right">{{plan_month_1_available}}</td>
+                            <td style="padding:10px 12px; font-size:16px; line-height:24px; color:#1F1F1F; font-weight:600;" align="right">{{plan_month_1_suggested}}</td>
+                          </tr>
+                          <tr style="background-color:#FFFFFF; {{plan_month_2_visibility}}">
+                            <td style="padding:10px 12px; font-size:16px; line-height:24px; color:#1F1F1F;">{{plan_month_2_label}}</td>
+                            <td style="padding:10px 12px; font-size:16px; line-height:24px; color:#1F1F1F;" align="right">{{plan_month_2_available}}</td>
+                            <td style="padding:10px 12px; font-size:16px; line-height:24px; color:#1F1F1F; font-weight:600;" align="right">{{plan_month_2_suggested}}</td>
+                          </tr>
+                          <tr style="{{plan_month_3_visibility}}">
+                            <td style="padding:10px 12px; font-size:16px; line-height:24px; color:#1F1F1F;">{{plan_month_3_label}}</td>
+                            <td style="padding:10px 12px; font-size:16px; line-height:24px; color:#1F1F1F;" align="right">{{plan_month_3_available}}</td>
+                            <td style="padding:10px 12px; font-size:16px; line-height:24px; color:#1F1F1F; font-weight:600;" align="right">{{plan_month_3_suggested}}</td>
+                          </tr>
+                        </table>
+                        <p style="margin:0 0 16px 0; font-size:15px; line-height:22px; {{repay_detail_style}} {{repay_detail_visibility}}">{{repay_detail}}</p>
+                        <p style="margin:0 0 8px 0; font-size:16px; line-height:24px; color:#555555;">Next steps:</p>
                         <ul style="margin:0 0 0 18px; padding:0; font-size:16px; line-height:24px; color:#1F1F1F;">
                           <li style="margin-bottom:8px;">{{next_step_1}}</li>
                           <li style="margin-bottom:8px;">{{next_step_2}}</li>

@@ -662,6 +662,30 @@ function email_format_period_label(DateTimeImmutable $start, DateTimeImmutable $
     return $startLabel . '–' . $endLabel;
 }
 
+function email_list_join(array $items, string $conjunction = 'and'): string
+{
+    $items = array_values(array_filter(array_map('trim', $items), static function ($value): bool {
+        return $value !== '';
+    }));
+
+    $count = count($items);
+    if ($count === 0) {
+        return '';
+    }
+
+    if ($count === 1) {
+        return $items[0];
+    }
+
+    if ($count === 2) {
+        return $items[0] . ' ' . $conjunction . ' ' . $items[1];
+    }
+
+    $last = array_pop($items);
+
+    return implode(', ', $items) . ', ' . $conjunction . ' ' . $last;
+}
+
 function email_prepare_top_categories(array $summary, int $limit = 5): array
 {
     $total = max(0.0, (float)($summary['spending_total'] ?? 0.0));
@@ -810,6 +834,299 @@ function email_collect_emergency_status(PDO $pdo, int $userId, string $defaultCu
         'total' => $total,
         'target' => $target,
         'currency' => $statusCurrency,
+    ];
+}
+
+function email_project_emergency_cashflow(PDO $pdo, int $userId, string $currency, DateTimeImmutable $startMonth, int $months): array
+{
+    $currency = strtoupper(trim($currency));
+    if ($currency === '') {
+        $main = fx_user_main($pdo, $userId);
+        $currency = $main !== '' ? $main : 'USD';
+    }
+
+    $months = max(1, min(6, $months));
+
+    $monthsMap = [];
+    $cursor = $startMonth;
+    for ($i = 0; $i < $months; $i++) {
+        $key = $cursor->format('Y-m');
+        $monthsMap[$key] = [
+            'label' => $cursor->format('F Y'),
+            'start' => $cursor->format('Y-m-01'),
+            'end' => $cursor->format('Y-m-t'),
+            'income' => 0.0,
+            'obligations' => 0.0,
+            'leftover' => 0.0,
+        ];
+        $cursor = $cursor->modify('+1 month');
+        if (!$cursor instanceof DateTimeImmutable) {
+            break;
+        }
+    }
+
+    if (!$monthsMap) {
+        return [];
+    }
+
+    $keys = array_keys($monthsMap);
+    $rangeStart = $monthsMap[$keys[0]]['start'];
+    $rangeEnd = $monthsMap[$keys[count($keys) - 1]]['end'];
+
+    $scheduledStmt = $pdo->prepare('SELECT amount, currency, next_due, rrule FROM scheduled_payments WHERE user_id = ?');
+    $scheduledStmt->execute([$userId]);
+
+    foreach ($scheduledStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $amount = (float)($row['amount'] ?? 0.0);
+        if ($amount <= 0.0) {
+            continue;
+        }
+
+        $rowCurrency = strtoupper(trim((string)($row['currency'] ?? '')));
+        if ($rowCurrency === '') {
+            $rowCurrency = $currency;
+        }
+
+        $dtStart = trim((string)($row['next_due'] ?? ''));
+        if ($dtStart === '') {
+            continue;
+        }
+
+        $rrule = trim((string)($row['rrule'] ?? ''));
+        $occurrences = rrule_expand($dtStart, $rrule, $rangeStart, $rangeEnd);
+        if (!$occurrences || !is_array($occurrences)) {
+            continue;
+        }
+
+        foreach ($occurrences as $dueDate) {
+            $key = substr((string)$dueDate, 0, 7);
+            if (!isset($monthsMap[$key])) {
+                continue;
+            }
+
+            $converted = $rowCurrency === $currency
+                ? $amount
+                : fx_convert($pdo, $amount, $rowCurrency, $currency, (string)$dueDate);
+
+            $monthsMap[$key]['obligations'] += max(0.0, (float)$converted);
+        }
+    }
+
+    $incomeStmt = $pdo->prepare("SELECT amount, currency, valid_from, COALESCE(valid_to, '') AS valid_to FROM basic_incomes WHERE user_id = ?");
+    $incomeStmt->execute([$userId]);
+    $incomes = $incomeStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($monthsMap as $key => &$month) {
+        $start = $month['start'];
+        $end = $month['end'];
+
+        foreach ($incomes as $income) {
+            $amount = (float)($income['amount'] ?? 0.0);
+            if ($amount <= 0.0) {
+                continue;
+            }
+
+            $validFrom = trim((string)($income['valid_from'] ?? ''));
+            if ($validFrom === '' || $validFrom > $end) {
+                continue;
+            }
+
+            $validTo = trim((string)($income['valid_to'] ?? ''));
+            if ($validTo !== '' && $validTo < $start) {
+                continue;
+            }
+
+            $incomeCurrency = strtoupper(trim((string)($income['currency'] ?? '')));
+            if ($incomeCurrency === '') {
+                $incomeCurrency = $currency;
+            }
+
+            $converted = $incomeCurrency === $currency
+                ? $amount
+                : fx_convert($pdo, $amount, $incomeCurrency, $currency, $start);
+
+            $month['income'] += max(0.0, (float)$converted);
+        }
+
+        $month['leftover'] = max(0.0, (float)$month['income'] - (float)$month['obligations']);
+    }
+    unset($month);
+
+    return array_values($monthsMap);
+}
+
+function email_prepare_emergency_replenishment_plan(
+    PDO $pdo,
+    int $userId,
+    float $withdrawAmount,
+    string $currency,
+    DateTimeImmutable $startMonth,
+    int $monthsToProject = 3
+): array {
+    $withdrawAmount = max(0.0, $withdrawAmount);
+    $currency = strtoupper(trim($currency));
+    if ($currency === '') {
+        $main = fx_user_main($pdo, $userId);
+        $currency = $main !== '' ? $main : 'USD';
+    }
+
+    $monthsToProject = max(1, min(6, $monthsToProject));
+
+    $cashflowMonths = email_project_emergency_cashflow($pdo, $userId, $currency, $startMonth, $monthsToProject);
+    if (!$cashflowMonths) {
+        $cursor = $startMonth;
+        for ($i = 0; $i < $monthsToProject; $i++) {
+            $cashflowMonths[] = [
+                'label' => $cursor->format('F Y'),
+                'income' => 0.0,
+                'obligations' => 0.0,
+                'leftover' => 0.0,
+            ];
+            $cursor = $cursor->modify('+1 month');
+            if (!$cursor instanceof DateTimeImmutable) {
+                break;
+            }
+        }
+    }
+
+    $availableMonths = count($cashflowMonths);
+    $maxWindow = max(1, min(3, $availableMonths));
+    $defaultPlanMonths = $maxWindow >= 2 ? 2 : 1;
+
+    $planMonths = $defaultPlanMonths;
+    $feasible = $withdrawAmount <= 0.0;
+
+    if ($withdrawAmount > 0.0) {
+        for ($candidate = $defaultPlanMonths; $candidate <= $maxWindow; $candidate++) {
+            $slice = array_slice($cashflowMonths, 0, $candidate);
+            $minLeftover = null;
+
+            foreach ($slice as $month) {
+                $leftover = max(0.0, (float)($month['leftover'] ?? 0.0));
+                $minLeftover = $minLeftover === null ? $leftover : min($minLeftover, $leftover);
+            }
+
+            if ($minLeftover === null || $minLeftover <= 0.0) {
+                continue;
+            }
+
+            $monthlyNeed = $withdrawAmount / $candidate;
+            if ($monthlyNeed <= $minLeftover + 0.01) {
+                $planMonths = $candidate;
+                $feasible = true;
+                break;
+            }
+        }
+
+        if (!$feasible && $maxWindow > $defaultPlanMonths) {
+            $planMonths = $maxWindow;
+        }
+    }
+
+    $slice = array_slice($cashflowMonths, 0, $planMonths);
+    if (!$slice) {
+        $slice = $cashflowMonths ? [$cashflowMonths[0]] : [];
+        $planMonths = count($slice);
+    }
+
+    $monthlyAmount = $planMonths > 0 ? $withdrawAmount / $planMonths : 0.0;
+    $rows = [];
+    $remaining = $withdrawAmount;
+    $allocated = 0.0;
+    $minLeftover = null;
+
+    foreach ($slice as $index => $month) {
+        $label = (string)($month['label'] ?? '');
+        $available = max(0.0, (float)($month['leftover'] ?? 0.0));
+        $suggested = 0.0;
+
+        if ($withdrawAmount > 0.0) {
+            if ($feasible && $planMonths > 0) {
+                if ($index === $planMonths - 1) {
+                    $suggested = $remaining;
+                } else {
+                    $suggested = $monthlyAmount;
+                }
+            } else {
+                $remainingMonths = max(1, $planMonths - $index);
+                $evenSplit = $remainingMonths > 0 ? $remaining / $remainingMonths : $remaining;
+                $suggested = min($available, $evenSplit);
+            }
+        }
+
+        if ($suggested > $available) {
+            $suggested = $available;
+        }
+        if ($suggested < 0.0) {
+            $suggested = 0.0;
+        }
+
+        $remaining = max(0.0, $remaining - $suggested);
+        $allocated += $suggested;
+
+        $rows[] = [
+            'label' => $label,
+            'available' => $available,
+            'available_formatted' => email_format_amount($available, $currency),
+            'available_plain' => email_plaintext_amount($available, $currency),
+            'suggested' => $suggested,
+            'suggested_formatted' => email_format_amount($suggested, $currency),
+            'suggested_plain' => email_plaintext_amount($suggested, $currency),
+        ];
+
+        $minLeftover = $minLeftover === null ? $available : min($minLeftover, $available);
+    }
+
+    $shortfall = max(0.0, $withdrawAmount - $allocated);
+
+    $headline = $planMonths > 1 ? 'Rebuild over ' . $planMonths . ' months' : 'Rebuild next month';
+
+    if ($withdrawAmount <= 0.0) {
+        $summary = 'No repayment needed—your balance stayed level after this withdrawal.';
+    } elseif ($shortfall > 0.01) {
+        $summary = 'We can stage ' . email_format_amount($allocated, $currency) . ' over ' . $planMonths
+            . ' months—plan extra transfers to restore the full ' . email_format_amount($withdrawAmount, $currency) . '.';
+    } elseif ($planMonths > 1) {
+        $finalLabel = $rows ? ($rows[$planMonths - 1]['label'] ?? '') : $startMonth->format('F Y');
+        $summary = 'Set aside ' . email_format_amount($monthlyAmount, $currency) . ' per month to replace the '
+            . email_format_amount($withdrawAmount, $currency) . ' by ' . $finalLabel . '.';
+    } else {
+        $summary = 'Set aside ' . email_format_amount($withdrawAmount, $currency) . ' next month to restore your emergency fund.';
+    }
+
+    $detail = '';
+    $detailStyle = 'color:#555555;';
+
+    if ($withdrawAmount > 0.0) {
+        if ($allocated <= 0.0) {
+            $detail = 'We could not detect spare cash after bills—log your income and recurring expenses to refine this plan.';
+            $detailStyle = 'color:#B45309;';
+        } elseif ($shortfall > 0.01) {
+            $detail = 'Recurring income covers about ' . email_format_amount($allocated, $currency)
+                . ' of this withdrawal. Trim expenses or extend the plan to close the gap.';
+            $detailStyle = 'color:#B45309;';
+        } elseif ($minLeftover !== null && $minLeftover > 0.0) {
+            $detail = 'We estimate at least ' . email_format_amount($minLeftover, $currency)
+                . ' left after bills in each month of this plan.';
+        }
+    }
+
+    $detailVisible = $detail !== '';
+
+    return [
+        'headline' => $headline,
+        'summary' => $summary,
+        'detail' => $detail,
+        'detail_style' => $detailStyle,
+        'detail_visible' => $detailVisible,
+        'rows' => $rows,
+        'plan_months' => $planMonths,
+        'feasible' => $feasible && $shortfall <= 0.01,
+        'shortfall' => $shortfall,
+        'allocated' => $allocated,
+        'monthly_amount' => $monthlyAmount,
+        'month_labels' => array_column($rows, 'label'),
+        'min_leftover' => $minLeftover ?? 0.0,
     ];
 }
 
@@ -1962,12 +2279,57 @@ function email_send_emergency_withdrawal(PDO $pdo, int $userId, float $amount, s
         ? ''
         : 'display:none; mso-hide:all; line-height:0; font-size:0; height:0; overflow:hidden;';
 
-    $repayReminder = 'Plan to move ' . $withdrawFormatted . ' back into your emergency fund during ' . $repayMonth . ' to restore your safety net.';
-    $nextSteps = [
-        'Schedule a transfer at the start of ' . $repayMonth . '.',
-        'Trim discretionary spending this month to free up ' . $withdrawFormatted . '.',
-        'Log the repayment in MyMoneyMap so your progress updates automatically.',
-    ];
+    $planStartCandidate = $nextMonth instanceof DateTimeImmutable ? $nextMonth : ($occurred->modify('+1 month') ?: null);
+    if (!$planStartCandidate instanceof DateTimeImmutable) {
+        try {
+            $planStartCandidate = new DateTimeImmutable('first day of next month');
+        } catch (Exception $e) {
+            $planStartCandidate = new DateTimeImmutable();
+        }
+    }
+
+    try {
+        $planStart = new DateTimeImmutable($planStartCandidate->format('Y-m-01'));
+    } catch (Exception $e) {
+        $planStart = $planStartCandidate;
+    }
+
+    if (!$planStart instanceof DateTimeImmutable) {
+        $planStart = new DateTimeImmutable();
+    }
+
+    try {
+        $planStart = new DateTimeImmutable($planStart->format('Y-m-01'));
+    } catch (Exception $e) {
+        // keep original reference if formatting fails
+    }
+
+    $replenishmentPlan = email_prepare_emergency_replenishment_plan($pdo, $userId, $amount, $statusCurrency, $planStart);
+    $planRows = $replenishmentPlan['rows'] ?? [];
+    $planRowCount = count($planRows);
+    $planMonthLabels = $replenishmentPlan['month_labels'] ?? [];
+    $planMonthsText = email_list_join($planMonthLabels);
+    if ($planMonthsText === '') {
+        $planMonthsText = $repayMonth;
+    }
+
+    $monthlyContribution = max(0.0, (float)($replenishmentPlan['monthly_amount'] ?? 0.0));
+    $monthlyContributionFormatted = email_format_amount($monthlyContribution, $statusCurrency);
+    $planShortfall = max(0.0, (float)($replenishmentPlan['shortfall'] ?? 0.0));
+
+    if ($planShortfall > 0.01 && $amount > 0.0) {
+        $nextSteps = [
+            'Schedule transfers that match the suggested deposits below and adjust if your income shifts.',
+            'Plan extra transfers or trim costs to cover the remaining ' . email_format_amount($planShortfall, $statusCurrency) . '.',
+            'Log each repayment in MyMoneyMap so your emergency fund updates automatically.',
+        ];
+    } else {
+        $nextSteps = [
+            'Schedule transfers for ' . $planMonthsText . ' in advance so funds move back automatically.',
+            'Keep discretionary spending aligned so you can set aside ' . $monthlyContributionFormatted . ' each month.',
+            'Log each repayment in MyMoneyMap so your emergency fund updates automatically.',
+        ];
+    }
 
     $tokens = [
         'user_first_name' => $firstName,
@@ -1980,14 +2342,36 @@ function email_send_emergency_withdrawal(PDO $pdo, int $userId, float $amount, s
         'ef_balance' => $balanceAfter,
         'ef_target_row_style' => $targetRowStyle,
         'ef_target' => $targetFormatted,
-        'repay_month' => $repayMonth,
-        'repay_reminder' => $repayReminder,
+        'repay_headline' => (string)($replenishmentPlan['headline'] ?? 'Plan your repayment'),
+        'repay_summary' => (string)($replenishmentPlan['summary'] ?? $repayMonth),
+        'repay_detail' => (string)($replenishmentPlan['detail'] ?? ''),
+        'repay_detail_style' => (string)($replenishmentPlan['detail_style'] ?? 'color:#555555;'),
+        'repay_detail_visibility' => !empty($replenishmentPlan['detail_visible'])
+            ? ''
+            : 'display:none; mso-hide:all; line-height:0; font-size:0; height:0; overflow:hidden;',
         'cta_label' => 'Replenish emergency fund',
         'cta_url' => app_url('/emergency'),
         'next_step_1' => $nextSteps[0],
         'next_step_2' => $nextSteps[1],
         'next_step_3' => $nextSteps[2],
     ];
+
+    $hiddenRowStyle = 'display:none; mso-hide:all; line-height:0; font-size:0; height:0; overflow:hidden;';
+    for ($i = 0; $i < 3; $i++) {
+        $index = $i + 1;
+        $row = $planRows[$i] ?? null;
+        if ($row) {
+            $tokens['plan_month_' . $index . '_label'] = (string)($row['label'] ?? '');
+            $tokens['plan_month_' . $index . '_available'] = (string)($row['available_formatted'] ?? '');
+            $tokens['plan_month_' . $index . '_suggested'] = (string)($row['suggested_formatted'] ?? '');
+            $tokens['plan_month_' . $index . '_visibility'] = '';
+        } else {
+            $tokens['plan_month_' . $index . '_label'] = '';
+            $tokens['plan_month_' . $index . '_available'] = '';
+            $tokens['plan_month_' . $index . '_suggested'] = '';
+            $tokens['plan_month_' . $index . '_visibility'] = $hiddenRowStyle;
+        }
+    }
 
     $html = email_template_render('email_emergency_withdrawal', $tokens);
 
@@ -1996,6 +2380,15 @@ function email_send_emergency_withdrawal(PDO $pdo, int $userId, float $amount, s
         $statusSummaryPlain = 'Track your emergency fund progress in the app.';
     }
     $statusNotePlain = trim(str_replace("\xc2\xa0", ' ', html_entity_decode($statusNote, ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+
+    $planSummaryPlain = '';
+    if (isset($replenishmentPlan['summary'])) {
+        $planSummaryPlain = trim(str_replace("\xc2\xa0", ' ', html_entity_decode((string)$replenishmentPlan['summary'], ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+    }
+    $planDetailPlain = '';
+    if (!empty($replenishmentPlan['detail'])) {
+        $planDetailPlain = trim(str_replace("\xc2\xa0", ' ', html_entity_decode((string)$replenishmentPlan['detail'], ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+    }
 
     $textLines = [
         'Hi ' . $displayName . ',',
@@ -2016,7 +2409,28 @@ function email_send_emergency_withdrawal(PDO $pdo, int $userId, float $amount, s
     }
     $textLines[] = '';
     $textLines[] = 'Repayment plan:';
-    $textLines[] = $repayReminder;
+    if ($planRowCount > 0) {
+        foreach ($planRows as $row) {
+            $label = (string)($row['label'] ?? '');
+            $availablePlain = (string)($row['available_plain'] ?? '');
+            $suggestedPlain = (string)($row['suggested_plain'] ?? '');
+            if ($label !== '' && $suggestedPlain !== '') {
+                $textLines[] = '- ' . $label . ': set aside ' . $suggestedPlain
+                    . ' (≈ ' . ($availablePlain !== '' ? $availablePlain : '0') . ' free after bills)';
+            }
+        }
+    } else {
+        $textLines[] = '- Review your emergency fund dashboard for tailored repayment suggestions.';
+    }
+    if ($planSummaryPlain !== '') {
+        $textLines[] = $planSummaryPlain;
+    }
+    if ($planDetailPlain !== '') {
+        $textLines[] = $planDetailPlain;
+    }
+    if ($planShortfall > 0.01 && $amount > 0.0) {
+        $textLines[] = 'Shortfall to cover: ' . email_plaintext_amount($planShortfall, $statusCurrency) . '.';
+    }
     foreach ($nextSteps as $step) {
         $textLines[] = ' • ' . $step;
     }
