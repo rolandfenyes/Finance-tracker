@@ -419,9 +419,29 @@ function detect_locale_from_header(array $available): ?string
 
 function set_locale(string $locale): void
 {
+    $locale = strtolower($locale);
     $available = available_locales();
-    if (isset($available[$locale])) {
-        $_SESSION['locale'] = $locale;
+    if (!isset($available[$locale])) {
+        return;
+    }
+
+    $_SESSION['locale'] = $locale;
+
+    if (!is_logged_in()) {
+        return;
+    }
+
+    global $pdo;
+
+    if (!$pdo instanceof PDO) {
+        return;
+    }
+
+    try {
+        $stmt = $pdo->prepare('UPDATE users SET desired_language = ? WHERE id = ?');
+        $stmt->execute([$locale, uid()]);
+    } catch (Throwable $e) {
+        // ignore persistence failures and keep session locale only
     }
 }
 
@@ -466,6 +486,25 @@ function app_locale(): string
     $stored = $_SESSION['locale'] ?? null;
     if ($stored && isset($available[$stored])) {
         return $locale = $stored;
+    }
+
+    if (is_logged_in()) {
+        global $pdo;
+
+        if ($pdo instanceof PDO) {
+            try {
+                $stmt = $pdo->prepare('SELECT desired_language FROM users WHERE id = ? LIMIT 1');
+                $stmt->execute([uid()]);
+                $dbLocale = strtolower((string)$stmt->fetchColumn());
+
+                if ($dbLocale && isset($available[$dbLocale])) {
+                    $_SESSION['locale'] = $dbLocale;
+                    return $locale = $dbLocale;
+                }
+            } catch (Throwable $e) {
+                // ignore lookup failures and continue with detection
+            }
+        }
     }
 
     $detected = detect_locale_from_header($available);
