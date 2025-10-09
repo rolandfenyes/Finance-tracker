@@ -312,9 +312,9 @@ $faqItems = [
 </section>
 
 <section class="relative mx-auto w-full max-w-7xl px-6 py-20 lg:px-16">
-  <div class="mx-auto max-w-2xl text-center">
-    <h2 class="text-3xl font-semibold text-slate-900 sm:text-4xl">Everything you need to stay ahead</h2>
-    <p class="mt-3 text-lg text-slate-600">Nine focused features to automate, organize, and secure your finances.</p>
+  <div class="mx-auto max-w-2xl text-center text-white">
+    <h2 class="text-3xl font-semibold text-white drop-shadow-sm sm:text-4xl">Everything you need to stay ahead</h2>
+    <p class="mt-3 text-lg text-emerald-100">Nine focused features to automate, organize, and secure your finances.</p>
   </div>
   <div class="mt-12 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
     <?php foreach ($features as $feature): ?>
@@ -335,9 +335,9 @@ $faqItems = [
 </section>
 
 <section class="relative mx-auto w-full max-w-7xl px-6 py-20 lg:px-16" x-data="{ billing: 'monthly' }">
-  <div class="mx-auto max-w-3xl text-center">
-    <h2 class="text-3xl font-semibold text-slate-900 sm:text-4xl">Simple, transparent pricing.</h2>
-    <p class="mt-3 text-lg text-slate-600">Choose monthly or yearly billing. Either way, your first 14 days are on us.</p>
+  <div class="mx-auto max-w-3xl text-center text-white">
+    <h2 class="text-3xl font-semibold text-white drop-shadow-sm sm:text-4xl">Simple, transparent pricing.</h2>
+    <p class="mt-3 text-lg text-emerald-100">Choose monthly or yearly billing. Either way, your first 14 days are on us.</p>
   </div>
   <div class="mt-10 flex items-center justify-center gap-3">
     <button
@@ -428,13 +428,13 @@ $faqItems = [
       </a>
     </article>
   </div>
-  <p class="mt-6 text-center text-sm text-slate-500">Cancel anytime. Keep your data safe and exportable. All prices include VAT.</p>
+  <p class="mt-6 text-center text-sm text-emerald-100">Cancel anytime. Keep your data safe and exportable. All prices include VAT.</p>
 </section>
 
 <section class="relative mx-auto w-full max-w-7xl px-6 py-20 lg:px-16">
-  <div class="mx-auto max-w-3xl text-center">
-    <h2 class="text-3xl font-semibold text-slate-900 sm:text-4xl">Frequently asked questions</h2>
-    <p class="mt-3 text-lg text-slate-600">Answers to the most common questions before you get started.</p>
+  <div class="mx-auto max-w-3xl text-center text-white">
+    <h2 class="text-3xl font-semibold text-white drop-shadow-sm sm:text-4xl">Frequently asked questions</h2>
+    <p class="mt-3 text-lg text-emerald-100">Answers to the most common questions before you get started.</p>
   </div>
   <div class="mt-12 grid gap-4">
     <?php foreach ($faqItems as $faq): ?>
