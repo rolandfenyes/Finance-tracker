@@ -275,9 +275,9 @@ $faqItems = [
 </div>
 
 <section id="demo" class="relative mx-auto w-full max-w-7xl px-6 py-20 lg:px-16">
-  <div class="mx-auto max-w-2xl text-center">
-    <h2 class="text-3xl font-semibold text-slate-900 sm:text-4xl">See it in action</h2>
-    <p class="mt-3 text-lg text-slate-600">Visual clarity for your finances — at a glance.</p>
+  <div class="mx-auto max-w-2xl text-center text-white">
+    <h2 class="text-3xl font-semibold text-white drop-shadow-sm sm:text-4xl">See it in action</h2>
+    <p class="mt-3 text-lg text-emerald-100">Visual clarity for your finances — at a glance.</p>
   </div>
   <div class="mt-12 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
     <?php foreach ($demoCards as $card): ?>
