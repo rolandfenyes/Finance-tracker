@@ -112,12 +112,63 @@ function email_template_escape(string $value): string
 
 function email_template_render(string $template, array $tokens): string
 {
-    $path = dirname(__DIR__, 2) . '/docs/email_templates/' . $template . '.html';
-    if (!is_file($path) || !is_readable($path)) {
+    $basePath = dirname(__DIR__, 2) . '/docs/email_templates';
+    $candidates = [];
+
+    $candidateKeys = [
+        'template_language',
+        'language',
+        'locale',
+        'user_language',
+        'user_locale',
+    ];
+
+    foreach ($candidateKeys as $key) {
+        if (!isset($tokens[$key])) {
+            continue;
+        }
+
+        $value = strtolower(trim((string)$tokens[$key]));
+        if ($value === '') {
+            continue;
+        }
+
+        $value = str_replace([' ', '.'], '-', str_replace('_', '-', $value));
+        if ($value !== '') {
+            $candidates[] = $value;
+        }
+
+        if (strlen($value) > 2) {
+            $primary = substr($value, 0, 2);
+            if ($primary !== '') {
+                $candidates[] = $primary;
+            }
+        }
+    }
+
+    $candidates[] = default_locale();
+    $candidates[] = 'en';
+
+    $candidates = array_values(array_unique(array_filter($candidates)));
+
+    $html = '';
+
+    foreach ($candidates as $language) {
+        $path = $basePath . '/' . $language . '/' . $template . '.html';
+        if (!is_file($path) || !is_readable($path)) {
+            continue;
+        }
+
+        $html = (string)file_get_contents($path);
+        if ($html !== '') {
+            break;
+        }
+    }
+
+    if ($html === '') {
         throw new RuntimeException('Email template not found: ' . $template);
     }
 
-    $html = (string)file_get_contents($path);
     $defaults = email_template_base_tokens();
     $replacements = [];
 
