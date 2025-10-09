@@ -28,7 +28,7 @@ foreach ($options as $option) {
     exit(1);
 }
 
-$stmt = $pdo->query("SELECT id, email, full_name, email_verified_at, email_verification_token FROM users " .
+$stmt = $pdo->query("SELECT id, email, full_name, email_verified_at, email_verification_token, desired_language FROM users " .
     "WHERE email_verified_at IS NULL AND email IS NOT NULL AND email <> '' ORDER BY id");
 $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -47,6 +47,11 @@ foreach ($users as $user) {
     }
 
     $user['full_name_plain'] = $user['full_name'] ? pii_decrypt($user['full_name']) : '';
+    $preferred = strtolower(trim((string)($user['desired_language'] ?? '')));
+    if ($preferred !== '') {
+        $preferred = str_replace([' ', '.'], '-', str_replace('_', '-', $preferred));
+    }
+    $user['desired_language'] = $preferred !== '' ? $preferred : null;
 
     try {
         $ok = email_send_verification($pdo, $user, $refreshToken);
