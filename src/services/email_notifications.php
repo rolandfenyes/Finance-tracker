@@ -118,6 +118,7 @@ function email_template_render(string $template, array $tokens): string
     $candidateKeys = [
         'template_language',
         'language',
+        'desired_language',
         'locale',
         'user_language',
         'user_locale',
@@ -388,7 +389,7 @@ function email_render_button(string $href, string $label, array $palette): strin
 
 function email_load_user_profile(PDO $pdo, int $userId): ?array
 {
-    $stmt = $pdo->prepare('SELECT id, email, full_name, email_verified_at FROM users WHERE id = ?');
+    $stmt = $pdo->prepare('SELECT id, email, full_name, email_verified_at, desired_language FROM users WHERE id = ?');
     $stmt->execute([$userId]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -403,6 +404,12 @@ function email_load_user_profile(PDO $pdo, int $userId): ?array
 
     $user['email'] = $email;
     $user['full_name_plain'] = $user['full_name'] ? pii_decrypt($user['full_name']) : '';
+
+    $preferred = strtolower(trim((string)($user['desired_language'] ?? '')));
+    if ($preferred !== '') {
+        $preferred = str_replace([' ', '.'], '-', str_replace('_', '-', $preferred));
+    }
+    $user['desired_language'] = $preferred !== '' ? $preferred : null;
 
     return $user;
 }
@@ -435,6 +442,29 @@ function email_user_first_name(array $user): string
     return $parts[0];
 }
 
+function email_user_locale(array $user): ?string
+{
+    $keys = ['desired_language', 'locale', 'language'];
+
+    foreach ($keys as $key) {
+        if (!isset($user[$key])) {
+            continue;
+        }
+
+        $value = strtolower(trim((string)$user[$key]));
+        if ($value === '') {
+            continue;
+        }
+
+        $value = str_replace([' ', '.'], '-', str_replace('_', '-', $value));
+        if ($value !== '') {
+            return $value;
+        }
+    }
+
+    return null;
+}
+
 function email_generate_verification_token(PDO $pdo, int $userId): string
 {
     $token = bin2hex(random_bytes(32));
@@ -465,6 +495,7 @@ function email_send_verification(PDO $pdo, array $user, bool $refreshToken = tru
     $html = email_template_render('email_registration_validation', [
         'user_first_name' => $firstName,
         'verification_link' => $link,
+        'template_language' => email_user_locale($user),
     ]);
 
     $text = "Hi {$name},\n\n" .
@@ -589,6 +620,7 @@ function email_send_tips(array $user, ?array $tips = null): bool
         'promo_title' => 'Pro Guide: Build lasting money habits',
         'promo_body' => 'Download our expert playbook with checklists for budgeting, goal tracking, and investment readiness.',
         'promo_link' => app_url('/guides/pro'),
+        'template_language' => email_user_locale($user),
     ]);
 
     $textLines = [
@@ -734,6 +766,7 @@ function email_send_cashflow_overspend(PDO $pdo, int $userId, array $status, Dat
         }
     }
 
+    $tokens['template_language'] = email_user_locale($user);
     $html = email_template_render('email_cashflow_overspend', $tokens);
 
     $textLines = [
@@ -897,6 +930,7 @@ function email_send_feedback_resolved(PDO $pdo, int $feedbackId): bool
         'cta_url' => app_url('/feedback?highlight=' . (int)$feedback['id']),
         'cta_label' => 'View feedback',
         'resolved_at' => $resolvedLabel,
+        'template_language' => email_user_locale($user),
     ];
 
     $html = email_template_render('email_feedback_resolved', $tokens);
@@ -2084,6 +2118,7 @@ function email_send_weekly_results(PDO $pdo, array $user, ?DateTimeImmutable $re
             $start->format('Y-m-d'),
             $end->format('Y-m-d')
         )),
+        'template_language' => email_user_locale($user),
     ];
 
     for ($i = 1; $i <= 5; $i++) {
@@ -2198,6 +2233,7 @@ function email_send_monthly_results(PDO $pdo, array $user, ?DateTimeImmutable $r
             (int)$start->format('Y'),
             (int)$start->format('n')
         )),
+        'template_language' => email_user_locale($user),
     ];
 
     for ($i = 1; $i <= 3; $i++) {
@@ -2339,6 +2375,7 @@ function email_send_yearly_results(PDO $pdo, array $user, ?DateTimeImmutable $re
         'savings_achievement_2' => $savingsAchievements[1] ?? 'Stay consistent with contributions',
         'savings_achievement_3' => $savingsAchievements[2] ?? 'Plan your next milestone',
         'app_url' => app_url(sprintf('/years/%d', $year)),
+        'template_language' => email_user_locale($user),
     ];
 
     $html = email_template_render('email_report_yearly', $tokens);
@@ -2508,6 +2545,7 @@ function email_send_completion_notification(PDO $pdo, array $user, array $achiev
         'next_ef_goal_equivalent' => $nextEfEquivalent,
         'next_ef_goal_equivalent_visibility' => $nextEfEquivalentVisibility,
         'next_ef_goal_note' => $nextEfNote,
+        'template_language' => email_user_locale($user),
     ];
 
     $html = email_template_render('email_goal_congratulations', $tokens);
@@ -2639,6 +2677,7 @@ function email_send_emergency_motivation(PDO $pdo, array $user): bool
         'motivation_tip_3' => $tips[2] ?? 'Protect the fund by separating it from everyday spending.',
         'cta_label' => 'Update Emergency Fund',
         'cta_url' => app_url('/emergency'),
+        'template_language' => email_user_locale($user),
     ];
 
     $html = email_template_render('email_emergency_motivation', $tokens);
@@ -2867,6 +2906,7 @@ function email_send_emergency_withdrawal(PDO $pdo, int $userId, float $amount, s
         'next_step_1' => $nextSteps[0],
         'next_step_2' => $nextSteps[1],
         'next_step_3' => $nextSteps[2],
+        'template_language' => email_user_locale($user),
     ];
 
     $hiddenRowStyle = 'display:none; mso-hide:all; line-height:0; font-size:0; height:0; overflow:hidden;';
