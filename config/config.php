@@ -19,7 +19,6 @@ return [
             'en' => 'English',
             'hu' => 'Magyar',
             'es' => 'Español',
-            'el' => 'Ελληνικά',
         ],
     ],
     'stocks' => [

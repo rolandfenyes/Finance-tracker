@@ -5,7 +5,6 @@ $localeIndicators = [
   'en' => ['icon' => 'languages', 'abbr' => 'EN'],
   'hu' => ['icon' => 'book', 'abbr' => 'HU'],
   'es' => ['icon' => 'sparkle', 'abbr' => 'ES'],
-  'el' => ['icon' => 'globe-2', 'abbr' => 'EL'],
 ];
 $activeIndicator = $localeIndicators[$currentLocale] ?? ['icon' => 'languages', 'abbr' => strtoupper($currentLocale)];
 $activeLabel = $localeOptions[$currentLocale] ?? strtoupper($currentLocale);
@@ -58,13 +57,13 @@ $features = [
   ],
   [
     'title' => 'Basic incomes',
-    'description' => 'Track salary and side hustles, comparing expected vs. actual instantly.',
+    'description' => 'Set up your basic monthly incomes like wages, pensions, and investments.',
     'icon' => 'badge-dollar-sign',
     'tag' => 'Automation',
   ],
   [
     'title' => 'Currencies',
-    'description' => 'Multi-currency support (HUF, EUR, USD) with daily FX for accurate reports.',
+    'description' => 'Multi-currency support with daily FX for accurate reports.',
     'icon' => 'globe-2',
     'tag' => 'Organization',
   ],
@@ -107,7 +106,7 @@ $faqItems = [
   ['q' => 'What’s the difference between Pro and Premium?', 'a' => 'Premium includes everything in Pro plus stock and investment tracking.', 'icon' => 'layers'],
   ['q' => 'Do you support multiple currencies?', 'a' => 'Yes. MyMoneyMap works with daily exchange rates for accurate conversions.', 'icon' => 'globe-2'],
   ['q' => 'Can I export my data?', 'a' => 'Absolutely. CSV and JSON exports are available whenever you need them.', 'icon' => 'download'],
-  ['q' => 'Is it available in Hungarian and other languages?', 'a' => 'Yes. Switch between English, Hungarian, Spanish, and Greek instantly.', 'icon' => 'languages'],
+  ['q' => 'Is it available in Hungarian and other languages?', 'a' => 'Yes. Switch between English, Hungarian and Spanish instantly.', 'icon' => 'languages'],
   ['q' => 'What platforms can I use it on?', 'a' => 'Use MyMoneyMap in any modern browser on desktop or mobile.', 'icon' => 'monitor-smartphone'],
 ];
 ?>
@@ -377,20 +376,20 @@ $faqItems = [
     <article class="relative flex h-full flex-col overflow-hidden rounded-3xl border-2 border-emerald-500 bg-white p-8 shadow-brand-glow">
       <div class="absolute right-4 top-4 rounded-full bg-emerald-500 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">Most popular</div>
       <div class="flex-1 space-y-5">
-        <h3 class="text-2xl font-semibold text-slate-900">Pro</h3>
+        <h3 class="text-2xl font-semibold text-slate-100">Pro</h3>
         <p class="text-4xl font-bold text-emerald-600">
           <span x-show="billing === 'monthly'">€5</span>
           <span x-cloak x-show="billing === 'yearly'">€50</span>
-          <span class="text-base font-medium text-slate-500" x-show="billing === 'monthly'">/month</span>
-          <span class="text-base font-medium text-slate-500" x-cloak x-show="billing === 'yearly'">/year</span>
+          <span class="text-base font-medium text-slate-100" x-show="billing === 'monthly'">/month</span>
+          <span class="text-base font-medium text-slate-100" x-cloak x-show="billing === 'yearly'">/year</span>
         </p>
         <p class="text-sm font-semibold text-emerald-600">Best for serious budgeters.</p>
-        <p class="text-sm text-slate-600">14-day free trial included.</p>
-        <ul class="space-y-2 text-sm text-slate-600">
+        <p class="text-sm text-slate-100">14-day free trial included.</p>
+        <ul class="space-y-2 text-sm text-slate-100">
           <li class="flex items-center gap-2"><span class="text-emerald-500"><i data-lucide="check" class="h-4 w-4"></i></span> Unlimited currencies</li>
           <li class="flex items-center gap-2"><span class="text-emerald-500"><i data-lucide="check" class="h-4 w-4"></i></span> Unlimited categories</li>
           <li class="flex items-center gap-2"><span class="text-emerald-500"><i data-lucide="check" class="h-4 w-4"></i></span> Unlimited goals, loans, rules</li>
-          <li class="flex items-center gap-2 text-slate-400"><span><i data-lucide="minus" class="h-4 w-4"></i></span> No investments</li>
+          <li class="flex items-center gap-2 text-slate-300"><span><i data-lucide="minus" class="h-4 w-4"></i></span> No investments</li>
         </ul>
       </div>
       <div class="mt-8 grid gap-3">
@@ -462,7 +461,7 @@ $faqItems = [
         <h2 class="text-4xl font-bold tracking-tight text-white">Financial calm starts here.</h2>
         <p class="text-lg text-emerald-50">Take control of your money today with MyMoneyMap. Your goals, cashflow, and peace of mind—together.</p>
         <div class="flex flex-wrap items-center gap-4">
-          <a href="/register?plan=free" class="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-base font-semibold text-emerald-700 shadow-md hover:bg-emerald-50">Start Free</a>
+          <a href="/register?plan=free" class="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-base font-semibold text-emerald-100 shadow-md hover:bg-emerald-50 hover:text-emerald-900">Start Free</a>
           <a href="/register?plan=pro" class="inline-flex items-center gap-2 rounded-full border border-white/70 px-6 py-3 text-base font-semibold text-white hover:bg-white/10">Get Pro (14-day trial)</a>
           <a href="/register?plan=premium" class="inline-flex items-center gap-2 rounded-full border border-white/70 px-6 py-3 text-base font-semibold text-white hover:bg-white/10">Get Premium (14-day trial)</a>
         </div>
@@ -512,7 +511,6 @@ $faqItems = [
         <a href="/privacy" class="hover:text-emerald-600">Privacy Policy</a>
         <a href="/terms" class="hover:text-emerald-600">Terms of Service</a>
         <a href="/contact" class="hover:text-emerald-600">Contact</a>
-        <a href="https://github.com/rolandcsaba/Finance-tracker" target="_blank" rel="noopener" class="hover:text-emerald-600">GitHub</a>
       </div>
       <div class="grid gap-3 text-sm text-slate-600">
         <p class="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-500/80">Languages</p>
@@ -531,7 +529,6 @@ $faqItems = [
           <?php endforeach; ?>
         </div>
         <div class="flex items-center gap-3 pt-4 text-lg text-emerald-500">
-          <a href="https://github.com/rolandcsaba/Finance-tracker" aria-label="GitHub" target="_blank" rel="noopener"><i data-lucide="github"></i></a>
           <a href="https://twitter.com" aria-label="Twitter" target="_blank" rel="noopener"><i data-lucide="twitter"></i></a>
           <a href="https://instagram.com" aria-label="Instagram" target="_blank" rel="noopener"><i data-lucide="instagram"></i></a>
         </div>
