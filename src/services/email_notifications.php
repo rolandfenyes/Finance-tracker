@@ -110,12 +110,23 @@ function email_template_escape(string $value): string
     return str_replace('&amp;nbsp;', '&nbsp;', $escaped);
 }
 
-function email_template_render(string $template, array $tokens): string
+function email_template_normalize_locale(?string $locale): string
 {
-    $basePath = dirname(__DIR__, 2) . '/docs/email_templates';
-    $candidates = [];
+    if ($locale === null) {
+        return '';
+    }
 
-    $candidateKeys = [
+    $normalized = strtolower(trim($locale));
+    if ($normalized === '') {
+        return '';
+    }
+
+    return str_replace([' ', '.'], '-', str_replace('_', '-', $normalized));
+}
+
+function email_template_candidate_locales(array $tokens): array
+{
+    $keys = [
         'template_language',
         'language',
         'desired_language',
@@ -124,20 +135,19 @@ function email_template_render(string $template, array $tokens): string
         'user_locale',
     ];
 
-    foreach ($candidateKeys as $key) {
+    $candidates = [];
+
+    foreach ($keys as $key) {
         if (!isset($tokens[$key])) {
             continue;
         }
 
-        $value = strtolower(trim((string)$tokens[$key]));
+        $value = email_template_normalize_locale((string)$tokens[$key]);
         if ($value === '') {
             continue;
         }
 
-        $value = str_replace([' ', '.'], '-', str_replace('_', '-', $value));
-        if ($value !== '') {
-            $candidates[] = $value;
-        }
+        $candidates[] = $value;
 
         if (strlen($value) > 2) {
             $primary = substr($value, 0, 2);
@@ -150,7 +160,107 @@ function email_template_render(string $template, array $tokens): string
     $candidates[] = default_locale();
     $candidates[] = 'en';
 
-    $candidates = array_values(array_unique(array_filter($candidates)));
+    return array_values(array_unique(array_filter($candidates)));
+}
+
+function email_template_resolve_locale(array $tokens): string
+{
+    $basePath = dirname(__DIR__, 2) . '/lang';
+    $available = available_locales();
+    $candidates = email_template_candidate_locales($tokens);
+
+    foreach ($candidates as $candidate) {
+        if (isset($available[$candidate])) {
+            return $candidate;
+        }
+
+        $path = $basePath . '/' . $candidate . '.php';
+        if (is_file($path)) {
+            return $candidate;
+        }
+
+        if (strlen($candidate) > 2) {
+            $primary = substr($candidate, 0, 2);
+            if ($primary !== '') {
+                if (isset($available[$primary])) {
+                    return $primary;
+                }
+
+                $primaryPath = $basePath . '/' . $primary . '.php';
+                if (is_file($primaryPath)) {
+                    return $primary;
+                }
+            }
+        }
+    }
+
+    return default_locale();
+}
+
+function email_template_translate_value(string $key, string $locale, array $replace = []): string
+{
+    $translated = load_translations($locale)[$key] ?? null;
+
+    if ($translated === null && $locale !== default_locale()) {
+        $translated = load_translations(default_locale())[$key] ?? null;
+    }
+
+    if ($translated === null) {
+        $translated = $key;
+    }
+
+    foreach ($replace as $name => $replacement) {
+        if (!is_string($replacement)) {
+            $replacement = (string)$replacement;
+        }
+
+        $translated = str_replace(':' . $name, $replacement, $translated);
+    }
+
+    return $translated;
+}
+
+function email_template_prepare_token_value($value, string $locale, bool &$raw = false): string
+{
+    $raw = false;
+
+    if (is_array($value)) {
+        $raw = !empty($value['raw']);
+
+        $key = $value['translate'] ?? $value['key'] ?? null;
+        $fallback = $value['value'] ?? null;
+        $replace = [];
+
+        if (isset($value['replace']) && is_array($value['replace'])) {
+            $replace = $value['replace'];
+        }
+
+        if (is_string($key) && $key !== '') {
+            return email_template_translate_value($key, $locale, $replace);
+        }
+
+        if ($fallback !== null) {
+            if (!is_string($fallback)) {
+                $fallback = (string)$fallback;
+            }
+
+            return email_template_translate_value($fallback, $locale, $replace);
+        }
+
+        $value = $value['value'] ?? '';
+    }
+
+    if (!is_string($value)) {
+        $value = (string)$value;
+    }
+
+    return email_template_translate_value($value, $locale);
+}
+
+function email_template_render(string $template, array $tokens): string
+{
+    $basePath = dirname(__DIR__, 2) . '/docs/email_templates';
+    $candidates = email_template_candidate_locales($tokens);
 
     $html = '';
 
@@ -170,15 +280,15 @@ function email_template_render(string $template, array $tokens): string
         throw new RuntimeException('Email template not found: ' . $template);
     }
 
+    $locale = email_template_resolve_locale($tokens);
     $defaults = email_template_base_tokens();
     $replacements = [];
 
     foreach (array_merge($defaults, $tokens) as $key => $value) {
         $placeholder = '{{' . $key . '}}';
-        if (!is_string($value)) {
-            $value = (string)$value;
-        }
-        $replacements[$placeholder] = email_template_escape($value);
+        $isRaw = false;
+        $prepared = email_template_prepare_token_value($value, $locale, $isRaw);
+        $replacements[$placeholder] = $isRaw ? $prepared : email_template_escape($prepared);
     }
 
     return strtr($html, $replacements);
