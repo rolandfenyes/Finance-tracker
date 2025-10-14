@@ -708,6 +708,7 @@ return [
     'Welcome' => 'Bienvenido',
     'Welcome back' => 'Bienvenido de nuevo',
     'Welcome to Finance Tracker 👋' => 'Bienvenido a Finance Tracker 👋',
+    'Welcome to MyMoneyMap' => 'Te damos la bienvenida a MyMoneyMap',
     'We’ll celebrate your total monthly inflow in your main currency (:currency).' => 'Celebramos tu ingreso mensual total en tu moneda principal (:currency).',
     'We’ll use the first currency you add as your main one by default.' => 'Usaremos por defecto la primera moneda que agregues como principal.',
     'We’ve suggested some below—you can edit, add, or remove them.' => 'Te sugerimos algunas a continuación; puedes editarlas, agregarlas o eliminarlas.',

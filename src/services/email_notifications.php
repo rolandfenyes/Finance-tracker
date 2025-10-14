@@ -658,24 +658,19 @@ function email_send_verification(PDO $pdo, array $user, bool $refreshToken = tru
 function email_send_welcome(array $user): bool
 {
     $name = email_user_display_name($user);
-    $palette = email_theme_palette($user);
+    $firstName = email_user_first_name($user);
 
-    $body = '<p style="margin:0 0 16px;">Hi ' . htmlspecialchars($name) . ',</p>' .
-        '<p style="margin:0 0 16px;">Your MyMoneyMap registration was successful. You can start tracking your finances right away — add accounts, record transactions, and set your goals.</p>' .
-        '<ul style="margin:0 0 16px;padding-left:20px;">' .
-        '<li style="margin-bottom:8px;">Record today\'s income and spending from the dashboard.</li>' .
-        '<li style="margin-bottom:8px;">Invite MyMoneyMap into your routine with weekly reviews.</li>' .
-        '<li style="margin-bottom:0;">Explore Baby Steps, emergency funds, and long-term goals.</li>' .
-        '</ul>' .
-        '<p style="margin:0;">We\'re thrilled to have you on board!<br />— The MyMoneyMap team</p>';
+    $tokens = [
+        'user_first_name' => $firstName,
+        'template_language' => email_user_locale($user),
+    ];
 
-    $html = email_wrap_html('Welcome to MyMoneyMap', $body, $palette);
+    $locale = email_template_resolve_locale($tokens);
+    $html = email_template_render('email_welcome', $tokens);
+    $text = email_template_html_to_text($html);
+    $subject = email_template_subject($html, 'Welcome to MyMoneyMap', $locale);
 
-    $text = "Hi {$name},\n\n" .
-        "Your MyMoneyMap registration was successful. Start tracking your finances right away: add transactions, review budgets, and set meaningful goals.\n\n" .
-        "We\'re thrilled to have you on board!\n— The MyMoneyMap team";
-
-    return send_app_email((string)$user['email'], 'Welcome to MyMoneyMap', $html, $text, [
+    return send_app_email((string)$user['email'], $subject, $html, $text, [
         'to_name' => $name,
     ]);
 }

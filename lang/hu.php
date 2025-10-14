@@ -708,6 +708,7 @@ return [
     'Welcome' => 'Üdvözlünk',
     'Welcome back' => 'Üdv újra',
     'Welcome to Finance Tracker 👋' => 'Üdv a Finance Trackerben 👋',
+    'Welcome to MyMoneyMap' => 'Üdvözlünk a MyMoneyMapben',
     'We’ll celebrate your total monthly inflow in your main currency (:currency).' => 'A teljes havi beáramlásodat a fő pénznemedben (:currency) ünnepeljük.',
     'We’ll use the first currency you add as your main one by default.' => 'Alapértelmezés szerint az első hozzáadott pénznem lesz a fő pénznemed.',
     'We’ve suggested some below—you can edit, add, or remove them.' => 'Alább javasoltunk néhányat – tetszés szerint szerkesztheted, hozzáadhatsz vagy törölhetsz.',
