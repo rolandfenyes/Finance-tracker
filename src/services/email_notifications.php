@@ -608,10 +608,7 @@ function email_load_user_profile(PDO $pdo, int $userId): ?array
     $user['email'] = $email;
     $user['full_name_plain'] = $user['full_name'] ? pii_decrypt($user['full_name']) : '';
 
-    $preferred = strtolower(trim((string)($user['desired_language'] ?? '')));
-    if ($preferred !== '') {
-        $preferred = str_replace([' ', '.'], '-', str_replace('_', '-', $preferred));
-    }
+    $preferred = trim((string)($user['desired_language'] ?? ''));
     $user['desired_language'] = $preferred !== '' ? $preferred : null;
 
     return $user;

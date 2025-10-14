@@ -47,10 +47,7 @@ foreach ($users as $user) {
     }
 
     $user['full_name_plain'] = $user['full_name'] ? pii_decrypt($user['full_name']) : '';
-    $preferred = strtolower(trim((string)($user['desired_language'] ?? '')));
-    if ($preferred !== '') {
-        $preferred = str_replace([' ', '.'], '-', str_replace('_', '-', $preferred));
-    }
+    $preferred = trim((string)($user['desired_language'] ?? ''));
     $user['desired_language'] = $preferred !== '' ? $preferred : null;
 
     try {
