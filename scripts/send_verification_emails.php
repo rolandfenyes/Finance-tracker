@@ -47,8 +47,14 @@ foreach ($users as $user) {
     }
 
     $user['full_name_plain'] = $user['full_name'] ? pii_decrypt($user['full_name']) : '';
-    $preferred = trim((string)($user['desired_language'] ?? ''));
-    $user['desired_language'] = $preferred !== '' ? $preferred : null;
+    $preferredRaw = $user['desired_language'] ?? null;
+    $user['desired_language_raw'] = $preferredRaw;
+    if (is_string($preferredRaw)) {
+        $preferred = trim($preferredRaw);
+        $user['desired_language'] = $preferred !== '' ? $preferred : null;
+    } else {
+        $user['desired_language'] = null;
+    }
 
     try {
         $ok = email_send_verification($pdo, $user, $refreshToken);

@@ -346,13 +346,65 @@ function email_template_render(string $template, array $tokens): string
     return strtr($html, $replacements);
 }
 
+function email_log_output(string $message): void
+{
+    if (defined('STDOUT')) {
+        fwrite(STDOUT, $message . PHP_EOL);
+    } else {
+        echo $message . PHP_EOL;
+    }
+}
+
+function email_log_user_details(?array $user): void
+{
+    if (!is_array($user)) {
+        return;
+    }
+
+    $fields = [
+        'id',
+        'email',
+        'full_name_plain',
+        'desired_language_raw',
+        'desired_language',
+        'locale',
+        'language',
+        'email_verified_at',
+    ];
+
+    $details = [];
+    foreach ($fields as $field) {
+        if (!array_key_exists($field, $user)) {
+            continue;
+        }
+
+        $value = $user[$field];
+        if ($value === null || $value === '') {
+            continue;
+        }
+
+        $details[$field] = $value;
+    }
+
+    if (!$details) {
+        return;
+    }
+
+    $encoded = json_encode($details, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($encoded === false) {
+        return;
+    }
+
+    email_log_output('[mail-user] ' . $encoded);
+}
+
 function email_user_desired_language(?array $user): string
 {
     if (!is_array($user)) {
         return '';
     }
 
-    foreach (['desired_language', 'locale', 'language'] as $key) {
+    foreach (['desired_language_raw', 'desired_language', 'locale', 'language'] as $key) {
         if (!isset($user[$key])) {
             continue;
         }
@@ -373,18 +425,15 @@ function email_log_template_selection(string $email, ?array $user = null): void
         return;
     }
 
+    email_log_user_details($user);
+
     $desired = email_user_desired_language($user);
     if ($desired === '') {
         $desired = 'default';
     }
 
     $message = '[mail] ' . $email . ' desired_language=' . $desired . ' template=' . $path;
-
-    if (defined('STDOUT')) {
-        fwrite(STDOUT, $message . PHP_EOL);
-    } else {
-        echo $message . PHP_EOL;
-    }
+    email_log_output($message);
 }
 
 function email_hex_luminance(string $hex): float
@@ -608,8 +657,15 @@ function email_load_user_profile(PDO $pdo, int $userId): ?array
     $user['email'] = $email;
     $user['full_name_plain'] = $user['full_name'] ? pii_decrypt($user['full_name']) : '';
 
-    $preferred = trim((string)($user['desired_language'] ?? ''));
-    $user['desired_language'] = $preferred !== '' ? $preferred : null;
+    $preferredRaw = $user['desired_language'] ?? null;
+    $user['desired_language_raw'] = $preferredRaw;
+
+    if (is_string($preferredRaw)) {
+        $preferred = trim($preferredRaw);
+        $user['desired_language'] = $preferred !== '' ? $preferred : null;
+    } else {
+        $user['desired_language'] = null;
+    }
 
     return $user;
 }
