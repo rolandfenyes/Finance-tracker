@@ -294,12 +294,24 @@ function email_template_html_to_text(string $html): string
     return $text;
 }
 
+function email_template_last_path(?string $set = null): ?string
+{
+    static $last = null;
+
+    if ($set !== null) {
+        $last = $set;
+    }
+
+    return $last;
+}
+
 function email_template_render(string $template, array $tokens): string
 {
     $basePath = dirname(__DIR__, 2) . '/docs/email_templates';
     $candidates = email_template_candidate_locales($tokens);
 
     $html = '';
+    $selectedPath = null;
 
     foreach ($candidates as $language) {
         $path = $basePath . '/' . $language . '/' . $template . '.html';
@@ -309,13 +321,16 @@ function email_template_render(string $template, array $tokens): string
 
         $html = (string)file_get_contents($path);
         if ($html !== '') {
+            $selectedPath = $path;
             break;
         }
     }
 
-    if ($html === '') {
+    if ($html === '' || $selectedPath === null) {
         throw new RuntimeException('Email template not found: ' . $template);
     }
+
+    email_template_last_path($selectedPath);
 
     $locale = email_template_resolve_locale($tokens);
     $defaults = email_template_base_tokens();
@@ -329,6 +344,47 @@ function email_template_render(string $template, array $tokens): string
     }
 
     return strtr($html, $replacements);
+}
+
+function email_user_desired_language(?array $user): string
+{
+    if (!is_array($user)) {
+        return '';
+    }
+
+    foreach (['desired_language', 'locale', 'language'] as $key) {
+        if (!isset($user[$key])) {
+            continue;
+        }
+
+        $value = trim((string)$user[$key]);
+        if ($value !== '') {
+            return $value;
+        }
+    }
+
+    return '';
+}
+
+function email_log_template_selection(string $email, ?array $user = null): void
+{
+    $path = email_template_last_path();
+    if ($path === null) {
+        return;
+    }
+
+    $desired = email_user_desired_language($user);
+    if ($desired === '') {
+        $desired = 'default';
+    }
+
+    $message = '[mail] ' . $email . ' desired_language=' . $desired . ' template=' . $path;
+
+    if (defined('STDOUT')) {
+        fwrite(STDOUT, $message . PHP_EOL);
+    } else {
+        echo $message . PHP_EOL;
+    }
 }
 
 function email_hex_luminance(string $hex): float
@@ -647,6 +703,7 @@ function email_send_verification(PDO $pdo, array $user, bool $refreshToken = tru
 
     $locale = email_template_resolve_locale($tokens);
     $html = email_template_render('email_registration_validation', $tokens);
+    email_log_template_selection((string)($user['email'] ?? ''), $user);
     $text = email_template_html_to_text($html);
     $subject = email_template_subject($html, 'Verify your email address', $locale);
 
@@ -667,6 +724,7 @@ function email_send_welcome(array $user): bool
 
     $locale = email_template_resolve_locale($tokens);
     $html = email_template_render('email_welcome', $tokens);
+    email_log_template_selection((string)($user['email'] ?? ''), $user);
     $text = email_template_html_to_text($html);
     $subject = email_template_subject($html, 'Welcome to MyMoneyMap', $locale);
 
@@ -767,6 +825,7 @@ function email_send_tips(array $user, ?array $tips = null): bool
 
     $locale = email_template_resolve_locale($tokens);
     $html = email_template_render('email_tips_and_tricks', $tokens);
+    email_log_template_selection((string)($user['email'] ?? ''), $user);
     $text = email_template_html_to_text($html);
     $subject = email_template_subject($html, 'Tips & tricks for MyMoneyMap', $locale);
 
@@ -901,6 +960,7 @@ function email_send_cashflow_overspend(PDO $pdo, int $userId, array $status, Dat
 
     $locale = email_template_resolve_locale($tokens);
     $html = email_template_render('email_cashflow_overspend', $tokens);
+    email_log_template_selection((string)($user['email'] ?? ''), $user);
     $text = email_template_html_to_text($html);
     $subject = email_template_subject($html, 'Heads-up: :rule is over budget', $locale, [
         'rule' => $ruleLabel,
@@ -976,6 +1036,8 @@ function email_send_feedback_new_alert(PDO $pdo, int $feedbackId): bool
     ];
 
     $html = email_template_render('email_feedback_new', $tokens);
+    $recipient = email_feedback_inbox_address();
+    email_log_template_selection($recipient, null);
 
     $text = "New feedback submitted by {$userName} ({$userEmail}).\n\n"
         . "Title: {$title}\n"
@@ -985,7 +1047,7 @@ function email_send_feedback_new_alert(PDO $pdo, int $feedbackId): bool
         . "Message:\n{$message}\n\n"
         . 'Open in MyMoneyMap: ' . $feedbackUrl . "\n";
 
-    return send_app_email(email_feedback_inbox_address(), 'New feedback: ' . $title, $html, $text, [
+    return send_app_email($recipient, 'New feedback: ' . $title, $html, $text, [
         'to_name' => 'Feedback team',
     ]);
 }
@@ -1041,6 +1103,7 @@ function email_send_feedback_resolved(PDO $pdo, int $feedbackId): bool
 
     $locale = email_template_resolve_locale($tokens);
     $html = email_template_render('email_feedback_resolved', $tokens);
+    email_log_template_selection((string)($user['email'] ?? ''), $user);
     $text = email_template_html_to_text($html);
     $subject = email_template_subject($html, 'We resolved your feedback: :title', $locale, [
         'title' => $title,
@@ -2227,6 +2290,7 @@ function email_send_weekly_results(PDO $pdo, array $user, ?DateTimeImmutable $re
 
     $locale = email_template_resolve_locale($tokens);
     $html = email_template_render('email_report_weekly', $tokens);
+    email_log_template_selection((string)($user['email'] ?? ''), $user);
     $text = email_template_html_to_text($html);
     $subject = email_template_subject($html, 'Your weekly MyMoneyMap report', $locale);
 
@@ -2325,6 +2389,7 @@ function email_send_monthly_results(PDO $pdo, array $user, ?DateTimeImmutable $r
 
     $locale = email_template_resolve_locale($tokens);
     $html = email_template_render('email_report_monthly', $tokens);
+    email_log_template_selection((string)($user['email'] ?? ''), $user);
     $text = email_template_html_to_text($html);
     $subject = email_template_subject($html, 'Your monthly MyMoneyMap report', $locale);
 
@@ -2431,6 +2496,7 @@ function email_send_yearly_results(PDO $pdo, array $user, ?DateTimeImmutable $re
 
     $locale = email_template_resolve_locale($tokens);
     $html = email_template_render('email_report_yearly', $tokens);
+    email_log_template_selection((string)($user['email'] ?? ''), $user);
     $text = email_template_html_to_text($html);
     $subject = email_template_subject($html, 'Your yearly MyMoneyMap report', $locale);
 
@@ -2584,6 +2650,7 @@ function email_send_completion_notification(PDO $pdo, array $user, array $achiev
 
     $locale = email_template_resolve_locale($tokens);
     $html = email_template_render('email_goal_congratulations', $tokens);
+    email_log_template_selection((string)($user['email'] ?? ''), $user);
     $text = email_template_html_to_text($html);
     $subject = email_template_subject($html, $subjectKey, $locale, $subjectReplace);
 
@@ -2682,6 +2749,7 @@ function email_send_emergency_motivation(PDO $pdo, array $user): bool
 
     $locale = email_template_resolve_locale($tokens);
     $html = email_template_render('email_emergency_motivation', $tokens);
+    email_log_template_selection((string)($user['email'] ?? ''), $user);
     $text = email_template_html_to_text($html);
     $subject = email_template_subject($html, 'Keep building your emergency fund', $locale);
 
@@ -2906,6 +2974,7 @@ function email_send_emergency_withdrawal(PDO $pdo, int $userId, float $amount, s
 
     $locale = email_template_resolve_locale($tokens);
     $html = email_template_render('email_emergency_withdrawal', $tokens);
+    email_log_template_selection((string)($user['email'] ?? ''), $user);
     $text = email_template_html_to_text($html);
     $subject = email_template_subject($html, 'Emergency fund withdrawal: :amount', $locale, [
         'amount' => $withdrawFormatted,
