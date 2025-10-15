@@ -103,6 +103,15 @@ function email_template_base_tokens(): array
     ];
 }
 
+function email_translated_token(string $key, array $replace = [], bool $raw = false): array
+{
+    return [
+        'translate' => $key,
+        'replace' => $replace,
+        'raw' => $raw,
+    ];
+}
+
 function email_template_escape(string $value): string
 {
     $escaped = htmlspecialchars($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
@@ -110,26 +119,330 @@ function email_template_escape(string $value): string
     return str_replace('&amp;nbsp;', '&nbsp;', $escaped);
 }
 
+function email_template_normalize_locale(?string $locale): string
+{
+    if ($locale === null) {
+        return '';
+    }
+
+    $normalized = strtolower(trim($locale));
+    if ($normalized === '') {
+        return '';
+    }
+
+    return str_replace([' ', '.'], '-', str_replace('_', '-', $normalized));
+}
+
+function email_template_candidate_locales(array $tokens): array
+{
+    $keys = [
+        'template_language',
+        'language',
+        'desired_language',
+        'locale',
+        'user_language',
+        'user_locale',
+    ];
+
+    $candidates = [];
+
+    foreach ($keys as $key) {
+        if (!isset($tokens[$key])) {
+            continue;
+        }
+
+        $value = email_template_normalize_locale((string)$tokens[$key]);
+        if ($value === '') {
+            continue;
+        }
+
+        $candidates[] = $value;
+
+        if (strlen($value) > 2) {
+            $primary = substr($value, 0, 2);
+            if ($primary !== '') {
+                $candidates[] = $primary;
+            }
+        }
+    }
+
+    $candidates[] = default_locale();
+    $candidates[] = 'en';
+
+    return array_values(array_unique(array_filter($candidates)));
+}
+
+function email_template_resolve_locale(array $tokens): string
+{
+    $basePath = dirname(__DIR__, 2) . '/lang';
+    $available = available_locales();
+    $candidates = email_template_candidate_locales($tokens);
+
+    foreach ($candidates as $candidate) {
+        if (isset($available[$candidate])) {
+            return $candidate;
+        }
+
+        $path = $basePath . '/' . $candidate . '.php';
+        if (is_file($path)) {
+            return $candidate;
+        }
+
+        if (strlen($candidate) > 2) {
+            $primary = substr($candidate, 0, 2);
+            if ($primary !== '') {
+                if (isset($available[$primary])) {
+                    return $primary;
+                }
+
+                $primaryPath = $basePath . '/' . $primary . '.php';
+                if (is_file($primaryPath)) {
+                    return $primary;
+                }
+            }
+        }
+    }
+
+    return default_locale();
+}
+
+function email_template_translate_value(string $key, string $locale, array $replace = []): string
+{
+    $translated = load_translations($locale)[$key] ?? null;
+
+    if ($translated === null && $locale !== default_locale()) {
+        $translated = load_translations(default_locale())[$key] ?? null;
+    }
+
+    if ($translated === null) {
+        $translated = $key;
+    }
+
+    foreach ($replace as $name => $replacement) {
+        if (!is_string($replacement)) {
+            $replacement = (string)$replacement;
+        }
+
+        $translated = str_replace(':' . $name, $replacement, $translated);
+    }
+
+    return $translated;
+}
+
+function email_template_prepare_token_value($value, string $locale, bool &$raw = false): string
+{
+    $raw = false;
+
+    if (is_array($value)) {
+        $raw = !empty($value['raw']);
+
+        $key = $value['translate'] ?? $value['key'] ?? null;
+        $fallback = $value['value'] ?? null;
+        $replace = [];
+
+        if (isset($value['replace']) && is_array($value['replace'])) {
+            $replace = $value['replace'];
+        }
+
+        if (is_string($key) && $key !== '') {
+            return email_template_translate_value($key, $locale, $replace);
+        }
+
+        if ($fallback !== null) {
+            if (!is_string($fallback)) {
+                $fallback = (string)$fallback;
+            }
+
+            return email_template_translate_value($fallback, $locale, $replace);
+        }
+
+        $value = $value['value'] ?? '';
+    }
+
+    if (!is_string($value)) {
+        $value = (string)$value;
+    }
+
+    return email_template_translate_value($value, $locale);
+}
+
+function email_template_extract_title(string $html): ?string
+{
+    if (preg_match('/<title[^>]*>(.*?)<\/title>/is', $html, $matches)) {
+        $title = html_entity_decode(trim($matches[1]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        if ($title !== '') {
+            return preg_replace('/\s+/', ' ', $title);
+        }
+    }
+
+    return null;
+}
+
+function email_template_subject(string $html, string $fallbackKey, string $locale, array $replace = []): string
+{
+    $title = email_template_extract_title($html);
+    if ($title !== null && $title !== '') {
+        return $title;
+    }
+
+    return email_template_translate_value($fallbackKey, $locale, $replace);
+}
+
+function email_template_html_to_text(string $html): string
+{
+    $text = preg_replace('/<head\b.*?<\/head>/is', '', $html);
+    $text = preg_replace('/<\s*(script|style)\b.*?<\/\s*\1\s*>/is', '', $text);
+    $text = preg_replace('/<\s*br\s*\/?>/i', "\n", $text);
+    $text = preg_replace('/<\s*\/\s*(p|div|section|article|tr|table|h[1-6]|ul|ol)\s*>/i', "\n", $text);
+    $text = preg_replace('/<\s*li[^>]*>/i', "\n• ", $text);
+    $text = strip_tags($text);
+    $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $text = preg_replace("/[\t ]+\n/", "\n", $text);
+    $text = preg_replace("/\n{3,}/", "\n\n", trim($text));
+
+    return $text;
+}
+
+function email_template_last_path(?string $set = null): ?string
+{
+    static $last = null;
+
+    if ($set !== null) {
+        $last = $set;
+    }
+
+    return $last;
+}
+
 function email_template_render(string $template, array $tokens): string
 {
-    $path = dirname(__DIR__, 2) . '/docs/email_templates/' . $template . '.html';
-    if (!is_file($path) || !is_readable($path)) {
+    $basePath = dirname(__DIR__, 2) . '/docs/email_templates';
+    $candidates = email_template_candidate_locales($tokens);
+
+    $html = '';
+    $selectedPath = null;
+
+    foreach ($candidates as $language) {
+        $path = $basePath . '/' . $language . '/' . $template . '.html';
+        if (!is_file($path) || !is_readable($path)) {
+            continue;
+        }
+
+        $html = (string)file_get_contents($path);
+        if ($html !== '') {
+            $selectedPath = $path;
+            break;
+        }
+    }
+
+    if ($html === '' || $selectedPath === null) {
         throw new RuntimeException('Email template not found: ' . $template);
     }
 
-    $html = (string)file_get_contents($path);
+    email_template_last_path($selectedPath);
+
+    $locale = email_template_resolve_locale($tokens);
     $defaults = email_template_base_tokens();
     $replacements = [];
 
     foreach (array_merge($defaults, $tokens) as $key => $value) {
         $placeholder = '{{' . $key . '}}';
-        if (!is_string($value)) {
-            $value = (string)$value;
-        }
-        $replacements[$placeholder] = email_template_escape($value);
+        $isRaw = false;
+        $prepared = email_template_prepare_token_value($value, $locale, $isRaw);
+        $replacements[$placeholder] = $isRaw ? $prepared : email_template_escape($prepared);
     }
 
     return strtr($html, $replacements);
+}
+
+function email_log_output(string $message): void
+{
+    if (defined('STDOUT')) {
+        fwrite(STDOUT, $message . PHP_EOL);
+    } else {
+        echo $message . PHP_EOL;
+    }
+}
+
+function email_log_user_details(?array $user): void
+{
+    if (!is_array($user)) {
+        return;
+    }
+
+    $fields = [
+        'id',
+        'email',
+        'full_name_plain',
+        'desired_language_raw',
+        'desired_language',
+        'locale',
+        'language',
+        'email_verified_at',
+    ];
+
+    $details = [];
+    foreach ($fields as $field) {
+        if (!array_key_exists($field, $user)) {
+            continue;
+        }
+
+        $value = $user[$field];
+        if ($value === null || $value === '') {
+            continue;
+        }
+
+        $details[$field] = $value;
+    }
+
+    if (!$details) {
+        return;
+    }
+
+    $encoded = json_encode($details, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($encoded === false) {
+        return;
+    }
+
+    email_log_output('[mail-user] ' . $encoded);
+}
+
+function email_user_desired_language(?array $user): string
+{
+    if (!is_array($user)) {
+        return '';
+    }
+
+    foreach (['desired_language_raw', 'desired_language', 'locale', 'language'] as $key) {
+        if (!isset($user[$key])) {
+            continue;
+        }
+
+        $value = trim((string)$user[$key]);
+        if ($value !== '') {
+            return $value;
+        }
+    }
+
+    return '';
+}
+
+function email_log_template_selection(string $email, ?array $user = null): void
+{
+    $path = email_template_last_path();
+    if ($path === null) {
+        return;
+    }
+
+    email_log_user_details($user);
+
+    $desired = email_user_desired_language($user);
+    if ($desired === '') {
+        $desired = 'default';
+    }
+
+    $message = '[mail] ' . $email . ' desired_language=' . $desired . ' template=' . $path;
+    email_log_output($message);
 }
 
 function email_hex_luminance(string $hex): float
@@ -337,7 +650,7 @@ function email_render_button(string $href, string $label, array $palette): strin
 
 function email_load_user_profile(PDO $pdo, int $userId): ?array
 {
-    $stmt = $pdo->prepare('SELECT id, email, full_name, email_verified_at FROM users WHERE id = ?');
+    $stmt = $pdo->prepare('SELECT id, email, full_name, email_verified_at, desired_language FROM users WHERE id = ?');
     $stmt->execute([$userId]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -352,6 +665,16 @@ function email_load_user_profile(PDO $pdo, int $userId): ?array
 
     $user['email'] = $email;
     $user['full_name_plain'] = $user['full_name'] ? pii_decrypt($user['full_name']) : '';
+
+    $preferredRaw = $user['desired_language'] ?? null;
+    $user['desired_language_raw'] = $preferredRaw;
+
+    if (is_string($preferredRaw)) {
+        $preferred = trim($preferredRaw);
+        $user['desired_language'] = $preferred !== '' ? $preferred : null;
+    } else {
+        $user['desired_language'] = null;
+    }
 
     return $user;
 }
@@ -384,6 +707,29 @@ function email_user_first_name(array $user): string
     return $parts[0];
 }
 
+function email_user_locale(array $user): ?string
+{
+    $keys = ['desired_language', 'locale', 'language'];
+
+    foreach ($keys as $key) {
+        if (!isset($user[$key])) {
+            continue;
+        }
+
+        $value = strtolower(trim((string)$user[$key]));
+        if ($value === '') {
+            continue;
+        }
+
+        $value = str_replace([' ', '.'], '-', str_replace('_', '-', $value));
+        if ($value !== '') {
+            return $value;
+        }
+    }
+
+    return null;
+}
+
 function email_generate_verification_token(PDO $pdo, int $userId): string
 {
     $token = bin2hex(random_bytes(32));
@@ -411,17 +757,19 @@ function email_send_verification(PDO $pdo, array $user, bool $refreshToken = tru
     $name = email_user_display_name($user);
     $firstName = email_user_first_name($user);
 
-    $html = email_template_render('email_registration_validation', [
+    $tokens = [
         'user_first_name' => $firstName,
         'verification_link' => $link,
-    ]);
+        'template_language' => email_user_locale($user),
+    ];
 
-    $text = "Hi {$name},\n\n" .
-        "Thanks for creating a MyMoneyMap account. Please confirm your email address so we can keep your data safe and share updates with you.\n\n" .
-        "Verification link: {$link}\n\n" .
-        "See you soon,\nThe MyMoneyMap team";
+    $locale = email_template_resolve_locale($tokens);
+    $html = email_template_render('email_registration_validation', $tokens);
+    email_log_template_selection((string)($user['email'] ?? ''), $user);
+    $text = email_template_html_to_text($html);
+    $subject = email_template_subject($html, 'Verify your email address', $locale);
 
-    return send_app_email((string)$user['email'], 'Verify your email address', $html, $text, [
+    return send_app_email((string)$user['email'], $subject, $html, $text, [
         'to_name' => $name,
     ]);
 }
@@ -429,24 +777,20 @@ function email_send_verification(PDO $pdo, array $user, bool $refreshToken = tru
 function email_send_welcome(array $user): bool
 {
     $name = email_user_display_name($user);
-    $palette = email_theme_palette($user);
+    $firstName = email_user_first_name($user);
 
-    $body = '<p style="margin:0 0 16px;">Hi ' . htmlspecialchars($name) . ',</p>' .
-        '<p style="margin:0 0 16px;">Your MyMoneyMap registration was successful. You can start tracking your finances right away — add accounts, record transactions, and set your goals.</p>' .
-        '<ul style="margin:0 0 16px;padding-left:20px;">' .
-        '<li style="margin-bottom:8px;">Record today\'s income and spending from the dashboard.</li>' .
-        '<li style="margin-bottom:8px;">Invite MyMoneyMap into your routine with weekly reviews.</li>' .
-        '<li style="margin-bottom:0;">Explore Baby Steps, emergency funds, and long-term goals.</li>' .
-        '</ul>' .
-        '<p style="margin:0;">We\'re thrilled to have you on board!<br />— The MyMoneyMap team</p>';
+    $tokens = [
+        'user_first_name' => $firstName,
+        'template_language' => email_user_locale($user),
+    ];
 
-    $html = email_wrap_html('Welcome to MyMoneyMap', $body, $palette);
+    $locale = email_template_resolve_locale($tokens);
+    $html = email_template_render('email_welcome', $tokens);
+    email_log_template_selection((string)($user['email'] ?? ''), $user);
+    $text = email_template_html_to_text($html);
+    $subject = email_template_subject($html, 'Welcome to MyMoneyMap', $locale);
 
-    $text = "Hi {$name},\n\n" .
-        "Your MyMoneyMap registration was successful. Start tracking your finances right away: add transactions, review budgets, and set meaningful goals.\n\n" .
-        "We\'re thrilled to have you on board!\n— The MyMoneyMap team";
-
-    return send_app_email((string)$user['email'], 'Welcome to MyMoneyMap', $html, $text, [
+    return send_app_email((string)$user['email'], $subject, $html, $text, [
         'to_name' => $name,
     ]);
 }
@@ -524,7 +868,7 @@ function email_send_tips(array $user, ?array $tips = null): bool
 
     $normalized = array_slice($normalized, 0, 3);
 
-    $html = email_template_render('email_tips_and_tricks', [
+    $tokens = [
         'user_first_name' => $firstName,
         'tip_title_1' => $normalized[0]['title'] ?? 'Stay curious',
         'tip_body_1' => $normalized[0]['body'] ?? 'Explore MyMoneyMap to uncover insights tailored to your habits.',
@@ -538,25 +882,16 @@ function email_send_tips(array $user, ?array $tips = null): bool
         'promo_title' => 'Pro Guide: Build lasting money habits',
         'promo_body' => 'Download our expert playbook with checklists for budgeting, goal tracking, and investment readiness.',
         'promo_link' => app_url('/guides/pro'),
-    ]);
-
-    $textLines = [
-        "Hi {$name},",
-        '',
-        'Here are a few tips to help you get more value from MyMoneyMap:',
+        'template_language' => email_user_locale($user),
     ];
 
-    foreach ($normalized as $tip) {
-        $textLines[] = '• ' . $tip['title'] . ': ' . $tip['body'];
-    }
+    $locale = email_template_resolve_locale($tokens);
+    $html = email_template_render('email_tips_and_tricks', $tokens);
+    email_log_template_selection((string)($user['email'] ?? ''), $user);
+    $text = email_template_html_to_text($html);
+    $subject = email_template_subject($html, 'Tips & tricks for MyMoneyMap', $locale);
 
-    $textLines[] = '';
-    $textLines[] = 'Explore more tips: ' . app_url('/learn');
-    $textLines[] = '';
-    $textLines[] = 'Happy tracking!';
-    $textLines[] = '— The MyMoneyMap team';
-
-    return send_app_email((string)$user['email'], 'Tips & tricks for MyMoneyMap', $html, implode("\n", $textLines), [
+    return send_app_email((string)$user['email'], $subject, $html, $text, [
         'to_name' => $name,
     ]);
 }
@@ -683,40 +1018,17 @@ function email_send_cashflow_overspend(PDO $pdo, int $userId, array $status, Dat
         }
     }
 
+    $tokens['template_language'] = email_user_locale($user);
+
+    $locale = email_template_resolve_locale($tokens);
     $html = email_template_render('email_cashflow_overspend', $tokens);
+    email_log_template_selection((string)($user['email'] ?? ''), $user);
+    $text = email_template_html_to_text($html);
+    $subject = email_template_subject($html, 'Heads-up: :rule is over budget', $locale, [
+        'rule' => $ruleLabel,
+    ]);
 
-    $textLines = [
-        'Hi ' . $displayName . ',',
-        '',
-        'Your ' . $ruleLabel . ' cashflow rule for ' . $periodLabel . ' is over budget.',
-        'Planned (' . $percentFormatted . '): ' . $budgetPlain,
-        'Spent so far: ' . $spentPlain,
-        'Over by: ' . $overPlain,
-        '',
-        'Top categories:',
-    ];
-
-    if ($topCategories) {
-        foreach (array_slice($topCategories, 0, 3) as $cat) {
-            $textLines[] = '- ' . $cat['label'] . ': ' . email_plaintext_amount((float)$cat['amount'], $currency);
-        }
-    } else {
-        $textLines[] = '- Track spending by category in the app to see more detail.';
-    }
-
-    $textLines[] = '';
-    $textLines[] = 'Next steps:';
-    $textLines[] = '1. ' . $primaryTipText;
-    $textLines[] = '2. ' . $secondaryTipText;
-    $textLines[] = '';
-    $textLines[] = 'Review your cashflow plan: ' . app_url('/cashflow');
-    $textLines[] = '';
-    $textLines[] = 'Stay focused,';
-    $textLines[] = 'The MyMoneyMap team';
-
-    $subject = 'Heads-up: ' . $ruleLabel . ' is over budget';
-
-    return send_app_email((string)$user['email'], $subject, $html, implode("\n", $textLines), [
+    return send_app_email((string)$user['email'], $subject, $html, $text, [
         'to_name' => $displayName,
     ]);
 }
@@ -786,6 +1098,8 @@ function email_send_feedback_new_alert(PDO $pdo, int $feedbackId): bool
     ];
 
     $html = email_template_render('email_feedback_new', $tokens);
+    $recipient = email_feedback_inbox_address();
+    email_log_template_selection($recipient, null);
 
     $text = "New feedback submitted by {$userName} ({$userEmail}).\n\n"
         . "Title: {$title}\n"
@@ -795,7 +1109,7 @@ function email_send_feedback_new_alert(PDO $pdo, int $feedbackId): bool
         . "Message:\n{$message}\n\n"
         . 'Open in MyMoneyMap: ' . $feedbackUrl . "\n";
 
-    return send_app_email(email_feedback_inbox_address(), 'New feedback: ' . $title, $html, $text, [
+    return send_app_email($recipient, 'New feedback: ' . $title, $html, $text, [
         'to_name' => 'Feedback team',
     ]);
 }
@@ -846,25 +1160,18 @@ function email_send_feedback_resolved(PDO $pdo, int $feedbackId): bool
         'cta_url' => app_url('/feedback?highlight=' . (int)$feedback['id']),
         'cta_label' => 'View feedback',
         'resolved_at' => $resolvedLabel,
+        'template_language' => email_user_locale($user),
     ];
 
+    $locale = email_template_resolve_locale($tokens);
     $html = email_template_render('email_feedback_resolved', $tokens);
+    email_log_template_selection((string)($user['email'] ?? ''), $user);
+    $text = email_template_html_to_text($html);
+    $subject = email_template_subject($html, 'We resolved your feedback: :title', $locale, [
+        'title' => $title,
+    ]);
 
-    $textLines = [
-        'Hi ' . $displayName . ',',
-        '',
-        'We resolved your feedback: ' . $title . '.',
-        'Completed: ' . $resolvedLabel,
-        '',
-        'What we fixed: ' . $resolutionSummary,
-        'Next step: ' . $resolutionNextStep,
-        '',
-        'Review the update: ' . app_url('/feedback?highlight=' . (int)$feedback['id']),
-        '',
-        'Thanks for helping us improve MyMoneyMap!',
-    ];
-
-    return send_app_email((string)$user['email'], 'We resolved your feedback: ' . $title, $html, implode("\n", $textLines), [
+    return send_app_email((string)$user['email'], $subject, $html, $text, [
         'to_name' => $displayName,
     ]);
 }
@@ -1061,13 +1368,17 @@ function email_collect_budget_rows(PDO $pdo, int $userId, array $summary): array
         }
 
         if ($planned <= 0.0) {
-            $status = 'Track plan in app';
+            $status = email_translated_token('email.reports.budget.track_plan');
         } elseif ($diff > 0.01) {
-            $status = 'Under by ' . email_format_amount($diff, $currency);
+            $status = email_translated_token('email.reports.budget.under', [
+                'amount' => email_format_amount($diff, $currency),
+            ]);
         } elseif ($diff < -0.01) {
-            $status = 'Over by ' . email_format_amount(abs($diff), $currency);
+            $status = email_translated_token('email.reports.budget.over', [
+                'amount' => email_format_amount(abs($diff), $currency),
+            ]);
         } else {
-            $status = 'On target';
+            $status = email_translated_token('email.reports.budget.on_target');
         }
 
         $rows[] = [
@@ -1086,7 +1397,7 @@ function email_collect_budget_rows(PDO $pdo, int $userId, array $summary): array
                 'label' => $category['label'],
                 'planned' => '—',
                 'actual' => $category['amount_formatted'],
-                'status' => 'Review in dashboard',
+                'status' => email_translated_token('email.reports.budget.review_in_dashboard'),
                 'actual_value' => $category['amount'],
             ];
         }
@@ -2013,9 +2324,9 @@ function email_send_weekly_results(PDO $pdo, array $user, ?DateTimeImmutable $re
     $firstName = email_user_first_name($user);
     $currency = (string)$summary['currency'];
     $reportPeriod = email_format_period_label($start, $end);
-    $topCategory = $summary['top_category']['label'] ?? 'No spending recorded';
+    $topCategory = $summary['top_category']['label'] ?? email_translated_token('email.reports.no_spending');
     if (($summary['spending_total'] ?? 0.0) <= 0.0) {
-        $topCategory = 'No spending recorded';
+        $topCategory = email_translated_token('email.reports.no_spending');
     }
 
     $topCategories = email_prepare_top_categories($summary, 5);
@@ -2033,6 +2344,7 @@ function email_send_weekly_results(PDO $pdo, array $user, ?DateTimeImmutable $re
             $start->format('Y-m-d'),
             $end->format('Y-m-d')
         )),
+        'template_language' => email_user_locale($user),
     ];
 
     for ($i = 1; $i <= 5; $i++) {
@@ -2042,30 +2354,13 @@ function email_send_weekly_results(PDO $pdo, array $user, ?DateTimeImmutable $re
         $tokens['category_percent_' . $i] = $category['percent_formatted'] ?? '—';
     }
 
+    $locale = email_template_resolve_locale($tokens);
     $html = email_template_render('email_report_weekly', $tokens);
+    email_log_template_selection((string)($user['email'] ?? ''), $user);
+    $text = email_template_html_to_text($html);
+    $subject = email_template_subject($html, 'Your weekly MyMoneyMap report', $locale);
 
-    $textLines = [
-        "Hi {$name},",
-        '',
-        'Weekly recap for ' . $reportPeriod . ':',
-        '- Income: ' . email_plaintext_amount($summary['income_total'], $currency),
-        '- Spending: ' . email_plaintext_amount($summary['spending_total'], $currency),
-        '- Net: ' . email_plaintext_amount($summary['net'], $currency),
-    ];
-
-    if ($topCategories) {
-        $textLines[] = '';
-        $textLines[] = 'Top spending categories:';
-        foreach ($topCategories as $category) {
-            $textLines[] = ' • ' . $category['label'] . ' — ' . email_plaintext_amount($category['amount'], $currency) . ' (' . $category['percent_formatted'] . ')';
-        }
-    }
-
-    $textLines[] = '';
-    $textLines[] = 'Keep logging transactions to sharpen your insights.';
-    $textLines[] = '— The MyMoneyMap team';
-
-    return send_app_email((string)$user['email'], 'Your weekly MyMoneyMap report', $html, implode("\n", $textLines), [
+    return send_app_email((string)$user['email'], $subject, $html, $text, [
         'to_name' => $name,
     ]);
 }
@@ -2081,48 +2376,61 @@ function email_send_monthly_results(PDO $pdo, array $user, ?DateTimeImmutable $r
     $firstName = email_user_first_name($user);
     $currency = (string)$summary['currency'];
     $reportPeriod = email_format_period_label($start, $end);
-    $topCategory = $summary['top_category']['label'] ?? 'No spending recorded';
+    $topCategoryLabel = (string)($summary['top_category']['label'] ?? '');
+    $topCategory = $topCategoryLabel !== ''
+        ? $topCategoryLabel
+        : email_translated_token('email.reports.no_spending');
     $topCategoryAmount = $summary['top_category']['amount'] ?? 0.0;
     if (($summary['spending_total'] ?? 0.0) <= 0.0) {
-        $topCategory = 'No spending recorded';
+        $topCategory = email_translated_token('email.reports.no_spending');
         $topCategoryAmount = 0.0;
     }
 
     $milestones = [
         $summary['transaction_count'] > 0
-            ? $summary['transaction_count'] . ' transactions captured'
-            : 'Start logging transactions to unlock monthly insights',
+            ? email_translated_token('email.reports.monthly.milestone.transactions', [
+                'count' => $summary['transaction_count'],
+            ])
+            : email_translated_token('email.reports.monthly.milestone.log_transactions'),
         $summary['income_count'] > 0
-            ? $summary['income_count'] . ' income entries totalling ' . email_format_amount($summary['income_total'], $currency)
-            : 'No income recorded this month',
+            ? email_translated_token('email.reports.monthly.milestone.income', [
+                'count' => $summary['income_count'],
+                'total' => email_format_amount($summary['income_total'], $currency),
+            ])
+            : email_translated_token('email.reports.monthly.milestone.no_income'),
         $topCategoryAmount > 0
-            ? $topCategory . ' led spending at ' . email_format_amount($topCategoryAmount, $currency)
-            : 'Spending insights will appear once expenses are tracked',
+            ? email_translated_token('email.reports.monthly.milestone.top_category', [
+                'category' => $topCategoryLabel !== '' ? $topCategoryLabel : '—',
+                'amount' => email_format_amount($topCategoryAmount, $currency),
+            ])
+            : email_translated_token('email.reports.monthly.milestone.no_spending'),
     ];
 
     $goal = email_fetch_primary_goal($pdo, (int)$user['id']);
     if ($goal) {
         if (($goal['progress_percent'] ?? null) === null) {
-            $savingsProgress = 'Goal ready to track';
+            $savingsProgress = email_translated_token('email.reports.goal.ready');
         } elseif ($goal['progress_percent'] >= 100.0) {
-            $savingsProgress = 'Goal completed!';
+            $savingsProgress = email_translated_token('email.reports.goal.completed');
         } else {
-            $savingsProgress = round((float)$goal['progress_percent']) . '% funded';
+            $savingsProgress = email_translated_token('email.reports.goal.percent_funded', [
+                'percent' => round((float)$goal['progress_percent']),
+            ]);
         }
         $savingsGoalName = $goal['title'];
     } else {
-        $savingsProgress = 'Goal tracking ready';
-        $savingsGoalName = 'your next goal';
+        $savingsProgress = email_translated_token('email.reports.goal.tracking_ready');
+        $savingsGoalName = email_translated_token('email.reports.goal.next_name');
     }
 
     $budgets = email_collect_budget_rows($pdo, (int)$user['id'], $summary);
     $focus = email_collect_financial_focus($pdo, (int)$user['id'], $currency);
-    $emergencyStatus = $focus['emergency']['status'] ?? 'Emergency fund ready.';
-    $emergencyNote = $focus['emergency']['note'] ?? 'Track your emergency fund progress in the app.';
-    $goalsStatus = $focus['goals']['status'] ?? 'Goals overview available in the app.';
-    $goalsNote = $focus['goals']['note'] ?? 'Review your goals to stay on course.';
-    $loansStatus = $focus['loans']['status'] ?? 'Loan overview available in the app.';
-    $loansNote = $focus['loans']['note'] ?? 'Review your payoff plan for more detail.';
+    $emergencyStatus = $focus['emergency']['status'] ?? email_translated_token('email.reports.focus.emergency_status');
+    $emergencyNote = $focus['emergency']['note'] ?? email_translated_token('email.reports.focus.emergency_note');
+    $goalsStatus = $focus['goals']['status'] ?? email_translated_token('email.reports.focus.goals_status');
+    $goalsNote = $focus['goals']['note'] ?? email_translated_token('email.reports.focus.goals_note');
+    $loansStatus = $focus['loans']['status'] ?? email_translated_token('email.reports.focus.loans_status');
+    $loansNote = $focus['loans']['note'] ?? email_translated_token('email.reports.focus.loans_note');
 
     $tokens = [
         'user_first_name' => $firstName,
@@ -2131,9 +2439,9 @@ function email_send_monthly_results(PDO $pdo, array $user, ?DateTimeImmutable $r
         'total_income' => email_format_amount($summary['income_total'], $currency),
         'net_change' => email_format_amount($summary['net'], $currency),
         'top_category' => $topCategory,
-        'milestone_1' => $milestones[0] ?? 'Keep building your routine',
-        'milestone_2' => $milestones[1] ?? 'Review your cashflow regularly',
-        'milestone_3' => $milestones[2] ?? 'Celebrate progress and adjust goals',
+        'milestone_1' => $milestones[0] ?? email_translated_token('email.reports.monthly.milestone.keep_routine'),
+        'milestone_2' => $milestones[1] ?? email_translated_token('email.reports.monthly.milestone.review_cashflow'),
+        'milestone_3' => $milestones[2] ?? email_translated_token('email.reports.monthly.milestone.celebrate'),
         'savings_progress' => $savingsProgress,
         'savings_goal_name' => $savingsGoalName,
         'ef_status' => $emergencyStatus,
@@ -2147,6 +2455,7 @@ function email_send_monthly_results(PDO $pdo, array $user, ?DateTimeImmutable $r
             (int)$start->format('Y'),
             (int)$start->format('n')
         )),
+        'template_language' => email_user_locale($user),
     ];
 
     for ($i = 1; $i <= 3; $i++) {
@@ -2157,40 +2466,13 @@ function email_send_monthly_results(PDO $pdo, array $user, ?DateTimeImmutable $r
         $tokens['budget_status_' . $i] = $row['status'] ?? '—';
     }
 
+    $locale = email_template_resolve_locale($tokens);
     $html = email_template_render('email_report_monthly', $tokens);
+    email_log_template_selection((string)($user['email'] ?? ''), $user);
+    $text = email_template_html_to_text($html);
+    $subject = email_template_subject($html, 'Your monthly MyMoneyMap report', $locale);
 
-    $textLines = [
-        "Hi {$name},",
-        '',
-        'Monthly performance for ' . $reportPeriod . ':',
-        '- Income: ' . email_plaintext_amount($summary['income_total'], $currency),
-        '- Spending: ' . email_plaintext_amount($summary['spending_total'], $currency),
-        '- Net: ' . email_plaintext_amount($summary['net'], $currency),
-        '',
-        'Highlights:',
-    ];
-    foreach ($milestones as $milestone) {
-        $textLines[] = ' • ' . $milestone;
-    }
-
-    $textLines[] = '';
-    $textLines[] = 'Savings focus: ' . $savingsProgress . ' toward ' . $savingsGoalName . '.';
-    $textLines[] = 'Emergency fund: ' . $emergencyStatus;
-    if ($emergencyNote !== '') {
-        $textLines[] = '  ' . $emergencyNote;
-    }
-    $textLines[] = 'Goals: ' . $goalsStatus;
-    if ($goalsNote !== '') {
-        $textLines[] = '  ' . $goalsNote;
-    }
-    $textLines[] = 'Loans: ' . $loansStatus;
-    if ($loansNote !== '') {
-        $textLines[] = '  ' . $loansNote;
-    }
-    $textLines[] = '';
-    $textLines[] = '— The MyMoneyMap team';
-
-    return send_app_email((string)$user['email'], 'Your monthly MyMoneyMap report', $html, implode("\n", $textLines), [
+    return send_app_email((string)$user['email'], $subject, $html, $text, [
         'to_name' => $name,
     ]);
 }
@@ -2288,37 +2570,16 @@ function email_send_yearly_results(PDO $pdo, array $user, ?DateTimeImmutable $re
         'savings_achievement_2' => $savingsAchievements[1] ?? 'Stay consistent with contributions',
         'savings_achievement_3' => $savingsAchievements[2] ?? 'Plan your next milestone',
         'app_url' => app_url(sprintf('/years/%d', $year)),
+        'template_language' => email_user_locale($user),
     ];
 
+    $locale = email_template_resolve_locale($tokens);
     $html = email_template_render('email_report_yearly', $tokens);
+    email_log_template_selection((string)($user['email'] ?? ''), $user);
+    $text = email_template_html_to_text($html);
+    $subject = email_template_subject($html, 'Your yearly MyMoneyMap report', $locale);
 
-    $textLines = [
-        "Hi {$name},",
-        '',
-        'Year in review for ' . $reportPeriod . ':',
-        '- Income: ' . email_plaintext_amount($summary['income_total'], $currency),
-        '- Spending: ' . email_plaintext_amount($summary['spending_total'], $currency),
-        '- Net: ' . email_plaintext_amount($summary['net'], $currency),
-        '',
-        'Trend highlights:',
-    ];
-    foreach ($trendHighlights as $highlight) {
-        $textLines[] = ' • ' . $highlight;
-    }
-
-    $textLines[] = '';
-    $textLines[] = 'Best month: ' . $bestMonthLabel . ' (' . email_plaintext_amount($bestMonthNet, $currency) . ')';
-    $textLines[] = $investmentGrowth;
-    $textLines[] = '';
-    $textLines[] = 'Savings achievements:';
-    foreach ($savingsAchievements as $achievement) {
-        $textLines[] = ' • ' . $achievement;
-    }
-    $textLines[] = '';
-    $textLines[] = 'Thank you for staying committed to your goals.';
-    $textLines[] = '— The MyMoneyMap team';
-
-    return send_app_email((string)$user['email'], 'Your yearly MyMoneyMap report', $html, implode("\n", $textLines), [
+    return send_app_email((string)$user['email'], $subject, $html, $text, [
         'to_name' => $name,
     ]);
 }
@@ -2355,15 +2616,18 @@ function email_send_completion_notification(PDO $pdo, array $user, array $achiev
     $ctaLabel = 'Review your goals';
     $ctaUrl = app_url('/goals');
     $celebrationNote = 'Keep the momentum going—your next milestone is within reach.';
-    $subject = 'Goal complete!';
-
-    if ($achievementName !== '') {
-        $subject = 'Goal complete: ' . $achievementName;
-    }
+    $subjectKey = $achievementName !== '' ? 'Goal complete: :name' : 'Goal complete!';
+    $subjectReplace = $achievementName !== '' ? ['name' => $achievementName] : [];
 
     switch ($type) {
         case 'loan':
-            $subject = $achievementName !== '' ? 'Loan paid off: ' . $achievementName : 'Loan paid off!';
+            if ($achievementName !== '') {
+                $subjectKey = 'Loan paid off: :name';
+                $subjectReplace = ['name' => $achievementName];
+            } else {
+                $subjectKey = 'Loan paid off!';
+                $subjectReplace = [];
+            }
             $headline = 'Loan freedom achieved';
             $subheadline = 'You paid off ' . ($achievementName !== '' ? $achievementName : 'your loan') . '.';
             $summary = 'Principal cleared: ' . $achievedAmount . '.';
@@ -2377,9 +2641,12 @@ function email_send_completion_notification(PDO $pdo, array $user, array $achiev
             $celebrationNote = 'Keep the momentum by pointing that cashflow at your next priority.';
             break;
         case 'emergency':
-            $subject = 'Emergency fund goal reached!';
             if ($achievementName !== '') {
-                $subject = 'Emergency fund ready: ' . $achievementName;
+                $subjectKey = 'Emergency fund ready: :name';
+                $subjectReplace = ['name' => $achievementName];
+            } else {
+                $subjectKey = 'Emergency fund goal reached!';
+                $subjectReplace = [];
             }
             $headline = 'Emergency fund secured';
             $subheadline = 'You filled your safety net to the brim.';
@@ -2457,48 +2724,16 @@ function email_send_completion_notification(PDO $pdo, array $user, array $achiev
         'next_ef_goal_equivalent' => $nextEfEquivalent,
         'next_ef_goal_equivalent_visibility' => $nextEfEquivalentVisibility,
         'next_ef_goal_note' => $nextEfNote,
+        'template_language' => email_user_locale($user),
     ];
 
+    $locale = email_template_resolve_locale($tokens);
     $html = email_template_render('email_goal_congratulations', $tokens);
+    email_log_template_selection((string)($user['email'] ?? ''), $user);
+    $text = email_template_html_to_text($html);
+    $subject = email_template_subject($html, $subjectKey, $locale, $subjectReplace);
 
-    $textLines = [
-        "Hi {$name},",
-        '',
-        $subheadline,
-        $summary,
-        '',
-        'Next steps:',
-    ];
-    foreach ($highlights as $line) {
-        $textLines[] = ' • ' . $line;
-    }
-    $textLines[] = '';
-    if ($type === 'emergency' && is_array($nextEmergencyGoal)) {
-        $label = trim((string)($nextEmergencyGoal['label'] ?? ''));
-        $amountValue = $nextEmergencyGoal['amount'] ?? null;
-        $amountCurrency = (string)($nextEmergencyGoal['amount_currency'] ?? $currency);
-        $equivalentValue = $nextEmergencyGoal['equivalent'] ?? null;
-        $equivalentCurrency = (string)($nextEmergencyGoal['equivalent_currency'] ?? '');
-        $note = trim((string)($nextEmergencyGoal['note'] ?? ''));
-
-        if ($label !== '') {
-            $textLines[] = 'Next emergency fund target: ' . $label;
-        }
-        if ($amountValue !== null) {
-            $textLines[] = 'Amount: ' . email_plaintext_amount((float)$amountValue, $amountCurrency);
-        }
-        if ($equivalentValue !== null && $equivalentCurrency !== '') {
-            $textLines[] = 'Equivalent: ' . email_plaintext_amount((float)$equivalentValue, $equivalentCurrency);
-        }
-        if ($note !== '') {
-            $textLines[] = $note;
-        }
-        $textLines[] = '';
-    }
-    $textLines[] = $celebrationNote;
-    $textLines[] = '— The MyMoneyMap team';
-
-    return send_app_email((string)$user['email'], $subject, $html, implode("\n", $textLines), [
+    return send_app_email((string)$user['email'], $subject, $html, $text, [
         'to_name' => $name,
     ]);
 }
@@ -2588,34 +2823,16 @@ function email_send_emergency_motivation(PDO $pdo, array $user): bool
         'motivation_tip_3' => $tips[2] ?? 'Protect the fund by separating it from everyday spending.',
         'cta_label' => 'Update Emergency Fund',
         'cta_url' => app_url('/emergency'),
+        'template_language' => email_user_locale($user),
     ];
 
+    $locale = email_template_resolve_locale($tokens);
     $html = email_template_render('email_emergency_motivation', $tokens);
+    email_log_template_selection((string)($user['email'] ?? ''), $user);
+    $text = email_template_html_to_text($html);
+    $subject = email_template_subject($html, 'Keep building your emergency fund', $locale);
 
-    $textLines = [
-        'Hi ' . $displayName . ',',
-        '',
-        $progressNote,
-        'Current balance: ' . email_plaintext_amount($total, $currency),
-    ];
-    if ($target > 0.0) {
-        $textLines[] = 'Target: ' . email_plaintext_amount($target, $currency) . ' (' . round($percent) . '% complete)';
-        $textLines[] = 'Gap remaining: ' . email_plaintext_amount($gap, $currency);
-    } else {
-        $textLines[] = 'Set your target to start measuring progress.';
-    }
-    $textLines[] = '';
-    $textLines[] = 'Try these next:';
-    foreach ($tips as $tip) {
-        $textLines[] = ' • ' . $tip;
-    }
-    $textLines[] = '';
-    $textLines[] = 'You have got this—keep your safety net growing.';
-    $textLines[] = '— The MyMoneyMap team';
-
-    $subject = 'Keep building your emergency fund';
-
-    return send_app_email((string)$user['email'], $subject, $html, implode("\n", $textLines), [
+    return send_app_email((string)$user['email'], $subject, $html, $text, [
         'to_name' => $displayName,
     ]);
 }
@@ -2664,7 +2881,6 @@ function email_send_emergency_withdrawal(PDO $pdo, int $userId, float $amount, s
     }
 
     $withdrawFormatted = email_format_amount($amount, $currency);
-    $withdrawPlain = email_plaintext_amount($amount, $currency);
 
     $defaultCurrency = $currency !== '' ? $currency : ((string)(fx_user_main($pdo, $userId) ?: 'USD'));
 
@@ -2768,7 +2984,6 @@ function email_send_emergency_withdrawal(PDO $pdo, int $userId, float $amount, s
     }
 
     $planRows = $replenishmentPlan['rows'] ?? [];
-    $planRowCount = count($planRows);
     $planMonthLabels = $replenishmentPlan['month_labels'] ?? [];
     $planMonthsText = email_list_join($planMonthLabels);
     if ($planMonthsText === '') {
@@ -2816,6 +3031,7 @@ function email_send_emergency_withdrawal(PDO $pdo, int $userId, float $amount, s
         'next_step_1' => $nextSteps[0],
         'next_step_2' => $nextSteps[1],
         'next_step_3' => $nextSteps[2],
+        'template_language' => email_user_locale($user),
     ];
 
     $hiddenRowStyle = 'display:none; mso-hide:all; line-height:0; font-size:0; height:0; overflow:hidden;';
@@ -2835,74 +3051,15 @@ function email_send_emergency_withdrawal(PDO $pdo, int $userId, float $amount, s
         }
     }
 
+    $locale = email_template_resolve_locale($tokens);
     $html = email_template_render('email_emergency_withdrawal', $tokens);
+    email_log_template_selection((string)($user['email'] ?? ''), $user);
+    $text = email_template_html_to_text($html);
+    $subject = email_template_subject($html, 'Emergency fund withdrawal: :amount', $locale, [
+        'amount' => $withdrawFormatted,
+    ]);
 
-    $statusSummaryPlain = trim(str_replace("\xc2\xa0", ' ', html_entity_decode($statusSummary, ENT_QUOTES | ENT_HTML5, 'UTF-8')));
-    if ($statusSummaryPlain === '') {
-        $statusSummaryPlain = 'Track your emergency fund progress in the app.';
-    }
-    $statusNotePlain = trim(str_replace("\xc2\xa0", ' ', html_entity_decode($statusNote, ENT_QUOTES | ENT_HTML5, 'UTF-8')));
-
-    $planSummaryPlain = '';
-    if (isset($replenishmentPlan['summary'])) {
-        $planSummaryPlain = trim(str_replace("\xc2\xa0", ' ', html_entity_decode((string)$replenishmentPlan['summary'], ENT_QUOTES | ENT_HTML5, 'UTF-8')));
-    }
-    $planDetailPlain = '';
-    if (!empty($replenishmentPlan['detail'])) {
-        $planDetailPlain = trim(str_replace("\xc2\xa0", ' ', html_entity_decode((string)$replenishmentPlan['detail'], ENT_QUOTES | ENT_HTML5, 'UTF-8')));
-    }
-
-    $textLines = [
-        'Hi ' . $displayName . ',',
-        '',
-        'We recorded your emergency fund withdrawal of ' . $withdrawPlain . ' on ' . $occurredFormatted . '.',
-    ];
-    if ($noteText !== '') {
-        $textLines[] = 'Note: ' . $noteText;
-        $textLines[] = '';
-    }
-    $textLines[] = 'Balance after withdrawal: ' . email_plaintext_amount($totalAfter, $statusCurrency);
-    if ($targetValue > 0.0) {
-        $textLines[] = 'Target: ' . email_plaintext_amount($targetValue, $statusCurrency) . '.';
-    }
-    $textLines[] = 'Status: ' . $statusSummaryPlain;
-    if ($statusNotePlain !== '') {
-        $textLines[] = $statusNotePlain;
-    }
-    $textLines[] = '';
-    $textLines[] = 'Repayment plan:';
-    if ($planRowCount > 0) {
-        foreach ($planRows as $row) {
-            $label = (string)($row['label'] ?? '');
-            $availablePlain = (string)($row['available_plain'] ?? '');
-            $suggestedPlain = (string)($row['suggested_plain'] ?? '');
-            if ($label !== '' && $suggestedPlain !== '') {
-                $textLines[] = '- ' . $label . ': set aside ' . $suggestedPlain
-                    . ' (≈ ' . ($availablePlain !== '' ? $availablePlain : '0') . ' free after bills)';
-            }
-        }
-    } else {
-        $textLines[] = '- Review your emergency fund dashboard for tailored repayment suggestions.';
-    }
-    if ($planSummaryPlain !== '') {
-        $textLines[] = $planSummaryPlain;
-    }
-    if ($planDetailPlain !== '') {
-        $textLines[] = $planDetailPlain;
-    }
-    if ($planShortfall > 0.01 && $amount > 0.0) {
-        $textLines[] = 'Shortfall to cover: ' . email_plaintext_amount($planShortfall, $statusCurrency) . '.';
-    }
-    foreach ($nextSteps as $step) {
-        $textLines[] = ' • ' . $step;
-    }
-    $textLines[] = '';
-    $textLines[] = 'Keep your emergency fund ready for the unexpected.';
-    $textLines[] = '— The MyMoneyMap team';
-
-    $subject = 'Emergency fund withdrawal: ' . $withdrawFormatted;
-
-    return send_app_email((string)$user['email'], $subject, $html, implode("\n", $textLines), [
+    return send_app_email((string)$user['email'], $subject, $html, $text, [
         'to_name' => $displayName,
     ]);
 }

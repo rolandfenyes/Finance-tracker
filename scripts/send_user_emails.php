@@ -17,7 +17,7 @@ if (!in_array($type, $validTypes, true)) {
 
 $requiresVerification = in_array($type, ['tips', 'weekly', 'monthly', 'yearly', 'ef-motivation'], true);
 
-$stmt = $pdo->query("SELECT id, email, full_name, email_verified_at, email_verification_token FROM users WHERE email IS NOT NULL AND email <> '' ORDER BY id");
+$stmt = $pdo->query("SELECT id, email, full_name, email_verified_at, email_verification_token, desired_language FROM users WHERE email IS NOT NULL AND email <> '' ORDER BY id");
 $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 if (!$users) {
@@ -41,6 +41,9 @@ foreach ($users as $user) {
     }
 
     $user['full_name_plain'] = $user['full_name'] ? pii_decrypt($user['full_name']) : '';
+    if (array_key_exists('desired_language', $user)) {
+        $user['desired_language_raw'] = $user['desired_language'];
+    }
 
     switch ($type) {
         case 'tips':
