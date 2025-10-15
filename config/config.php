@@ -13,12 +13,30 @@ return [
     'app' => [
         'name' => 'MyMoneyMap',
         'base_url' => '/', // if hosted in subfolder, e.g. '/moneymap/'
+        'url' => getenv('MM_APP_URL') ?: 'http://localhost:8080',
         'session_name' => 'moneymap_sess',
         'default_locale' => 'en',
         'locales' => [
             'en' => 'English',
             'hu' => 'Magyar',
             'es' => 'Español',
+        ],
+    ],
+    'mail' => [
+        'transport' => getenv('MM_MAIL_TRANSPORT') ?: 'log',
+        'from_email' => getenv('MM_MAIL_FROM_ADDRESS') ?: 'no-reply@mymoneymap.local',
+        'from_name' => getenv('MM_MAIL_FROM_NAME') ?: 'MyMoneyMap',
+        'reply_to' => getenv('MM_MAIL_REPLY_TO') ?: null,
+        'smtp' => [
+            'host' => getenv('MM_MAIL_SMTP_HOST') ?: '127.0.0.1',
+            'port' => (int)(getenv('MM_MAIL_SMTP_PORT') ?: 1025),
+            'username' => getenv('MM_MAIL_SMTP_USER') ?: null,
+            'password' => getenv('MM_MAIL_SMTP_PASS') ?: null,
+            'encryption' => getenv('MM_MAIL_SMTP_ENCRYPTION') ?: '', // '', 'tls', or 'ssl'
+            'timeout' => (int)(getenv('MM_MAIL_SMTP_TIMEOUT') ?: 15),
+        ],
+        'log' => [
+            'path' => getenv('MM_MAIL_LOG_PATH') ?: __DIR__ . '/../storage/logs/mail.log',
         ],
     ],
     'stocks' => [
