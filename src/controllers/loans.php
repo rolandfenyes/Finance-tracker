@@ -21,9 +21,11 @@ function loans_index(PDO $pdo){
   $q->execute([$u]);
   $rows = $q->fetchAll(PDO::FETCH_ASSOC);
 
-  // Sum of recorded principal payments for each loan (for users who DON’T confirm history)
+  // Sum of recorded components for each loan (used to reconcile against amortization)
   $sumStmt = $pdo->prepare("
-    SELECT COALESCE(SUM(principal_component),0) AS p
+    SELECT
+      COALESCE(SUM(principal_component), 0) AS principal_total,
+      COALESCE(SUM(interest_component), 0) AS interest_total
     FROM loan_payments
     WHERE loan_id = ?
   ");
@@ -58,6 +60,11 @@ function loans_index(PDO $pdo){
       $monthly_total = $PI + $insurance;
     }
 
+    $sumStmt->execute([(int)$l['id']]);
+    $components = $sumStmt->fetch(PDO::FETCH_ASSOC) ?: ['principal_total' => 0.0, 'interest_total' => 0.0];
+    $actualPrincipal = (float)$components['principal_total'];
+    $actualInterest  = (float)$components['interest_total'];
+
     if (!empty($l['history_confirmed'])) {
       // Compute expected position up to today with bank-like rules
       $am = amortization_to_date_precise(
@@ -74,13 +81,23 @@ function loans_index(PDO $pdo){
       $l['_principal_paid'] = $am['principal_paid'];
       $l['_interest_paid']  = $am['interest_paid'];
       $l['_est_balance']    = $am['balance'];
+
+      // If there are recorded payments, prefer the actual ledger figures.
+      if ($actualPrincipal > 0.0 || $actualInterest > 0.0) {
+        $l['_principal_paid'] = max($l['_principal_paid'], min($principal, $actualPrincipal));
+        $l['_interest_paid']  = max($l['_interest_paid'], $actualInterest);
+
+        $recordedBalance = $principal - $actualPrincipal;
+        if (isset($l['balance']) && $l['balance'] !== null) {
+          $recordedBalance = min($recordedBalance, (float)$l['balance']);
+        }
+        $l['_est_balance'] = max(0.0, min($l['_est_balance'], $recordedBalance));
+      }
     } else {
-      // Actual recorded principal only
-      $sumStmt->execute([(int)$l['id']]);
-      $actualP = (float)$sumStmt->fetchColumn(); // ← now correct
-      $l['_principal_paid'] = $actualP;
-      $l['_interest_paid']  = null;
-      $l['_est_balance']    = max(0.0, $principal - $actualP);
+      // Actual recorded payments drive progress when history is not confirmed.
+      $l['_principal_paid'] = $actualPrincipal;
+      $l['_interest_paid']  = $actualInterest > 0.0 ? $actualInterest : null;
+      $l['_est_balance']    = max(0.0, $principal - $actualPrincipal);
     }
 
     $l['_progress_pct'] = $principal > 0 ? max(0, min(100, ($l['_principal_paid'] / $principal) * 100)) : 0;
@@ -303,20 +320,83 @@ function loans_delete(PDO $pdo){ verify_csrf(); require_login(); $u=uid();
   $pdo->prepare('DELETE FROM loans WHERE id=? AND user_id=?')->execute([(int)$_POST['id'],$u]);
 }
 
-function loan_payment_add(PDO $pdo){ verify_csrf(); require_login(); $u=uid();
-  $loanId=(int)$_POST['loan_id'];
-  $amount=(float)$_POST['amount']; $interest=(float)($_POST['interest_component']??0); $principal=max(0,$amount-$interest);
-  $loanMeta = $pdo->prepare('SELECT name, balance, principal FROM loans WHERE id=? AND user_id=?');
-  $loanMeta->execute([$loanId,$u]);
+function loan_payment_add(PDO $pdo){
+  verify_csrf(); require_login(); $u = uid();
+
+  $loanId   = (int)($_POST['loan_id'] ?? 0);
+  $amount   = max(0.0, (float)($_POST['amount'] ?? 0));
+  $interest = max(0.0, (float)($_POST['interest_component'] ?? 0));
+  $paidOn   = $_POST['paid_on'] ?: date('Y-m-d');
+
+  if ($loanId <= 0 || $amount <= 0.0) {
+    $_SESSION['flash'] = 'Payment amount is required.';
+    redirect('/loans');
+    return;
+  }
+
+  if ($interest > $amount) { $interest = $amount; }
+  $principal = max(0.0, $amount - $interest);
+
+  $loanMeta = $pdo->prepare('
+    SELECT l.name, l.balance, l.principal, l.currency, l.scheduled_payment_id,
+           sp.category_id AS sched_category_id
+      FROM loans l
+      LEFT JOIN scheduled_payments sp
+             ON sp.id = l.scheduled_payment_id AND sp.user_id = l.user_id
+     WHERE l.id = ? AND l.user_id = ?
+  ');
+  $loanMeta->execute([$loanId, $u]);
   $loanRow = $loanMeta->fetch(PDO::FETCH_ASSOC);
   if (!$loanRow) {
     $_SESSION['flash'] = 'Loan not found.';
     redirect('/loans');
+    return;
   }
+
   $previousBalance = max(0.0, (float)($loanRow['balance'] ?? $loanRow['principal'] ?? 0.0));
-  $pdo->prepare('INSERT INTO loan_payments(loan_id,paid_on,amount,principal_component,interest_component,currency) VALUES(?,?,?,?,?,?)')
-      ->execute([$loanId, $_POST['paid_on'], $amount, $principal, $interest, $_POST['currency']??'HUF']);
-  $pdo->prepare('UPDATE loans SET balance = GREATEST(0,balance-?) WHERE id=? AND user_id=?')->execute([$principal,$loanId,$u]);
+  $currency = strtoupper(trim((string)($_POST['currency'] ?? '')));
+  if ($currency === '') {
+    $currency = strtoupper((string)($loanRow['currency'] ?? 'HUF'));
+  }
+
+  $categoryId = (int)($loanRow['sched_category_id'] ?? 0);
+  if ($categoryId <= 0) { $categoryId = null; }
+
+  $transactionId = null;
+
+  $pdo->beginTransaction();
+  try {
+    $loanName = trim((string)$loanRow['name']);
+    $note = $loanName !== '' ? ('Loan payment · ' . $loanName) : 'Loan payment';
+    $insTx = $pdo->prepare('INSERT INTO transactions(user_id,kind,category_id,amount,currency,occurred_on,note) VALUES(?,?,?,?,?,?,?) RETURNING id');
+    $insTx->execute([$u, 'spending', $categoryId, $amount, $currency, $paidOn, $note]);
+    $transactionId = (int)$insTx->fetchColumn();
+
+    $pdo->prepare('INSERT INTO loan_payments(loan_id,paid_on,amount,principal_component,interest_component,currency,transaction_id) VALUES(?,?,?,?,?,?,?)')
+        ->execute([$loanId, $paidOn, $amount, $principal, $interest, $currency, $transactionId ?: null]);
+
+    $pdo->prepare('UPDATE loans SET balance = GREATEST(0,balance-?) WHERE id=? AND user_id=?')
+        ->execute([$principal, $loanId, $u]);
+
+    $pdo->commit();
+  } catch (Throwable $e) {
+    $pdo->rollBack();
+    $_SESSION['flash'] = 'Could not record payment.';
+    redirect('/loans');
+    return;
+  }
+
+  if ($transactionId && $categoryId) {
+    try {
+      if (!function_exists('tx_maybe_send_cashflow_overspend')) {
+        require_once __DIR__ . '/transactions.php';
+      }
+      tx_maybe_send_cashflow_overspend($pdo, $u, $categoryId, $amount, $currency, $paidOn, null);
+    } catch (Throwable $mailError) {
+      error_log('Cashflow overspend email failed after loan payment insert for user ' . $u . ': ' . $mailError->getMessage());
+    }
+  }
+
   $_SESSION['flash'] = 'Payment recorded.';
   email_maybe_send_loan_completion($pdo, $u, $loanId, $previousBalance);
   redirect('/loans');
@@ -335,9 +415,12 @@ function loan_payment_update(PDO $pdo){ verify_csrf(); require_login(); $u = uid
   }
 
   $q = $pdo->prepare('SELECT lp.*, l.user_id, l.currency AS loan_currency, l.id AS loan_id,
-                         l.name AS loan_name, l.balance, l.principal
+                         l.name AS loan_name, l.balance, l.principal, l.scheduled_payment_id,
+                         sp.category_id AS sched_category_id
                         FROM loan_payments lp
                         JOIN loans l ON l.id = lp.loan_id
+                        LEFT JOIN scheduled_payments sp
+                               ON sp.id = l.scheduled_payment_id AND sp.user_id = l.user_id
                        WHERE lp.id=? AND l.user_id=?');
   $q->execute([$id,$u]);
   $row = $q->fetch(PDO::FETCH_ASSOC);
@@ -353,6 +436,20 @@ function loan_payment_update(PDO $pdo){ verify_csrf(); require_login(); $u = uid
   $principal = max(0.0, $amount - $interest);
 
   $previousBalance = max(0.0, (float)($row['balance'] ?? $row['principal'] ?? 0.0));
+  $transactionId = (int)($row['transaction_id'] ?? 0);
+
+  $previousTx = null;
+  if ($transactionId > 0) {
+    $prevStmt = $pdo->prepare('SELECT kind, category_id, amount, currency, occurred_on FROM transactions WHERE id=? AND user_id=?');
+    $prevStmt->execute([$transactionId, $u]);
+    $previousTx = $prevStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+  }
+
+  $categoryId = (int)($row['sched_category_id'] ?? 0);
+  if ($categoryId <= 0 && $previousTx) {
+    $categoryId = (int)($previousTx['category_id'] ?? 0);
+  }
+  if ($categoryId <= 0) { $categoryId = null; }
 
   $pdo->beginTransaction();
   try {
@@ -365,12 +462,42 @@ function loan_payment_update(PDO $pdo){ verify_csrf(); require_login(); $u = uid
                     WHERE id=? AND user_id=?')
         ->execute([(float)$row['principal_component'],$principal,(int)$row['loan_id'],$u]);
 
+    if ($transactionId > 0) {
+      $pdo->prepare('UPDATE transactions SET amount=?, currency=?, occurred_on=?, updated_at=NOW()
+                      WHERE id=? AND user_id=?')
+          ->execute([$amount, $currency, $paid_on, $transactionId, $u]);
+    } else {
+      $loanName = trim((string)$row['loan_name']);
+      $note = $loanName !== '' ? ('Loan payment · ' . $loanName) : 'Loan payment';
+      $insTx = $pdo->prepare('INSERT INTO transactions(user_id,kind,category_id,amount,currency,occurred_on,note) VALUES(?,?,?,?,?,?,?) RETURNING id');
+      $insTx->execute([$u, 'spending', $categoryId, $amount, $currency, $paid_on, $note]);
+      $transactionId = (int)$insTx->fetchColumn();
+      $pdo->prepare('UPDATE loan_payments SET transaction_id=? WHERE id=?')
+          ->execute([$transactionId, $id]);
+    }
+
     $pdo->commit();
     $_SESSION['flash'] = 'Payment updated.';
     email_maybe_send_loan_completion($pdo, $u, (int)$row['loan_id'], $previousBalance);
   } catch (Throwable $e) {
     $pdo->rollBack();
     $_SESSION['flash'] = 'Could not update payment.';
+    redirect('/loans');
+    return;
+  }
+
+  if ($transactionId && ($categoryId || ($previousTx && (int)($previousTx['category_id'] ?? 0) > 0))) {
+    $alertCategory = $categoryId ?: (int)($previousTx['category_id'] ?? 0);
+    if ($alertCategory > 0) {
+      try {
+        if (!function_exists('tx_maybe_send_cashflow_overspend')) {
+          require_once __DIR__ . '/transactions.php';
+        }
+        tx_maybe_send_cashflow_overspend($pdo, $u, $alertCategory, $amount, $currency, $paid_on, $previousTx);
+      } catch (Throwable $mailError) {
+        error_log('Cashflow overspend email failed after loan payment update for user ' . $u . ': ' . $mailError->getMessage());
+      }
+    }
   }
 
   redirect('/loans');
@@ -394,11 +521,16 @@ function loan_payment_delete(PDO $pdo){ verify_csrf(); require_login(); $u = uid
     $pdo->prepare('UPDATE loans SET balance = GREATEST(0, COALESCE(balance,0) + ?)
                     WHERE id=? AND user_id=?')
         ->execute([(float)$row['principal_component'], (int)$row['loan_id'], $u]);
+    if (!empty($row['transaction_id'])) {
+      $pdo->prepare('DELETE FROM transactions WHERE id=? AND user_id=?')->execute([(int)$row['transaction_id'], $u]);
+    }
     $pdo->commit();
     $_SESSION['flash'] = 'Payment removed.';
   } catch (Throwable $e) {
     $pdo->rollBack();
     $_SESSION['flash'] = 'Could not remove payment.';
+    redirect('/loans');
+    return;
   }
 
   redirect('/loans');
