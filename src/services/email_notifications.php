@@ -103,6 +103,15 @@ function email_template_base_tokens(): array
     ];
 }
 
+function email_translated_token(string $key, array $replace = [], bool $raw = false): array
+{
+    return [
+        'translate' => $key,
+        'replace' => $replace,
+        'raw' => $raw,
+    ];
+}
+
 function email_template_escape(string $value): string
 {
     $escaped = htmlspecialchars($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
@@ -1359,13 +1368,17 @@ function email_collect_budget_rows(PDO $pdo, int $userId, array $summary): array
         }
 
         if ($planned <= 0.0) {
-            $status = 'Track plan in app';
+            $status = email_translated_token('email.reports.budget.track_plan');
         } elseif ($diff > 0.01) {
-            $status = 'Under by ' . email_format_amount($diff, $currency);
+            $status = email_translated_token('email.reports.budget.under', [
+                'amount' => email_format_amount($diff, $currency),
+            ]);
         } elseif ($diff < -0.01) {
-            $status = 'Over by ' . email_format_amount(abs($diff), $currency);
+            $status = email_translated_token('email.reports.budget.over', [
+                'amount' => email_format_amount(abs($diff), $currency),
+            ]);
         } else {
-            $status = 'On target';
+            $status = email_translated_token('email.reports.budget.on_target');
         }
 
         $rows[] = [
@@ -1384,7 +1397,7 @@ function email_collect_budget_rows(PDO $pdo, int $userId, array $summary): array
                 'label' => $category['label'],
                 'planned' => '—',
                 'actual' => $category['amount_formatted'],
-                'status' => 'Review in dashboard',
+                'status' => email_translated_token('email.reports.budget.review_in_dashboard'),
                 'actual_value' => $category['amount'],
             ];
         }
@@ -2311,9 +2324,9 @@ function email_send_weekly_results(PDO $pdo, array $user, ?DateTimeImmutable $re
     $firstName = email_user_first_name($user);
     $currency = (string)$summary['currency'];
     $reportPeriod = email_format_period_label($start, $end);
-    $topCategory = $summary['top_category']['label'] ?? 'No spending recorded';
+    $topCategory = $summary['top_category']['label'] ?? email_translated_token('email.reports.no_spending');
     if (($summary['spending_total'] ?? 0.0) <= 0.0) {
-        $topCategory = 'No spending recorded';
+        $topCategory = email_translated_token('email.reports.no_spending');
     }
 
     $topCategories = email_prepare_top_categories($summary, 5);
@@ -2363,48 +2376,61 @@ function email_send_monthly_results(PDO $pdo, array $user, ?DateTimeImmutable $r
     $firstName = email_user_first_name($user);
     $currency = (string)$summary['currency'];
     $reportPeriod = email_format_period_label($start, $end);
-    $topCategory = $summary['top_category']['label'] ?? 'No spending recorded';
+    $topCategoryLabel = (string)($summary['top_category']['label'] ?? '');
+    $topCategory = $topCategoryLabel !== ''
+        ? $topCategoryLabel
+        : email_translated_token('email.reports.no_spending');
     $topCategoryAmount = $summary['top_category']['amount'] ?? 0.0;
     if (($summary['spending_total'] ?? 0.0) <= 0.0) {
-        $topCategory = 'No spending recorded';
+        $topCategory = email_translated_token('email.reports.no_spending');
         $topCategoryAmount = 0.0;
     }
 
     $milestones = [
         $summary['transaction_count'] > 0
-            ? $summary['transaction_count'] . ' transactions captured'
-            : 'Start logging transactions to unlock monthly insights',
+            ? email_translated_token('email.reports.monthly.milestone.transactions', [
+                'count' => $summary['transaction_count'],
+            ])
+            : email_translated_token('email.reports.monthly.milestone.log_transactions'),
         $summary['income_count'] > 0
-            ? $summary['income_count'] . ' income entries totalling ' . email_format_amount($summary['income_total'], $currency)
-            : 'No income recorded this month',
+            ? email_translated_token('email.reports.monthly.milestone.income', [
+                'count' => $summary['income_count'],
+                'total' => email_format_amount($summary['income_total'], $currency),
+            ])
+            : email_translated_token('email.reports.monthly.milestone.no_income'),
         $topCategoryAmount > 0
-            ? $topCategory . ' led spending at ' . email_format_amount($topCategoryAmount, $currency)
-            : 'Spending insights will appear once expenses are tracked',
+            ? email_translated_token('email.reports.monthly.milestone.top_category', [
+                'category' => $topCategoryLabel !== '' ? $topCategoryLabel : '—',
+                'amount' => email_format_amount($topCategoryAmount, $currency),
+            ])
+            : email_translated_token('email.reports.monthly.milestone.no_spending'),
     ];
 
     $goal = email_fetch_primary_goal($pdo, (int)$user['id']);
     if ($goal) {
         if (($goal['progress_percent'] ?? null) === null) {
-            $savingsProgress = 'Goal ready to track';
+            $savingsProgress = email_translated_token('email.reports.goal.ready');
         } elseif ($goal['progress_percent'] >= 100.0) {
-            $savingsProgress = 'Goal completed!';
+            $savingsProgress = email_translated_token('email.reports.goal.completed');
         } else {
-            $savingsProgress = round((float)$goal['progress_percent']) . '% funded';
+            $savingsProgress = email_translated_token('email.reports.goal.percent_funded', [
+                'percent' => round((float)$goal['progress_percent']),
+            ]);
         }
         $savingsGoalName = $goal['title'];
     } else {
-        $savingsProgress = 'Goal tracking ready';
-        $savingsGoalName = 'your next goal';
+        $savingsProgress = email_translated_token('email.reports.goal.tracking_ready');
+        $savingsGoalName = email_translated_token('email.reports.goal.next_name');
     }
 
     $budgets = email_collect_budget_rows($pdo, (int)$user['id'], $summary);
     $focus = email_collect_financial_focus($pdo, (int)$user['id'], $currency);
-    $emergencyStatus = $focus['emergency']['status'] ?? 'Emergency fund ready.';
-    $emergencyNote = $focus['emergency']['note'] ?? 'Track your emergency fund progress in the app.';
-    $goalsStatus = $focus['goals']['status'] ?? 'Goals overview available in the app.';
-    $goalsNote = $focus['goals']['note'] ?? 'Review your goals to stay on course.';
-    $loansStatus = $focus['loans']['status'] ?? 'Loan overview available in the app.';
-    $loansNote = $focus['loans']['note'] ?? 'Review your payoff plan for more detail.';
+    $emergencyStatus = $focus['emergency']['status'] ?? email_translated_token('email.reports.focus.emergency_status');
+    $emergencyNote = $focus['emergency']['note'] ?? email_translated_token('email.reports.focus.emergency_note');
+    $goalsStatus = $focus['goals']['status'] ?? email_translated_token('email.reports.focus.goals_status');
+    $goalsNote = $focus['goals']['note'] ?? email_translated_token('email.reports.focus.goals_note');
+    $loansStatus = $focus['loans']['status'] ?? email_translated_token('email.reports.focus.loans_status');
+    $loansNote = $focus['loans']['note'] ?? email_translated_token('email.reports.focus.loans_note');
 
     $tokens = [
         'user_first_name' => $firstName,
@@ -2413,9 +2439,9 @@ function email_send_monthly_results(PDO $pdo, array $user, ?DateTimeImmutable $r
         'total_income' => email_format_amount($summary['income_total'], $currency),
         'net_change' => email_format_amount($summary['net'], $currency),
         'top_category' => $topCategory,
-        'milestone_1' => $milestones[0] ?? 'Keep building your routine',
-        'milestone_2' => $milestones[1] ?? 'Review your cashflow regularly',
-        'milestone_3' => $milestones[2] ?? 'Celebrate progress and adjust goals',
+        'milestone_1' => $milestones[0] ?? email_translated_token('email.reports.monthly.milestone.keep_routine'),
+        'milestone_2' => $milestones[1] ?? email_translated_token('email.reports.monthly.milestone.review_cashflow'),
+        'milestone_3' => $milestones[2] ?? email_translated_token('email.reports.monthly.milestone.celebrate'),
         'savings_progress' => $savingsProgress,
         'savings_goal_name' => $savingsGoalName,
         'ef_status' => $emergencyStatus,
