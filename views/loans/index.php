@@ -175,17 +175,24 @@
         $bal   = (float)($l['_est_balance'] ?? ($l['balance'] ?? 0));
         $paid  = (float)($l['_principal_paid'] ?? max(0, $prin - $bal));
         $pct   = (float)($l['_progress_pct'] ?? ($prin>0?($paid/$prin*100):0));
+        $isPaidOff = !empty($l['_is_paid_off']);
         $months = 0;
         if (!empty($l['start_date']) && !empty($l['end_date'])) {
           $a = new DateTime($l['start_date']); $b = new DateTime($l['end_date']);
           $d = $a->diff($b); $months = $d->y*12 + $d->m + ($d->d>0?1:0);
         }
       ?>
-        <tr class="border-b align-top">
+        <tr class="border-b align-top <?= $isPaidOff ? 'bg-emerald-50/60 dark:bg-emerald-500/5' : '' ?>">
           <td class="py-3 pr-3">
             <div class="font-medium flex items-center gap-2">
               <?= htmlspecialchars($l['name']) ?>
               <span class="text-xs text-gray-500"><?= __('· APR :rate%', ['rate' => (float)$l['interest_rate']]) ?></span>
+              <?php if ($isPaidOff): ?>
+                <span class="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-100/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
+                  <span aria-hidden="true">🎉</span>
+                  <?= __('Paid off') ?>
+                </span>
+              <?php endif; ?>
             </div>
             <div class="text-xs text-gray-500">
               <?= __(':start → :end', [
@@ -213,6 +220,15 @@
               </div>
               <?php if (!empty($l['history_confirmed']) && $l['_interest_paid'] !== null): ?>
                 <div class="text-[11px] text-gray-500"><?= __('Estimated interest so far: :amount', ['amount' => moneyfmt($l['_interest_paid'],$cur)]) ?></div>
+              <?php endif; ?>
+              <?php if ($isPaidOff): ?>
+                <div class="mt-3 flex items-start gap-2 rounded-xl border border-emerald-200/80 bg-emerald-50/80 px-3 py-2 text-xs text-emerald-700 shadow-sm dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
+                  <span aria-hidden="true" class="text-base leading-none">✅</span>
+                  <div class="space-y-0.5">
+                    <div class="text-sm font-semibold text-emerald-700 dark:text-emerald-100"><?= __('Loan complete!') ?></div>
+                    <div><?= __('Congrats on clearing this debt.') ?></div>
+                  </div>
+                </div>
               <?php endif; ?>
             </div>
           </td>
@@ -245,11 +261,18 @@
                 <i data-lucide="history" class="h-4 w-4"></i>
                 <span class="sr-only"><?= __('View history') ?></span>
               </button>
-              <button type="button"
-                      class="btn btn-primary !px-3"
-                      data-open="#loan-pay-<?= (int)$l['id'] ?>">
-                <?= __('Record Payment') ?>
-              </button>
+              <?php if ($isPaidOff): ?>
+                <span class="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-100/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
+                  <span aria-hidden="true">🌟</span>
+                  <?= __('Finished') ?>
+                </span>
+              <?php else: ?>
+                <button type="button"
+                        class="btn btn-primary !px-3"
+                        data-open="#loan-pay-<?= (int)$l['id'] ?>">
+                  <?= __('Record Payment') ?>
+                </button>
+              <?php endif; ?>
               <button type="button"
                       class="btn !px-3"
                       data-open="#loan-edit-<?= (int)$l['id'] ?>">
@@ -273,8 +296,9 @@
       $bal   = (float)($l['_est_balance'] ?? ($l['balance'] ?? 0));
       $paid  = (float)($l['_principal_paid'] ?? max(0, $prin - $bal));
       $pct   = (float)($l['_progress_pct'] ?? ($prin>0?($paid/$prin*100):0));
+      $isPaidOff = !empty($l['_is_paid_off']);
     ?>
-      <div class="panel p-4">
+      <div class="panel p-4 <?= $isPaidOff ? 'border-emerald-300/60 bg-emerald-50/60 dark:border-emerald-500/40 dark:bg-emerald-500/10' : '' ?>">
         <div class="flex items-center justify-between gap-3">
           <div>
             <div class="font-medium"><?= htmlspecialchars($l['name']) ?></div>
@@ -312,6 +336,13 @@
           </div>
         </div>
 
+        <?php if ($isPaidOff): ?>
+          <div class="mt-3 rounded-xl border border-emerald-200/80 bg-emerald-50/90 px-3 py-2 text-xs text-emerald-700 shadow-sm dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
+            <div class="font-semibold text-sm text-emerald-700 dark:text-emerald-100"><?= __('Loan complete!') ?></div>
+            <div><?= __('Congrats on clearing this debt.') ?></div>
+          </div>
+        <?php endif; ?>
+
         <div class="mt-3 text-xs text-gray-600">
           <?php if (!empty($l['scheduled_payment_id'])): ?>
             <div class="flex flex-wrap items-center gap-2">
@@ -330,7 +361,14 @@
         </div>
 
         <div class="mt-3 flex flex-col gap-2">
-          <button type="button" class="btn btn-primary" data-open="#loan-pay-<?= (int)$l['id'] ?>"><?= __('Record Payment') ?></button>
+          <?php if ($isPaidOff): ?>
+            <span class="inline-flex items-center justify-center gap-2 rounded-full border border-emerald-300 bg-emerald-100/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
+              <span aria-hidden="true">🌟</span>
+              <?= __('Finished') ?>
+            </span>
+          <?php else: ?>
+            <button type="button" class="btn btn-primary" data-open="#loan-pay-<?= (int)$l['id'] ?>"><?= __('Record Payment') ?></button>
+          <?php endif; ?>
         </div>
       </div>
     <?php endforeach; ?>

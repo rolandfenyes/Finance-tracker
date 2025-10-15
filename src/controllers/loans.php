@@ -102,6 +102,7 @@ function loans_index(PDO $pdo){
 
     $l['_progress_pct'] = $principal > 0 ? max(0, min(100, ($l['_principal_paid'] / $principal) * 100)) : 0;
     $l['_currency']     = $currency;
+    $l['_is_paid_off']  = $l['_progress_pct'] >= 99.9 && $l['_est_balance'] <= 0.01;
   }
   unset($l);
 
