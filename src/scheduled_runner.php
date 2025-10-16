@@ -3,6 +3,7 @@
 
 require_once __DIR__ . '/recurrence.php';
 require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/services/loan_completion.php';
 
 /**
  * Compute the next occurrence of a schedule after a given date.
@@ -101,7 +102,7 @@ function scheduled_apply_loan(PDO $pdo, array $schedule, string $dueDate): void 
   }
 
   $u = (int)($schedule['user_id'] ?? 0);
-  $loanStmt = $pdo->prepare('SELECT id, user_id, currency FROM loans WHERE id=? AND user_id=?');
+  $loanStmt = $pdo->prepare('SELECT id, user_id, currency, name, balance FROM loans WHERE id=? AND user_id=?');
   $loanStmt->execute([$loanId, $u]);
   $loan = $loanStmt->fetch(PDO::FETCH_ASSOC);
   if (!$loan) {
@@ -118,8 +119,21 @@ function scheduled_apply_loan(PDO $pdo, array $schedule, string $dueDate): void 
     $currency = $loan['currency'] ?: 'HUF';
   }
 
-  $ins = $pdo->prepare('INSERT INTO loan_payments(loan_id,paid_on,amount,principal_component,interest_component,currency) VALUES (?,?,?,?,?,?)');
-  $ins->execute([$loanId, $dueDate, $amount, $amount, 0.0, $currency]);
+  $categoryId = (int)($schedule['category_id'] ?? 0);
+  if ($categoryId <= 0) { $categoryId = null; }
+
+  $transactionId = null;
+  $note = 'Loan payment · ' . trim((string)($loan['name'] ?? ''));
+  if ($note === 'Loan payment ·') {
+    $note = 'Loan payment';
+  }
+
+  $tx = $pdo->prepare('INSERT INTO transactions(user_id,kind,category_id,amount,currency,occurred_on,note) VALUES(?,?,?,?,?,?,?) RETURNING id');
+  $tx->execute([$u, 'spending', $categoryId, $amount, $currency, $dueDate, $note]);
+  $transactionId = (int)$tx->fetchColumn();
+
+  $ins = $pdo->prepare('INSERT INTO loan_payments(loan_id,paid_on,amount,principal_component,interest_component,currency,transaction_id) VALUES (?,?,?,?,?,?,?)');
+  $ins->execute([$loanId, $dueDate, $amount, $amount, 0.0, $currency, $transactionId ?: null]);
 
   $loanCurrency = $loan['currency'] ?: $currency;
   if ($currency === $loanCurrency) {
@@ -131,7 +145,11 @@ function scheduled_apply_loan(PDO $pdo, array $schedule, string $dueDate): void 
     $principalDelta = is_numeric($converted) ? (float)$converted : $amount;
   }
 
+  $previousBalance = max(0.0, (float)($loan['balance'] ?? 0.0));
+
   $pdo->prepare('UPDATE loans SET balance = GREATEST(0, balance - ?) WHERE id=? AND user_id=?')->execute([$principalDelta, $loanId, $u]);
+
+  loan_maybe_handle_completion($pdo, $u, $loanId, $previousBalance);
 }
 
 /**
