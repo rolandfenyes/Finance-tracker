@@ -9,10 +9,6 @@ require_once __DIR__ . '/email_notifications.php';
  */
 function loan_maybe_handle_completion(PDO $pdo, int $userId, int $loanId, float $previousBalance): void
 {
-    if ($previousBalance <= 0.01) {
-        return;
-    }
-
     $loanStmt = $pdo->prepare('SELECT balance, scheduled_payment_id, finished_at FROM loans WHERE id = ? AND user_id = ?');
     $loanStmt->execute([$loanId, $userId]);
     $loan = $loanStmt->fetch(PDO::FETCH_ASSOC);
@@ -21,13 +17,12 @@ function loan_maybe_handle_completion(PDO $pdo, int $userId, int $loanId, float 
         return;
     }
 
-    if (!empty($loan['finished_at'])) {
-        // Already marked finished, nothing else to do.
-        return;
-    }
-
     $currentBalance = max(0.0, (float)($loan['balance'] ?? 0.0));
-    if ($currentBalance > 0.01) {
+    $finishedAt = !empty($loan['finished_at']);
+
+    // Only take action when the balance is effectively paid off or the loan was already
+    // flagged as finished previously.
+    if ($currentBalance > 0.01 && !$finishedAt) {
         return;
     }
 
@@ -37,8 +32,10 @@ function loan_maybe_handle_completion(PDO $pdo, int $userId, int $loanId, float 
             ->execute([$scheduleId, $userId]);
     }
 
-    $pdo->prepare('UPDATE loans SET finished_at = COALESCE(finished_at, CURRENT_TIMESTAMP) WHERE id = ? AND user_id = ?')
-        ->execute([$loanId, $userId]);
+    if (!$finishedAt && $currentBalance <= 0.01) {
+        $pdo->prepare('UPDATE loans SET finished_at = COALESCE(finished_at, CURRENT_TIMESTAMP) WHERE id = ? AND user_id = ?')
+            ->execute([$loanId, $userId]);
 
-    email_maybe_send_loan_completion($pdo, $userId, $loanId, $previousBalance);
+        email_maybe_send_loan_completion($pdo, $userId, $loanId, $previousBalance);
+    }
 }
