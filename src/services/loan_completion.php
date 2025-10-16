@@ -13,11 +13,16 @@ function loan_maybe_handle_completion(PDO $pdo, int $userId, int $loanId, float 
         return;
     }
 
-    $loanStmt = $pdo->prepare('SELECT balance, scheduled_payment_id FROM loans WHERE id = ? AND user_id = ?');
+    $loanStmt = $pdo->prepare('SELECT balance, scheduled_payment_id, finished_at FROM loans WHERE id = ? AND user_id = ?');
     $loanStmt->execute([$loanId, $userId]);
     $loan = $loanStmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$loan) {
+        return;
+    }
+
+    if (!empty($loan['finished_at'])) {
+        // Already marked finished, nothing else to do.
         return;
     }
 
@@ -31,6 +36,9 @@ function loan_maybe_handle_completion(PDO $pdo, int $userId, int $loanId, float 
         $pdo->prepare('UPDATE scheduled_payments SET next_due = NULL WHERE id = ? AND user_id = ?')
             ->execute([$scheduleId, $userId]);
     }
+
+    $pdo->prepare('UPDATE loans SET finished_at = COALESCE(finished_at, CURRENT_TIMESTAMP) WHERE id = ? AND user_id = ?')
+        ->execute([$loanId, $userId]);
 
     email_maybe_send_loan_completion($pdo, $userId, $loanId, $previousBalance);
 }

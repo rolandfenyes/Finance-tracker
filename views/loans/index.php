@@ -1,4 +1,9 @@
-<?php $loanPayments = $loanPayments ?? []; ?>
+<?php
+$loanPayments = $loanPayments ?? [];
+$activeLoans = $activeLoans ?? [];
+$finishedLoans = $finishedLoans ?? [];
+$allLoans = $allLoans ?? array_merge($activeLoans, $finishedLoans);
+?>
 
 <section class="card">
   <h1 class="text-xl font-semibold"><?= __('Loans') ?></h1>
@@ -169,7 +174,7 @@
         </tr>
       </thead>
       <tbody>
-      <?php foreach($rows as $l):
+      <?php foreach($activeLoans as $l):
         $cur   = $l['_currency'] ?: ($l['currency'] ?: 'HUF');
         $prin  = (float)($l['principal'] ?? 0);
         $bal   = (float)($l['_est_balance'] ?? ($l['balance'] ?? 0));
@@ -281,7 +286,7 @@
             </div>
           </td>
         </tr>
-      <?php endforeach; if (!count($rows)): ?>
+      <?php endforeach; if (!count($activeLoans)): ?>
         <tr><td colspan="4" class="py-6 text-center text-sm text-gray-500"><?= __('No loans yet.') ?></td></tr>
       <?php endif; ?>
       </tbody>
@@ -290,7 +295,7 @@
 
   <!-- Mobile cards -->
   <div class="md:hidden space-y-3">
-    <?php foreach($rows as $l):
+    <?php foreach($activeLoans as $l):
       $cur   = $l['_currency'] ?: ($l['currency'] ?: 'HUF');
       $prin  = (float)($l['principal'] ?? 0);
       $bal   = (float)($l['_est_balance'] ?? ($l['balance'] ?? 0));
@@ -375,16 +380,188 @@
   </div>
 </section>
 
-<?php foreach($rows as $l):
+<?php if (count($finishedLoans)): ?>
+<section class="mt-6 card">
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="font-semibold"><?= __('Finished loans') ?></h2>
+  </div>
+  <p class="text-sm text-gray-500"><?= __('These loans have been paid off and are kept for history. Payments and loan details are locked.') ?></p>
+
+  <div class="hidden md:block overflow-x-auto mt-4">
+    <table class="table-glass min-w-full text-sm">
+      <thead>
+        <tr class="text-left border-b">
+          <th class="py-2 pr-3 w-[38%]"><?= __('Loan') ?></th>
+          <th class="py-2 pr-3 w-[18%]"><?= __('Balance') ?></th>
+          <th class="py-2 pr-3 w-[24%]"><?= __('Schedule') ?></th>
+          <th class="py-2 pr-3 w-[20%] text-right"><?= __('Actions') ?></th>
+        </tr>
+      </thead>
+      <tbody>
+      <?php foreach($finishedLoans as $l):
+        $cur   = $l['_currency'] ?: ($l['currency'] ?: 'HUF');
+        $prin  = (float)($l['principal'] ?? 0);
+        $bal   = 0.0;
+        $paid  = (float)($l['_principal_paid'] ?? $prin);
+        $pct   = 100.0;
+        $finishedAt = $l['finished_at'] ?? null;
+      ?>
+        <tr class="border-b align-top bg-emerald-50/50 dark:bg-emerald-500/5">
+          <td class="py-3 pr-3">
+            <div class="font-medium flex items-center gap-2">
+              <?= htmlspecialchars($l['name']) ?>
+              <span class="text-xs text-gray-500"><?= __('· APR :rate%', ['rate' => (float)$l['interest_rate']]) ?></span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-100/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
+                <span aria-hidden="true">🎉</span>
+                <?= __('Paid off') ?>
+              </span>
+            </div>
+            <div class="text-xs text-gray-500">
+              <?= __(':start → :end', [
+                'start' => htmlspecialchars($l['start_date']),
+                'end' => htmlspecialchars($l['end_date'] ?? '—'),
+              ]) ?>
+              <?php if ($finishedAt): ?>
+                · <?= __('Finished on :date', ['date' => htmlspecialchars(date('Y-m-d', strtotime($finishedAt)))]) ?>
+              <?php endif; ?>
+            </div>
+
+            <div class="mt-2">
+              <div class="h-2 bg-brand-100/60 rounded-full">
+                <div class="h-2 bg-brand-500 rounded-full" style="width: 100%"></div>
+              </div>
+              <div class="mt-1 text-xs text-gray-600">
+                <?= __(':paid paid of :total (:percent%)', [
+                  'paid' => moneyfmt($paid,$cur),
+                  'total' => moneyfmt($prin,$cur),
+                  'percent' => number_format($pct,1),
+                ]) ?>
+                <br> <?= __('Est. balance :amount', ['amount' => moneyfmt($bal,$cur)]) ?>
+              </div>
+              <div class="mt-3 flex items-start gap-2 rounded-xl border border-emerald-200/80 bg-emerald-50/80 px-3 py-2 text-xs text-emerald-700 shadow-sm dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
+                <span aria-hidden="true" class="text-base leading-none">✅</span>
+                <div class="space-y-0.5">
+                  <div class="text-sm font-semibold text-emerald-700 dark:text-emerald-100"><?= __('Loan complete!') ?></div>
+                  <div><?= __('Congrats on clearing this debt.') ?></div>
+                </div>
+              </div>
+            </div>
+          </td>
+
+          <td class="py-3 pr-3 whitespace-nowrap align-middle">
+            <div class="text-sm text-gray-500"><?= __('Balance') ?></div>
+            <div class="font-semibold"><?= moneyfmt($bal, $cur) ?></div>
+          </td>
+
+          <td class="py-3 pr-3 align-middle">
+            <?php if (!empty($l['scheduled_payment_id'])): ?>
+              <div class="flex items-center gap-2">
+                <span class="chip"> <?= htmlspecialchars($l['sched_title']) ?> </span>
+              </div>
+              <div class="text-xs text-gray-500 mt-1"><?= __('Finished') ?></div>
+            <?php else: ?>
+              <div class="text-xs text-gray-500"><?= __('No schedule') ?></div>
+            <?php endif; ?>
+          </td>
+
+          <td class="py-3 pr-3 text-right align-middle">
+            <div class="flex justify-end gap-2">
+              <button class="icon-action" data-open="#loan-history-<?= (int)$l['id'] ?>" title="<?= __('View history') ?>">
+                <i data-lucide="history" class="h-4 w-4"></i>
+                <span class="sr-only"><?= __('View history') ?></span>
+              </button>
+              <span class="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-100/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
+                <span aria-hidden="true">🌟</span>
+                <?= __('Finished') ?>
+              </span>
+            </div>
+          </td>
+        </tr>
+      <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="md:hidden space-y-3 mt-4">
+    <?php foreach($finishedLoans as $l):
+      $cur   = $l['_currency'] ?: ($l['currency'] ?: 'HUF');
+      $prin  = (float)($l['principal'] ?? 0);
+      $paid  = (float)($l['_principal_paid'] ?? $prin);
+      $finishedAt = $l['finished_at'] ?? null;
+    ?>
+      <div class="panel p-4 border-emerald-300/60 bg-emerald-50/60 dark:border-emerald-500/40 dark:bg-emerald-500/10">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <div class="font-medium"><?= htmlspecialchars($l['name']) ?></div>
+            <div class="text-xs text-gray-500"><?= __('APR :rate%', ['rate' => (float)$l['interest_rate']]) ?></div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" class="icon-action" data-open="#loan-history-<?= (int)$l['id'] ?>" title="<?= __('View history') ?>">
+              <i data-lucide="history" class="h-4 w-4"></i>
+              <span class="sr-only"><?= __('View history') ?></span>
+            </button>
+          </div>
+        </div>
+
+        <div class="mt-2 text-xs text-gray-500">
+          <?= __(':start → :end', [
+            'start' => htmlspecialchars($l['start_date']),
+            'end' => htmlspecialchars($l['end_date'] ?? '—'),
+          ]) ?>
+          <?php if ($finishedAt): ?>
+            · <?= __('Finished :date', ['date' => htmlspecialchars(date('Y-m-d', strtotime($finishedAt)))]) ?>
+          <?php endif; ?>
+        </div>
+
+        <div class="mt-3">
+          <div class="h-2 bg-brand-100/60 rounded-full">
+            <div class="h-2 bg-brand-500 rounded-full" style="width: 100%"></div>
+          </div>
+          <div class="mt-1 text-xs text-gray-600">
+            <?= moneyfmt($paid,$cur) ?> / <?= moneyfmt($prin,$cur) ?>
+            <br> <?= __('Balance :amount', ['amount' => moneyfmt(0,$cur)]) ?>
+          </div>
+        </div>
+
+        <div class="mt-3 rounded-xl border border-emerald-200/80 bg-emerald-50/90 px-3 py-2 text-xs text-emerald-700 shadow-sm dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
+          <div class="font-semibold text-sm text-emerald-700 dark:text-emerald-100"><?= __('Loan complete!') ?></div>
+          <div><?= __('Congrats on clearing this debt.') ?></div>
+        </div>
+
+        <div class="mt-3 text-xs text-gray-600">
+          <?php if (!empty($l['scheduled_payment_id'])): ?>
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="chip"><?= htmlspecialchars($l['sched_title']) ?></span>
+              <span class="text-gray-500"><?= __('Finished') ?></span>
+            </div>
+          <?php else: ?>
+            <div class="text-gray-500"><?= __('No schedule') ?></div>
+          <?php endif; ?>
+        </div>
+
+        <div class="mt-3 flex flex-col gap-2">
+          <span class="inline-flex items-center justify-center gap-2 rounded-full border border-emerald-300 bg-emerald-100/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
+            <span aria-hidden="true">🌟</span>
+            <?= __('Finished') ?>
+          </span>
+        </div>
+      </div>
+    <?php endforeach; ?>
+  </div>
+</section>
+<?php endif; ?>
+
+<?php foreach($allLoans as $l):
   $curList = $userCurrencies ?? [['code'=>'HUF','is_main'=>true]];
   $loanCurrency = $l['_currency'] ?: ($l['currency'] ?: 'HUF');
   $loanTxList = $loanPayments[(int)$l['id']] ?? [];
+  $loanLocked = !empty($l['_is_locked']);
 ?>
+<?php if (!$loanLocked): ?>
 <div id="loan-edit-<?= (int)$l['id'] ?>" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="loan-edit-title-<?= (int)$l['id'] ?>">
   <div class="modal-backdrop" data-close></div>
 
   <div class="modal-panel overflow-hidden">
-    <!-- Header -->
     <div class="modal-header">
       <h3 id="loan-edit-title-<?= (int)$l['id'] ?>" class="font-semibold"><?= __('Edit loan') ?></h3>
       <button type="button" class="icon-btn" aria-label="<?= __('Close') ?>" data-close>
@@ -392,13 +569,11 @@
       </button>
     </div>
 
-    <!-- Body -->
     <div class="modal-body flex flex-col gap-6">
       <form method="post" action="/loans/edit" id="loan-form-<?= (int)$l['id'] ?>" class="grid gap-4 md:grid-cols-12">
         <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
         <input type="hidden" name="id" value="<?= (int)$l['id'] ?>" />
 
-      <!-- Left: details -->
       <div class="md:col-span-7 space-y-3">
         <div class="grid sm:grid-cols-12 gap-3">
           <div class="field sm:col-span-6">
@@ -458,14 +633,11 @@
         </div>
       </div>
 
-      <!-- Right: schedule -->
-      <!-- Right: schedule (Goals-style) -->
       <div class="md:col-span-5 grid gap-4">
 
         <h4 class="font-semibold"><?= __('Repayment schedule') ?></h4>
 
         <?php if (!empty($l['scheduled_payment_id'])): ?>
-          <!-- Linked card -->
           <div class="rounded-xl border p-3 bg-gray-50" id="loan-linked-card-<?= (int)$l['id'] ?>">
             <div class="flex items-start justify-between gap-3">
               <div>
@@ -482,7 +654,6 @@
                   <?php endif; ?>
                 </div>
               </div>
-              <!-- Unlink -->
               <form method="post" action="/loans/edit" class="shrink-0" id="loan-unlink-form-<?= (int)$l['id'] ?>">
                 <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                 <input type="hidden" name="id" value="<?= (int)$l['id'] ?>" />
@@ -492,9 +663,7 @@
             </div>
           </div>
 
-          <!-- Hidden containers that will show after unlink (JS will reveal immediately; server will also refresh) -->
           <div class="hidden" id="loan-link-wrap-<?= (int)$l['id'] ?>">
-            <!-- Link existing schedule -->
             <form method="post" action="/loans/edit" class="grid gap-2">
               <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
               <input type="hidden" name="id" value="<?= (int)$l['id'] ?>" />
@@ -515,7 +684,6 @@
               <div class="h-px flex-1 bg-gray-200"></div><span><?= __('or') ?></span><div class="h-px flex-1 bg-gray-200"></div>
             </div>
 
-            <!-- Create schedule -->
             <form method="post" action="/loans/edit" class="grid sm:grid-cols-12 gap-3">
               <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
               <input type="hidden" name="id" value="<?= (int)$l['id'] ?>" />
@@ -550,7 +718,6 @@
           </div>
 
         <?php else: ?>
-          <!-- No linked schedule: show link + create immediately -->
           <form method="post" action="/loans/edit" class="grid gap-2">
             <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
             <input type="hidden" name="id" value="<?= (int)$l['id'] ?>" />
@@ -703,6 +870,7 @@
     </div>
   </div>
 </div>
+<?php endif; ?>
 <div id="loan-history-<?= (int)$l['id'] ?>" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="loan-history-title-<?= (int)$l['id'] ?>">
   <div class="modal-backdrop" data-close></div>
 
@@ -723,7 +891,7 @@
                 <th class="py-2 pr-3"><?= __('Date') ?></th>
                 <th class="py-2 pr-3"><?= __('Amount') ?></th>
                 <th class="py-2 pr-3"><?= __('Breakdown') ?></th>
-                <th class="py-2 pr-0 text-right"><?= __('Actions') ?></th>
+                <th class="py-2 pr-0 text-right"><?= $loanLocked ? __('Status') : __('Actions') ?></th>
               </tr>
             </thead>
             <tbody>
@@ -741,14 +909,21 @@
                   <?= __('Interest: :amount', ['amount' => moneyfmt((float)$tx['interest_component'], $txCur)]) ?>
                 </td>
                 <td class="py-2 pr-0 align-middle text-right">
-                  <div class="flex justify-end gap-2">
-                    <button type="button" class="btn !px-3" data-open="#loan-payment-edit-<?= $txId ?>"><?= __('Edit') ?></button>
-                    <form method="post" action="/loans/payment/delete" onsubmit="return confirm('<?= __('Delete this payment?') ?>');">
-                      <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-                      <input type="hidden" name="id" value="<?= $txId ?>" />
-                      <button class="btn btn-danger !px-3" type="submit"><?= __('Delete') ?></button>
-                    </form>
-                  </div>
+                  <?php if ($loanLocked): ?>
+                    <span class="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
+                      <span aria-hidden="true">🔒</span>
+                      <?= __('Locked') ?>
+                    </span>
+                  <?php else: ?>
+                    <div class="flex justify-end gap-2">
+                      <button type="button" class="btn !px-3" data-open="#loan-payment-edit-<?= $txId ?>"><?= __('Edit') ?></button>
+                      <form method="post" action="/loans/payment/delete" onsubmit="return confirm('<?= __('Delete this payment?') ?>');">
+                        <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+                        <input type="hidden" name="id" value="<?= $txId ?>" />
+                        <button class="btn btn-danger !px-3" type="submit"><?= __('Delete') ?></button>
+                      </form>
+                    </div>
+                  <?php endif; ?>
                 </td>
               </tr>
             <?php endforeach; ?>
@@ -769,9 +944,10 @@
 </div>
 <?php endforeach; ?>
 
-<?php foreach($rows as $l):
+<?php foreach($allLoans as $l):
   $loanCurrency = $l['_currency'] ?: ($l['currency'] ?: 'HUF');
   $loanTxList = $loanPayments[(int)$l['id']] ?? [];
+  if (!empty($l['_is_locked'])) { continue; }
 ?>
   <?php foreach ($loanTxList as $tx): $txId=(int)$tx['id']; $txCur = $tx['currency'] ?: $loanCurrency; ?>
     <div id="loan-payment-edit-<?= $txId ?>" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="loan-payment-edit-title-<?= $txId ?>">

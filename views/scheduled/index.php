@@ -1,3 +1,9 @@
+<?php
+$activeSchedules = $activeSchedules ?? [];
+$finishedSchedules = $finishedSchedules ?? [];
+$allSchedules = $allSchedules ?? array_merge($activeSchedules, $finishedSchedules);
+?>
+
 <section class="card">
   <h1 class="text-xl font-semibold"><?= __('Scheduled Payments') ?></h1>
   <p class="text-sm text-gray-500"><?= __('Set up recurring payments.') ?></p>
@@ -136,6 +142,93 @@
   </details>
 </section>
 
+<?php if (count($finishedSchedules)): ?>
+<section class="mt-6 card">
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="font-semibold"><?= __('Finished schedules') ?></h2>
+  </div>
+  <p class="text-sm text-gray-500"><?= __('These schedules are linked to loans that have been paid off and are kept for record purposes. They can no longer be edited or deleted.') ?></p>
+
+  <div class="hidden md:block overflow-x-auto mt-4">
+    <table class="table-glass min-w-full text-sm">
+      <thead>
+        <tr class="text-left border-b">
+          <th class="py-2 pr-3"><?= __('Title') ?></th>
+          <th class="py-2 pr-3"><?= __('Amount') ?></th>
+          <th class="py-2 pr-3"><?= __('Currency') ?></th>
+          <th class="py-2 pr-3"><?= __('Repeats') ?></th>
+          <th class="py-2 pr-3"><?= __('First payment') ?></th>
+          <th class="py-2 pr-3 text-right"><?= __('Status') ?></th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php foreach($finishedSchedules as $r): ?>
+          <tr class="border-b bg-emerald-50/60 dark:bg-emerald-500/10">
+            <td class="py-2 pr-3 font-medium">
+              <?= htmlspecialchars($r['title']) ?>
+              <?php if (!empty($r['loan_name'])): ?>
+                <div class="text-xs text-gray-500"><?= __('Linked loan: :name', ['name' => htmlspecialchars($r['loan_name'])]) ?></div>
+              <?php endif; ?>
+            </td>
+            <td class="py-2 pr-3 font-medium"><?= moneyfmt($r['amount']) ?></td>
+            <td class="py-2 pr-3"><?= htmlspecialchars($r['currency']) ?></td>
+            <td class="py-2 pr-3 text-sm text-gray-600">
+              <span class="rrule-summary" data-rrule="<?= htmlspecialchars($r['rrule'] ?? '') ?>"></span>
+            </td>
+            <td class="py-2 pr-3"><?= htmlspecialchars($r['next_due'] ?? '—') ?></td>
+            <td class="py-2 pr-3 text-right">
+              <span class="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
+                <span aria-hidden="true">🔒</span>
+                <?= __('Finished') ?>
+              </span>
+            </td>
+          </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="md:hidden space-y-3 mt-4">
+    <?php foreach($finishedSchedules as $r): ?>
+      <div class="panel p-4 border-emerald-300/60 bg-emerald-50/60 dark:border-emerald-500/40 dark:bg-emerald-500/10">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <div class="font-medium"><?= htmlspecialchars($r['title']) ?></div>
+            <?php if (!empty($r['loan_name'])): ?>
+              <div class="text-xs text-gray-500 mt-1"><?= __('Linked loan: :name', ['name' => htmlspecialchars($r['loan_name'])]) ?></div>
+            <?php endif; ?>
+          </div>
+          <div class="text-right">
+            <div class="font-semibold"><?= moneyfmt($r['amount']) ?></div>
+            <div class="text-xs text-gray-500"><?= htmlspecialchars($r['currency']) ?></div>
+          </div>
+        </div>
+
+        <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+          <div class="rounded-lg bg-gray-50 p-2">
+            <div class="text-gray-500"><?= __('First payment') ?></div>
+            <div class="font-medium"><?= htmlspecialchars($r['next_due'] ?? '—') ?></div>
+          </div>
+          <div class="rounded-lg bg-gray-50 p-2">
+            <div class="text-gray-500"><?= __('Repeats') ?></div>
+            <div class="font-medium">
+              <span class="rrule-summary" data-rrule="<?= htmlspecialchars($r['rrule'] ?? '') ?>"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-3 flex items-center justify-end">
+          <span class="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
+            <span aria-hidden="true">🔒</span>
+            <?= __('Finished') ?>
+          </span>
+        </div>
+      </div>
+    <?php endforeach; ?>
+  </div>
+</section>
+<?php endif; ?>
+
 <section class="mt-6 card">
   <div class="flex items-center justify-between mb-3">
     <h2 class="font-semibold"><?= __('Scheduled payments') ?></h2>
@@ -155,7 +248,7 @@
         </tr>
       </thead>
       <tbody>
-        <?php foreach($rows as $r): ?>
+        <?php foreach($activeSchedules as $r): ?>
           <tr class="border-b">
             <td class="py-2 pr-3 font-medium"><?= htmlspecialchars($r['title']) ?></td>
             <td class="py-2 pr-3 font-medium"><?= moneyfmt($r['amount']) ?></td>
@@ -204,14 +297,18 @@
               </div>
             </td>
           </tr>
-        <?php endforeach; ?>
+        <?php endforeach; if (!count($activeSchedules)): ?>
+          <tr>
+            <td colspan="6" class="py-6 text-center text-sm text-gray-500"><?= __('No scheduled payments yet.') ?></td>
+          </tr>
+        <?php endif; ?>
       </tbody>
     </table>
   </div>
 
   <!-- Mobile cards -->
   <div class="md:hidden space-y-3">
-    <?php foreach($rows as $r): ?>
+    <?php foreach($activeSchedules as $r): ?>
       <div class="panel p-4">
         <div class="flex items-start justify-between gap-3">
           <div>
@@ -271,8 +368,10 @@
             </button>
           </form>
         </div>
-      </div>
-    <?php endforeach; ?>
+    </div>
+    <?php endforeach; if (!count($activeSchedules)): ?>
+      <div class="panel p-4 text-center text-sm text-gray-500"><?= __('No scheduled payments yet.') ?></div>
+    <?php endif; ?>
   </div>
 </section>
 
