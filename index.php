@@ -91,7 +91,18 @@ if (preg_match('#^/api/stocks/([A-Za-z0-9\.-:]+)/history$#', $path, $m)) {
 // Simple routing
 switch ($path) {
     case '/':
-        if (!is_logged_in()) { view('auth/login'); break; }
+        if (!is_logged_in()) {
+            view('marketing/landing', [
+                'pageTitle' => 'MyMoneyMap — Clarity for your money',
+                'pageDescription' => 'Understand where your money goes and build savings faster with MyMoneyMap.',
+                'pageOgImage' => '/android-chrome-512x512.png',
+                'fullWidthMain' => true,
+                'disableMainPadding' => true,
+                'mainClassOverride' => 'relative z-10 flex-1 w-full px-0',
+                'skipGlobalFooter' => true,
+            ]);
+            break;
+        }
         view('dashboard');
         break;
 

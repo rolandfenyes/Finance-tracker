@@ -1,4 +1,22 @@
-<?php $app = require __DIR__ . '/../../config/config.php'; ?>
+<?php
+$app = require __DIR__ . '/../../config/config.php';
+$appName = $app['app']['name'] ?? 'MyMoneyMap';
+$documentTitle = isset($pageTitle) && trim((string)$pageTitle) !== ''
+  ? trim((string)$pageTitle)
+  : $appName;
+$metaDescription = isset($pageDescription) ? trim((string)$pageDescription) : '';
+$metaDescription = $metaDescription !== '' ? $metaDescription : null;
+$ogImageSource = isset($pageOgImage) && trim((string)$pageOgImage) !== ''
+  ? trim((string)$pageOgImage)
+  : '/android-chrome-512x512.png';
+$httpsDetected = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+  || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower((string)$_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https')
+  || (isset($_SERVER['HTTP_X_FORWARDED_SSL']) && strtolower((string)$_SERVER['HTTP_X_FORWARDED_SSL']) === 'on');
+$scheme = $httpsDetected ? 'https' : 'http';
+$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+$currentRequestPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/';
+$ogUrl = $scheme . '://' . $host . $currentRequestPath;
+?>
 <!doctype html>
 <html lang="<?= htmlspecialchars(app_locale(), ENT_QUOTES) ?>" class="scroll-smooth">
 <head>
@@ -7,7 +25,16 @@
     name="viewport"
     content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
   />
-  <title><?= htmlspecialchars($app['app']['name']) ?></title>
+  <title><?= htmlspecialchars($documentTitle, ENT_QUOTES) ?></title>
+  <meta property="og:title" content="<?= htmlspecialchars($documentTitle, ENT_QUOTES) ?>" />
+  <?php if ($metaDescription): ?>
+    <meta name="description" content="<?= htmlspecialchars($metaDescription, ENT_QUOTES) ?>" />
+    <meta property="og:description" content="<?= htmlspecialchars($metaDescription, ENT_QUOTES) ?>" />
+  <?php endif; ?>
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="<?= htmlspecialchars($ogUrl, ENT_QUOTES) ?>" />
+  <meta property="og:image" content="<?= htmlspecialchars($ogImageSource, ENT_QUOTES) ?>" />
+  <meta property="og:image:alt" content="<?= htmlspecialchars($appName . ' preview', ENT_QUOTES) ?>" />
   
   <!-- Favicons -->
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=2">
@@ -1233,5 +1260,22 @@
     </ul>
   </nav>
 <?php endif; ?>
-  <?php $mainPadding = (is_logged_in() && !$hideMenus) ? 'pb-8' : 'pb-16'; ?>
-  <main class="relative z-10 mx-auto w-full max-w-6xl flex-1 px-4 pt-8 <?= $mainPadding ?>">
+  <?php
+    $mainPaddingClass = (!empty($disableMainPadding))
+      ? ''
+      : ((is_logged_in() && !$hideMenus) ? 'pb-8' : 'pb-16');
+    $mainClass = isset($mainClassOverride) ? trim((string)$mainClassOverride) : '';
+    if ($mainClass === '') {
+      $isFullWidth = !empty($fullWidthMain);
+      $maxWidth = $isFullWidth ? 'max-w-7xl lg:max-w-[110rem]' : 'max-w-6xl';
+      $horizontalPadding = $isFullWidth ? 'px-6 sm:px-10 lg:px-16' : 'px-4';
+      $topPadding = !empty($disableMainPadding) ? '' : 'pt-8';
+      $mainClass = trim("relative z-10 mx-auto w-full {$maxWidth} flex-1 {$horizontalPadding} {$topPadding} {$mainPaddingClass}");
+    } else {
+      $appendPadding = trim($mainPaddingClass);
+      if ($appendPadding !== '') {
+        $mainClass .= ' ' . $appendPadding;
+      }
+    }
+  ?>
+  <main class="<?= htmlspecialchars(trim($mainClass), ENT_QUOTES) ?>">
