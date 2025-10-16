@@ -3,6 +3,7 @@
 
 require_once __DIR__ . '/recurrence.php';
 require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/services/loan_completion.php';
 
 /**
  * Compute the next occurrence of a schedule after a given date.
@@ -101,7 +102,7 @@ function scheduled_apply_loan(PDO $pdo, array $schedule, string $dueDate): void 
   }
 
   $u = (int)($schedule['user_id'] ?? 0);
-  $loanStmt = $pdo->prepare('SELECT id, user_id, currency, name FROM loans WHERE id=? AND user_id=?');
+  $loanStmt = $pdo->prepare('SELECT id, user_id, currency, name, balance FROM loans WHERE id=? AND user_id=?');
   $loanStmt->execute([$loanId, $u]);
   $loan = $loanStmt->fetch(PDO::FETCH_ASSOC);
   if (!$loan) {
@@ -144,7 +145,11 @@ function scheduled_apply_loan(PDO $pdo, array $schedule, string $dueDate): void 
     $principalDelta = is_numeric($converted) ? (float)$converted : $amount;
   }
 
+  $previousBalance = max(0.0, (float)($loan['balance'] ?? 0.0));
+
   $pdo->prepare('UPDATE loans SET balance = GREATEST(0, balance - ?) WHERE id=? AND user_id=?')->execute([$principalDelta, $loanId, $u]);
+
+  loan_maybe_handle_completion($pdo, $u, $loanId, $previousBalance);
 }
 
 /**

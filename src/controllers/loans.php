@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../helpers.php';
-require_once __DIR__ . '/../services/email_notifications.php';
+require_once __DIR__ . '/../services/loan_completion.php';
 
 function loans_index(PDO $pdo){
   require_login(); $u=uid();
@@ -399,7 +399,7 @@ function loan_payment_add(PDO $pdo){
   }
 
   $_SESSION['flash'] = 'Payment recorded.';
-  email_maybe_send_loan_completion($pdo, $u, $loanId, $previousBalance);
+  loan_maybe_handle_completion($pdo, $u, $loanId, $previousBalance);
   redirect('/loans');
 }
 
@@ -479,7 +479,7 @@ function loan_payment_update(PDO $pdo){ verify_csrf(); require_login(); $u = uid
 
     $pdo->commit();
     $_SESSION['flash'] = 'Payment updated.';
-    email_maybe_send_loan_completion($pdo, $u, (int)$row['loan_id'], $previousBalance);
+    loan_maybe_handle_completion($pdo, $u, (int)$row['loan_id'], $previousBalance);
   } catch (Throwable $e) {
     $pdo->rollBack();
     $_SESSION['flash'] = 'Could not update payment.';
