@@ -33,6 +33,12 @@ function more_show(PDO $pdo): void
                     'href' => '/scheduled',
                     'icon' => 'calendar-clock',
                 ],
+                [
+                    'label' => __('Investments'),
+                    'description' => __('Add and manage savings accounts, ETFs, and individual stocks.'),
+                    'href' => '/investments',
+                    'icon' => 'trending-up',
+                ],
             ],
         ],
         [

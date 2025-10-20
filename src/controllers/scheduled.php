@@ -8,9 +8,12 @@ function scheduled_index(PDO $pdo){
   $q = $pdo->prepare("
     SELECT s.*,
            c.label AS cat_label,
-           COALESCE(NULLIF(c.color,''),'#6B7280') AS cat_color
+           COALESCE(NULLIF(c.color,''),'#6B7280') AS cat_color,
+           i.name AS investment_name,
+           i.type AS investment_type
       FROM scheduled_payments s
       LEFT JOIN categories c ON c.id=s.category_id AND c.user_id=s.user_id
+      LEFT JOIN investments i ON i.id = s.investment_id AND i.user_id = s.user_id
      WHERE s.user_id=?
      ORDER BY s.next_due NULLS LAST, lower(s.title)
   ");

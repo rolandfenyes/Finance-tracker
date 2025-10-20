@@ -172,6 +172,12 @@
                     <?= htmlspecialchars($r['cat_label']) ?>
                   </span>
                 <?php endif; ?>
+                <?php if (!empty($r['investment_name'])): ?>
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs bg-brand-50/70 text-brand-700 dark:border-brand-500/40 dark:bg-brand-500/10 dark:text-brand-100">
+                    <i data-lucide="trending-up" class="h-3.5 w-3.5"></i>
+                    <?= htmlspecialchars($r['investment_name']) ?>
+                  </span>
+                <?php endif; ?>
 
                 <div class="flex flex-row gap-2">
                   <button
@@ -213,16 +219,22 @@
   <div class="md:hidden space-y-3">
     <?php foreach($rows as $r): ?>
       <div class="panel p-4">
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <div class="font-medium"><?= htmlspecialchars($r['title']) ?></div>
-            <?php if (!empty($r['cat_label'])): ?>
-              <div class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px]">
-                <span class="inline-block h-2 w-2 rounded-full" style="background-color: <?= htmlspecialchars($r['cat_color']) ?>;"></span>
-                <?= htmlspecialchars($r['cat_label']) ?>
-              </div>
-            <?php endif; ?>
-          </div>
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="font-medium"><?= htmlspecialchars($r['title']) ?></div>
+              <?php if (!empty($r['cat_label'])): ?>
+                <div class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px]">
+                  <span class="inline-block h-2 w-2 rounded-full" style="background-color: <?= htmlspecialchars($r['cat_color']) ?>;"></span>
+                  <?= htmlspecialchars($r['cat_label']) ?>
+                </div>
+              <?php endif; ?>
+              <?php if (!empty($r['investment_name'])): ?>
+                <div class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] bg-brand-50/70 text-brand-700 dark:border-brand-500/40 dark:bg-brand-500/10 dark:text-brand-100">
+                  <i data-lucide="trending-up" class="h-3.5 w-3.5"></i>
+                  <?= htmlspecialchars($r['investment_name']) ?>
+                </div>
+              <?php endif; ?>
+            </div>
 
           <div class="text-right">
             <div class="font-semibold"><?= moneyfmt($r['amount']) ?></div>
