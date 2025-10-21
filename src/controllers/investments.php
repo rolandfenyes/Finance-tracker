@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../helpers.php';
 require_once __DIR__ . '/../fx.php';
+require_once __DIR__ . '/../recurrence.php';
 
 function investments_allowed_frequencies(): array
 {
@@ -66,7 +67,7 @@ function investments_accrued_interest(
     return $balance * (pow(1 + $periodRate, $totalPeriods) - 1);
 }
 
-function investments_performance_snapshot(array $investment, array $transactions): array
+function investments_performance_snapshot(array $investment, array $transactions, ?array $schedule = null): array
 {
     $balance = (float)($investment['balance'] ?? 0);
     $rateRaw = (float)($investment['interest_rate'] ?? 0);
@@ -87,20 +88,229 @@ function investments_performance_snapshot(array $investment, array $transactions
     if ($rateDecimal > 0 && $periodsPerYear > 0) {
         foreach ($transactions as $tx) {
             $txTime = investments_parse_datetime($tx['created_at'] ?? null);
-            $interestEarned += investments_accrued_interest($runningBalance, $previousPoint, $txTime, $periodsPerYear, $rateDecimal);
+            $interestEarned += investments_accrued_interest(
+                $runningBalance,
+                $previousPoint,
+                $txTime,
+                $periodsPerYear,
+                $rateDecimal
+            );
             $runningBalance += (float)($tx['amount'] ?? 0);
             $previousPoint = $txTime;
         }
 
-        $interestEarned += investments_accrued_interest($runningBalance, $previousPoint, $now, $periodsPerYear, $rateDecimal);
+        $interestEarned += investments_accrued_interest(
+            $runningBalance,
+            $previousPoint,
+            $now,
+            $periodsPerYear,
+            $rateDecimal
+        );
     }
 
     $interestEarned = max(0.0, $interestEarned);
 
-    $projectionMonths = 12;
+    $result = [
+        'estimated_interest' => $interestEarned,
+        'chart_labels' => [],
+        'chart_values' => [],
+        'has_rate' => $rateDecimal > 0 && $periodsPerYear > 0,
+        'frequency' => $frequency,
+        'milestones' => [],
+    ];
+
+    if (!$result['has_rate']) {
+        return $result;
+    }
+
+    $scheduleAmount = null;
+    $scheduleCurrency = null;
+    $scheduleNextDue = null;
+    $scheduleRrule = '';
+    $investmentCurrency = strtoupper((string)($investment['currency'] ?? ''));
+
+    if (is_array($schedule)) {
+        $scheduleAmount = isset($schedule['amount']) ? (float)$schedule['amount'] : null;
+        $scheduleCurrency = strtoupper((string)($schedule['currency'] ?? ''));
+        $scheduleNextDue = $schedule['next_due'] ?? null;
+        $scheduleRrule = trim((string)($schedule['rrule'] ?? ''));
+
+        if ($scheduleAmount !== null && $scheduleAmount <= 0) {
+            $scheduleAmount = null;
+        }
+
+        if ($scheduleAmount !== null && $investmentCurrency !== '' && $scheduleCurrency !== '' && $scheduleCurrency !== $investmentCurrency) {
+            // Skip contribution projection if currencies differ to avoid unreliable FX forecasting.
+            $scheduleAmount = null;
+        }
+    }
+
+    if ($scheduleAmount !== null) {
+        $scheduleHasEnd = false;
+        $horizon = null;
+        $scheduleStart = null;
+
+        if ($scheduleNextDue) {
+            try {
+                $scheduleStart = new DateTimeImmutable($scheduleNextDue);
+            } catch (Throwable $e) {
+                $scheduleStart = null;
+            }
+        }
+
+        if ($scheduleStart && $scheduleRrule === '') {
+            $scheduleHasEnd = true;
+            $horizon = $scheduleStart;
+        } elseif ($scheduleStart && $scheduleRrule !== '') {
+            $parsed = rrule_parse($scheduleRrule);
+            $until = isset($parsed['UNTIL']) ? rrule_until_to_date($parsed['UNTIL']) : null;
+            if ($until) {
+                try {
+                    $horizon = new DateTimeImmutable($until);
+                    $scheduleHasEnd = true;
+                } catch (Throwable $e) {
+                    $horizon = null;
+                }
+            }
+
+            if (!$horizon && !empty($parsed['COUNT'])) {
+                $rangeStart = $scheduleStart->format('Y-m-d');
+                $rangeEnd = $scheduleStart->modify('+100 years')->format('Y-m-d');
+                $occ = rrule_expand($rangeStart, $scheduleRrule, $rangeStart, $rangeEnd);
+                if ($occ) {
+                    $last = end($occ);
+                    try {
+                        $horizon = new DateTimeImmutable($last);
+                        $scheduleHasEnd = true;
+                    } catch (Throwable $e) {
+                        $horizon = null;
+                    }
+                }
+            }
+        }
+
+        if (!$horizon || $horizon < $now) {
+            if ($scheduleHasEnd) {
+                $horizon = $now;
+            } else {
+                $horizon = $now->modify('+10 years');
+            }
+        }
+
+        $chartDates = [$now];
+        if ($horizon > $now) {
+            $diffSeconds = max(0, $horizon->getTimestamp() - $now->getTimestamp());
+            $approxMonths = $diffSeconds > 0 ? (int)ceil($diffSeconds / 2629800) : 0; // approx seconds in month
+            $approxMonths = max($approxMonths, 1);
+            $approxMonths = min($approxMonths, 240);
+            for ($i = 1; $i <= $approxMonths; $i++) {
+                $candidate = $now->modify('+' . $i . ' month');
+                if ($candidate >= $horizon) {
+                    break;
+                }
+                $chartDates[] = $candidate;
+            }
+            if (end($chartDates) < $horizon) {
+                $chartDates[] = $horizon;
+            }
+        }
+
+        $occurrences = [];
+        if ($scheduleStart) {
+            if ($scheduleRrule === '') {
+                if ($scheduleStart >= $now && $scheduleStart <= $horizon) {
+                    $occurrences[] = $scheduleStart;
+                }
+            } else {
+                $rangeStart = $now->format('Y-m-d');
+                $rangeEnd = $horizon->format('Y-m-d');
+                $dates = rrule_expand($scheduleStart->format('Y-m-d'), $scheduleRrule, $rangeStart, $rangeEnd);
+                foreach ($dates as $dateStr) {
+                    try {
+                        $d = new DateTimeImmutable($dateStr);
+                        if ($d >= $now && $d <= $horizon) {
+                            $occurrences[] = $d;
+                        }
+                    } catch (Throwable $e) {
+                        // ignore invalid dates
+                    }
+                }
+            }
+        }
+        usort($occurrences, static fn(DateTimeImmutable $a, DateTimeImmutable $b) => $a <=> $b);
+
+        $chartLabels = [];
+        $chartValues = [];
+        $currentValue = max(0.0, $balance);
+        $lastPoint = $now;
+        $futureInterest = 0.0;
+        $futureContrib = 0.0;
+        $occIndex = 0;
+        $occCount = count($occurrences);
+
+        foreach ($chartDates as $datePoint) {
+            while ($occIndex < $occCount && $occurrences[$occIndex] <= $datePoint) {
+                $occDate = $occurrences[$occIndex];
+                $interestDelta = investments_accrued_interest(
+                    $currentValue,
+                    $lastPoint,
+                    $occDate,
+                    $periodsPerYear,
+                    $rateDecimal
+                );
+                if ($interestDelta > 0) {
+                    $currentValue += $interestDelta;
+                    $futureInterest += $interestDelta;
+                }
+                $currentValue += $scheduleAmount;
+                $futureContrib += $scheduleAmount;
+                $lastPoint = $occDate;
+                $occIndex++;
+            }
+
+            if ($datePoint > $lastPoint) {
+                $interestDelta = investments_accrued_interest(
+                    $currentValue,
+                    $lastPoint,
+                    $datePoint,
+                    $periodsPerYear,
+                    $rateDecimal
+                );
+                if ($interestDelta > 0) {
+                    $currentValue += $interestDelta;
+                    $futureInterest += $interestDelta;
+                }
+                $lastPoint = $datePoint;
+            }
+
+            $chartLabels[] = $datePoint->format('M Y');
+            $chartValues[] = round($currentValue, 2);
+        }
+
+        $targetValue = $currentValue;
+        $targetGain = max(0.0, $futureInterest);
+
+        $label = $scheduleHasEnd
+            ? __('Projected at schedule completion (:date)', ['date' => $horizon->format('Y-m-d')])
+            : __('Projected in 10 years');
+
+        $result['chart_labels'] = $chartLabels;
+        $result['chart_values'] = $chartValues;
+        $result['milestones'] = [[
+            'label' => $label,
+            'value' => $targetValue,
+            'gain' => $targetGain,
+            'contribution_total' => $futureContrib,
+        ]];
+
+        return $result;
+    }
+
+    // No linked schedule with contributions — fall back to simple compounding milestones
     $chartLabels = [];
     $chartValues = [];
     $chartDate = $now;
+    $projectionMonths = 12;
 
     for ($month = 0; $month <= $projectionMonths; $month++) {
         $chartLabels[] = $chartDate->format('M Y');
@@ -126,17 +336,24 @@ function investments_performance_snapshot(array $investment, array $transactions
         $fiveYearValue *= pow(1 + $rateDecimal / $periodsPerYear, $periodsPerYear * 5);
     }
 
-    return [
-        'estimated_interest' => $interestEarned,
-        'chart_labels' => $chartLabels,
-        'chart_values' => $chartValues,
-        'one_year_value' => $oneYearValue,
-        'one_year_gain' => max(0.0, $oneYearValue - max(0.0, $balance)),
-        'five_year_value' => $fiveYearValue,
-        'five_year_gain' => max(0.0, $fiveYearValue - max(0.0, $balance)),
-        'has_rate' => $rateDecimal > 0 && $periodsPerYear > 0,
-        'frequency' => $frequency,
+    $result['chart_labels'] = $chartLabels;
+    $result['chart_values'] = $chartValues;
+    $result['milestones'] = [
+        [
+            'label' => __('Projected in 12 months'),
+            'value' => $oneYearValue,
+            'gain' => max(0.0, $oneYearValue - max(0.0, $balance)),
+            'contribution_total' => 0.0,
+        ],
+        [
+            'label' => __('Projected in 5 years'),
+            'value' => $fiveYearValue,
+            'gain' => max(0.0, $fiveYearValue - max(0.0, $balance)),
+            'contribution_total' => 0.0,
+        ],
     ];
+
+    return $result;
 }
 
 function investments_schedule_summary(?string $rrule): ?string
@@ -190,7 +407,7 @@ function investments_index(PDO $pdo): void
     require_login();
     $userId = uid();
 
-    $stmt = $pdo->prepare("SELECT i.*, sp.id AS sched_id, sp.title AS sched_title, sp.amount AS sched_amount, sp.currency AS sched_currency, sp.next_due AS sched_next_due, sp.rrule AS sched_rrule
+    $stmt = $pdo->prepare("SELECT i.*, sp.id AS sched_id, sp.title AS sched_title, sp.amount AS sched_amount, sp.currency AS sched_currency, sp.next_due AS sched_next_due, sp.rrule AS sched_rrule, sp.category_id AS sched_category_id
         FROM investments i
         LEFT JOIN scheduled_payments sp ON sp.investment_id = i.id AND sp.user_id = i.user_id
         WHERE i.user_id = ?
@@ -221,7 +438,13 @@ function investments_index(PDO $pdo): void
     foreach ($investments as $index => $investment) {
         $investmentId = (int)($investment['id'] ?? 0);
         $txList = $transactionsByInvestment[$investmentId] ?? [];
-        $performanceByInvestment[$investmentId] = investments_performance_snapshot($investment, $txList);
+        $schedulePayload = [
+            'amount' => $investment['sched_amount'] ?? null,
+            'currency' => $investment['sched_currency'] ?? null,
+            'next_due' => $investment['sched_next_due'] ?? null,
+            'rrule' => $investment['sched_rrule'] ?? null,
+        ];
+        $performanceByInvestment[$investmentId] = investments_performance_snapshot($investment, $txList, $schedulePayload);
         $transactionsByInvestment[$investmentId] = array_reverse($txList);
         $investments[$index]['interest_frequency'] = $performanceByInvestment[$investmentId]['frequency'] ?? ($investment['interest_frequency'] ?? 'monthly');
         $investments[$index]['sched_summary'] = investments_schedule_summary($investment['sched_rrule'] ?? null);
@@ -236,6 +459,10 @@ function investments_index(PDO $pdo): void
         ORDER BY lower(title)");
     $scheduleStmt->execute([$userId]);
     $availableSchedules = $scheduleStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+    $categoryStmt = $pdo->prepare("SELECT id, label FROM categories WHERE user_id = ? ORDER BY lower(label)");
+    $categoryStmt->execute([$userId]);
+    $categories = $categoryStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
     $uc = $pdo->prepare('SELECT code, is_main FROM user_currencies WHERE user_id=? ORDER BY is_main DESC, code');
     $uc->execute([$userId]);
@@ -259,6 +486,7 @@ function investments_index(PDO $pdo): void
         'userCurrencies' => $userCurrencies,
         'mainCurrency' => $mainCurrency,
         'performanceByInvestment' => $performanceByInvestment,
+        'categories' => $categories,
     ]);
 }
 
@@ -302,8 +530,55 @@ function investments_add(PDO $pdo): void
     if ($initialAmount < 0) {
         $initialAmount = 0.0;
     }
-    $scheduleIdRaw = $_POST['scheduled_payment_id'] ?? '';
-    $scheduleId = ($scheduleIdRaw !== '' && $scheduleIdRaw !== null) ? (int)$scheduleIdRaw : null;
+    $scheduleMode = strtolower(trim((string)($_POST['scheduled_mode'] ?? 'existing')));
+    if (!in_array($scheduleMode, ['existing', 'new'], true)) {
+        $scheduleMode = 'existing';
+    }
+
+    $scheduleId = null;
+    $newSchedule = null;
+
+    if ($scheduleMode === 'existing') {
+        $scheduleIdRaw = $_POST['scheduled_payment_id'] ?? '';
+        $scheduleId = ($scheduleIdRaw !== '' && $scheduleIdRaw !== null) ? (int)$scheduleIdRaw : null;
+    } else {
+        $newTitle = trim((string)($_POST['scheduled_new_title'] ?? ''));
+        $newAmountRaw = trim((string)($_POST['scheduled_new_amount'] ?? ''));
+        $newAmount = $newAmountRaw === '' ? 0.0 : (float)str_replace(',', '.', $newAmountRaw);
+        if (!is_finite($newAmount)) {
+            $newAmount = 0.0;
+        }
+        $newCurrency = strtoupper(trim((string)($_POST['scheduled_new_currency'] ?? '')));
+        $newNextDue = trim((string)($_POST['scheduled_new_next_due'] ?? ''));
+        $newRrule = trim((string)($_POST['scheduled_new_rrule'] ?? ''));
+        $newCategoryId = ($_POST['scheduled_new_category_id'] ?? '') !== '' ? (int)$_POST['scheduled_new_category_id'] : null;
+
+        if ($newTitle === '' || $newAmount <= 0 || $newNextDue === '') {
+            $_SESSION['flash'] = __('Provide a title, amount, and first due date for the schedule.');
+            redirect('/investments');
+        }
+
+        if ($newCurrency === '') {
+            $newCurrency = $currencyInput;
+        }
+
+        if ($newCategoryId !== null) {
+            $catCheck = $pdo->prepare('SELECT id FROM categories WHERE id=? AND user_id=?');
+            $catCheck->execute([$newCategoryId, $userId]);
+            if (!$catCheck->fetchColumn()) {
+                $newCategoryId = null;
+            }
+        }
+
+        $newSchedule = [
+            'title' => $newTitle,
+            'amount' => $newAmount,
+            'currency' => $newCurrency,
+            'next_due' => $newNextDue,
+            'rrule' => $newRrule,
+            'category_id' => $newCategoryId,
+        ];
+    }
 
     $pdo->beginTransaction();
     try {
@@ -324,6 +599,20 @@ function investments_add(PDO $pdo): void
                 $link = $pdo->prepare('UPDATE scheduled_payments SET investment_id=? WHERE id=? AND user_id=?');
                 $link->execute([$investmentId, $scheduleId, $userId]);
             }
+        }
+
+        if ($newSchedule) {
+            $insertSchedule = $pdo->prepare('INSERT INTO scheduled_payments (user_id, title, amount, currency, next_due, rrule, category_id, investment_id) VALUES (?,?,?,?,?,?,?,?)');
+            $insertSchedule->execute([
+                $userId,
+                $newSchedule['title'],
+                $newSchedule['amount'],
+                $newSchedule['currency'],
+                $newSchedule['next_due'],
+                $newSchedule['rrule'],
+                $newSchedule['category_id'],
+                $investmentId,
+            ]);
         }
 
         $pdo->commit();
@@ -520,11 +809,8 @@ function investments_schedule_create(PDO $pdo): void
     $amount = $amountRaw === '' ? 0.0 : (float)str_replace(',', '.', $amountRaw);
     $currency = strtoupper(trim((string)($_POST['currency'] ?? '')));
     $nextDue = trim((string)($_POST['next_due'] ?? ''));
-    $frequencyInput = strtolower(trim((string)($_POST['frequency'] ?? '')));
-    $interval = (int)($_POST['interval'] ?? 1);
-    if ($interval <= 0) {
-        $interval = 1;
-    }
+    $rrule = trim((string)($_POST['rrule'] ?? ''));
+    $categoryId = ($_POST['category_id'] ?? '') !== '' ? (int)$_POST['category_id'] : null;
 
     if ($title === '' || $amount <= 0 || $nextDue === '') {
         $_SESSION['flash'] = __('Provide a title, amount, and first due date for the schedule.');
@@ -535,38 +821,17 @@ function investments_schedule_create(PDO $pdo): void
         $currency = strtoupper((string)($investment['currency'] ?? 'HUF')) ?: 'HUF';
     }
 
-    $rrule = '';
-    $freqMap = [
-        'daily' => 'DAILY',
-        'weekly' => 'WEEKLY',
-        'monthly' => 'MONTHLY',
-        'annual' => 'YEARLY',
-    ];
-
-    if (isset($freqMap[$frequencyInput])) {
-        $parts = ['FREQ=' . $freqMap[$frequencyInput]];
-        if ($interval > 1) {
-            $parts[] = 'INTERVAL=' . $interval;
+    if ($categoryId !== null) {
+        $catCheck = $pdo->prepare('SELECT id FROM categories WHERE id=? AND user_id=?');
+        $catCheck->execute([$categoryId, $userId]);
+        if (!$catCheck->fetchColumn()) {
+            $categoryId = null;
         }
-
-        if ($frequencyInput === 'weekly' && $nextDue !== '') {
-            try {
-                $weekday = strtoupper((new DateTimeImmutable($nextDue))->format('D'));
-                $dayMap = ['MON' => 'MO', 'TUE' => 'TU', 'WED' => 'WE', 'THU' => 'TH', 'FRI' => 'FR', 'SAT' => 'SA', 'SUN' => 'SU'];
-                if (isset($dayMap[$weekday])) {
-                    $parts[] = 'BYDAY=' . $dayMap[$weekday];
-                }
-            } catch (Throwable $e) {
-                // ignore parsing errors
-            }
-        }
-
-        $rrule = implode(';', $parts);
     }
 
     try {
-        $insert = $pdo->prepare('INSERT INTO scheduled_payments (user_id, title, amount, currency, next_due, rrule, investment_id) VALUES (?,?,?,?,?,?,?)');
-        $insert->execute([$userId, $title, $amount, $currency, $nextDue, $rrule, $investmentId]);
+        $insert = $pdo->prepare('INSERT INTO scheduled_payments (user_id, title, amount, currency, next_due, rrule, category_id, investment_id) VALUES (?,?,?,?,?,?,?,?)');
+        $insert->execute([$userId, $title, $amount, $currency, $nextDue, $rrule, $categoryId, $investmentId]);
         $_SESSION['flash'] = __('Scheduled payment created and linked.');
     } catch (Throwable $e) {
         $_SESSION['flash'] = __('Could not create scheduled payment.');

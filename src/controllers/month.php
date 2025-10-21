@@ -229,7 +229,78 @@ function month_show(PDO $pdo, ?int $year = null, ?int $month = null) {
     }
   }
 
-  // (C) Goal contributions (manual)
+  // (C) Investment manual adjustments (deposits/withdrawals)
+  $schedMetaStmt = $pdo->prepare("SELECT sp.investment_id, sp.category_id, c.label AS cat_label, COALESCE(NULLIF(c.color,''),'#2563EB') AS cat_color
+    FROM scheduled_payments sp
+    LEFT JOIN categories c ON c.id = sp.category_id AND c.user_id = sp.user_id
+    WHERE sp.user_id = ? AND sp.investment_id IS NOT NULL");
+  $schedMetaStmt->execute([$u]);
+  $scheduleByInvestment = [];
+  foreach ($schedMetaStmt as $meta) {
+    $invId = (int)($meta['investment_id'] ?? 0);
+    if (!$invId || isset($scheduleByInvestment[$invId])) continue;
+    $scheduleByInvestment[$invId] = [
+      'category_id' => isset($meta['category_id']) ? (int)$meta['category_id'] : null,
+      'cat_label' => $meta['cat_label'] ?? null,
+      'cat_color' => $meta['cat_color'] ?? '#2563EB',
+    ];
+  }
+
+  $invTxStmt = $pdo->prepare(
+    "SELECT it.id, it.investment_id, it.amount, it.note, it.created_at, i.name AS investment_name, i.currency
+       FROM investment_transactions it
+       JOIN investments i ON i.id = it.investment_id AND i.user_id = it.user_id
+      WHERE it.user_id = ?
+        AND it.created_at::date BETWEEN ?::date AND ?::date
+      ORDER BY it.created_at ASC, it.id ASC"
+  );
+  $invTxStmt->execute([$u, $df, $dt]);
+
+  foreach ($invTxStmt as $tx) {
+    $invId = (int)($tx['investment_id'] ?? 0);
+    $meta = $scheduleByInvestment[$invId] ?? null;
+    $occurred = substr((string)($tx['created_at'] ?? ''), 0, 10) ?: $df;
+    $amountRaw = (float)($tx['amount'] ?? 0);
+    $kind = $amountRaw >= 0 ? 'spending' : 'income';
+    $nativeAmount = abs($amountRaw);
+    $currency = strtoupper((string)($tx['currency'] ?? $main));
+    if ($currency === '') {
+      $currency = $main;
+    }
+
+    $noteParts = [];
+    $noteValue = trim((string)($tx['note'] ?? ''));
+    if ($noteValue !== '') {
+      $noteParts[] = $noteValue;
+    }
+    $investmentName = trim((string)($tx['investment_name'] ?? ''));
+    if ($investmentName !== '') {
+      $noteParts[] = $investmentName;
+    }
+    $note = implode(' · ', $noteParts);
+
+    $rowV = [
+      'id' => null,
+      'is_virtual' => true,
+      'virtual_type' => 'investment_adjustment',
+      'occurred_on' => $occurred,
+      'kind' => $kind,
+      'category_id' => $meta['category_id'] ?? null,
+      'cat_label' => $meta['cat_label'] ?? __('Investments'),
+      'cat_color' => $meta['cat_color'] ?? '#2563EB',
+      'amount' => $nativeAmount,
+      'currency' => $currency,
+      'amount_main' => fx_convert($pdo, $nativeAmount, $currency, $main, $occurred),
+      'main_currency' => $main,
+      'note' => $note,
+    ];
+
+    if ($matchVirtual($rowV)) {
+      $virtualTx[] = $rowV;
+    }
+  }
+
+  // (D) Goal contributions (manual)
   $q = $pdo->prepare("
     SELECT
         gc.id,
