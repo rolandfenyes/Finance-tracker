@@ -106,6 +106,12 @@ switch ($path) {
         view('dashboard');
         break;
 
+    case '/admin':
+        require_login();
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_dashboard_index($pdo);
+        break;
+
     // Registration
     case '/register':
         require __DIR__ . '/src/controllers/auth.php';

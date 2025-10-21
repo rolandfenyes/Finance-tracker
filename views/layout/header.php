@@ -1125,6 +1125,7 @@ $ogUrl = $scheme . '://' . $host . $currentRequestPath;
       ['href'=>'/scheduled',     'label'=>'Scheduled',        'match'=>'#^/scheduled(?:/.*)?$#',   'icon' => 'calendar-clock'],
       ['href'=>'/feedback',      'label'=>'Feedback',         'match'=>'#^/feedback$#',            'icon' => 'message-circle'],
       ['href'=>'/settings',      'label'=>'Settings',         'match'=>'#^/settings$#',            'icon' => 'settings'],
+      ['href'=>'/admin',         'label'=>'Admin',            'match'=>'#^/admin$#',               'icon' => 'shield'],
     ];
     $mobileNavItems = [
       ['href'=>'/',              'label'=>'Dashboard',      'match'=>'#^/$#',                                                        'icon' => 'layout-dashboard'],
