@@ -27,4 +27,5 @@ return [
     'email.reports.budget.over' => 'Over by :amount',
     'email.reports.budget.on_target' => 'On target',
     'email.reports.budget.review_in_dashboard' => 'Review in dashboard',
+    'Hide add investment form' => 'Hide add investment form',
 ];

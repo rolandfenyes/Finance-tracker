@@ -4,6 +4,7 @@
 /** @var array $userCurrencies */
 /** @var string $mainCurrency */
 /** @var array $transactionsByInvestment */
+/** @var array $performanceByInvestment */
 
 $types = [
   'savings' => [
@@ -23,6 +24,15 @@ $types = [
   ],
 ];
 
+$frequencyOptions = [
+  'daily' => __('Daily'),
+  'weekly' => __('Weekly'),
+  'monthly' => __('Monthly'),
+  'annual' => __('Annual'),
+];
+
+$addPanelId = 'investment-add-panel';
+
 ?>
 
 <div class="mx-auto w-full max-w-5xl space-y-6 pb-6 pt-6 sm:px-6 lg:px-0">
@@ -33,112 +43,150 @@ $types = [
       <?= __('Keep track of savings accounts, ETFs, and individual stocks. Link scheduled payments to stay on autopilot.') ?>
     </p>
 
-    <form method="post" action="/investments/add" class="mt-6 space-y-4">
-      <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+    <div class="mt-6">
+      <button
+        type="button"
+        class="btn btn-primary inline-flex items-center gap-2"
+        data-investment-add-toggle
+        data-target="#<?= $addPanelId ?>"
+        aria-expanded="false"
+        aria-controls="<?= $addPanelId ?>"
+      >
+        <span data-add-state="closed" class="inline-flex items-center gap-2">
+          <i data-lucide="plus" class="h-4 w-4"></i>
+          <?= __('Add new investment') ?>
+        </span>
+        <span data-add-state="open" class="hidden items-center gap-2">
+          <i data-lucide="minus" class="h-4 w-4"></i>
+          <?= __('Hide add investment form') ?>
+        </span>
+      </button>
+    </div>
 
-      <div class="grid gap-3 md:grid-cols-3">
-        <?php foreach ($types as $value => $meta): ?>
-          <label class="group relative flex cursor-pointer flex-col gap-2 rounded-2xl border border-slate-200 p-4 transition hover:border-brand-300 hover:bg-brand-50/70 dark:border-slate-700 dark:hover:border-brand-500/70 dark:hover:bg-slate-900/60">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2 text-sm font-semibold">
-                <input
-                  type="radio"
-                  name="type"
-                  value="<?= htmlspecialchars($value, ENT_QUOTES) ?>"
-                  class="h-4 w-4 text-brand-600 focus:ring-brand-500"
-                  <?= $value === 'savings' ? 'checked' : '' ?>
-                />
-                <span><?= htmlspecialchars($meta['label']) ?></span>
-              </div>
-              <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-brand-700 group-hover:bg-brand-200 dark:bg-brand-500/15 dark:text-brand-50">
-                <i data-lucide="<?= htmlspecialchars($meta['icon']) ?>" class="h-4 w-4"></i>
-              </span>
-            </div>
-            <p class="text-xs text-slate-500 dark:text-slate-300/80">
-              <?= htmlspecialchars($meta['description']) ?>
-            </p>
-          </label>
-        <?php endforeach; ?>
-      </div>
+    <details id="<?= $addPanelId ?>" class="mt-4 rounded-2xl border border-slate-200 bg-slate-50/60 p-5 shadow-sm transition dark:border-slate-700 dark:bg-slate-900/40">
+      <summary class="sr-only"><?= __('Add new investment') ?></summary>
 
-      <div class="grid gap-3 md:grid-cols-2">
-        <div>
-          <label class="label" for="investment-name"><?= __('Name') ?></label>
-          <input id="investment-name" name="name" class="input" placeholder="<?= __('e.g., Smart Savings 2.5%') ?>" required />
-        </div>
-        <div>
-          <label class="label" for="investment-provider"><?= __('Institution or broker') ?></label>
-          <input id="investment-provider" name="provider" class="input" placeholder="<?= __('e.g., MyBank') ?>" />
-        </div>
-      </div>
+      <div class="mt-5 space-y-4">
+        <form method="post" action="/investments/add" class="space-y-4">
+          <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
 
-      <div class="grid gap-3 md:grid-cols-2">
-        <div>
-          <label class="label" for="investment-identifier"><?= __('Account number / Ticker') ?></label>
-          <input id="investment-identifier" name="identifier" class="input" placeholder="<?= __('e.g., HU12 3456 7890 1234 or VOO') ?>" />
-        </div>
-        <div>
-          <label class="label" for="investment-interest"><?= __('Annual rate (EBKM)') ?></label>
-          <div class="relative">
-            <input id="investment-interest" name="interest_rate" type="number" step="0.01" min="0" class="input pr-12" placeholder="<?= __('Optional') ?>" />
-            <span class="absolute inset-y-0 right-3 flex items-center text-sm text-slate-500">%</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="grid gap-3 md:grid-cols-2">
-        <div>
-          <label class="label" for="investment-currency"><?= __('Currency') ?></label>
-          <select id="investment-currency" name="currency" class="select">
-            <?php foreach ($userCurrencies as $currency):
-              $code = strtoupper($currency['code'] ?? '');
-              if ($code === '') { continue; }
-              $selected = !empty($currency['is_main']);
-            ?>
-              <option value="<?= htmlspecialchars($code) ?>" <?= $selected ? 'selected' : '' ?>>
-                <?= htmlspecialchars($code) ?><?= !empty($currency['is_main']) ? ' · ' . __('Main') : '' ?>
-              </option>
+          <div class="grid gap-3 md:grid-cols-3">
+            <?php foreach ($types as $value => $meta): ?>
+              <label class="group relative flex cursor-pointer flex-col gap-2 rounded-2xl border border-slate-200 p-4 transition hover:border-brand-300 hover:bg-brand-50/70 dark:border-slate-700 dark:hover:border-brand-500/70 dark:hover:bg-slate-900/60">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2 text-sm font-semibold">
+                    <input
+                      type="radio"
+                      name="type"
+                      value="<?= htmlspecialchars($value, ENT_QUOTES) ?>"
+                      class="h-4 w-4 text-brand-600 focus:ring-brand-500"
+                      <?= $value === 'savings' ? 'checked' : '' ?>
+                    />
+                    <span><?= htmlspecialchars($meta['label']) ?></span>
+                  </div>
+                  <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-brand-700 group-hover:bg-brand-200 dark:bg-brand-500/15 dark:text-brand-50">
+                    <i data-lucide="<?= htmlspecialchars($meta['icon']) ?>" class="h-4 w-4"></i>
+                  </span>
+                </div>
+                <p class="text-xs text-slate-500 dark:text-slate-300/80">
+                  <?= htmlspecialchars($meta['description']) ?>
+                </p>
+              </label>
             <?php endforeach; ?>
-          </select>
-        </div>
-        <div>
-          <label class="label" for="investment-initial-amount"><?= __('Starting balance') ?></label>
-          <div class="relative">
-            <input id="investment-initial-amount" name="initial_amount" type="number" step="0.01" class="input pr-16" placeholder="<?= __('Optional') ?>" />
-            <span class="absolute inset-y-0 right-3 flex items-center text-sm text-slate-500">
-              <?= htmlspecialchars(strtoupper($mainCurrency)) ?>
-            </span>
           </div>
-        </div>
-      </div>
 
-      <div>
-        <label class="label" for="investment-notes"><?= __('Notes') ?></label>
-        <textarea id="investment-notes" name="notes" rows="3" class="textarea" placeholder="<?= __('Add details like goals, strategy, or reminders.') ?>"></textarea>
-      </div>
+          <div class="grid gap-3 md:grid-cols-2">
+            <div>
+              <label class="label" for="investment-name"><?= __('Name') ?></label>
+              <input id="investment-name" name="name" class="input" placeholder="<?= __('e.g., Smart Savings 2.5%') ?>" required />
+            </div>
+            <div>
+              <label class="label" for="investment-provider"><?= __('Institution or broker') ?></label>
+              <input id="investment-provider" name="provider" class="input" placeholder="<?= __('e.g., MyBank') ?>" />
+            </div>
+          </div>
 
-      <div>
-        <label class="label" for="investment-schedule"><?= __('Linked scheduled payment') ?></label>
-        <select id="investment-schedule" name="scheduled_payment_id" class="select">
-          <option value=""><?= __('No linked schedule') ?></option>
-          <?php foreach ($availableSchedules as $schedule): ?>
-            <option value="<?= (int)$schedule['id'] ?>">
-              <?= htmlspecialchars($schedule['title']) ?> · <?= moneyfmt($schedule['amount']) ?> <?= htmlspecialchars($schedule['currency']) ?>
-            </option>
-          <?php endforeach; ?>
-        </select>
-        <p class="mt-1 text-xs text-slate-500 dark:text-slate-300/80">
-          <?= __('Link a scheduled payment to automate contributions or transfers.') ?>
-        </p>
-      </div>
+          <div class="grid gap-3 md:grid-cols-3">
+            <div class="md:col-span-2">
+              <label class="label" for="investment-identifier"><?= __('Account number / Ticker') ?></label>
+              <input id="investment-identifier" name="identifier" class="input" placeholder="<?= __('e.g., HU12 3456 7890 1234 or VOO') ?>" />
+            </div>
+            <div>
+              <label class="label" for="investment-frequency"><?= __('Interest payment frequency') ?></label>
+              <select id="investment-frequency" name="interest_frequency" class="select">
+                <?php foreach ($frequencyOptions as $freqValue => $freqLabel): ?>
+                  <option value="<?= htmlspecialchars($freqValue) ?>" <?= $freqValue === 'monthly' ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($freqLabel) ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+          </div>
 
-      <div class="flex justify-end">
-        <button class="btn btn-primary">
-          <i data-lucide="plus" class="mr-2 h-4 w-4"></i>
-          <?= __('Add investment') ?>
-        </button>
+          <div class="grid gap-3 md:grid-cols-2">
+            <div>
+              <label class="label" for="investment-interest"><?= __('Annual rate (EBKM)') ?></label>
+              <div class="relative">
+                <input id="investment-interest" name="interest_rate" type="number" step="0.01" min="0" class="input pr-12" placeholder="<?= __('Optional') ?>" />
+                <span class="absolute inset-y-0 right-3 flex items-center text-sm text-slate-500">%</span>
+              </div>
+            </div>
+            <div>
+              <label class="label" for="investment-currency"><?= __('Currency') ?></label>
+              <select id="investment-currency" name="currency" class="select">
+                <?php foreach ($userCurrencies as $currency):
+                  $code = strtoupper($currency['code'] ?? '');
+                  if ($code === '') { continue; }
+                  $selected = !empty($currency['is_main']);
+                ?>
+                  <option value="<?= htmlspecialchars($code) ?>" <?= $selected ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($code) ?><?= !empty($currency['is_main']) ? ' · ' . __('Main') : '' ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid gap-3 md:grid-cols-2">
+            <div>
+              <label class="label" for="investment-initial-amount"><?= __('Starting balance') ?></label>
+              <div class="relative">
+                <input id="investment-initial-amount" name="initial_amount" type="number" step="0.01" class="input pr-16" placeholder="<?= __('Optional') ?>" />
+                <span class="absolute inset-y-0 right-3 flex items-center text-sm text-slate-500">
+                  <?= htmlspecialchars(strtoupper($mainCurrency)) ?>
+                </span>
+              </div>
+            </div>
+            <div>
+              <label class="label" for="investment-schedule"><?= __('Linked scheduled payment') ?></label>
+              <select id="investment-schedule" name="scheduled_payment_id" class="select">
+                <option value=""><?= __('No linked schedule') ?></option>
+                <?php foreach ($availableSchedules as $schedule): ?>
+                  <option value="<?= (int)$schedule['id'] ?>">
+                    <?= htmlspecialchars($schedule['title']) ?> · <?= moneyfmt($schedule['amount']) ?> <?= htmlspecialchars($schedule['currency']) ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+              <p class="mt-1 text-xs text-slate-500 dark:text-slate-300/80">
+                <?= __('Link a scheduled payment to automate contributions or transfers.') ?>
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <label class="label" for="investment-notes"><?= __('Notes') ?></label>
+            <textarea id="investment-notes" name="notes" rows="3" class="textarea" placeholder="<?= __('Add details like goals, strategy, or reminders.') ?>"></textarea>
+          </div>
+
+          <div class="flex justify-end">
+            <button class="btn btn-primary">
+              <i data-lucide="check" class="mr-2 h-4 w-4"></i>
+              <?= __('Save investment') ?>
+            </button>
+          </div>
+        </form>
       </div>
-    </form>
+    </details>
   </section>
 
   <section class="card">
@@ -163,6 +211,15 @@ $types = [
             $currencyCode = strtoupper($mainCurrency);
           }
           $balance = (float)($investment['balance'] ?? 0);
+          $performance = $performanceByInvestment[$investmentId] ?? null;
+          $frequencyKey = strtolower((string)($investment['interest_frequency'] ?? 'monthly'));
+          $frequencyLabel = $frequencyOptions[$frequencyKey] ?? ucfirst($frequencyKey);
+          $estimatedInterest = (float)($performance['estimated_interest'] ?? 0);
+          $oneYearValue = (float)($performance['one_year_value'] ?? 0);
+          $oneYearGain = (float)($performance['one_year_gain'] ?? 0);
+          $fiveYearValue = (float)($performance['five_year_value'] ?? 0);
+          $fiveYearGain = (float)($performance['five_year_gain'] ?? 0);
+          $hasRate = !empty($performance['has_rate']);
         ?>
           <details class="panel overflow-hidden" data-investment="<?= $investmentId ?>">
             <summary class="flex cursor-pointer flex-col gap-4 p-5 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-500">
@@ -189,16 +246,23 @@ $types = [
                   </div>
                 </div>
               </div>
-              <?php if (!empty($investment['provider']) || !empty($investment['identifier'])): ?>
-                <div class="text-sm text-slate-500 dark:text-slate-400">
-                  <?= htmlspecialchars($investment['provider'] ?? '') ?><?= (!empty($investment['provider']) && !empty($investment['identifier'])) ? ' · ' : '' ?><?= htmlspecialchars($investment['identifier'] ?? '') ?>
-                </div>
-              <?php endif; ?>
-              <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                <span><?= __('Open editor') ?></span>
-                <span><?= __('Updated :date', ['date' => htmlspecialchars(substr((string)($investment['updated_at'] ?? ''), 0, 16))]) ?></span>
-              </div>
-            </summary>
+          <?php if (!empty($investment['provider']) || !empty($investment['identifier'])): ?>
+            <div class="text-sm text-slate-500 dark:text-slate-400">
+              <?= htmlspecialchars($investment['provider'] ?? '') ?><?= (!empty($investment['provider']) && !empty($investment['identifier'])) ? ' · ' : '' ?><?= htmlspecialchars($investment['identifier'] ?? '') ?>
+            </div>
+          <?php endif; ?>
+          <div class="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+            <span><?= __('Payout frequency: :frequency', ['frequency' => htmlspecialchars($frequencyLabel)]) ?></span>
+            <?php if ($investment['interest_rate'] !== null && $investment['interest_rate'] !== ''): ?>
+              <span class="hidden text-slate-400 dark:text-slate-500 sm:inline">•</span>
+              <span><?= __('Rate: :rate%', ['rate' => number_format((float)$investment['interest_rate'], 2)]) ?></span>
+            <?php endif; ?>
+          </div>
+          <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+            <span><?= __('Open editor') ?></span>
+            <span><?= __('Updated :date', ['date' => htmlspecialchars(substr((string)($investment['updated_at'] ?? ''), 0, 16))]) ?></span>
+          </div>
+        </summary>
 
             <div class="space-y-6 border-t border-slate-200 bg-white px-5 pb-6 pt-5 dark:border-slate-700 dark:bg-slate-900">
               <div class="grid gap-4 md:grid-cols-2">
@@ -249,11 +313,70 @@ $types = [
                     <?= __('Withdraw') ?>
                   </button>
                 </form>
-              </div>
+            </div>
 
-              <form method="post" action="/investments/update" class="space-y-4" id="investment-update-<?= $investmentId ?>">
-                <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-                <input type="hidden" name="id" value="<?= $investmentId ?>" />
+            <?php if ($performance): ?>
+              <div class="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900/40">
+                <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 dark:border-slate-700 dark:text-white">
+                  <span><?= __('Performance insights') ?></span>
+                  <span class="text-xs text-slate-500 dark:text-slate-400"><?= htmlspecialchars($frequencyLabel) ?></span>
+                </div>
+                <div class="grid gap-4 px-4 py-4 lg:grid-cols-5">
+                  <div class="space-y-3 lg:col-span-2">
+                    <div class="rounded-lg border border-slate-200/70 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-900/60">
+                      <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300/80">
+                        <?= __('Estimated interest earned') ?>
+                      </div>
+                      <div class="mt-1 text-lg font-semibold text-slate-900 dark:text-white">
+                        <?= moneyfmt($estimatedInterest, $currencyCode) ?>
+                      </div>
+                      <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        <?= __('Based on your balance changes and interest rate to date.') ?>
+                      </p>
+                    </div>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                      <div class="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900/60">
+                        <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300/80">
+                          <?= __('Projected in 12 months') ?>
+                        </div>
+                        <div class="mt-1 text-base font-semibold text-slate-900 dark:text-white">
+                          <?= moneyfmt($oneYearValue, $currencyCode) ?>
+                        </div>
+                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                          <?= __('Gain of :amount', ['amount' => moneyfmt($oneYearGain, $currencyCode)]) ?>
+                        </p>
+                      </div>
+                      <div class="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900/60">
+                        <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300/80">
+                          <?= __('Projected in 5 years') ?>
+                        </div>
+                        <div class="mt-1 text-base font-semibold text-slate-900 dark:text-white">
+                          <?= moneyfmt($fiveYearValue, $currencyCode) ?>
+                        </div>
+                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                          <?= __('Gain of :amount', ['amount' => moneyfmt($fiveYearGain, $currencyCode)]) ?>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="lg:col-span-3">
+                    <?php if ($hasRate && !empty($performance['chart_values'])): ?>
+                      <div class="h-64">
+                        <canvas id="investment-chart-<?= $investmentId ?>" aria-label="<?= __('Expected balance over time') ?>" role="img"></canvas>
+                      </div>
+                    <?php else: ?>
+                      <p class="rounded-lg border border-dashed border-slate-300 p-4 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                        <?= __('Add an annual rate to unlock growth projections.') ?>
+                      </p>
+                    <?php endif; ?>
+                  </div>
+                </div>
+              </div>
+            <?php endif; ?>
+
+            <form method="post" action="/investments/update" class="space-y-4" id="investment-update-<?= $investmentId ?>">
+              <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+              <input type="hidden" name="id" value="<?= $investmentId ?>" />
 
                 <div class="grid gap-3 md:grid-cols-2">
                   <div>
@@ -283,13 +406,23 @@ $types = [
                   </div>
                 </div>
 
-                <div class="grid gap-3 md:grid-cols-2">
+                <div class="grid gap-3 md:grid-cols-3">
                   <div>
                     <label class="label"><?= __('Annual rate (EBKM)') ?></label>
                     <div class="relative">
                       <input name="interest_rate" type="number" step="0.01" min="0" class="input pr-12" value="<?= htmlspecialchars($investment['interest_rate'] ?? '') ?>" />
                       <span class="absolute inset-y-0 right-3 flex items-center text-sm text-slate-500">%</span>
                     </div>
+                  </div>
+                  <div>
+                    <label class="label"><?= __('Interest payment frequency') ?></label>
+                    <select name="interest_frequency" class="select">
+                      <?php foreach ($frequencyOptions as $freqValue => $freqLabel): ?>
+                        <option value="<?= htmlspecialchars($freqValue) ?>" <?= $freqValue === $frequencyKey ? 'selected' : '' ?>>
+                          <?= htmlspecialchars($freqLabel) ?>
+                        </option>
+                      <?php endforeach; ?>
+                    </select>
                   </div>
                   <div>
                     <label class="label"><?= __('Currency') ?></label>
@@ -331,6 +464,16 @@ $types = [
                       <p class="mt-1 text-xs text-slate-500 dark:text-slate-300/80">
                         <?= __('Next payment on :date', ['date' => htmlspecialchars($investment['sched_next_due'] ?? '—')]) ?>
                       </p>
+                      <?php if (!empty($investment['sched_summary'])): ?>
+                        <p class="text-xs text-slate-500 dark:text-slate-300/80">
+                          <?= __('Repeats: :summary', ['summary' => htmlspecialchars($investment['sched_summary'])]) ?>
+                        </p>
+                      <?php endif; ?>
+                      <?php if (!empty($investment['sched_amount'])): ?>
+                        <p class="text-xs text-slate-500 dark:text-slate-300/80">
+                          <?= __('Scheduled amount: :amount', ['amount' => moneyfmt((float)$investment['sched_amount'], (string)($investment['sched_currency'] ?? $currencyCode))]) ?>
+                        </p>
+                      <?php endif; ?>
                     <?php else: ?>
                       <p class="mt-1 text-xs text-slate-500 dark:text-slate-300/80">
                         <?= __('No schedule linked yet.') ?>
@@ -362,11 +505,75 @@ $types = [
                     </button>
                   </div>
                 </div>
-              </form>
+            </form>
 
-              <div class="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900/40">
-                <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 dark:border-slate-700 dark:text-white">
-                  <span><?= __('Recent activity') ?></span>
+            <div class="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900/40">
+              <details>
+                <summary class="flex cursor-pointer items-center justify-between gap-2 px-4 py-3 text-sm font-semibold text-slate-900 dark:text-white">
+                  <span class="inline-flex items-center gap-2">
+                    <i data-lucide="calendar-plus" class="h-4 w-4"></i>
+                    <?= __('Create and link scheduled payment') ?>
+                  </span>
+                  <span class="text-xs text-slate-500 dark:text-slate-400">
+                    <?= __('Automate new contributions in one step.') ?>
+                  </span>
+                </summary>
+                <div class="border-t border-slate-200 px-4 py-4 dark:border-slate-700">
+                  <form method="post" action="/investments/scheduled/create" class="grid gap-3 md:grid-cols-12">
+                    <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+                    <input type="hidden" name="investment_id" value="<?= $investmentId ?>" />
+                    <div class="md:col-span-4">
+                      <label class="label"><?= __('Title') ?></label>
+                      <input name="title" class="input" placeholder="<?= __('e.g., Monthly top-up') ?>" required />
+                    </div>
+                    <div class="md:col-span-2">
+                      <label class="label"><?= __('Amount') ?></label>
+                      <input name="amount" type="number" step="0.01" min="0" class="input" required />
+                    </div>
+                    <div class="md:col-span-2">
+                      <label class="label"><?= __('Currency') ?></label>
+                      <select name="currency" class="select">
+                        <option value="<?= htmlspecialchars($currencyCode) ?>" selected><?= htmlspecialchars($currencyCode) ?></option>
+                        <?php foreach ($userCurrencies as $currency):
+                          $code = strtoupper($currency['code'] ?? '');
+                          if ($code === '' || $code === $currencyCode) { continue; }
+                        ?>
+                          <option value="<?= htmlspecialchars($code) ?>"><?= htmlspecialchars($code) ?></option>
+                        <?php endforeach; ?>
+                      </select>
+                    </div>
+                    <div class="md:col-span-4">
+                      <label class="label"><?= __('First due date') ?></label>
+                      <input name="next_due" type="date" class="input" required />
+                    </div>
+                    <div class="md:col-span-4">
+                      <label class="label"><?= __('Frequency') ?></label>
+                      <select name="frequency" class="select">
+                        <?php foreach ($frequencyOptions as $freqValue => $freqLabel): ?>
+                          <option value="<?= htmlspecialchars($freqValue) ?>" <?= $freqValue === 'monthly' ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($freqLabel) ?>
+                          </option>
+                        <?php endforeach; ?>
+                      </select>
+                    </div>
+                    <div class="md:col-span-2">
+                      <label class="label"><?= __('Every (interval)') ?></label>
+                      <input name="interval" type="number" min="1" value="1" class="input" />
+                    </div>
+                    <div class="md:col-span-12 flex justify-end">
+                      <button class="btn btn-primary">
+                        <i data-lucide="calendar-plus" class="mr-2 h-4 w-4"></i>
+                        <?= __('Create schedule') ?>
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </details>
+            </div>
+
+            <div class="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900/40">
+              <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 dark:border-slate-700 dark:text-white">
+                <span><?= __('Recent activity') ?></span>
                   <span class="text-xs text-slate-500 dark:text-slate-400"><?= htmlspecialchars($currencyCode) ?></span>
                 </div>
                 <?php $recentTransactions = array_slice($transactions, 0, 5); ?>
@@ -420,3 +627,86 @@ $types = [
     <?php endif; ?>
   </section>
 </div>
+
+<?php
+$chartPayloads = [];
+foreach ($performanceByInvestment as $id => $payload) {
+    if (empty($payload['has_rate']) || empty($payload['chart_values']) || empty($payload['chart_labels'])) {
+        continue;
+    }
+    $chartPayloads[$id] = [
+        'labels' => array_values(array_map('strval', $payload['chart_labels'])),
+        'values' => array_values(array_map('floatval', $payload['chart_values'])),
+    ];
+}
+?>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const charts = <?= json_encode((object)$chartPayloads, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+    if (charts && typeof charts === 'object') {
+      Object.keys(charts).forEach(function (id) {
+        const data = charts[id];
+        if (!data || !Array.isArray(data.labels) || !Array.isArray(data.values)) {
+          return;
+        }
+        if (typeof window.renderLineChart === 'function') {
+          window.renderLineChart('investment-chart-' + id, data.labels, data.values);
+        }
+      });
+    }
+
+    const toggleButton = document.querySelector('[data-investment-add-toggle]');
+    if (!toggleButton) {
+      return;
+    }
+
+    const targetSelector = toggleButton.getAttribute('data-target');
+    if (!targetSelector) {
+      return;
+    }
+
+    const panel = document.querySelector(targetSelector);
+    if (!panel) {
+      return;
+    }
+
+    const closedLabel = toggleButton.querySelector('[data-add-state="closed"]');
+    const openLabel = toggleButton.querySelector('[data-add-state="open"]');
+    const firstField = panel.querySelector('input, select, textarea');
+
+    const updateState = function () {
+      const isOpen = panel.hasAttribute('open');
+      toggleButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      if (closedLabel) {
+        closedLabel.classList.toggle('hidden', isOpen);
+      }
+      if (openLabel) {
+        openLabel.classList.toggle('hidden', !isOpen);
+      }
+    };
+
+    toggleButton.addEventListener('click', function (event) {
+      event.preventDefault();
+      const isOpen = panel.hasAttribute('open');
+      if (isOpen) {
+        panel.removeAttribute('open');
+      } else {
+        panel.setAttribute('open', '');
+        if (typeof panel.scrollIntoView === 'function') {
+          panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        if (firstField) {
+          window.setTimeout(function () {
+            if (typeof firstField.focus === 'function') {
+              firstField.focus();
+            }
+          }, 150);
+        }
+      }
+      updateState();
+    });
+
+    panel.addEventListener('toggle', updateState);
+    updateState();
+  });
+</script>

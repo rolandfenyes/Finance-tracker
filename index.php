@@ -743,6 +743,12 @@ switch ($path) {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') { investments_adjust($pdo); }
         redirect('/investments');
         break;
+    case '/investments/scheduled/create':
+        require_login();
+        require __DIR__ . '/src/controllers/investments.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { investments_schedule_create($pdo); }
+        redirect('/investments');
+        break;
     case '/investments/delete':
         require_login();
         require __DIR__ . '/src/controllers/investments.php';
