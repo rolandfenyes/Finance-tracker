@@ -60,6 +60,23 @@
             <?php endforeach; ?>
           </select>
         </div>
+        <div class="sm:col-span-12">
+          <label class="label"><?= __('Emergency fund pocket') ?></label>
+          <select name="investment_id" class="select">
+            <option value=""><?= __('No linked investment pocket') ?></option>
+            <?php foreach($investmentOptions as $option): ?>
+              <option value="<?= (int)$option['id'] ?>" <?= ($linkedInvestmentId && $linkedInvestmentId === (int)$option['id']) ? 'selected' : '' ?>>
+                <?= htmlspecialchars($option['name'] ?: __('Unnamed investment')) ?> · <?= htmlspecialchars($option['type_label']) ?><?php if (!empty($option['currency'])): ?> · <?= htmlspecialchars($option['currency']) ?><?php endif; ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+          <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            <?= __('Connect your emergency fund to an investment pocket to keep balances in sync.') ?>
+            <?php if (!$investmentOptions): ?>
+              <?= __('Add an investment pocket first on the Investments page.') ?>
+            <?php endif; ?>
+          </p>
+        </div>
         <div class="sm:col-span-12 flex justify-end">
           <button class="btn btn-primary">
             <?= __('Save target') ?>
@@ -79,6 +96,27 @@
           <div class="h-2 rounded-full bg-brand-600" style="width: <?= number_format($pct,2,'.','') ?>%"></div>
         </div>
         <div class="text-xs font-semibold text-brand-700 dark:text-brand-200"><?= number_format($pct,1) ?>%</div>
+        <?php if (!empty($linkedInvestment)): ?>
+          <?php $linkedCurrency = strtoupper($linkedInvestment['currency'] ?? '') ?: $ef_cur; ?>
+          <div class="mt-4 space-y-2 rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/40">
+            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              <?= __('Connected investment pocket') ?>
+            </div>
+            <div class="text-sm font-semibold text-slate-900 dark:text-white">
+              <?= htmlspecialchars($linkedInvestment['name'] ?: __('Unnamed investment')) ?>
+            </div>
+            <div class="text-xs text-slate-500 dark:text-slate-400">
+              <?= htmlspecialchars($investmentTypeMeta[$linkedInvestment['type']]['label'] ?? $linkedInvestment['type_label']) ?> · <?= htmlspecialchars($linkedCurrency) ?>
+            </div>
+            <div class="text-sm text-slate-600 dark:text-slate-300">
+              <?= __('Investment balance: :amount', ['amount' => moneyfmt($linkedInvestment['balance'], $linkedCurrency)]) ?>
+            </div>
+            <a class="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:underline dark:text-brand-300" href="/investments">
+              <i data-lucide="external-link" class="h-3.5 w-3.5"></i>
+              <?= __('Manage investment') ?>
+            </a>
+          </div>
+        <?php endif; ?>
       </div>
     </div>
 

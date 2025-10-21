@@ -720,6 +720,42 @@ switch ($path) {
         redirect('/scheduled');
         break;
 
+    case '/investments':
+        require_login();
+        require __DIR__ . '/src/controllers/investments.php';
+        investments_index($pdo);
+        break;
+    case '/investments/add':
+        require_login();
+        require __DIR__ . '/src/controllers/investments.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { investments_add($pdo); }
+        redirect('/investments');
+        break;
+    case '/investments/update':
+        require_login();
+        require __DIR__ . '/src/controllers/investments.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { investments_update($pdo); }
+        redirect('/investments');
+        break;
+    case '/investments/adjust':
+        require_login();
+        require __DIR__ . '/src/controllers/investments.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { investments_adjust($pdo); }
+        redirect('/investments');
+        break;
+    case '/investments/scheduled/create':
+        require_login();
+        require __DIR__ . '/src/controllers/investments.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { investments_schedule_create($pdo); }
+        redirect('/investments');
+        break;
+    case '/investments/delete':
+        require_login();
+        require __DIR__ . '/src/controllers/investments.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { investments_delete($pdo); }
+        redirect('/investments');
+        break;
+
     // Emergency Fund
     case '/emergency':
         require_login();

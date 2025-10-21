@@ -100,7 +100,7 @@ function loans_index(PDO $pdo){
     SELECT id, title, amount, currency, next_due, rrule, loan_id, goal_id
     FROM scheduled_payments
     WHERE user_id = ?
-      AND (loan_id IS NULL AND goal_id IS NULL) -- free ones
+      AND (loan_id IS NULL AND goal_id IS NULL AND investment_id IS NULL) -- free ones
     ORDER BY lower(title)
   ");
   $sp->execute([$u]);

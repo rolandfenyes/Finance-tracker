@@ -1123,6 +1123,7 @@ $ogUrl = $scheme . '://' . $host . $currentRequestPath;
       ['href'=>'/loans',         'label'=>'Loans',            'match'=>'#^/loans(?:/.*)?$#',       'icon' => 'landmark'],
       ['href'=>'/emergency',     'label'=>'Emergency Fund',   'match'=>'#^/emergency(?:/.*)?$#',   'icon' => 'life-buoy'],
       ['href'=>'/scheduled',     'label'=>'Scheduled',        'match'=>'#^/scheduled(?:/.*)?$#',   'icon' => 'calendar-clock'],
+      ['href'=>'/investments',   'label'=>'Investments',      'match'=>'#^/investments(?:/.*)?$#', 'icon' => 'trending-up'],
       ['href'=>'/feedback',      'label'=>'Feedback',         'match'=>'#^/feedback$#',            'icon' => 'message-circle'],
       ['href'=>'/settings',      'label'=>'Settings',         'match'=>'#^/settings$#',            'icon' => 'settings'],
     ];

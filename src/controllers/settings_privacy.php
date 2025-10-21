@@ -146,7 +146,7 @@ function build_user_data_export(PDO $pdo, int $userId): array
         'categories' => 'SELECT id, label, kind, color, cashflow_rule_id, system_key, protected FROM categories WHERE user_id = ? ORDER BY id',
         'basic_incomes' => 'SELECT id, label, amount, currency, valid_from, valid_to FROM basic_incomes WHERE user_id = ? ORDER BY valid_from',
         'transactions' => 'SELECT id, kind, category_id, amount, currency, occurred_on, note, created_at, updated_at, source, source_ref_id, locked FROM transactions WHERE user_id = ? ORDER BY occurred_on',
-        'scheduled_payments' => 'SELECT id, title, amount, currency, rrule, next_due, category_id, loan_id, goal_id FROM scheduled_payments WHERE user_id = ? ORDER BY id',
+        'scheduled_payments' => 'SELECT id, title, amount, currency, rrule, next_due, category_id, loan_id, goal_id, investment_id FROM scheduled_payments WHERE user_id = ? ORDER BY id',
         'goals' => 'SELECT id, title, target_amount, current_amount, currency, deadline, priority, status FROM goals WHERE user_id = ? ORDER BY id',
         'goal_transactions' => 'SELECT id, goal_id, occurred_on, amount, currency, note FROM goal_transactions WHERE user_id = ? ORDER BY occurred_on',
         'goal_contributions' => 'SELECT id, goal_id, amount, currency, occurred_on, note, created_at FROM goal_contributions WHERE user_id = ? ORDER BY occurred_on',
