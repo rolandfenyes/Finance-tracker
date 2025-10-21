@@ -949,4 +949,8 @@ return [
     'Emergency fund withdrawal' => 'Retiro del fondo de emergencia',
     'Cannot withdraw more than the emergency fund balance.' => 'No puedes retirar más que el saldo del fondo de emergencia.',
     'Cannot withdraw more than the connected investment balance.' => 'No puedes retirar más que el saldo de la inversión vinculada.',
+    'Investment details' => 'Detalles de la inversión',
+    'Edit investment' => 'Editar inversión',
+    'Cancel editing' => 'Cancelar edición',
+    'View details' => 'Ver detalles',
 ];

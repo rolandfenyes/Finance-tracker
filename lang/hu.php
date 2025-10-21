@@ -949,4 +949,8 @@ return [
     'Emergency fund withdrawal' => 'Kifizetés a vésztartalékból',
     'Cannot withdraw more than the emergency fund balance.' => 'Nem vehetsz ki többet, mint amennyi a vésztartalék egyenlege.',
     'Cannot withdraw more than the connected investment balance.' => 'Nem vehetsz ki többet, mint amennyi a kapcsolt befektetés egyenlege.',
+    'Investment details' => 'Befektetés részletei',
+    'Edit investment' => 'Befektetés szerkesztése',
+    'Cancel editing' => 'Szerkesztés megszakítása',
+    'View details' => 'Részletek megtekintése',
 ];

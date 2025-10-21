@@ -109,4 +109,8 @@ return [
     'Emergency fund withdrawal' => 'Ανάληψη από το ταμείο έκτακτης ανάγκης',
     'Cannot withdraw more than the emergency fund balance.' => 'Δεν μπορείς να κάνεις ανάληψη μεγαλύτερη από το υπόλοιπο του ταμείου έκτακτης ανάγκης.',
     'Cannot withdraw more than the connected investment balance.' => 'Δεν μπορείς να κάνεις ανάληψη μεγαλύτερη από το υπόλοιπο της συνδεδεμένης επένδυσης.',
+    'Investment details' => 'Λεπτομέρειες επένδυσης',
+    'Edit investment' => 'Επεξεργασία επένδυσης',
+    'Cancel editing' => 'Ακύρωση επεξεργασίας',
+    'View details' => 'Προβολή λεπτομερειών',
 ];

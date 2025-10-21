@@ -347,6 +347,7 @@ $addPanelId = 'investment-add-panel';
           $milestones = $performance['milestones'] ?? [];
           $milestoneCount = is_array($milestones) ? count($milestones) : 0;
           $hasRate = !empty($performance['has_rate']);
+          $noteText = trim((string)($investment['notes'] ?? ''));
         ?>
           <details class="panel overflow-hidden" data-investment="<?= $investmentId ?>">
             <summary class="flex cursor-pointer flex-col gap-4 p-5 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-500">
@@ -391,7 +392,7 @@ $addPanelId = 'investment-add-panel';
             <?php endif; ?>
           </div>
           <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-            <span><?= __('Open editor') ?></span>
+            <span><?= __('View details') ?></span>
             <span><?= __('Updated :date', ['date' => htmlspecialchars(substr((string)($investment['updated_at'] ?? ''), 0, 16))]) ?></span>
           </div>
         </summary>
@@ -513,9 +514,96 @@ $addPanelId = 'investment-add-panel';
               </div>
             <?php endif; ?>
 
-            <form method="post" action="/investments/update" class="space-y-4" id="investment-update-<?= $investmentId ?>">
-              <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-              <input type="hidden" name="id" value="<?= $investmentId ?>" />
+            <div class="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900/40">
+              <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 dark:border-slate-700 dark:text-white">
+                <span><?= __('Investment details') ?></span>
+                <button
+                  type="button"
+                  class="btn btn-muted inline-flex items-center gap-2"
+                  data-investment-mode-toggle
+                  data-target-view="#investment-view-<?= $investmentId ?>"
+                  data-target-edit="#investment-update-<?= $investmentId ?>"
+                  aria-pressed="false"
+                  aria-controls="investment-update-<?= $investmentId ?>"
+                >
+                  <span data-mode-label="view" class="inline-flex items-center gap-2">
+                    <i data-lucide="pencil" class="h-4 w-4"></i>
+                    <?= __('Edit investment') ?>
+                  </span>
+                  <span data-mode-label="edit" class="hidden items-center gap-2">
+                    <i data-lucide="eye" class="h-4 w-4"></i>
+                    <?= __('Cancel editing') ?>
+                  </span>
+                </button>
+              </div>
+
+              <div class="space-y-4 px-4 py-4" id="investment-view-<?= $investmentId ?>" data-investment-view>
+                <div class="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400"><?= __('Investment type') ?></div>
+                    <div class="mt-1 text-sm font-medium text-slate-900 dark:text-white"><?= htmlspecialchars($meta['label']) ?></div>
+                  </div>
+                  <div>
+                    <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400"><?= __('Currency') ?></div>
+                    <div class="mt-1 text-sm font-medium text-slate-900 dark:text-white"><?= htmlspecialchars($currencyCode) ?></div>
+                  </div>
+                  <?php if (!empty($investment['provider'])): ?>
+                    <div>
+                      <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400"><?= __('Institution or broker') ?></div>
+                      <div class="mt-1 text-sm text-slate-900 dark:text-white"><?= htmlspecialchars($investment['provider']) ?></div>
+                    </div>
+                  <?php endif; ?>
+                  <?php if (!empty($investment['identifier'])): ?>
+                    <div>
+                      <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400"><?= __('Account number / Ticker') ?></div>
+                      <div class="mt-1 text-sm text-slate-900 dark:text-white"><?= htmlspecialchars($investment['identifier']) ?></div>
+                    </div>
+                  <?php endif; ?>
+                  <div>
+                    <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400"><?= __('Interest payment frequency') ?></div>
+                    <div class="mt-1 text-sm text-slate-900 dark:text-white"><?= htmlspecialchars($frequencyLabel) ?></div>
+                  </div>
+                  <?php if ($investment['interest_rate'] !== null && $investment['interest_rate'] !== ''): ?>
+                    <div>
+                      <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400"><?= __('Annual rate (EBKM)') ?></div>
+                      <div class="mt-1 text-sm text-slate-900 dark:text-white"><?= number_format((float)$investment['interest_rate'], 2) ?>%</div>
+                    </div>
+                  <?php endif; ?>
+                  <div class="md:col-span-2">
+                    <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400"><?= __('Linked scheduled payment') ?></div>
+                    <?php if ($scheduleId): ?>
+                      <div class="mt-1 text-sm font-semibold text-slate-900 dark:text-white"><?= htmlspecialchars($investment['sched_title'] ?? '') ?></div>
+                      <ul class="mt-2 space-y-1 text-xs text-slate-500 dark:text-slate-400">
+                        <?php if (!empty($investment['sched_next_due'])): ?>
+                          <li><?= __('Next payment on :date', ['date' => htmlspecialchars($investment['sched_next_due'])]) ?></li>
+                        <?php endif; ?>
+                        <?php if (!empty($investment['sched_summary'])): ?>
+                          <li><?= __('Repeats: :summary', ['summary' => htmlspecialchars($investment['sched_summary'])]) ?></li>
+                        <?php endif; ?>
+                        <?php if (!empty($investment['sched_amount'])): ?>
+                          <li><?= __('Scheduled amount: :amount', ['amount' => moneyfmt((float)$investment['sched_amount'], (string)($investment['sched_currency'] ?? $currencyCode))]) ?></li>
+                        <?php endif; ?>
+                      </ul>
+                    <?php else: ?>
+                      <p class="mt-1 text-sm text-slate-500 dark:text-slate-400"><?= __('No schedule linked yet.') ?></p>
+                    <?php endif; ?>
+                  </div>
+                  <?php if ($noteText !== ''): ?>
+                    <div class="md:col-span-2">
+                      <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400"><?= __('Notes') ?></div>
+                      <p class="mt-1 whitespace-pre-wrap text-sm text-slate-900 dark:text-white"><?= nl2br(htmlspecialchars($noteText, ENT_QUOTES)) ?></p>
+                    </div>
+                  <?php endif; ?>
+                  <div class="md:col-span-2 text-xs text-slate-500 dark:text-slate-400">
+                    <div><?= __('Created on :date', ['date' => htmlspecialchars(substr((string)($investment['created_at'] ?? ''), 0, 10))]) ?></div>
+                    <div><?= __('Updated :date', ['date' => htmlspecialchars(substr((string)($investment['updated_at'] ?? ''), 0, 16))]) ?></div>
+                  </div>
+                </div>
+              </div>
+
+              <form method="post" action="/investments/update" class="hidden space-y-4 border-t border-slate-200 px-4 py-4 dark:border-slate-700" id="investment-update-<?= $investmentId ?>" data-investment-edit>
+                <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+                <input type="hidden" name="id" value="<?= $investmentId ?>" />
 
                 <div class="grid gap-3 md:grid-cols-2">
                   <div>
@@ -644,7 +732,8 @@ $addPanelId = 'investment-add-panel';
                     </button>
                   </div>
                 </div>
-            </form>
+              </form>
+            </div>
 
             <div class="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900/40">
               <details>
@@ -1165,5 +1254,40 @@ $builderIds = array_values(array_unique(array_filter($builderIds)));
         updateState();
       }
     }
+
+    document.querySelectorAll('[data-investment-mode-toggle]').forEach(function (btn) {
+      const viewSelector = btn.getAttribute('data-target-view');
+      const editSelector = btn.getAttribute('data-target-edit');
+      const viewEl = viewSelector ? document.querySelector(viewSelector) : null;
+      const editEl = editSelector ? document.querySelector(editSelector) : null;
+      const viewLabel = btn.querySelector('[data-mode-label="view"]');
+      const editLabel = btn.querySelector('[data-mode-label="edit"]');
+      const firstField = editEl ? editEl.querySelector('input, select, textarea') : null;
+
+      const setMode = function (mode) {
+        const isEdit = mode === 'edit';
+        btn.setAttribute('data-mode', isEdit ? 'edit' : 'view');
+        btn.setAttribute('aria-pressed', isEdit ? 'true' : 'false');
+        if (viewLabel) viewLabel.classList.toggle('hidden', isEdit);
+        if (editLabel) editLabel.classList.toggle('hidden', !isEdit);
+        if (viewEl) viewEl.classList.toggle('hidden', isEdit);
+        if (editEl) editEl.classList.toggle('hidden', !isEdit);
+        if (isEdit && firstField) {
+          window.setTimeout(function () {
+            if (typeof firstField.focus === 'function') {
+              firstField.focus();
+            }
+          }, 120);
+        }
+      };
+
+      btn.addEventListener('click', function (event) {
+        event.preventDefault();
+        const nextMode = btn.getAttribute('data-mode') === 'edit' ? 'view' : 'edit';
+        setMode(nextMode);
+      });
+
+      setMode('view');
+    });
   });
 </script>

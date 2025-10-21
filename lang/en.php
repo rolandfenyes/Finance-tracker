@@ -43,4 +43,8 @@ return [
     'Emergency fund withdrawal' => 'Emergency fund withdrawal',
     'Cannot withdraw more than the emergency fund balance.' => 'Cannot withdraw more than the emergency fund balance.',
     'Cannot withdraw more than the connected investment balance.' => 'Cannot withdraw more than the connected investment balance.',
+    'Investment details' => 'Investment details',
+    'Edit investment' => 'Edit investment',
+    'Cancel editing' => 'Cancel editing',
+    'View details' => 'View details',
 ];
