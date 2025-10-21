@@ -479,6 +479,10 @@ function investments_index(PDO $pdo): void
         $mainCurrency = strtoupper($userCurrencies[0]['code'] ?? 'HUF');
     }
 
+    $emergencyStmt = $pdo->prepare('SELECT investment_id FROM emergency_fund WHERE user_id=?');
+    $emergencyStmt->execute([$userId]);
+    $emergencyInvestmentId = (int)($emergencyStmt->fetchColumn() ?: 0);
+
     view('investments/index', [
         'investments' => $investments,
         'availableSchedules' => $availableSchedules,
@@ -487,6 +491,7 @@ function investments_index(PDO $pdo): void
         'mainCurrency' => $mainCurrency,
         'performanceByInvestment' => $performanceByInvestment,
         'categories' => $categories,
+        'emergencyInvestmentId' => $emergencyInvestmentId,
     ]);
 }
 
@@ -718,6 +723,7 @@ function investments_delete(PDO $pdo): void
     $pdo->beginTransaction();
     try {
         $pdo->prepare('UPDATE scheduled_payments SET investment_id=NULL WHERE investment_id=? AND user_id=?')->execute([$id, $userId]);
+        $pdo->prepare('UPDATE emergency_fund SET investment_id=NULL WHERE investment_id=? AND user_id=?')->execute([$id, $userId]);
         $pdo->prepare('DELETE FROM investments WHERE id=? AND user_id=?')->execute([$id, $userId]);
         $pdo->commit();
         $_SESSION['flash'] = __('Investment deleted.');

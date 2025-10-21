@@ -9,7 +9,7 @@ function emergency_index(PDO $pdo){
   require_login(); $u = uid();
 
   // current EF state
-  $q = $pdo->prepare('SELECT total, target_amount, currency FROM emergency_fund WHERE user_id=?');
+  $q = $pdo->prepare('SELECT total, target_amount, currency, investment_id FROM emergency_fund WHERE user_id=?');
   $q->execute([$u]);
   $ef = $q->fetch(PDO::FETCH_ASSOC) ?: ['total'=>0, 'target_amount'=>0, 'currency'=>fx_user_main($pdo,$u) ?: 'HUF'];
 
@@ -17,6 +17,7 @@ function emergency_index(PDO $pdo){
   $ef_total = (float)($ef['total'] ?? 0);
   $ef_target= (float)($ef['target_amount'] ?? 0);
   $main     = fx_user_main($pdo,$u) ?: $ef_cur;
+  $linkedInvestmentId = isset($ef['investment_id']) ? (int)$ef['investment_id'] : null;
 
   // ---- Suggestions: monthly scheduled "bills" total ----
   // We'll expand all user scheduled_payments for the NEXT full calendar month
@@ -166,9 +167,45 @@ function emergency_index(PDO $pdo){
   $uc->execute([$u]);
   $userCurrencies = $uc->fetchAll(PDO::FETCH_ASSOC) ?: [['code'=>'HUF','is_main'=>true]];
 
+  $investmentTypeMeta = [
+    'savings' => [
+      'label' => __('Savings account'),
+    ],
+    'etf' => [
+      'label' => __('ETF'),
+    ],
+    'stock' => [
+      'label' => __('Individual stock'),
+    ],
+  ];
+
+  $investmentOptions = [];
+  $linkedInvestment = null;
+  $inv = $pdo->prepare('SELECT id, name, type, currency, balance FROM investments WHERE user_id=? ORDER BY LOWER(name)');
+  $inv->execute([$u]);
+  while ($row = $inv->fetch(PDO::FETCH_ASSOC)) {
+    $typeKey = strtolower((string)($row['type'] ?? 'savings'));
+    if (!isset($investmentTypeMeta[$typeKey])) {
+      $typeKey = 'savings';
+    }
+    $option = [
+      'id' => (int)($row['id'] ?? 0),
+      'name' => (string)($row['name'] ?? ''),
+      'type' => $typeKey,
+      'currency' => strtoupper((string)($row['currency'] ?? '')),
+      'balance' => (float)($row['balance'] ?? 0),
+      'type_label' => $investmentTypeMeta[$typeKey]['label'],
+    ];
+    $investmentOptions[] = $option;
+    if ($linkedInvestmentId && $option['id'] === $linkedInvestmentId) {
+      $linkedInvestment = $option;
+    }
+  }
+
   view('emergency/index', compact(
     'ef','ef_cur','ef_total','ef_target','main','target_main','total_main','rows','userCurrencies',
-    'scheduledMonthlyEF','scheduledMonthlyMain','usd1kEF','usd1kMain','suggest','monthlyNeedsEF','monthlyNeedsMain'
+    'scheduledMonthlyEF','scheduledMonthlyMain','usd1kEF','usd1kMain','suggest','monthlyNeedsEF','monthlyNeedsMain',
+    'investmentOptions','linkedInvestment','linkedInvestmentId','investmentTypeMeta'
   ));
 }
 
@@ -179,15 +216,34 @@ function emergency_set_target(PDO $pdo){
   $currency = strtoupper(trim($_POST['currency'] ?? ''));
   if ($currency === '') $currency = fx_user_main($pdo,$u) ?: 'HUF';
 
+  $investmentIdRaw = $_POST['investment_id'] ?? '';
+  $investmentId = ($investmentIdRaw !== '' && $investmentIdRaw !== null) ? (int)$investmentIdRaw : null;
+  if ($investmentId) {
+    $invStmt = $pdo->prepare('SELECT id, currency FROM investments WHERE id=? AND user_id=?');
+    $invStmt->execute([$investmentId, $u]);
+    $investment = $invStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    if (!$investment) {
+      $investmentId = null;
+    } else {
+      $invCurrency = strtoupper((string)($investment['currency'] ?? ''));
+      if ($invCurrency !== '' && $invCurrency !== $currency) {
+        $_SESSION['flash'] = __('Select the same currency as your linked investment (:currency).', ['currency' => $invCurrency]);
+        redirect('/emergency');
+      }
+    }
+  }
+
   // initialize row if missing
   $pdo->prepare("
-    INSERT INTO emergency_fund (user_id, total, target_amount, currency)
-    VALUES (?, 0, ?, ?)
+    INSERT INTO emergency_fund (user_id, total, target_amount, currency, investment_id)
+    VALUES (?, 0, ?, ?, ?)
     ON CONFLICT (user_id)
-    DO UPDATE SET target_amount = EXCLUDED.target_amount, currency = EXCLUDED.currency
-  ")->execute([$u,$target,$currency]);
+    DO UPDATE SET target_amount = EXCLUDED.target_amount,
+                  currency = EXCLUDED.currency,
+                  investment_id = EXCLUDED.investment_id
+  ")->execute([$u,$target,$currency,$investmentId]);
 
-  $_SESSION['flash'] = 'Emergency fund target saved.';
+  $_SESSION['flash'] = __('Emergency fund settings saved.');
   redirect('/emergency');
 }
 
@@ -200,7 +256,7 @@ function emergency_add(PDO $pdo){
   if ($amount <= 0) { $_SESSION['flash']='Amount must be positive.'; redirect('/emergency'); }
 
   // EF & main currencies
-  $row = $pdo->prepare('SELECT total, target_amount, currency FROM emergency_fund WHERE user_id=?');
+  $row = $pdo->prepare('SELECT total, target_amount, currency, investment_id FROM emergency_fund WHERE user_id=?');
   $row->execute([$u]);
   $fund = $row->fetch(PDO::FETCH_ASSOC) ?: null;
   $efCur = $fund['currency'] ?? null;
@@ -208,6 +264,23 @@ function emergency_add(PDO $pdo){
   $previousTotal = max(0.0, (float)($fund['total'] ?? 0.0));
   $targetAmount = max(0.0, (float)($fund['target_amount'] ?? 0.0));
   $main = fx_user_main($pdo,$u) ?: $efCur;
+  $investmentId = isset($fund['investment_id']) ? (int)$fund['investment_id'] : 0;
+
+  if ($investmentId > 0) {
+    $invStmt = $pdo->prepare('SELECT id, currency FROM investments WHERE id=? AND user_id=?');
+    $invStmt->execute([$investmentId, $u]);
+    $linked = $invStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    if (!$linked) {
+      $pdo->prepare('UPDATE emergency_fund SET investment_id=NULL WHERE user_id=?')->execute([$u]);
+      $investmentId = 0;
+    } else {
+      $invCurrency = strtoupper((string)($linked['currency'] ?? ''));
+      if ($invCurrency !== '' && $invCurrency !== strtoupper($efCur)) {
+        $_SESSION['flash'] = __('Linked investment currency must match your emergency fund currency (:currency).', ['currency' => $invCurrency]);
+        redirect('/emergency');
+      }
+    }
+  }
 
   // FX snapshot
   $amtMain = ($efCur === $main) ? $amount : fx_convert($pdo, $amount, $efCur, $main, $date);
@@ -228,6 +301,7 @@ function emergency_add(PDO $pdo){
     ");
     $ins->execute([$u,$date,'add',$amount,$efCur,$amtMain,$main,$rate,$note]);
     $efTxId = (int)$ins->fetchColumn();
+    $investmentTxId = null;
 
     // 2) Increase EF total (in EF currency)
     $pdo->prepare("
@@ -238,6 +312,17 @@ function emergency_add(PDO $pdo){
                     currency = EXCLUDED.currency
     ")->execute([$u,$amount,$efCur]);
 
+    if ($investmentId > 0) {
+      $invUpdate = $pdo->prepare('UPDATE investments SET balance = balance + ?, updated_at=NOW() WHERE id=? AND user_id=? RETURNING id');
+      $invUpdate->execute([$amount, $investmentId, $u]);
+      if ($invUpdate->fetchColumn()) {
+        $noteText = __('Emergency fund deposit');
+        $invTx = $pdo->prepare('INSERT INTO investment_transactions (investment_id, user_id, amount, note) VALUES (?,?,?,?) RETURNING id');
+        $invTx->execute([$investmentId, $u, $amount, $noteText]);
+        $investmentTxId = (int)$invTx->fetchColumn();
+      }
+    }
+
     // 3) Mirror into transactions as SPENDING (money leaves wallet to EF)
     $txNote = $note !== '' ? $note : 'Emergency Fund contribution';
     $tins = $pdo->prepare("
@@ -246,6 +331,10 @@ function emergency_add(PDO $pdo){
       VALUES (?, ?, 'spending', ?, ?, ?, ?, 'ef', ?, TRUE, ?)
     ");
     $tins->execute([$u, $date, $amount, $efCur, (int)$cats['ef_add'], $txNote, $efTxId, $efTxId]);
+
+    if (!empty($investmentTxId)) {
+      $pdo->prepare('UPDATE emergency_fund_tx SET investment_tx_id=? WHERE id=?')->execute([$investmentTxId, $efTxId]);
+    }
 
     $pdo->commit();
   } catch(Throwable $e){
@@ -274,12 +363,42 @@ function emergency_withdraw(PDO $pdo){
   $note   = trim($_POST['note'] ?? '');
   if ($amount <= 0) { $_SESSION['flash']='Amount must be positive.'; redirect('/emergency'); }
 
-  $row = $pdo->prepare('SELECT total, target_amount, currency FROM emergency_fund WHERE user_id=?');
+  $row = $pdo->prepare('SELECT total, target_amount, currency, investment_id FROM emergency_fund WHERE user_id=?');
   $row->execute([$u]);
   $fund = $row->fetch(PDO::FETCH_ASSOC) ?: null;
   $efCur = $fund['currency'] ?? null;
   if (!$efCur) { $efCur = fx_user_main($pdo,$u) ?: 'HUF'; }
   $main = fx_user_main($pdo,$u) ?: $efCur;
+  $investmentId = isset($fund['investment_id']) ? (int)$fund['investment_id'] : 0;
+  $efTotal = max(0.0, (float)($fund['total'] ?? 0.0));
+  $investmentBalance = null;
+
+  if ($investmentId > 0) {
+    $invStmt = $pdo->prepare('SELECT balance, currency FROM investments WHERE id=? AND user_id=?');
+    $invStmt->execute([$investmentId, $u]);
+    $linked = $invStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    if (!$linked) {
+      $pdo->prepare('UPDATE emergency_fund SET investment_id=NULL WHERE user_id=?')->execute([$u]);
+      $investmentId = 0;
+    } else {
+      $invCurrency = strtoupper((string)($linked['currency'] ?? ''));
+      if ($invCurrency !== '' && $invCurrency !== strtoupper($efCur)) {
+        $_SESSION['flash'] = __('Linked investment currency must match your emergency fund currency (:currency).', ['currency' => $invCurrency]);
+        redirect('/emergency');
+      }
+      $investmentBalance = (float)($linked['balance'] ?? 0.0);
+    }
+  }
+
+  if ($investmentId > 0 && $amount > $efTotal + 0.00001) {
+    $_SESSION['flash'] = __('Cannot withdraw more than the emergency fund balance.');
+    redirect('/emergency');
+  }
+
+  if ($investmentId > 0 && $investmentBalance !== null && $amount > $investmentBalance + 0.00001) {
+    $_SESSION['flash'] = __('Cannot withdraw more than the connected investment balance.');
+    redirect('/emergency');
+  }
 
   $amtMain = ($efCur === $main) ? $amount : fx_convert($pdo, $amount, $efCur, $main, $date);
   $one     = ($efCur === $main) ? 1.0     : fx_convert($pdo, 1, $efCur, $main, $date);
@@ -299,10 +418,22 @@ function emergency_withdraw(PDO $pdo){
     ");
     $ins->execute([$u,$date,'withdraw',$amount,$efCur,$amtMain,$main,$rate,$note]);
     $efTxId = (int)$ins->fetchColumn();
+    $investmentTxId = null;
 
     // 2) Decrease EF total
     $pdo->prepare("UPDATE emergency_fund SET total = GREATEST(0, COALESCE(total,0) - ?) WHERE user_id=?")
         ->execute([$amount,$u]);
+
+    if ($investmentId > 0) {
+      $invUpdate = $pdo->prepare('UPDATE investments SET balance = balance - ?, updated_at=NOW() WHERE id=? AND user_id=? RETURNING id');
+      $invUpdate->execute([$amount, $investmentId, $u]);
+      if ($invUpdate->fetchColumn()) {
+        $noteText = __('Emergency fund withdrawal');
+        $invTx = $pdo->prepare('INSERT INTO investment_transactions (investment_id, user_id, amount, note) VALUES (?,?,?,?) RETURNING id');
+        $invTx->execute([$investmentId, $u, -$amount, $noteText]);
+        $investmentTxId = (int)$invTx->fetchColumn();
+      }
+    }
 
     // 3) Mirror into transactions as INCOME (money returns from EF)
     $txNote = $note !== '' ? $note : 'Emergency Fund withdrawal';
@@ -312,6 +443,10 @@ function emergency_withdraw(PDO $pdo){
       VALUES (?, ?, 'income', ?, ?, ?, ?, 'ef', ?, TRUE, ?)
     ");
     $tins->execute([$u, $date, $amount, $efCur, (int)$cats['ef_withdraw'], $txNote, $efTxId, $efTxId]);
+
+    if (!empty($investmentTxId)) {
+      $pdo->prepare('UPDATE emergency_fund_tx SET investment_tx_id=? WHERE id=?')->execute([$investmentTxId, $efTxId]);
+    }
 
     $pdo->commit();
   } catch(Throwable $e){
@@ -340,7 +475,7 @@ function emergency_tx_delete(PDO $pdo){
   $id = (int)($_POST['id'] ?? 0);
   if (!$id) redirect('/emergency');
 
-  $row = $pdo->prepare("SELECT kind, amount_native FROM emergency_fund_tx WHERE id=? AND user_id=?");
+  $row = $pdo->prepare("SELECT kind, amount_native, investment_tx_id FROM emergency_fund_tx WHERE id=? AND user_id=?");
   $row->execute([$id,$u]); $tx = $row->fetch(PDO::FETCH_ASSOC);
   if (!$tx) redirect('/emergency');
 
@@ -353,6 +488,18 @@ function emergency_tx_delete(PDO $pdo){
     } else {
       $pdo->prepare("UPDATE emergency_fund SET total = COALESCE(total,0) + ? WHERE user_id=?")
           ->execute([(float)$tx['amount_native'],$u]);
+    }
+
+    $investmentTxId = isset($tx['investment_tx_id']) ? (int)$tx['investment_tx_id'] : 0;
+    if ($investmentTxId) {
+      $invTxStmt = $pdo->prepare('SELECT investment_id, amount FROM investment_transactions WHERE id=? AND user_id=?');
+      $invTxStmt->execute([$investmentTxId, $u]);
+      $invTx = $invTxStmt->fetch(PDO::FETCH_ASSOC);
+      if ($invTx) {
+        $pdo->prepare('UPDATE investments SET balance = balance - ?, updated_at=NOW() WHERE id=? AND user_id=?')
+            ->execute([(float)$invTx['amount'], (int)$invTx['investment_id'], $u]);
+        $pdo->prepare('DELETE FROM investment_transactions WHERE id=? AND user_id=?')->execute([$investmentTxId, $u]);
+      }
     }
 
     // Delete mirrored transaction(s) by either linkage

@@ -6,6 +6,7 @@
 /** @var array $transactionsByInvestment */
 /** @var array $performanceByInvestment */
 /** @var array $categories */
+/** @var int $emergencyInvestmentId */
 
 $types = [
   'savings' => [
@@ -332,6 +333,7 @@ $addPanelId = 'investment-add-panel';
           $meta = $types[$currentType] ?? $types['savings'];
           $scheduleId = (int)($investment['sched_id'] ?? 0);
           $investmentId = (int)($investment['id'] ?? 0);
+          $isEmergency = !empty($emergencyInvestmentId) && $emergencyInvestmentId === $investmentId;
           $transactions = $transactionsByInvestment[$investmentId] ?? [];
           $currencyCode = strtoupper((string)($investment['currency'] ?? $mainCurrency));
           if ($currencyCode === '') {
@@ -360,6 +362,11 @@ $addPanelId = 'investment-add-panel';
                     <div class="text-lg font-semibold text-slate-900 dark:text-white">
                       <?= htmlspecialchars($investment['name'] ?? '') ?>
                     </div>
+                    <?php if ($isEmergency): ?>
+                      <div class="mt-1 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:bg-amber-500/20 dark:text-amber-100">
+                        <?= __('Emergency fund pocket') ?>
+                      </div>
+                    <?php endif; ?>
                   </div>
                 </div>
                 <div class="text-right">
