@@ -113,4 +113,6 @@ return [
     'Edit investment' => 'Επεξεργασία επένδυσης',
     'Cancel editing' => 'Ακύρωση επεξεργασίας',
     'View details' => 'Προβολή λεπτομερειών',
+    'Unlink the existing schedule before creating a new one.' => 'Αποσυνδέστε την υπάρχουσα προγραμματισμένη πληρωμή πριν δημιουργήσετε μία νέα.',
+    'Set Linked scheduled payment to “No linked schedule” while editing the investment.' => 'Ορίστε την επιλογή «Συνδεδεμένη προγραμματισμένη πληρωμή» σε «Χωρίς συνδεδεμένο πρόγραμμα» κατά την επεξεργασία της επένδυσης.',
 ];

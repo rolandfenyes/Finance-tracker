@@ -810,6 +810,13 @@ function investments_schedule_create(PDO $pdo): void
         redirect('/investments');
     }
 
+    $existingStmt = $pdo->prepare('SELECT id FROM scheduled_payments WHERE investment_id=? AND user_id=? LIMIT 1');
+    $existingStmt->execute([$investmentId, $userId]);
+    if ($existingStmt->fetchColumn()) {
+        $_SESSION['flash'] = __('Unlink the existing schedule before creating a new one.');
+        redirect('/investments');
+    }
+
     $title = trim((string)($_POST['title'] ?? ''));
     $amountRaw = trim((string)($_POST['amount'] ?? ''));
     $amount = $amountRaw === '' ? 0.0 : (float)str_replace(',', '.', $amountRaw);

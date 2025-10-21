@@ -333,6 +333,7 @@ $addPanelId = 'investment-add-panel';
           $meta = $types[$currentType] ?? $types['savings'];
           $scheduleId = (int)($investment['sched_id'] ?? 0);
           $investmentId = (int)($investment['id'] ?? 0);
+          $scheduleCreateId = 'investment-schedule-create-' . $investmentId;
           $isEmergency = !empty($emergencyInvestmentId) && $emergencyInvestmentId === $investmentId;
           $transactions = $transactionsByInvestment[$investmentId] ?? [];
           $currencyCode = strtoupper((string)($investment['currency'] ?? $mainCurrency));
@@ -523,6 +524,7 @@ $addPanelId = 'investment-add-panel';
                   data-investment-mode-toggle
                   data-target-view="#investment-view-<?= $investmentId ?>"
                   data-target-edit="#investment-update-<?= $investmentId ?>"
+                  data-target-schedule="#<?= $scheduleCreateId ?>"
                   aria-pressed="false"
                   aria-controls="investment-update-<?= $investmentId ?>"
                 >
@@ -736,7 +738,7 @@ $addPanelId = 'investment-add-panel';
             </div>
 
             <div class="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900/40">
-              <details>
+              <details id="<?= $scheduleCreateId ?>" data-investment-schedule>
                 <summary class="flex cursor-pointer items-center justify-between gap-2 px-4 py-3 text-sm font-semibold text-slate-900 dark:text-white">
                   <span class="inline-flex items-center gap-2">
                     <i data-lucide="calendar-plus" class="h-4 w-4"></i>
@@ -747,7 +749,16 @@ $addPanelId = 'investment-add-panel';
                   </span>
                 </summary>
                 <div class="border-t border-slate-200 px-4 py-4 dark:border-slate-700">
-                  <?php $builderId = 'inv' . $investmentId; ?>
+                  <?php if ($scheduleId): ?>
+                    <div class="space-y-2 text-sm text-slate-500 dark:text-slate-300/80">
+                      <p><?= __('Unlink the existing schedule before creating a new one.') ?></p>
+                      <p class="text-xs text-slate-500 dark:text-slate-400">
+                        <?= __('Set Linked scheduled payment to “No linked schedule” while editing the investment.') ?>
+                      </p>
+                    </div>
+                  <?php else:
+                    $builderId = 'inv' . $investmentId;
+                  ?>
                   <form method="post" action="/investments/scheduled/create" class="space-y-3">
                     <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                     <input type="hidden" name="investment_id" value="<?= $investmentId ?>" />
@@ -864,6 +875,7 @@ $addPanelId = 'investment-add-panel';
                       </button>
                     </div>
                   </form>
+                  <?php endif; ?>
                 </div>
               </details>
             </div>
@@ -1263,6 +1275,8 @@ $builderIds = array_values(array_unique(array_filter($builderIds)));
       const viewLabel = btn.querySelector('[data-mode-label="view"]');
       const editLabel = btn.querySelector('[data-mode-label="edit"]');
       const firstField = editEl ? editEl.querySelector('input, select, textarea') : null;
+      const scheduleSelector = btn.getAttribute('data-target-schedule');
+      const scheduleEl = scheduleSelector ? document.querySelector(scheduleSelector) : null;
 
       const setMode = function (mode) {
         const isEdit = mode === 'edit';
@@ -1272,6 +1286,23 @@ $builderIds = array_values(array_unique(array_filter($builderIds)));
         if (editLabel) editLabel.classList.toggle('hidden', !isEdit);
         if (viewEl) viewEl.classList.toggle('hidden', isEdit);
         if (editEl) editEl.classList.toggle('hidden', !isEdit);
+        if (scheduleEl) {
+          if (isEdit) {
+            if (!scheduleEl.hasAttribute('open')) {
+              scheduleEl.setAttribute('open', '');
+              scheduleEl.dataset.autoOpened = 'true';
+            } else if (!scheduleEl.dataset.autoOpened) {
+              scheduleEl.dataset.autoOpened = 'manual';
+            }
+          } else {
+            if (scheduleEl.dataset.autoOpened === 'true') {
+              scheduleEl.removeAttribute('open');
+            }
+            if (scheduleEl.dataset.autoOpened) {
+              delete scheduleEl.dataset.autoOpened;
+            }
+          }
+        }
         if (isEdit && firstField) {
           window.setTimeout(function () {
             if (typeof firstField.focus === 'function') {

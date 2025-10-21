@@ -953,4 +953,6 @@ return [
     'Edit investment' => 'Editar inversión',
     'Cancel editing' => 'Cancelar edición',
     'View details' => 'Ver detalles',
+    'Unlink the existing schedule before creating a new one.' => 'Desvincula el pago programado existente antes de crear uno nuevo.',
+    'Set Linked scheduled payment to “No linked schedule” while editing the investment.' => 'Establece Pago programado vinculado en «Sin programación vinculada» al editar la inversión.',
 ];

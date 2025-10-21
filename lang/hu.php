@@ -953,4 +953,6 @@ return [
     'Edit investment' => 'Befektetés szerkesztése',
     'Cancel editing' => 'Szerkesztés megszakítása',
     'View details' => 'Részletek megtekintése',
+    'Unlink the existing schedule before creating a new one.' => 'Válaszd le a meglévő ütemezést, mielőtt újat hozol létre.',
+    'Set Linked scheduled payment to “No linked schedule” while editing the investment.' => 'A „Kapcsolt ütemezett befizetés” mezőt állítsd „Nincs kapcsolt ütemezés” értékre a befektetés szerkesztésekor.',
 ];

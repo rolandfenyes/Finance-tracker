@@ -47,4 +47,6 @@ return [
     'Edit investment' => 'Edit investment',
     'Cancel editing' => 'Cancel editing',
     'View details' => 'View details',
+    'Unlink the existing schedule before creating a new one.' => 'Unlink the existing schedule before creating a new one.',
+    'Set Linked scheduled payment to “No linked schedule” while editing the investment.' => 'Set Linked scheduled payment to “No linked schedule” while editing the investment.',
 ];
