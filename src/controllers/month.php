@@ -247,9 +247,13 @@ function month_show(PDO $pdo, ?int $year = null, ?int $month = null) {
   }
 
   $invTxStmt = $pdo->prepare(
-    "SELECT it.id, it.investment_id, it.amount, it.note, it.created_at, i.name AS investment_name, i.currency
+    "SELECT it.id, it.investment_id, it.amount, it.note, it.created_at,
+            i.name AS investment_name, i.currency,
+            eft.id AS emergency_link_id
        FROM investment_transactions it
        JOIN investments i ON i.id = it.investment_id AND i.user_id = it.user_id
+       LEFT JOIN emergency_fund_tx eft
+              ON eft.investment_tx_id = it.id AND eft.user_id = it.user_id
       WHERE it.user_id = ?
         AND it.created_at::date BETWEEN ?::date AND ?::date
       ORDER BY it.created_at ASC, it.id ASC"
@@ -257,6 +261,11 @@ function month_show(PDO $pdo, ?int $year = null, ?int $month = null) {
   $invTxStmt->execute([$u, $df, $dt]);
 
   foreach ($invTxStmt as $tx) {
+    $linkedEmergencyId = isset($tx['emergency_link_id']) ? (int)$tx['emergency_link_id'] : 0;
+    if ($linkedEmergencyId > 0) {
+      continue;
+    }
+
     $invId = (int)($tx['investment_id'] ?? 0);
     $meta = $scheduleByInvestment[$invId] ?? null;
     $occurred = substr((string)($tx['created_at'] ?? ''), 0, 10) ?: $df;
