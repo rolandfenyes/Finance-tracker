@@ -1,8 +1,8 @@
 <?php
 $loanPayments = $loanPayments ?? [];
 $activeLoans = $activeLoans ?? [];
-$finishedLoans = $finishedLoans ?? [];
-$allLoans = $allLoans ?? array_merge($activeLoans, $finishedLoans);
+$archivedLoans = $archivedLoans ?? [];
+$allLoans = $allLoans ?? array_merge($activeLoans, $archivedLoans);
 ?>
 
 <section class="card">
@@ -380,174 +380,187 @@ $allLoans = $allLoans ?? array_merge($activeLoans, $finishedLoans);
   </div>
 </section>
 
-<?php if (count($finishedLoans)): ?>
+<?php if (count($archivedLoans)): ?>
 <section class="mt-6 card">
-  <div class="flex items-center justify-between mb-3">
-    <h2 class="font-semibold"><?= __('Finished loans') ?></h2>
-  </div>
-  <p class="text-sm text-gray-500"><?= __('These loans have been paid off and are kept for history. Payments and loan details are locked.') ?></p>
+  <details class="group">
+    <summary class="flex cursor-pointer items-center justify-between gap-3 font-semibold">
+      <span><?= __('Archived loans') ?></span>
+      <span class="text-xs text-gray-500"><?= count($archivedLoans) ?></span>
+    </summary>
 
-  <div class="hidden md:block overflow-x-auto mt-4">
-    <table class="table-glass min-w-full text-sm">
-      <thead>
-        <tr class="text-left border-b">
-          <th class="py-2 pr-3 w-[38%]"><?= __('Loan') ?></th>
-          <th class="py-2 pr-3 w-[18%]"><?= __('Balance') ?></th>
-          <th class="py-2 pr-3 w-[24%]"><?= __('Schedule') ?></th>
-          <th class="py-2 pr-3 w-[20%] text-right"><?= __('Actions') ?></th>
-        </tr>
-      </thead>
-      <tbody>
-      <?php foreach($finishedLoans as $l):
-        $cur   = $l['_currency'] ?: ($l['currency'] ?: 'HUF');
-        $prin  = (float)($l['principal'] ?? 0);
-        $bal   = 0.0;
-        $paid  = (float)($l['_principal_paid'] ?? $prin);
-        $pct   = 100.0;
-        $finishedAt = $l['finished_at'] ?? null;
-      ?>
-        <tr class="border-b align-top bg-emerald-50/50 dark:bg-emerald-500/5">
-          <td class="py-3 pr-3">
-            <div class="font-medium flex items-center gap-2">
-              <?= htmlspecialchars($l['name']) ?>
-              <span class="text-xs text-gray-500"><?= __('· APR :rate%', ['rate' => (float)$l['interest_rate']]) ?></span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-100/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
-                <span aria-hidden="true">🎉</span>
-                <?= __('Paid off') ?>
-              </span>
-            </div>
-            <div class="text-xs text-gray-500">
-              <?= __(':start → :end', [
-                'start' => htmlspecialchars($l['start_date']),
-                'end' => htmlspecialchars($l['end_date'] ?? '—'),
-              ]) ?>
-              <?php if ($finishedAt): ?>
-                · <?= __('Finished on :date', ['date' => htmlspecialchars(date('Y-m-d', strtotime($finishedAt)))]) ?>
-              <?php endif; ?>
-            </div>
+    <div class="mt-3 text-sm text-gray-500">
+      <?= __('These loans have been paid off and archived. Payments and loan details are locked, but you can still review their history.') ?>
+    </div>
 
-            <div class="mt-2">
-              <div class="h-2 bg-brand-100/60 rounded-full">
-                <div class="h-2 bg-brand-500 rounded-full" style="width: 100%"></div>
+    <div class="hidden md:block overflow-x-auto mt-4">
+      <table class="table-glass min-w-full text-sm">
+        <thead>
+          <tr class="text-left border-b">
+            <th class="py-2 pr-3 w-[38%]"><?= __('Loan') ?></th>
+            <th class="py-2 pr-3 w-[18%]"><?= __('Balance') ?></th>
+            <th class="py-2 pr-3 w-[24%]"><?= __('Schedule') ?></th>
+            <th class="py-2 pr-3 w-[20%] text-right"><?= __('Actions') ?></th>
+          </tr>
+        </thead>
+        <tbody>
+        <?php foreach($archivedLoans as $l):
+          $cur   = $l['_currency'] ?: ($l['currency'] ?: 'HUF');
+          $prin  = (float)($l['principal'] ?? 0);
+          $bal   = 0.0;
+          $paid  = (float)($l['_principal_paid'] ?? $prin);
+          $pct   = 100.0;
+          $finishedAt = $l['finished_at'] ?? null;
+          $archivedAt = $l['archived_at'] ?? $finishedAt;
+        ?>
+          <tr class="border-b align-top bg-emerald-50/50 dark:bg-emerald-500/5">
+            <td class="py-3 pr-3">
+              <div class="font-medium flex items-center gap-2 flex-wrap">
+                <?= htmlspecialchars($l['name']) ?>
+                <span class="text-xs text-gray-500"><?= __('· APR :rate%', ['rate' => (float)$l['interest_rate']]) ?></span>
+                <span class="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-100/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
+                  <span aria-hidden="true">🎉</span>
+                  <?= __('Paid off') ?>
+                </span>
+                <span class="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:border-slate-500/40 dark:bg-slate-500/10 dark:text-slate-200">
+                  <span aria-hidden="true">📦</span>
+                  <?= __('Archived') ?>
+                </span>
               </div>
-              <div class="mt-1 text-xs text-gray-600">
-                <?= __(':paid paid of :total (:percent%)', [
-                  'paid' => moneyfmt($paid,$cur),
-                  'total' => moneyfmt($prin,$cur),
-                  'percent' => number_format($pct,1),
+              <div class="text-xs text-gray-500">
+                <?= __(':start → :end', [
+                  'start' => htmlspecialchars($l['start_date']),
+                  'end' => htmlspecialchars($l['end_date'] ?? '—'),
                 ]) ?>
-                <br> <?= __('Est. balance :amount', ['amount' => moneyfmt($bal,$cur)]) ?>
+                <?php if ($archivedAt): ?>
+                  · <?= __('Archived on :date', ['date' => htmlspecialchars(date('Y-m-d', strtotime($archivedAt)))]) ?>
+                <?php elseif ($finishedAt): ?>
+                  · <?= __('Finished on :date', ['date' => htmlspecialchars(date('Y-m-d', strtotime($finishedAt)))]) ?>
+                <?php endif; ?>
               </div>
-              <div class="mt-3 flex items-start gap-2 rounded-xl border border-emerald-200/80 bg-emerald-50/80 px-3 py-2 text-xs text-emerald-700 shadow-sm dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
-                <span aria-hidden="true" class="text-base leading-none">✅</span>
-                <div class="space-y-0.5">
-                  <div class="text-sm font-semibold text-emerald-700 dark:text-emerald-100"><?= __('Loan complete!') ?></div>
-                  <div><?= __('Congrats on clearing this debt.') ?></div>
+
+              <div class="mt-2">
+                <div class="h-2 bg-brand-100/60 rounded-full">
+                  <div class="h-2 bg-brand-500 rounded-full" style="width: 100%"></div>
+                </div>
+                <div class="mt-1 text-xs text-gray-600">
+                  <?= __(':paid paid of :total (:percent%)', [
+                    'paid' => moneyfmt($paid,$cur),
+                    'total' => moneyfmt($prin,$cur),
+                    'percent' => number_format($pct,1),
+                  ]) ?>
+                  <br> <?= __('Est. balance :amount', ['amount' => moneyfmt($bal,$cur)]) ?>
+                </div>
+                <div class="mt-3 flex items-start gap-2 rounded-xl border border-emerald-200/80 bg-emerald-50/80 px-3 py-2 text-xs text-emerald-700 shadow-sm dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
+                  <span aria-hidden="true" class="text-base leading-none">✅</span>
+                  <div class="space-y-0.5">
+                    <div class="text-sm font-semibold text-emerald-700 dark:text-emerald-100"><?= __('Loan complete!') ?></div>
+                    <div><?= __('Congrats on clearing this debt.') ?></div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </td>
+            </td>
 
-          <td class="py-3 pr-3 whitespace-nowrap align-middle">
-            <div class="text-sm text-gray-500"><?= __('Balance') ?></div>
-            <div class="font-semibold"><?= moneyfmt($bal, $cur) ?></div>
-          </td>
+            <td class="py-3 pr-3 whitespace-nowrap align-middle">
+              <div class="text-sm text-gray-500"><?= __('Balance') ?></div>
+              <div class="font-semibold"><?= moneyfmt($bal, $cur) ?></div>
+            </td>
 
-          <td class="py-3 pr-3 align-middle">
-            <?php if (!empty($l['scheduled_payment_id'])): ?>
-              <div class="flex items-center gap-2">
-                <span class="chip"> <?= htmlspecialchars($l['sched_title']) ?> </span>
+            <td class="py-3 pr-3 align-middle">
+              <?php if (!empty($l['scheduled_payment_id'])): ?>
+                <div class="flex items-center gap-2">
+                  <span class="chip"> <?= htmlspecialchars($l['sched_title']) ?> </span>
+                </div>
+                <div class="text-xs text-gray-500 mt-1"><?= __('Archived') ?></div>
+              <?php else: ?>
+                <div class="text-xs text-gray-500"><?= __('No schedule') ?></div>
+              <?php endif; ?>
+            </td>
+
+            <td class="py-3 pr-3 text-right align-middle">
+              <div class="flex justify-end gap-2">
+                <button class="icon-action" data-open="#loan-history-<?= (int)$l['id'] ?>" title="<?= __('View history') ?>">
+                  <i data-lucide="history" class="h-4 w-4"></i>
+                  <span class="sr-only"><?= __('View history') ?></span>
+                </button>
+                <span class="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:border-slate-500/40 dark:bg-slate-500/10 dark:text-slate-200">
+                  <span aria-hidden="true">📦</span>
+                  <?= __('Archived') ?>
+                </span>
               </div>
-              <div class="text-xs text-gray-500 mt-1"><?= __('Finished') ?></div>
-            <?php else: ?>
-              <div class="text-xs text-gray-500"><?= __('No schedule') ?></div>
-            <?php endif; ?>
-          </td>
+            </td>
+          </tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
 
-          <td class="py-3 pr-3 text-right align-middle">
-            <div class="flex justify-end gap-2">
-              <button class="icon-action" data-open="#loan-history-<?= (int)$l['id'] ?>" title="<?= __('View history') ?>">
+    <div class="md:hidden space-y-3 mt-4">
+      <?php foreach($archivedLoans as $l):
+        $cur   = $l['_currency'] ?: ($l['currency'] ?: 'HUF');
+        $prin  = (float)($l['principal'] ?? 0);
+        $paid  = (float)($l['_principal_paid'] ?? $prin);
+        $finishedAt = $l['finished_at'] ?? null;
+        $archivedAt = $l['archived_at'] ?? $finishedAt;
+      ?>
+        <div class="panel p-4 border-emerald-300/60 bg-emerald-50/60 dark:border-emerald-500/40 dark:bg-emerald-500/10">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <div class="font-medium"><?= htmlspecialchars($l['name']) ?></div>
+              <div class="text-xs text-gray-500"><?= __('APR :rate%', ['rate' => (float)$l['interest_rate']]) ?></div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button type="button" class="icon-action" data-open="#loan-history-<?= (int)$l['id'] ?>" title="<?= __('View history') ?>">
                 <i data-lucide="history" class="h-4 w-4"></i>
                 <span class="sr-only"><?= __('View history') ?></span>
               </button>
-              <span class="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-100/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
-                <span aria-hidden="true">🌟</span>
-                <?= __('Finished') ?>
+              <span class="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:border-slate-500/40 dark:bg-slate-500/10 dark:text-slate-200">
+                <span aria-hidden="true">📦</span>
+                <?= __('Archived') ?>
               </span>
             </div>
-          </td>
-        </tr>
-      <?php endforeach; ?>
-      </tbody>
-    </table>
-  </div>
-
-  <div class="md:hidden space-y-3 mt-4">
-    <?php foreach($finishedLoans as $l):
-      $cur   = $l['_currency'] ?: ($l['currency'] ?: 'HUF');
-      $prin  = (float)($l['principal'] ?? 0);
-      $paid  = (float)($l['_principal_paid'] ?? $prin);
-      $finishedAt = $l['finished_at'] ?? null;
-    ?>
-      <div class="panel p-4 border-emerald-300/60 bg-emerald-50/60 dark:border-emerald-500/40 dark:bg-emerald-500/10">
-        <div class="flex items-center justify-between gap-3">
-          <div>
-            <div class="font-medium"><?= htmlspecialchars($l['name']) ?></div>
-            <div class="text-xs text-gray-500"><?= __('APR :rate%', ['rate' => (float)$l['interest_rate']]) ?></div>
           </div>
-          <div class="flex items-center gap-2">
-            <button type="button" class="icon-action" data-open="#loan-history-<?= (int)$l['id'] ?>" title="<?= __('View history') ?>">
-              <i data-lucide="history" class="h-4 w-4"></i>
-              <span class="sr-only"><?= __('View history') ?></span>
-            </button>
+
+          <div class="mt-2 text-xs text-gray-500">
+            <?= __(':start → :end', [
+              'start' => htmlspecialchars($l['start_date']),
+              'end' => htmlspecialchars($l['end_date'] ?? '—'),
+            ]) ?>
+            <?php if ($archivedAt): ?>
+              · <?= __('Archived :date', ['date' => htmlspecialchars(date('Y-m-d', strtotime($archivedAt)))]) ?>
+            <?php elseif ($finishedAt): ?>
+              · <?= __('Finished :date', ['date' => htmlspecialchars(date('Y-m-d', strtotime($finishedAt)))]) ?>
+            <?php endif; ?>
           </div>
-        </div>
 
-        <div class="mt-2 text-xs text-gray-500">
-          <?= __(':start → :end', [
-            'start' => htmlspecialchars($l['start_date']),
-            'end' => htmlspecialchars($l['end_date'] ?? '—'),
-          ]) ?>
-          <?php if ($finishedAt): ?>
-            · <?= __('Finished :date', ['date' => htmlspecialchars(date('Y-m-d', strtotime($finishedAt)))]) ?>
-          <?php endif; ?>
-        </div>
-
-        <div class="mt-3">
-          <div class="h-2 bg-brand-100/60 rounded-full">
-            <div class="h-2 bg-brand-500 rounded-full" style="width: 100%"></div>
-          </div>
-          <div class="mt-1 text-xs text-gray-600">
-            <?= moneyfmt($paid,$cur) ?> / <?= moneyfmt($prin,$cur) ?>
-            <br> <?= __('Balance :amount', ['amount' => moneyfmt(0,$cur)]) ?>
-          </div>
-        </div>
-
-        <div class="mt-3 rounded-xl border border-emerald-200/80 bg-emerald-50/90 px-3 py-2 text-xs text-emerald-700 shadow-sm dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
-          <div class="font-semibold text-sm text-emerald-700 dark:text-emerald-100"><?= __('Loan complete!') ?></div>
-          <div><?= __('Congrats on clearing this debt.') ?></div>
-        </div>
-
-        <div class="mt-3 text-xs text-gray-600">
-          <?php if (!empty($l['scheduled_payment_id'])): ?>
-            <div class="flex flex-wrap items-center gap-2">
-              <span class="chip"><?= htmlspecialchars($l['sched_title']) ?></span>
-              <span class="text-gray-500"><?= __('Finished') ?></span>
+          <div class="mt-3">
+            <div class="h-2 bg-brand-100/60 rounded-full">
+              <div class="h-2 bg-brand-500 rounded-full" style="width: 100%"></div>
             </div>
-          <?php else: ?>
-            <div class="text-gray-500"><?= __('No schedule') ?></div>
-          <?php endif; ?>
-        </div>
+            <div class="mt-1 text-xs text-gray-600">
+              <?= moneyfmt($paid,$cur) ?> / <?= moneyfmt($prin,$cur) ?>
+              <br> <?= __('Balance :amount', ['amount' => moneyfmt(0,$cur)]) ?>
+            </div>
+          </div>
 
-        <div class="mt-3 flex flex-col gap-2">
-          <span class="inline-flex items-center justify-center gap-2 rounded-full border border-emerald-300 bg-emerald-100/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
-            <span aria-hidden="true">🌟</span>
-            <?= __('Finished') ?>
-          </span>
+          <div class="mt-3 rounded-xl border border-emerald-200/80 bg-emerald-50/90 px-3 py-2 text-xs text-emerald-700 shadow-sm dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
+            <div class="font-semibold text-sm text-emerald-700 dark:text-emerald-100"><?= __('Loan complete!') ?></div>
+            <div><?= __('Congrats on clearing this debt.') ?></div>
+          </div>
+
+          <div class="mt-3 text-xs text-gray-600">
+            <?php if (!empty($l['scheduled_payment_id'])): ?>
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="chip"><?= htmlspecialchars($l['sched_title']) ?></span>
+                <span class="text-gray-500"><?= __('Archived') ?></span>
+              </div>
+            <?php else: ?>
+              <div class="text-gray-500"><?= __('No schedule') ?></div>
+            <?php endif; ?>
+          </div>
         </div>
-      </div>
-    <?php endforeach; ?>
-  </div>
+      <?php endforeach; ?>
+    </div>
+  </details>
 </section>
 <?php endif; ?>
 

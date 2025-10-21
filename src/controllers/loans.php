@@ -104,10 +104,12 @@ function loans_index(PDO $pdo){
     $l['_currency']     = $currency;
 
     $finishedAt = $l['finished_at'] ?? null;
+    $archivedAt = $l['archived_at'] ?? null;
     $isPaidOff  = $l['_progress_pct'] >= 99.9 && $l['_est_balance'] <= 0.01;
+    $isArchived = !empty($archivedAt) || (!empty($finishedAt) && $isPaidOff);
 
-    if (!empty($finishedAt)) {
-      // Once finished, keep the loan locked in a completed state regardless of later edits.
+    if (!empty($finishedAt) || $isArchived) {
+      // Once finished/archived, keep the loan locked in a completed state regardless of later edits.
       $l['_progress_pct'] = 100.0;
       $l['_est_balance']  = 0.0;
       $l['_is_paid_off']  = true;
@@ -116,6 +118,8 @@ function loans_index(PDO $pdo){
       $l['_is_paid_off']  = $isPaidOff;
       $l['_is_locked']    = false;
     }
+
+    $l['_is_archived'] = $isArchived;
   }
   unset($l);
 
@@ -131,6 +135,7 @@ function loans_index(PDO $pdo){
     SELECT id, title, amount, currency, next_due, rrule, loan_id, goal_id
     FROM scheduled_payments
     WHERE user_id = ?
+      AND archived_at IS NULL
       AND (loan_id IS NULL AND goal_id IS NULL) -- free ones
     ORDER BY lower(title)
   ");
@@ -153,10 +158,10 @@ function loans_index(PDO $pdo){
 
 
   $activeLoans = [];
-  $finishedLoans = [];
+  $archivedLoans = [];
   foreach ($rows as $loanRow) {
-    if (!empty($loanRow['_is_locked'])) {
-      $finishedLoans[] = $loanRow;
+    if (!empty($loanRow['_is_archived']) || !empty($loanRow['_is_locked'])) {
+      $archivedLoans[] = $loanRow;
     } else {
       $activeLoans[] = $loanRow;
     }
@@ -164,7 +169,7 @@ function loans_index(PDO $pdo){
 
   $allLoans = $rows; // preserve original order for modal generation/history access
 
-  view('loans/index', compact('activeLoans','finishedLoans','allLoans','userCurrencies','scheduledList','loanPayments'));
+  view('loans/index', compact('activeLoans','archivedLoans','allLoans','userCurrencies','scheduledList','loanPayments'));
 }
 
 
@@ -249,14 +254,14 @@ function loans_edit(PDO $pdo){
   $id = (int)($_POST['id'] ?? 0);
   if (!$id) { redirect('/loans'); }
 
-  $metaStmt = $pdo->prepare('SELECT finished_at FROM loans WHERE id=? AND user_id=?');
+  $metaStmt = $pdo->prepare('SELECT finished_at, archived_at FROM loans WHERE id=? AND user_id=?');
   $metaStmt->execute([$id, $u]);
   $metaRow = $metaStmt->fetch(PDO::FETCH_ASSOC);
   if (!$metaRow) {
     redirect('/loans');
   }
-  if (!empty($metaRow['finished_at'])) {
-    $_SESSION['flash'] = 'This loan has been finished and can no longer be edited.';
+  if (!empty($metaRow['archived_at']) || !empty($metaRow['finished_at'])) {
+    $_SESSION['flash'] = 'This loan has been archived and can no longer be edited.';
     redirect('/loans');
     return;
   }
@@ -376,7 +381,7 @@ function loan_payment_add(PDO $pdo){
   $principal = max(0.0, $amount - $interest);
 
   $loanMeta = $pdo->prepare('
-    SELECT l.name, l.balance, l.principal, l.currency, l.scheduled_payment_id, l.finished_at,
+    SELECT l.name, l.balance, l.principal, l.currency, l.scheduled_payment_id, l.finished_at, l.archived_at,
             sp.category_id AS sched_category_id
        FROM loans l
       LEFT JOIN scheduled_payments sp
@@ -391,8 +396,8 @@ function loan_payment_add(PDO $pdo){
     return;
   }
 
-  if (!empty($loanRow['finished_at'])) {
-    $_SESSION['flash'] = 'This loan has already been marked finished and cannot accept new payments.';
+  if (!empty($loanRow['archived_at']) || !empty($loanRow['finished_at'])) {
+    $_SESSION['flash'] = 'This loan has already been archived and cannot accept new payments.';
     redirect('/loans');
     return;
   }
@@ -460,7 +465,7 @@ function loan_payment_update(PDO $pdo){ verify_csrf(); require_login(); $u = uid
 
   $q = $pdo->prepare('SELECT lp.*, l.user_id, l.currency AS loan_currency, l.id AS loan_id,
                          l.name AS loan_name, l.balance, l.principal, l.scheduled_payment_id,
-                         l.finished_at,
+                         l.finished_at, l.archived_at,
                          sp.category_id AS sched_category_id
                         FROM loan_payments lp
                         JOIN loans l ON l.id = lp.loan_id
@@ -471,8 +476,8 @@ function loan_payment_update(PDO $pdo){ verify_csrf(); require_login(); $u = uid
   $row = $q->fetch(PDO::FETCH_ASSOC);
   if (!$row) { redirect('/loans'); }
 
-  if (!empty($row['finished_at'])) {
-    $_SESSION['flash'] = 'This loan has been finished and payments are locked.';
+  if (!empty($row['archived_at']) || !empty($row['finished_at'])) {
+    $_SESSION['flash'] = 'This loan has been archived and payments are locked.';
     redirect('/loans');
     return;
   }
@@ -558,7 +563,7 @@ function loan_payment_delete(PDO $pdo){ verify_csrf(); require_login(); $u = uid
   $id = (int)($_POST['id'] ?? 0);
   if (!$id) { redirect('/loans'); }
 
-  $q = $pdo->prepare('SELECT lp.*, l.user_id, l.id AS loan_id, l.finished_at
+  $q = $pdo->prepare('SELECT lp.*, l.user_id, l.id AS loan_id, l.finished_at, l.archived_at
                         FROM loan_payments lp
                         JOIN loans l ON l.id = lp.loan_id
                        WHERE lp.id=? AND l.user_id=?');
@@ -566,8 +571,8 @@ function loan_payment_delete(PDO $pdo){ verify_csrf(); require_login(); $u = uid
   $row = $q->fetch(PDO::FETCH_ASSOC);
   if (!$row) { redirect('/loans'); }
 
-  if (!empty($row['finished_at'])) {
-    $_SESSION['flash'] = 'This loan has been finished and payments are locked.';
+  if (!empty($row['archived_at']) || !empty($row['finished_at'])) {
+    $_SESSION['flash'] = 'This loan has been archived and payments are locked.';
     redirect('/loans');
     return;
   }

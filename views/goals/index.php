@@ -1,4 +1,9 @@
-<?php $goalTransactions = $goalTransactions ?? []; ?>
+<?php
+$goalTransactions = $goalTransactions ?? [];
+$activeGoals = $activeGoals ?? [];
+$archivedGoals = $archivedGoals ?? [];
+$allGoals = $allGoals ?? array_merge($activeGoals, $archivedGoals);
+?>
 
 <section class="card">
   <h1 class="text-xl font-semibold"><?= __('Goals') ?></h1>
@@ -64,7 +69,7 @@
       </tr>
       </thead>
       <tbody>
-      <?php foreach ($rows as $g):
+      <?php foreach ($activeGoals as $g):
         $cur = $g['currency'] ?: 'HUF';
         $target = (float)($g['target_amount'] ?? 0);
         $current= (float)($g['current_amount'] ?? 0);
@@ -122,7 +127,7 @@
             </div>
           </td>
         </tr>
-      <?php endforeach; if(!count($rows)): ?>
+      <?php endforeach; if(!count($activeGoals)): ?>
         <tr><td colspan="4" class="py-6 text-center text-sm text-gray-500"><?= __('No goals yet.') ?></td></tr>
       <?php endif; ?>
       </tbody>
@@ -131,7 +136,7 @@
 
   <!-- Mobile cards -->
   <div class="md:hidden space-y-3">
-    <?php foreach ($rows as $g):
+    <?php foreach ($activeGoals as $g):
       $cur = $g['currency'] ?: 'HUF';
       $target = (float)($g['target_amount'] ?? 0);
       $current= (float)($g['current_amount'] ?? 0);
@@ -187,7 +192,152 @@
   </div>
 </section>
 
-<?php foreach ($rows as $g): $goalId=(int)$g['id']; $cur=$g['currency'] ?: 'HUF'; $goalTxList = $goalTransactions[$goalId] ?? []; ?>
+<?php if (count($archivedGoals)): ?>
+<section class="mt-6 card">
+  <details class="group">
+    <summary class="flex cursor-pointer items-center justify-between gap-3 font-semibold">
+      <span><?= __('Archived goals') ?></span>
+      <span class="text-xs text-gray-500"><?= count($archivedGoals) ?></span>
+    </summary>
+
+    <div class="mt-3 text-sm text-gray-500">
+      <?= __('Completed goals live here for safekeeping. Balances and schedules are locked, but you can still review their history.') ?>
+    </div>
+
+    <div class="hidden md:block overflow-x-auto mt-4">
+      <table class="table-glass min-w-full text-sm">
+        <thead>
+        <tr class="text-left border-b">
+          <th class="py-2 pr-3 w-[38%]"><?= __('Goal') ?></th>
+          <th class="py-2 pr-3 w-[20%]"><?= __('Schedule') ?></th>
+          <th class="py-2 pr-3 w-[22%]"><?= __('Progress') ?></th>
+          <th class="py-2 pr-3 w-[20%] text-right"><?= __('Actions') ?></th>
+        </tr>
+        </thead>
+        <tbody>
+        <?php foreach ($archivedGoals as $g):
+          $cur = $g['currency'] ?: 'HUF';
+          $target = (float)($g['target_amount'] ?? 0);
+          $current = (float)($g['current_amount'] ?? 0);
+          $pct = $target > 0 ? min(100, max(0, $current / $target * 100)) : 0;
+          $archivedAt = $g['archived_at'] ?? null;
+        ?>
+          <tr class="border-b align-top bg-emerald-50/50 dark:bg-emerald-500/5">
+            <td class="py-3 pr-3">
+              <div class="font-medium flex items-center gap-2 flex-wrap">
+                <?= htmlspecialchars($g['title']) ?>
+                <span class="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:border-slate-500/40 dark:bg-slate-500/10 dark:text-slate-200">
+                  <span aria-hidden="true">📦</span>
+                  <?= __('Archived') ?>
+                </span>
+              </div>
+              <div class="text-xs text-gray-500">
+                <?= htmlspecialchars($cur) ?>
+                <?php if ($archivedAt): ?>
+                  · <?= __('Archived on :date', ['date' => htmlspecialchars(date('Y-m-d', strtotime($archivedAt)))]) ?>
+                <?php endif; ?>
+              </div>
+              <div class="mt-2">
+                <div class="h-2 bg-brand-100/60 rounded-full">
+                  <div class="h-2 bg-brand-500 rounded-full" style="width: <?= number_format($pct,2,'.','') ?>%"></div>
+                </div>
+                <div class="mt-1 text-xs text-gray-600">
+                  <?= moneyfmt($current,$cur) ?> / <?= moneyfmt($target,$cur) ?> (<?= number_format($pct,1) ?>%)
+                </div>
+              </div>
+            </td>
+
+            <td class="py-3 pr-3 align-middle">
+              <?php if (!empty($g['sched_id'])): ?>
+                <div class="font-medium"><?= htmlspecialchars($g['sched_title']) ?></div>
+                <div class="text-xs text-gray-500"><?= moneyfmt($g['sched_amount'], $g['sched_currency']) ?></div>
+                <?php if (!empty($g['sched_rrule'])): ?>
+                  <div class="rrule-summary text-[11px] text-gray-400 mt-1"
+                       data-rrule="<?= htmlspecialchars($g['sched_rrule']) ?>"></div>
+                <?php endif; ?>
+              <?php else: ?>
+                <div class="text-xs text-gray-500"><?= __('No schedule') ?></div>
+              <?php endif; ?>
+            </td>
+
+            <td class="py-3 pr-3 align-middle">
+              <div class="text-sm">
+                <?= __('Goal saved in full!') ?><br>
+                <?= __(':amount stored of :target', ['amount' => moneyfmt($current,$cur), 'target' => moneyfmt($target,$cur)]) ?>
+              </div>
+            </td>
+
+            <td class="py-3 pr-3 text-right align-middle">
+              <div class="flex justify-end gap-2">
+                <button class="icon-action" data-open="#goal-history-<?= (int)$g['id'] ?>" title="<?= __('View history') ?>">
+                  <i data-lucide="history" class="h-4 w-4"></i>
+                  <span class="sr-only"><?= __('View history') ?></span>
+                </button>
+                <span class="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:border-slate-500/40 dark:bg-slate-500/10 dark:text-slate-200">
+                  <span aria-hidden="true">✅</span>
+                  <?= __('Complete') ?>
+                </span>
+              </div>
+            </td>
+          </tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="md:hidden space-y-3 mt-4">
+      <?php foreach ($archivedGoals as $g):
+        $cur = $g['currency'] ?: 'HUF';
+        $target = (float)($g['target_amount'] ?? 0);
+        $current = (float)($g['current_amount'] ?? 0);
+        $pct = $target > 0 ? min(100, max(0, $current / $target * 100)) : 0;
+        $archivedAt = $g['archived_at'] ?? null;
+      ?>
+        <div class="panel p-4 border-emerald-300/60 bg-emerald-50/60 dark:border-emerald-500/40 dark:bg-emerald-500/10">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <div class="font-medium"><?= htmlspecialchars($g['title']) ?></div>
+              <div class="text-xs text-gray-500">
+                <?= htmlspecialchars($cur) ?>
+                <?php if ($archivedAt): ?>
+                  · <?= __('Archived :date', ['date' => htmlspecialchars(date('Y-m-d', strtotime($archivedAt)))]) ?>
+                <?php endif; ?>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button class="icon-action" data-open="#goal-history-<?= (int)$g['id'] ?>" title="<?= __('View history') ?>">
+                <i data-lucide="history" class="h-4 w-4"></i>
+                <span class="sr-only"><?= __('View history') ?></span>
+              </button>
+              <span class="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:border-slate-500/40 dark:bg-slate-500/10 dark:text-slate-200">
+                <span aria-hidden="true">📦</span>
+                <?= __('Archived') ?>
+              </span>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <div class="h-2 bg-brand-100/60 rounded-full">
+              <div class="h-2 bg-brand-500 rounded-full" style="width: <?= number_format($pct,2,'.','') ?>%"></div>
+            </div>
+            <div class="mt-1 text-xs text-gray-600">
+              <?= moneyfmt($current,$cur) ?> / <?= moneyfmt($target,$cur) ?>
+            </div>
+            <?php if (!empty($g['sched_id'])): ?>
+              <div class="mt-2 text-xs">
+                <span class="chip"><?= htmlspecialchars($g['sched_title']) ?></span>
+                <span class="text-gray-500"> · <?= moneyfmt($g['sched_amount'], $g['sched_currency']) ?></span>
+              </div>
+            <?php endif; ?>
+          </div>
+        </div>
+      <?php endforeach; ?>
+    </div>
+  </details>
+</section>
+<?php endif; ?>
+
+<?php foreach ($allGoals as $g): $goalId=(int)$g['id']; $cur=$g['currency'] ?: 'HUF'; $goalTxList = $goalTransactions[$goalId] ?? []; $isArchivedGoal = !empty($g['archived_at']) || (($g['status'] ?? '') === 'done'); ?>
 <div id="goal-edit-<?= $goalId ?>" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="goal-edit-title-<?= $goalId ?>">
   <div class="modal-backdrop" data-close></div>
 
@@ -446,6 +596,7 @@
   </div>
 </div>
 
+<?php if (!$isArchivedGoal): ?>
 <div id="goal-add-<?= $goalId ?>" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="goal-add-title-<?= $goalId ?>">
   <div class="modal-backdrop" data-close></div>
 
@@ -484,6 +635,7 @@
     </div>
   </div>
 </div>
+<?php endif; ?>
 <div id="goal-history-<?= $goalId ?>" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="goal-history-title-<?= $goalId ?>">
   <div class="modal-backdrop" data-close></div>
 
@@ -525,14 +677,18 @@
                   <?php endif; ?>
                 </td>
                 <td class="py-2 pr-0 align-middle text-right">
-                  <div class="flex justify-end gap-2">
-                    <button type="button" class="btn !px-3" data-open="#goal-tx-edit-<?= $txId ?>"><?= __('Edit') ?></button>
-                    <form method="post" action="/goals/tx/delete" onsubmit="return confirm('<?= __('Delete this transaction?') ?>');">
-                      <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-                      <input type="hidden" name="id" value="<?= $txId ?>" />
-                      <button class="btn btn-danger !px-3" type="submit"><?= __('Delete') ?></button>
-                    </form>
-                  </div>
+                  <?php if (!$isArchivedGoal): ?>
+                    <div class="flex justify-end gap-2">
+                      <button type="button" class="btn !px-3" data-open="#goal-tx-edit-<?= $txId ?>"><?= __('Edit') ?></button>
+                      <form method="post" action="/goals/tx/delete" onsubmit="return confirm('<?= __('Delete this transaction?') ?>');">
+                        <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+                        <input type="hidden" name="id" value="<?= $txId ?>" />
+                        <button class="btn btn-danger !px-3" type="submit"><?= __('Delete') ?></button>
+                      </form>
+                    </div>
+                  <?php else: ?>
+                    <span class="text-xs uppercase tracking-wide text-gray-400"><?= __('Locked') ?></span>
+                  <?php endif; ?>
                 </td>
               </tr>
             <?php endforeach; ?>
@@ -553,7 +709,8 @@
 </div>
 <?php endforeach; ?>
 
-<?php foreach ($rows as $g): $goalId=(int)$g['id']; $cur=$g['currency'] ?: 'HUF'; $goalTxList = $goalTransactions[$goalId] ?? []; ?>
+<?php foreach ($allGoals as $g): $goalId=(int)$g['id']; $cur=$g['currency'] ?: 'HUF'; $goalTxList = $goalTransactions[$goalId] ?? []; $isArchivedGoal = !empty($g['archived_at']) || (($g['status'] ?? '') === 'done'); ?>
+  <?php if ($isArchivedGoal) { continue; } ?>
   <?php foreach ($goalTxList as $tx): $txId=(int)$tx['id']; $txCur = $tx['currency'] ?: $cur; ?>
     <div id="goal-tx-edit-<?= $txId ?>" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="goal-tx-edit-title-<?= $txId ?>">
       <div class="modal-backdrop" data-close></div>

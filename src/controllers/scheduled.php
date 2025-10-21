@@ -21,12 +21,15 @@ function scheduled_index(PDO $pdo){
   $rows = $q->fetchAll();
 
   $activeSchedules = [];
-  $finishedSchedules = [];
+  $archivedSchedules = [];
   foreach ($rows as $row) {
-    $isLocked = !empty($row['loan_id']) && !empty($row['loan_finished_at']);
-    $row['_is_locked'] = $isLocked;
-    if ($isLocked) {
-      $finishedSchedules[] = $row;
+    $isLockedLoan = !empty($row['loan_id']) && !empty($row['loan_finished_at']);
+    $isArchived = !empty($row['archived_at']) || $isLockedLoan;
+    $row['_is_locked'] = $isArchived;
+    $row['_is_archived'] = $isArchived;
+
+    if ($isArchived) {
+      $archivedSchedules[] = $row;
     } else {
       $activeSchedules[] = $row;
     }
@@ -59,7 +62,7 @@ function scheduled_index(PDO $pdo){
       $userCurrencies = $norm ?: [['code' => $main ?: 'HUF', 'is_main' => true]];
   }
   
-  view('scheduled/index', compact('activeSchedules','finishedSchedules','allSchedules','categories','userCurrencies'));
+  view('scheduled/index', compact('activeSchedules','archivedSchedules','allSchedules','categories','userCurrencies'));
 }
 
 function scheduled_add(PDO $pdo){
@@ -90,10 +93,15 @@ function scheduled_edit(PDO $pdo){
   verify_csrf(); require_login(); $u=uid();
   $id = (int)($_POST['id'] ?? 0); if(!$id) return;
 
-  $lockMeta = $pdo->prepare('SELECT loan_id FROM scheduled_payments WHERE id=? AND user_id=?');
+  $lockMeta = $pdo->prepare('SELECT loan_id, archived_at FROM scheduled_payments WHERE id=? AND user_id=?');
   $lockMeta->execute([$id,$u]);
   $lockRow = $lockMeta->fetch(PDO::FETCH_ASSOC);
   if (!$lockRow) { return; }
+  if (!empty($lockRow['archived_at'])) {
+    $_SESSION['flash'] = 'This scheduled payment has been archived and can no longer be edited.';
+    redirect('/scheduled');
+    return;
+  }
   if (!empty($lockRow['loan_id'])) {
     $loanCheck = $pdo->prepare('SELECT finished_at FROM loans WHERE id=? AND user_id=?');
     $loanCheck->execute([(int)$lockRow['loan_id'], $u]);
@@ -131,10 +139,16 @@ function scheduled_delete(PDO $pdo){ verify_csrf(); require_login(); $u=uid();
   $id = (int)($_POST['id'] ?? 0);
   if (!$id) { return; }
 
-  $lockMeta = $pdo->prepare('SELECT loan_id FROM scheduled_payments WHERE id=? AND user_id=?');
+  $lockMeta = $pdo->prepare('SELECT loan_id, archived_at FROM scheduled_payments WHERE id=? AND user_id=?');
   $lockMeta->execute([$id,$u]);
   $lockRow = $lockMeta->fetch(PDO::FETCH_ASSOC);
   if (!$lockRow) { return; }
+
+  if (!empty($lockRow['archived_at'])) {
+    $_SESSION['flash'] = 'This scheduled payment has been archived and can no longer be deleted.';
+    redirect('/scheduled');
+    return;
+  }
 
   if (!empty($lockRow['loan_id'])) {
     $loanCheck = $pdo->prepare('SELECT finished_at FROM loans WHERE id=? AND user_id=?');

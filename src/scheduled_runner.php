@@ -56,10 +56,10 @@ function scheduled_apply_goal(PDO $pdo, array $schedule, string $dueDate): void 
   }
 
   $u = (int)($schedule['user_id'] ?? 0);
-  $goalStmt = $pdo->prepare('SELECT id, user_id, currency FROM goals WHERE id=? AND user_id=?');
+  $goalStmt = $pdo->prepare('SELECT id, user_id, currency, archived_at FROM goals WHERE id=? AND user_id=?');
   $goalStmt->execute([$goalId, $u]);
   $goal = $goalStmt->fetch(PDO::FETCH_ASSOC);
-  if (!$goal) {
+  if (!$goal || !empty($goal['archived_at'])) {
     return;
   }
 
@@ -102,10 +102,10 @@ function scheduled_apply_loan(PDO $pdo, array $schedule, string $dueDate): void 
   }
 
   $u = (int)($schedule['user_id'] ?? 0);
-  $loanStmt = $pdo->prepare('SELECT id, user_id, currency, name, balance FROM loans WHERE id=? AND user_id=?');
+  $loanStmt = $pdo->prepare('SELECT id, user_id, currency, name, balance, archived_at FROM loans WHERE id=? AND user_id=?');
   $loanStmt->execute([$loanId, $u]);
   $loan = $loanStmt->fetch(PDO::FETCH_ASSOC);
-  if (!$loan) {
+  if (!$loan || !empty($loan['archived_at'])) {
     return;
   }
 
@@ -162,7 +162,7 @@ function scheduled_process_linked(PDO $pdo, int $userId, ?string $today = null):
 
   $today = $today ?: date('Y-m-d');
 
-  $listStmt = $pdo->prepare('SELECT id FROM scheduled_payments WHERE user_id=? AND next_due IS NOT NULL AND next_due <= ? AND (goal_id IS NOT NULL OR loan_id IS NOT NULL) ORDER BY next_due, id');
+  $listStmt = $pdo->prepare('SELECT id FROM scheduled_payments WHERE user_id=? AND archived_at IS NULL AND next_due IS NOT NULL AND next_due <= ? AND (goal_id IS NOT NULL OR loan_id IS NOT NULL) ORDER BY next_due, id');
   $listStmt->execute([$userId, $today]);
   $ids = $listStmt->fetchAll(PDO::FETCH_COLUMN);
 
@@ -172,7 +172,7 @@ function scheduled_process_linked(PDO $pdo, int $userId, ?string $today = null):
       $rowStmt = $pdo->prepare('SELECT * FROM scheduled_payments WHERE id=? AND user_id=? FOR UPDATE');
       $rowStmt->execute([(int)$id, $userId]);
       $schedule = $rowStmt->fetch(PDO::FETCH_ASSOC);
-      if (!$schedule) {
+      if (!$schedule || !empty($schedule['archived_at'])) {
         $pdo->commit();
         continue;
       }
