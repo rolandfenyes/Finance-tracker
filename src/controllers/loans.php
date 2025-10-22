@@ -105,21 +105,20 @@ function loans_index(PDO $pdo){
 
     $finishedAt = $l['finished_at'] ?? null;
     $archivedAt = $l['archived_at'] ?? null;
-    $isPaidOff  = $l['_progress_pct'] >= 99.9 && $l['_est_balance'] <= 0.01;
-    $isArchived = !empty($archivedAt) || (!empty($finishedAt) && $isPaidOff);
+    $isPaidOffCalc = $l['_progress_pct'] >= 99.9 && $l['_est_balance'] <= 0.01;
+    $isArchived = !empty($archivedAt);
+    $isPaidOffFinal = $isPaidOffCalc || !empty($finishedAt) || $isArchived;
 
-    if (!empty($finishedAt) || $isArchived) {
-      // Once finished/archived, keep the loan locked in a completed state regardless of later edits.
+    if ($isPaidOffFinal) {
+      // Once paid off we always surface a completed state.
       $l['_progress_pct'] = 100.0;
       $l['_est_balance']  = 0.0;
-      $l['_is_paid_off']  = true;
-      $l['_is_locked']    = true;
-    } else {
-      $l['_is_paid_off']  = $isPaidOff;
-      $l['_is_locked']    = false;
     }
 
+    $l['_is_paid_off'] = $isPaidOffFinal;
+    $l['_is_locked']   = $isPaidOffFinal;
     $l['_is_archived'] = $isArchived;
+    $l['_can_archive'] = !$isArchived && $isPaidOffFinal;
   }
   unset($l);
 
@@ -160,7 +159,7 @@ function loans_index(PDO $pdo){
   $activeLoans = [];
   $archivedLoans = [];
   foreach ($rows as $loanRow) {
-    if (!empty($loanRow['_is_archived']) || !empty($loanRow['_is_locked'])) {
+    if (!empty($loanRow['_is_archived'])) {
       $archivedLoans[] = $loanRow;
     } else {
       $activeLoans[] = $loanRow;
@@ -357,6 +356,78 @@ function loans_edit(PDO $pdo){
   redirect('/loans');
 }
 
+
+
+function loans_archive(PDO $pdo){
+  verify_csrf(); require_login(); $u = uid();
+
+  $id = (int)($_POST['id'] ?? 0);
+  if ($id <= 0) {
+    redirect('/loans');
+    return;
+  }
+
+  $loanStmt = $pdo->prepare('SELECT id, name, principal, balance, finished_at, archived_at, scheduled_payment_id FROM loans WHERE id=? AND user_id=?');
+  $loanStmt->execute([$id, $u]);
+  $loan = $loanStmt->fetch(PDO::FETCH_ASSOC);
+
+  if (!$loan) {
+    redirect('/loans');
+    return;
+  }
+
+  if (!empty($loan['archived_at'])) {
+    $_SESSION['flash'] = 'Loan already archived.';
+    redirect('/loans');
+    return;
+  }
+
+  $principal = max(0.0, (float)($loan['principal'] ?? 0));
+  $balance   = max(0.0, (float)($loan['balance'] ?? 0));
+
+  $sumStmt = $pdo->prepare('SELECT COALESCE(SUM(principal_component), 0) FROM loan_payments WHERE loan_id = ?');
+  $sumStmt->execute([$id]);
+  $principalPaid = (float)$sumStmt->fetchColumn();
+
+  $isPaidOff = !empty($loan['finished_at'])
+    || $balance <= 0.01
+    || $principal <= 0.0
+    || $principalPaid >= max(0.0, $principal - 0.01);
+
+  if (!$isPaidOff) {
+    $_SESSION['flash'] = 'This loan still has an outstanding balance and cannot be archived yet.';
+    redirect('/loans');
+    return;
+  }
+
+  $scheduleId = (int)($loan['scheduled_payment_id'] ?? 0);
+
+  $pdo->beginTransaction();
+  try {
+    $pdo->prepare('UPDATE loans
+                      SET finished_at = COALESCE(finished_at, CURRENT_TIMESTAMP),
+                          archived_at = CURRENT_TIMESTAMP,
+                          balance = 0
+                    WHERE id = ? AND user_id = ?')
+        ->execute([$id, $u]);
+
+    if ($scheduleId > 0) {
+      $pdo->prepare('UPDATE scheduled_payments
+                        SET next_due = NULL,
+                            archived_at = COALESCE(archived_at, CURRENT_TIMESTAMP)
+                      WHERE id = ? AND user_id = ?')
+          ->execute([$scheduleId, $u]);
+    }
+
+    $pdo->commit();
+    $_SESSION['flash'] = 'Loan archived.';
+  } catch (Throwable $e) {
+    $pdo->rollBack();
+    $_SESSION['flash'] = 'Failed to archive loan.';
+  }
+
+  redirect('/loans');
+}
 
 
 function loans_delete(PDO $pdo){ verify_csrf(); require_login(); $u=uid();

@@ -181,6 +181,8 @@ $allLoans = $allLoans ?? array_merge($activeLoans, $archivedLoans);
         $paid  = (float)($l['_principal_paid'] ?? max(0, $prin - $bal));
         $pct   = (float)($l['_progress_pct'] ?? ($prin>0?($paid/$prin*100):0));
         $isPaidOff = !empty($l['_is_paid_off']);
+        $loanLocked = !empty($l['_is_locked']);
+        $canArchive = !empty($l['_can_archive']);
         $months = 0;
         if (!empty($l['start_date']) && !empty($l['end_date'])) {
           $a = new DateTime($l['start_date']); $b = new DateTime($l['end_date']);
@@ -266,23 +268,32 @@ $allLoans = $allLoans ?? array_merge($activeLoans, $archivedLoans);
                 <i data-lucide="history" class="h-4 w-4"></i>
                 <span class="sr-only"><?= __('View history') ?></span>
               </button>
-              <?php if ($isPaidOff): ?>
+              <?php if ($loanLocked): ?>
                 <span class="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-100/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
                   <span aria-hidden="true">🌟</span>
                   <?= __('Finished') ?>
                 </span>
+                <?php if ($canArchive): ?>
+                  <form method="post" action="/loans/archive" onsubmit="return confirm('<?= __('Archive this loan?') ?>');">
+                    <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+                    <input type="hidden" name="id" value="<?= (int)$l['id'] ?>" />
+                    <button type="submit" class="btn !px-3">
+                      <?= __('Archive') ?>
+                    </button>
+                  </form>
+                <?php endif; ?>
               <?php else: ?>
                 <button type="button"
                         class="btn btn-primary !px-3"
                         data-open="#loan-pay-<?= (int)$l['id'] ?>">
                   <?= __('Record Payment') ?>
                 </button>
+                <button type="button"
+                        class="btn !px-3"
+                        data-open="#loan-edit-<?= (int)$l['id'] ?>">
+                  <?= __('Edit') ?>
+                </button>
               <?php endif; ?>
-              <button type="button"
-                      class="btn !px-3"
-                      data-open="#loan-edit-<?= (int)$l['id'] ?>">
-                <?= __('Edit') ?>
-              </button>
             </div>
           </td>
         </tr>
@@ -302,6 +313,8 @@ $allLoans = $allLoans ?? array_merge($activeLoans, $archivedLoans);
       $paid  = (float)($l['_principal_paid'] ?? max(0, $prin - $bal));
       $pct   = (float)($l['_progress_pct'] ?? ($prin>0?($paid/$prin*100):0));
       $isPaidOff = !empty($l['_is_paid_off']);
+      $loanLocked = !empty($l['_is_locked']);
+      $canArchive = !empty($l['_can_archive']);
     ?>
       <div class="panel p-4 <?= $isPaidOff ? 'border-emerald-300/60 bg-emerald-50/60 dark:border-emerald-500/40 dark:bg-emerald-500/10' : '' ?>">
         <div class="flex items-center justify-between gap-3">
@@ -314,10 +327,12 @@ $allLoans = $allLoans ?? array_merge($activeLoans, $archivedLoans);
               <i data-lucide="history" class="h-4 w-4"></i>
               <span class="sr-only"><?= __('View history') ?></span>
             </button>
-            <button type="button" class="icon-action icon-action--primary" data-open="#loan-edit-<?= (int)$l['id'] ?>" title="<?= __('Edit') ?>">
-              <i data-lucide="pencil" class="h-4 w-4"></i>
-              <span class="sr-only"><?= __('Edit') ?></span>
-            </button>
+            <?php if (!$loanLocked): ?>
+              <button type="button" class="icon-action icon-action--primary" data-open="#loan-edit-<?= (int)$l['id'] ?>" title="<?= __('Edit') ?>">
+                <i data-lucide="pencil" class="h-4 w-4"></i>
+                <span class="sr-only"><?= __('Edit') ?></span>
+              </button>
+            <?php endif; ?>
           </div>
         </div>
 
@@ -366,11 +381,18 @@ $allLoans = $allLoans ?? array_merge($activeLoans, $archivedLoans);
         </div>
 
         <div class="mt-3 flex flex-col gap-2">
-          <?php if ($isPaidOff): ?>
+          <?php if ($loanLocked): ?>
             <span class="inline-flex items-center justify-center gap-2 rounded-full border border-emerald-300 bg-emerald-100/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100">
               <span aria-hidden="true">🌟</span>
               <?= __('Finished') ?>
             </span>
+            <?php if ($canArchive): ?>
+              <form method="post" action="/loans/archive" onsubmit="return confirm('<?= __('Archive this loan?') ?>');">
+                <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+                <input type="hidden" name="id" value="<?= (int)$l['id'] ?>" />
+                <button class="btn" type="submit"><?= __('Archive') ?></button>
+              </form>
+            <?php endif; ?>
           <?php else: ?>
             <button type="button" class="btn btn-primary" data-open="#loan-pay-<?= (int)$l['id'] ?>"><?= __('Record Payment') ?></button>
           <?php endif; ?>
@@ -380,7 +402,6 @@ $allLoans = $allLoans ?? array_merge($activeLoans, $archivedLoans);
   </div>
 </section>
 
-<?php if (count($archivedLoans)): ?>
 <section class="mt-6 card">
   <details class="group">
     <summary class="flex cursor-pointer items-center justify-between gap-3 font-semibold">
@@ -392,6 +413,7 @@ $allLoans = $allLoans ?? array_merge($activeLoans, $archivedLoans);
       <?= __('These loans have been paid off and archived. Payments and loan details are locked, but you can still review their history.') ?>
     </div>
 
+    <?php if (count($archivedLoans)): ?>
     <div class="hidden md:block overflow-x-auto mt-4">
       <table class="table-glass min-w-full text-sm">
         <thead>
@@ -560,9 +582,12 @@ $allLoans = $allLoans ?? array_merge($activeLoans, $archivedLoans);
         </div>
       <?php endforeach; ?>
     </div>
+    <?php else: ?>
+      <p class="mt-4 text-sm text-gray-500"><?= __('No archived loans yet.') ?></p>
+    <?php endif; ?>
   </details>
 </section>
-<?php endif; ?>
+
 
 <?php foreach($allLoans as $l):
   $curList = $userCurrencies ?? [['code'=>'HUF','is_main'=>true]];

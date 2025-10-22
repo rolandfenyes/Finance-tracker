@@ -583,6 +583,12 @@ switch ($path) {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') { loans_edit($pdo); }
         redirect('/loans');
         break;
+    case '/loans/archive':
+        require_login();
+        require __DIR__ . '/src/controllers/loans.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { loans_archive($pdo); }
+        redirect('/loans');
+        break;
     case '/loans/delete':
         require_login();
         require __DIR__ . '/src/controllers/loans.php';
