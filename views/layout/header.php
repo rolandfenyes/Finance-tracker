@@ -1125,6 +1125,7 @@ $ogUrl = $scheme . '://' . $host . $currentRequestPath;
       ['href'=>'/scheduled',     'label'=>'Scheduled',        'match'=>'#^/scheduled(?:/.*)?$#',   'icon' => 'calendar-clock'],
       ['href'=>'/feedback',      'label'=>'Feedback',         'match'=>'#^/feedback$#',            'icon' => 'message-circle'],
       ['href'=>'/settings',      'label'=>'Settings',         'match'=>'#^/settings$#',            'icon' => 'settings'],
+      ['href'=>'/admin',         'label'=>'Admin',            'match'=>'#^/admin$#',               'icon' => 'shield'],
     ];
     $mobileNavItems = [
       ['href'=>'/',              'label'=>'Dashboard',      'match'=>'#^/$#',                                                        'icon' => 'layout-dashboard'],
@@ -1259,7 +1260,7 @@ $ogUrl = $scheme . '://' . $host . $currentRequestPath;
       <?php endforeach; ?>
     </ul>
   </nav>
-<?php endif; ?>
+  <?php endif; ?>
   <?php
     $mainPaddingClass = (!empty($disableMainPadding))
       ? ''
@@ -1278,4 +1279,38 @@ $ogUrl = $scheme . '://' . $host . $currentRequestPath;
       }
     }
   ?>
+  <?php if (admin_is_impersonating()): ?>
+    <?php $impersonatedEmail = $_SESSION['impersonated_email'] ?? null; ?>
+    <div class="mx-auto w-full max-w-6xl px-4 pt-3">
+      <div class="flex flex-col gap-3 rounded-3xl border border-amber-300/70 bg-amber-100/70 p-4 text-amber-900 shadow-sm dark:border-amber-600/60 dark:bg-amber-900/40 dark:text-amber-100">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-500/20 text-amber-900 dark:bg-amber-500/30 dark:text-amber-100">
+              <i data-lucide="user-cog" class="h-5 w-5"></i>
+            </span>
+            <div>
+              <p class="text-sm font-semibold">
+                <?= htmlspecialchars(__('You are impersonating another account.')) ?>
+              </p>
+              <p class="text-xs text-amber-700/90 dark:text-amber-200/80">
+                <?php if ($impersonatedEmail): ?>
+                  <?= htmlspecialchars(sprintf(__('Acting as %s.'), $impersonatedEmail)) ?>
+                  <?= htmlspecialchars(__('All actions are recorded.')) ?>
+                <?php else: ?>
+                  <?= htmlspecialchars(__('All actions are recorded. Return to your admin session when finished.')) ?>
+                <?php endif; ?>
+              </p>
+            </div>
+          </div>
+          <form action="/admin/users/stop-impersonating" method="post" class="flex items-center gap-2">
+            <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+            <button class="inline-flex items-center gap-2 rounded-full bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:bg-amber-500 dark:hover:bg-amber-400">
+              <i data-lucide="log-out" class="h-4 w-4"></i>
+              <?= htmlspecialchars(__('Return to admin')) ?>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  <?php endif; ?>
   <main class="<?= htmlspecialchars(trim($mainClass), ENT_QUOTES) ?>">

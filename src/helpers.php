@@ -207,6 +207,8 @@ function read_json_input(): array
 function is_logged_in(): bool { return isset($_SESSION['uid']); }
 function require_login() { if (!is_logged_in()) redirect('/login'); }
 function uid(): int { return (int)($_SESSION['uid'] ?? 0); }
+function admin_is_impersonating(): bool { return !empty($_SESSION['impersonator_id']); }
+function impersonator_id(): int { return (int)($_SESSION['impersonator_id'] ?? 0); }
 
 function csrf_token(): string {
     if (empty($_SESSION['csrf'])) { $_SESSION['csrf'] = bin2hex(random_bytes(16)); }

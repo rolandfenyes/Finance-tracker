@@ -70,6 +70,54 @@ if ($method === 'GET' && preg_match('#^/stocks/([A-Za-z0-9\.-:]+)$#', $path, $m)
     }
 }
 
+if (preg_match('#^/admin/users/(\d+)$#', $path, $m)) {
+    require_login();
+    require __DIR__ . '/src/controllers/admin.php';
+    if ($method === 'GET') {
+        admin_users_show($pdo, (int)$m[1]);
+    } elseif ($method === 'POST') {
+        admin_users_update($pdo, (int)$m[1]);
+    } else {
+        http_response_code(405);
+        echo 'Method Not Allowed';
+    }
+    return;
+}
+
+if (preg_match('#^/admin/users/(\d+)/impersonate$#', $path, $m)) {
+    require_login();
+    require __DIR__ . '/src/controllers/admin.php';
+    if ($method === 'POST') {
+        admin_users_impersonate($pdo, (int)$m[1]);
+    } else {
+        redirect('/admin/users/' . (int)$m[1]);
+    }
+    return;
+}
+
+if ($path === '/admin/users/stop-impersonating') {
+    require_login();
+    require __DIR__ . '/src/controllers/admin.php';
+    if ($method === 'POST') {
+        admin_users_stop_impersonating($pdo);
+    } else {
+        redirect('/');
+    }
+    return;
+}
+
+if ($path === '/admin/users/export') {
+    require_login();
+    require __DIR__ . '/src/controllers/admin.php';
+    if ($method === 'GET') {
+        admin_users_export($pdo);
+    } else {
+        http_response_code(405);
+        echo 'Method Not Allowed';
+    }
+    return;
+}
+
 if (preg_match('#^/stocks/([A-Za-z0-9\.-:]+)/watch$#', $path, $m)) {
     require_login();
     require __DIR__ . '/src/controllers/stocks.php';
@@ -104,6 +152,18 @@ switch ($path) {
             break;
         }
         view('dashboard');
+        break;
+
+    case '/admin':
+        require_login();
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_dashboard_index($pdo);
+        break;
+
+    case '/admin/users':
+        require_login();
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_users_index($pdo);
         break;
 
     // Registration
