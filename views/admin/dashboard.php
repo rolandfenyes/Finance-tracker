@@ -4,6 +4,7 @@
 /** @var array $quickActions */
 /** @var array $systemHealth */
 /** @var array $featureSections */
+/** @var array|null $adminContext */
 
 $kpis = $kpis ?? [];
 $recentActivity = $recentActivity ?? [];
@@ -49,7 +50,7 @@ $sectionIcons = [
           <?= htmlspecialchars(__('All signals, one dashboard.')) ?>
         </h1>
         <p class="text-base leading-relaxed text-slate-600 dark:text-slate-300">
-          <?= htmlspecialchars(__('Monitor product health, keep subscriptions flowing, and support customers without leaving this space. Every control you need to operate MyMoneyMap at scale lives here.')) ?>
+          <?= htmlspecialchars(__('Monitor product health, understand customer activity, and take action without leaving this space. Every control you need to operate MyMoneyMap at scale lives here.')) ?>
         </p>
       </div>
       <div class="grid gap-3 text-sm text-slate-600 dark:text-slate-300">
@@ -58,8 +59,10 @@ $sectionIcons = [
             <i data-lucide="clock" class="h-5 w-5"></i>
           </span>
           <div>
-            <p class="text-xs uppercase tracking-widest text-slate-500 dark:text-slate-400">Next maintenance window</p>
-            <p class="font-medium text-slate-900 dark:text-white">Sunday 02:00 UTC · 45 min</p>
+            <p class="text-xs uppercase tracking-widest text-slate-500 dark:text-slate-400"><?= htmlspecialchars(__('Admin role')) ?></p>
+            <p class="font-medium text-slate-900 dark:text-white">
+              <?= htmlspecialchars(ucfirst($adminContext['admin_role'] ?? 'superadmin')) ?>
+            </p>
           </div>
         </div>
         <div class="flex items-center gap-3 rounded-2xl border border-white/70 bg-white/70 px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900/70">
@@ -67,8 +70,12 @@ $sectionIcons = [
             <i data-lucide="users" class="h-5 w-5"></i>
           </span>
           <div>
-            <p class="text-xs uppercase tracking-widest text-slate-500 dark:text-slate-400">Admin team online</p>
-            <p class="font-medium text-slate-900 dark:text-white">Support · Finance · DevOps</p>
+            <p class="text-xs uppercase tracking-widest text-slate-500 dark:text-slate-400"><?= htmlspecialchars(__('Quick links')) ?></p>
+            <p class="font-medium text-slate-900 dark:text-white">
+              <a href="/admin/users" class="hover:underline"><?= htmlspecialchars(__('Manage users')) ?></a>
+              <span class="mx-1">·</span>
+              <a href="/feedback?tab=open" class="hover:underline"><?= htmlspecialchars(__('Feedback queue')) ?></a>
+            </p>
           </div>
         </div>
       </div>
@@ -93,7 +100,7 @@ $sectionIcons = [
             <?= htmlspecialchars($kpi['value'] ?? '') ?>
           </p>
           <div class="h-2 overflow-hidden rounded-full bg-slate-200/60 dark:bg-slate-800">
-            <div class="h-full rounded-full <?= $trend === 'down' ? 'bg-rose-500/80' : 'bg-emerald-500/80' ?>" style="width: <?= $trend === 'down' ? '40%' : '78%' ?>"></div>
+            <div class="h-full rounded-full <?= $trend === 'down' ? 'bg-rose-500/80' : 'bg-emerald-500/80' ?>" style="width: <?= $trend === 'down' ? '45%' : '85%' ?>"></div>
           </div>
         </article>
       <?php endforeach; ?>
@@ -173,23 +180,23 @@ $sectionIcons = [
           <?php foreach ($systemHealth as $health): ?>
             <?php $status = $health['status'] ?? 'operational'; ?>
             <div class="rounded-2xl border border-white/70 bg-white/70 p-4 text-sm shadow-sm dark:border-slate-700 dark:bg-slate-900/60">
-              <div class="flex items-center justify-between">
-                <p class="font-semibold text-slate-900 dark:text-white">
-                  <?= htmlspecialchars($health['label'] ?? '') ?>
-                </p>
-                <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider <?= $statusStyles[$status] ?? $statusStyles['operational'] ?>">
-                  <?= htmlspecialchars($health['status'] ?? '') ?>
-                </span>
-              </div>
-              <p class="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
-                <?= htmlspecialchars($health['value'] ?? '') ?>
-              </p>
-              <p class="text-xs text-slate-500 dark:text-slate-400">
-                <?= htmlspecialchars($health['detail'] ?? '') ?>
-              </p>
-            </div>
-          <?php endforeach; ?>
+          <div class="flex items-center justify-between">
+            <p class="font-semibold text-slate-900 dark:text-white">
+              <?= htmlspecialchars($health['label'] ?? '') ?>
+            </p>
+            <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider <?= $statusStyles[$status] ?? $statusStyles['operational'] ?>">
+              <?= htmlspecialchars($health['status'] ?? '') ?>
+            </span>
+          </div>
+          <p class="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
+            <?= htmlspecialchars($health['value'] ?? '') ?>
+          </p>
+          <p class="text-xs text-slate-500 dark:text-slate-400">
+            <?= htmlspecialchars($health['detail'] ?? '') ?>
+          </p>
         </div>
+      <?php endforeach; ?>
+    </div>
       </div>
     </div>
   </section>
@@ -236,12 +243,18 @@ $sectionIcons = [
                     <?= htmlspecialchars(substr((string)($feature['title'] ?? ''), 0, 1)) ?>
                   </span>
                   <div class="min-w-0 flex-1">
-                    <p class="text-sm font-semibold text-slate-900 transition group-hover:text-brand-700 dark:text-white dark:group-hover:text-emerald-200">
+                <p class="text-sm font-semibold text-slate-900 transition group-hover:text-brand-700 dark:text-white dark:group-hover:text-emerald-200">
+                  <?php if (!empty($feature['href'])): ?>
+                    <a href="<?= htmlspecialchars($feature['href'], ENT_QUOTES) ?>" class="hover:underline">
                       <?= htmlspecialchars($feature['title'] ?? '') ?>
-                    </p>
-                    <p class="text-xs text-slate-500 dark:text-slate-400">
-                      <?= htmlspecialchars($feature['summary'] ?? '') ?>
-                    </p>
+                    </a>
+                  <?php else: ?>
+                    <?= htmlspecialchars($feature['title'] ?? '') ?>
+                  <?php endif; ?>
+                </p>
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                  <?= htmlspecialchars($feature['summary'] ?? '') ?>
+                </p>
                   </div>
                   <?php if (!empty($feature['badge'])): ?>
                     <span class="ml-auto inline-flex items-center rounded-full border border-dashed border-slate-300 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-600 dark:text-slate-300">

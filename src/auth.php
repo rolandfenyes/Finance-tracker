@@ -107,7 +107,14 @@ function attempt_remembered_login(PDO $pdo): void {
         return;
     }
 
-    $_SESSION['uid'] = (int)$row['user_id'];
+    $uid = (int)$row['user_id'];
+    $_SESSION['uid'] = $uid;
+
+    try {
+        $pdo->prepare('UPDATE users SET last_login_at = NOW() WHERE id = ?')->execute([$uid]);
+    } catch (Throwable $e) {
+        error_log('Unable to persist last_login_at for remembered login user #' . $uid . ': ' . $e->getMessage());
+    }
 
     // Rotate token to prevent replay
     $newValidator = bin2hex(random_bytes(32));
@@ -151,6 +158,12 @@ function handle_login(PDO $pdo) {
     if ($row && password_verify($pass, $row['password_hash'])) {
         $uid = (int)$row['id'];
         $_SESSION['uid'] = $uid;
+
+        try {
+            $pdo->prepare('UPDATE users SET last_login_at = NOW() WHERE id = ?')->execute([$uid]);
+        } catch (Throwable $e) {
+            error_log('Unable to persist last_login_at for user #' . $uid . ': ' . $e->getMessage());
+        }
 
         if (!empty($_POST['remember'])) {
             remember_login($pdo, $uid);
