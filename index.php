@@ -860,6 +860,12 @@ switch ($path) {
         redirect('/feedback');
         break;
 
+    // Maintenance utilities
+    case '/maintenance/migrations':
+        require __DIR__ . '/src/controllers/migrations.php';
+        maintenance_run_migrations($pdo);
+        break;
+
     case '/privacy':
         view('legal/privacy');
         break;
