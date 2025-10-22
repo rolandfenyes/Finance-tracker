@@ -524,6 +524,12 @@ switch ($path) {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') { goals_edit($pdo); }
         redirect('/goals');
         break;
+    case '/goals/archive':
+        require_login();
+        require __DIR__ . '/src/controllers/goals.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { goals_archive($pdo); }
+        redirect('/goals');
+        break;
     case '/goals/delete':
         require_login();
         require __DIR__ . '/src/controllers/goals.php';

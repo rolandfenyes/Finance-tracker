@@ -28,18 +28,27 @@ function goals_index(PDO $pdo){
   ");
 
   $q->execute([$u]);
-  $rows = $q->fetchAll();
+  $rows = $q->fetchAll(PDO::FETCH_ASSOC);
 
   $activeGoals = [];
   $archivedGoals = [];
-  foreach ($rows as $goalRow) {
-    $isArchived = !empty($goalRow['archived_at']) || (($goalRow['status'] ?? '') === 'done');
+  foreach ($rows as &$goalRow) {
+    $statusKey = strtolower((string)($goalRow['status'] ?? ''));
+    $targetAmount = max(0.0, (float)($goalRow['target_amount'] ?? 0));
+    $currentAmount = max(0.0, (float)($goalRow['current_amount'] ?? 0));
+    $isCompleted = in_array($statusKey, ['done', 'completed'], true) || ($targetAmount > 0.0 && $currentAmount >= $targetAmount);
+
+    $goalRow['_is_completed'] = $isCompleted;
+    $goalRow['_can_archive'] = $isCompleted && empty($goalRow['archived_at']);
+
+    $isArchived = !empty($goalRow['archived_at']) || in_array($statusKey, ['done', 'completed'], true);
     if ($isArchived) {
       $archivedGoals[] = $goalRow;
     } else {
       $activeGoals[] = $goalRow;
     }
   }
+  unset($goalRow);
 
   $allGoals = $rows;
 
@@ -110,11 +119,17 @@ function goals_edit(PDO $pdo){
   $id       = (int)($_POST['id'] ?? 0);
   if (!$id) redirect('/goals');
 
-  $existing = $pdo->prepare('SELECT title, target_amount, current_amount, currency, status FROM goals WHERE id=? AND user_id=?');
+  $existing = $pdo->prepare('SELECT title, target_amount, current_amount, currency, status, archived_at FROM goals WHERE id=? AND user_id=?');
   $existing->execute([$id,$u]);
   $previous = $existing->fetch(PDO::FETCH_ASSOC);
   if (!$previous) {
     redirect('/goals');
+  }
+
+  if (!empty($previous['archived_at'])) {
+    $_SESSION['flash'] = 'This goal has been archived and cannot be edited.';
+    redirect('/goals');
+    return;
   }
 
   $title    = trim($_POST['title'] ?? '');
@@ -156,6 +171,65 @@ function goals_delete(PDO $pdo){
     $pdo->rollBack();
     $_SESSION['flash'] = 'Failed to delete goal.';
   }
+  redirect('/goals');
+}
+
+function goals_archive(PDO $pdo){
+  verify_csrf(); require_login(); $u = uid();
+
+  $id = (int)($_POST['id'] ?? 0);
+  if ($id <= 0) {
+    redirect('/goals');
+    return;
+  }
+
+  $goalStmt = $pdo->prepare('SELECT id, title, target_amount, current_amount, status, archived_at FROM goals WHERE id=? AND user_id=?');
+  $goalStmt->execute([$id, $u]);
+  $goal = $goalStmt->fetch(PDO::FETCH_ASSOC);
+
+  if (!$goal) {
+    redirect('/goals');
+    return;
+  }
+
+  if (!empty($goal['archived_at'])) {
+    $_SESSION['flash'] = 'Goal already archived.';
+    redirect('/goals');
+    return;
+  }
+
+  $statusKey = strtolower((string)($goal['status'] ?? ''));
+  $targetAmount = max(0.0, (float)($goal['target_amount'] ?? 0));
+  $currentAmount = max(0.0, (float)($goal['current_amount'] ?? 0));
+  $isCompleted = in_array($statusKey, ['done', 'completed'], true) || ($targetAmount > 0.0 && $currentAmount >= $targetAmount);
+
+  if (!$isCompleted) {
+    $_SESSION['flash'] = 'This goal is not finished yet.';
+    redirect('/goals');
+    return;
+  }
+
+  $pdo->beginTransaction();
+  try {
+    $pdo->prepare('UPDATE goals
+                      SET archived_at = CURRENT_TIMESTAMP,
+                          status = CASE WHEN status IN (\'done\', \'completed\') THEN status ELSE \'done\' END
+                    WHERE id = ? AND user_id = ?')
+        ->execute([$id, $u]);
+
+    $pdo->prepare('UPDATE scheduled_payments
+                      SET archived_at = COALESCE(archived_at, CURRENT_TIMESTAMP),
+                          next_due = NULL
+                    WHERE goal_id = ? AND user_id = ?')
+        ->execute([$id, $u]);
+
+    $pdo->commit();
+    $_SESSION['flash'] = 'Goal archived.';
+  } catch (Throwable $e) {
+    $pdo->rollBack();
+    $_SESSION['flash'] = 'Failed to archive goal.';
+  }
+
   redirect('/goals');
 }
 
