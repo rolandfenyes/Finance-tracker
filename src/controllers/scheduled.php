@@ -7,18 +7,41 @@ function scheduled_index(PDO $pdo){
   // rows with category info
   $q = $pdo->prepare("
     SELECT s.*,
-           c.label AS cat_label,
-           COALESCE(NULLIF(c.color,''),'#6B7280') AS cat_color,
-           i.name AS investment_name,
-           i.type AS investment_type
+            c.label AS cat_label,
+            COALESCE(NULLIF(c.color,''),'#6B7280') AS cat_color,
+            
+            i.name AS investment_name,
+            i.type AS investment_type,
+            
+            l.name AS loan_name,
+            l.finished_at AS loan_finished_at
       FROM scheduled_payments s
-      LEFT JOIN categories c ON c.id=s.category_id AND c.user_id=s.user_id
+      LEFT JOIN categories  c ON c.id = s.category_id  AND c.user_id = s.user_id
       LEFT JOIN investments i ON i.id = s.investment_id AND i.user_id = s.user_id
-     WHERE s.user_id=?
-     ORDER BY s.next_due NULLS LAST, lower(s.title)
-  ");
+      LEFT JOIN loans       l ON l.id = s.loan_id      AND l.user_id = s.user_id
+      WHERE s.user_id = ?
+      ORDER BY s.next_due NULLS LAST, lower(s.title)
+    ");
+
   $q->execute([$u]);
   $rows = $q->fetchAll();
+
+  $activeSchedules = [];
+  $archivedSchedules = [];
+  foreach ($rows as $row) {
+    $isLockedLoan = !empty($row['loan_id']) && !empty($row['loan_finished_at']);
+    $isArchived = !empty($row['archived_at']) || $isLockedLoan;
+    $row['_is_locked'] = $isArchived;
+    $row['_is_archived'] = $isArchived;
+
+    if ($isArchived) {
+      $archivedSchedules[] = $row;
+    } else {
+      $activeSchedules[] = $row;
+    }
+  }
+
+  $allSchedules = $rows;
 
   // category selector
   $cs = $pdo->prepare("SELECT id,label,COALESCE(NULLIF(color,''),'#6B7280') AS color
@@ -45,7 +68,7 @@ function scheduled_index(PDO $pdo){
       $userCurrencies = $norm ?: [['code' => $main ?: 'HUF', 'is_main' => true]];
   }
   
-  view('scheduled/index', compact('rows','categories','userCurrencies'));
+  view('scheduled/index', compact('activeSchedules','archivedSchedules','allSchedules','categories','userCurrencies'));
 }
 
 function scheduled_add(PDO $pdo){
@@ -76,6 +99,26 @@ function scheduled_edit(PDO $pdo){
   verify_csrf(); require_login(); $u=uid();
   $id = (int)($_POST['id'] ?? 0); if(!$id) return;
 
+  $lockMeta = $pdo->prepare('SELECT loan_id, archived_at FROM scheduled_payments WHERE id=? AND user_id=?');
+  $lockMeta->execute([$id,$u]);
+  $lockRow = $lockMeta->fetch(PDO::FETCH_ASSOC);
+  if (!$lockRow) { return; }
+  if (!empty($lockRow['archived_at'])) {
+    $_SESSION['flash'] = 'This scheduled payment has been archived and can no longer be edited.';
+    redirect('/scheduled');
+    return;
+  }
+  if (!empty($lockRow['loan_id'])) {
+    $loanCheck = $pdo->prepare('SELECT finished_at FROM loans WHERE id=? AND user_id=?');
+    $loanCheck->execute([(int)$lockRow['loan_id'], $u]);
+    $loanState = $loanCheck->fetch(PDO::FETCH_ASSOC);
+    if (!empty($loanState['finished_at'])) {
+      $_SESSION['flash'] = 'This scheduled payment is locked because the linked loan is finished.';
+      redirect('/scheduled');
+      return;
+    }
+  }
+
   $title = trim($_POST['title'] ?? '');
   $amount = (float)($_POST['amount'] ?? 0);
   $currency = strtoupper(trim($_POST['currency'] ?? 'HUF'));
@@ -99,5 +142,30 @@ function scheduled_edit(PDO $pdo){
 
 
 function scheduled_delete(PDO $pdo){ verify_csrf(); require_login(); $u=uid();
-  $pdo->prepare('DELETE FROM scheduled_payments WHERE id=? AND user_id=?')->execute([(int)$_POST['id'],$u]);
+  $id = (int)($_POST['id'] ?? 0);
+  if (!$id) { return; }
+
+  $lockMeta = $pdo->prepare('SELECT loan_id, archived_at FROM scheduled_payments WHERE id=? AND user_id=?');
+  $lockMeta->execute([$id,$u]);
+  $lockRow = $lockMeta->fetch(PDO::FETCH_ASSOC);
+  if (!$lockRow) { return; }
+
+  if (!empty($lockRow['archived_at'])) {
+    $_SESSION['flash'] = 'This scheduled payment has been archived and can no longer be deleted.';
+    redirect('/scheduled');
+    return;
+  }
+
+  if (!empty($lockRow['loan_id'])) {
+    $loanCheck = $pdo->prepare('SELECT finished_at FROM loans WHERE id=? AND user_id=?');
+    $loanCheck->execute([(int)$lockRow['loan_id'], $u]);
+    $loanState = $loanCheck->fetch(PDO::FETCH_ASSOC);
+    if (!empty($loanState['finished_at'])) {
+      $_SESSION['flash'] = 'This scheduled payment is locked because the linked loan is finished.';
+      redirect('/scheduled');
+      return;
+    }
+  }
+
+  $pdo->prepare('DELETE FROM scheduled_payments WHERE id=? AND user_id=?')->execute([$id,$u]);
 }
