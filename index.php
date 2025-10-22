@@ -524,6 +524,12 @@ switch ($path) {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') { goals_edit($pdo); }
         redirect('/goals');
         break;
+    case '/goals/archive':
+        require_login();
+        require __DIR__ . '/src/controllers/goals.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { goals_archive($pdo); }
+        redirect('/goals');
+        break;
     case '/goals/delete':
         require_login();
         require __DIR__ . '/src/controllers/goals.php';
@@ -581,6 +587,12 @@ switch ($path) {
         require_login();
         require __DIR__ . '/src/controllers/loans.php';
         if ($_SERVER['REQUEST_METHOD'] === 'POST') { loans_edit($pdo); }
+        redirect('/loans');
+        break;
+    case '/loans/archive':
+        require_login();
+        require __DIR__ . '/src/controllers/loans.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') { loans_archive($pdo); }
         redirect('/loans');
         break;
     case '/loans/delete':

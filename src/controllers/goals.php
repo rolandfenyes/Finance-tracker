@@ -3,6 +3,26 @@ require_once __DIR__ . '/../helpers.php';
 require_once __DIR__ . '/../fx.php';
 require_once __DIR__ . '/../services/email_notifications.php';
 
+function goal_row_is_completed(array $goal): bool {
+  $statusKey = strtolower((string)($goal['status'] ?? ''));
+  $targetAmount = max(0.0, (float)($goal['target_amount'] ?? 0));
+  $currentAmount = max(0.0, (float)($goal['current_amount'] ?? 0));
+
+  if (in_array($statusKey, ['done', 'completed'], true)) {
+    return true;
+  }
+
+  return $targetAmount > 0.0 && $currentAmount >= $targetAmount;
+}
+
+function goal_row_is_locked(array $goal): bool {
+  if (!goal_row_is_completed($goal)) {
+    return false;
+  }
+
+  return empty($goal['archived_at']);
+}
+
 function goals_index(PDO $pdo){
   require_login(); $u = uid();
 
@@ -28,13 +48,33 @@ function goals_index(PDO $pdo){
   ");
 
   $q->execute([$u]);
-  $rows = $q->fetchAll();
+  $rows = $q->fetchAll(PDO::FETCH_ASSOC);
+
+  $activeGoals = [];
+  $archivedGoals = [];
+  foreach ($rows as &$goalRow) {
+    $isCompleted = goal_row_is_completed($goalRow);
+
+    $goalRow['_is_completed'] = $isCompleted;
+    $goalRow['_can_archive'] = $isCompleted && empty($goalRow['archived_at']);
+
+    $isArchived = !empty($goalRow['archived_at']) || $isCompleted;
+    if ($isArchived) {
+      $archivedGoals[] = $goalRow;
+    } else {
+      $activeGoals[] = $goalRow;
+    }
+  }
+  unset($goalRow);
+
+  $allGoals = $rows;
 
   // Only schedules that are free (not linked to any loan or goal) OR already linked to this record
   $sp = $pdo->prepare("
     SELECT id, title, amount, currency, next_due, rrule, loan_id, goal_id
     FROM scheduled_payments
     WHERE user_id = ?
+      AND archived_at IS NULL
       AND (loan_id IS NULL AND goal_id IS NULL) -- free ones
     ORDER BY lower(title)
   ");
@@ -64,7 +104,7 @@ function goals_index(PDO $pdo){
   $cs->execute([$u]);
   $categories = $cs->fetchAll(PDO::FETCH_ASSOC);
 
-  view('goals/index', compact('rows','scheduledList','userCurrencies','categories','goalTransactions'));
+  view('goals/index', compact('activeGoals','archivedGoals','allGoals','scheduledList','userCurrencies','categories','goalTransactions'));
 }
 
 /** Create a goal */
@@ -79,9 +119,11 @@ function goals_add(PDO $pdo){
 
   if ($title==='') redirect('/goals');
 
-  $pdo->prepare("INSERT INTO goals(user_id,title,target_amount,current_amount,currency,status)
-                 VALUES (?,?,?,?,?,?)")
-      ->execute([$u,$title,$target,$current,$currency,$status]);
+  $archivedAt = $status === 'done' ? date('Y-m-d H:i:s') : null;
+
+  $pdo->prepare("INSERT INTO goals(user_id,title,target_amount,current_amount,currency,status,archived_at)
+                 VALUES (?,?,?,?,?,?,?)")
+      ->execute([$u,$title,$target,$current,$currency,$status,$archivedAt]);
 
   $_SESSION['flash'] = 'Goal added.';
   redirect('/goals');
@@ -94,11 +136,23 @@ function goals_edit(PDO $pdo){
   $id       = (int)($_POST['id'] ?? 0);
   if (!$id) redirect('/goals');
 
-  $existing = $pdo->prepare('SELECT title, target_amount, current_amount, currency, status FROM goals WHERE id=? AND user_id=?');
+  $existing = $pdo->prepare('SELECT title, target_amount, current_amount, currency, status, archived_at FROM goals WHERE id=? AND user_id=?');
   $existing->execute([$id,$u]);
   $previous = $existing->fetch(PDO::FETCH_ASSOC);
   if (!$previous) {
     redirect('/goals');
+  }
+
+  if (!empty($previous['archived_at'])) {
+    $_SESSION['flash'] = 'This goal has been archived and cannot be edited.';
+    redirect('/goals');
+    return;
+  }
+
+  if (goal_row_is_locked($previous)) {
+    $_SESSION['flash'] = 'This goal is finished and cannot be edited.';
+    redirect('/goals');
+    return;
   }
 
   $title    = trim($_POST['title'] ?? '');
@@ -106,8 +160,14 @@ function goals_edit(PDO $pdo){
   $currency = strtoupper(trim($_POST['currency'] ?? 'HUF'));
   $status   = in_array($_POST['status'] ?? 'active', ['active','paused','done'], true) ? $_POST['status'] : 'active';
 
-  $pdo->prepare("UPDATE goals SET title=?, target_amount=?, currency=?, status=? WHERE id=? AND user_id=?")
-      ->execute([$title,$target,$currency,$status,$id,$u]);
+  $pdo->prepare("UPDATE goals
+                    SET title=?,
+                        target_amount=?,
+                        currency=?,
+                        status=?,
+                        archived_at = CASE WHEN ? = 'done' THEN COALESCE(archived_at, CURRENT_TIMESTAMP) ELSE NULL END
+                  WHERE id=? AND user_id=?")
+      ->execute([$title,$target,$currency,$status,$status,$id,$u]);
 
   $_SESSION['flash'] = 'Goal updated.';
   email_maybe_send_goal_completion($pdo, $u, $id, $previous);
@@ -134,6 +194,96 @@ function goals_delete(PDO $pdo){
     $pdo->rollBack();
     $_SESSION['flash'] = 'Failed to delete goal.';
   }
+  redirect('/goals');
+}
+
+function goals_archive(PDO $pdo){
+  verify_csrf(); require_login(); $u = uid();
+
+  $id = (int)($_POST['id'] ?? 0);
+  if ($id <= 0) {
+    redirect('/goals');
+    return;
+  }
+
+  $goalStmt = $pdo->prepare('SELECT id, title, target_amount, current_amount, status, archived_at FROM goals WHERE id=? AND user_id=?');
+  $goalStmt->execute([$id, $u]);
+  $goal = $goalStmt->fetch(PDO::FETCH_ASSOC);
+
+  if (!$goal) {
+    redirect('/goals');
+    return;
+  }
+
+  if (!empty($goal['archived_at'])) {
+    $_SESSION['flash'] = 'Goal already archived.';
+    redirect('/goals');
+    return;
+  }
+
+  $statusKey = strtolower((string)($goal['status'] ?? ''));
+  $targetAmount = max(0.0, (float)($goal['target_amount'] ?? 0));
+  $currentAmount = max(0.0, (float)($goal['current_amount'] ?? 0));
+  $isCompleted = in_array($statusKey, ['done', 'completed'], true) || ($targetAmount > 0.0 && $currentAmount >= $targetAmount);
+
+  if (!$isCompleted) {
+    $_SESSION['flash'] = 'This goal is not finished yet.';
+    redirect('/goals');
+    return;
+  }
+
+  $pdo->beginTransaction();
+  try {
+    $goalCurrency = strtoupper((string)($goal['currency'] ?? ''));
+    if ($goalCurrency === '') {
+      $goalCurrency = function_exists('fx_user_main') ? (fx_user_main($pdo, $u) ?: 'HUF') : 'HUF';
+    }
+
+    $currentAmount = max(0.0, (float)($goal['current_amount'] ?? 0));
+    $payoutAmount = round($currentAmount, 2);
+
+    if ($payoutAmount > 0) {
+      $note = trim('Goal completed · ' . (string)($goal['title'] ?? ''));
+      if ($note === 'Goal completed ·') {
+        $note = 'Goal completed';
+      }
+
+      $txStmt = $pdo->prepare('INSERT INTO transactions(user_id,kind,category_id,amount,currency,occurred_on,note,locked,source,source_ref_id)
+                                VALUES (?,?,?,?,?,?,?,?,?,?)');
+      $txStmt->execute([
+        $u,
+        'income',
+        null,
+        $payoutAmount,
+        $goalCurrency,
+        date('Y-m-d'),
+        $note,
+        true,
+        'goal_archive',
+        (int)$goal['id'],
+      ]);
+    }
+
+    $pdo->prepare('UPDATE goals
+                      SET archived_at = CURRENT_TIMESTAMP,
+                          status = CASE WHEN status IN (\'done\', \'completed\') THEN status ELSE \'done\' END,
+                          current_amount = CASE WHEN target_amount > 0 THEN GREATEST(target_amount, current_amount) ELSE current_amount END
+                    WHERE id = ? AND user_id = ?')
+        ->execute([$id, $u]);
+
+    $pdo->prepare('UPDATE scheduled_payments
+                      SET archived_at = COALESCE(archived_at, CURRENT_TIMESTAMP),
+                          next_due = NULL
+                    WHERE goal_id = ? AND user_id = ?')
+        ->execute([$id, $u]);
+
+    $pdo->commit();
+    $_SESSION['flash'] = 'Goal withdrawn and archived.';
+  } catch (Throwable $e) {
+    $pdo->rollBack();
+    $_SESSION['flash'] = 'Failed to archive goal.';
+  }
+
   redirect('/goals');
 }
 
@@ -188,9 +338,20 @@ function goals_create_schedule(PDO $pdo){
 
   // Validate ownerships
   if ($goalId) {
-    $g = $pdo->prepare('SELECT 1 FROM goals WHERE id=? AND user_id=?');
+    $g = $pdo->prepare('SELECT archived_at, status, target_amount, current_amount FROM goals WHERE id=? AND user_id=?');
     $g->execute([$goalId,$u]);
-    if (!$g->fetch()){ $_SESSION['flash']='Goal not found.'; redirect('/goals'); }
+    $goalMeta = $g->fetch(PDO::FETCH_ASSOC);
+    if (!$goalMeta){ $_SESSION['flash']='Goal not found.'; redirect('/goals'); return; }
+    if (!empty($goalMeta['archived_at'])) {
+      $_SESSION['flash'] = 'This goal has been archived and cannot receive new schedules.';
+      redirect('/goals');
+      return;
+    }
+    if (goal_row_is_locked($goalMeta)) {
+      $_SESSION['flash'] = 'This goal is finished and cannot receive new schedules.';
+      redirect('/goals');
+      return;
+    }
   }
   if ($catId !== null) {
     $c = $pdo->prepare('SELECT 1 FROM categories WHERE id=? AND user_id=?');
@@ -222,15 +383,33 @@ function goals_link_schedule(PDO $pdo){
   $spId   = (int)($_POST['scheduled_payment_id'] ?? 0);
   if (!$goalId || !$spId) { redirect('/goals'); }
 
+  $goalMeta = $pdo->prepare('SELECT archived_at, status, target_amount, current_amount FROM goals WHERE id=? AND user_id=?');
+  $goalMeta->execute([$goalId,$u]);
+  $goalRow = $goalMeta->fetch(PDO::FETCH_ASSOC);
+  if (!$goalRow) { redirect('/goals'); }
+  if (!empty($goalRow['archived_at'])) {
+    $_SESSION['flash'] = 'This goal has been archived and cannot be linked to a schedule.';
+    redirect('/goals');
+    return;
+  }
+  if (goal_row_is_locked($goalRow)) {
+    $_SESSION['flash'] = 'This goal is finished and cannot be linked to a schedule.';
+    redirect('/goals');
+    return;
+  }
+
+  $schedMeta = $pdo->prepare('SELECT archived_at FROM scheduled_payments WHERE id=? AND user_id=?');
+  $schedMeta->execute([$spId,$u]);
+  $schedRow = $schedMeta->fetch(PDO::FETCH_ASSOC);
+  if (!$schedRow) { redirect('/goals'); }
+  if (!empty($schedRow['archived_at'])) {
+    $_SESSION['flash'] = 'This scheduled payment has been archived and cannot be linked.';
+    redirect('/goals');
+    return;
+  }
+
   $pdo->beginTransaction();
   try {
-    // Ensure both belong to user
-    $okG = $pdo->prepare("SELECT 1 FROM goals WHERE id=? AND user_id=?");
-    $okG->execute([$goalId,$u]);
-    $okS = $pdo->prepare("SELECT 1 FROM scheduled_payments WHERE id=? AND user_id=?");
-    $okS->execute([$spId,$u]);
-    if (!$okG->fetch() || !$okS->fetch()) { throw new RuntimeException('Not found'); }
-
     // Unlink any other schedules pointing to this goal (keep a single link)
     $pdo->prepare("UPDATE scheduled_payments SET goal_id=NULL WHERE user_id=? AND goal_id=? AND id<>?")
         ->execute([$u,$goalId,$spId]);
@@ -265,13 +444,25 @@ function goals_tx_add(PDO $pdo){
   }
 
   // Load goal + its currency and ownership
-  $g = $pdo->prepare('SELECT id, user_id, title, target_amount, current_amount, currency, status
+  $g = $pdo->prepare('SELECT id, user_id, title, target_amount, current_amount, currency, status, archived_at
                       FROM goals WHERE id=? AND user_id=?');
   $g->execute([$goalId,$u]);
   $goal = $g->fetch(PDO::FETCH_ASSOC);
   if (!$goal){
     $_SESSION['flash'] = 'Goal not found.';
     redirect('/goals');
+  }
+
+  if (!empty($goal['archived_at'])) {
+    $_SESSION['flash'] = 'This goal has been archived and cannot accept new contributions.';
+    redirect('/goals');
+    return;
+  }
+
+  if (goal_row_is_locked($goal)) {
+    $_SESSION['flash'] = 'This goal is finished and cannot accept new contributions.';
+    redirect('/goals');
+    return;
   }
 
   // Fallback contribution currency to goal currency or user main
@@ -334,13 +525,31 @@ function goals_tx_update(PDO $pdo){
   }
 
   $q = $pdo->prepare('SELECT gc.*, g.currency AS goal_currency, g.user_id, g.id AS goal_id,
-                             g.title AS goal_title, g.target_amount, g.current_amount, g.status AS goal_status
+                             g.title AS goal_title, g.target_amount, g.current_amount, g.status AS goal_status, g.archived_at AS goal_archived_at
                        FROM goal_contributions gc
                        JOIN goals g ON g.id = gc.goal_id
                       WHERE gc.id=? AND g.user_id=?');
   $q->execute([$id,$u]);
   $row = $q->fetch(PDO::FETCH_ASSOC);
   if (!$row) { redirect('/goals'); }
+
+  if (!empty($row['goal_archived_at'])) {
+    $_SESSION['flash'] = 'This goal has been archived and contributions are locked.';
+    redirect('/goals');
+    return;
+  }
+
+  $lockCheck = [
+    'status' => $row['goal_status'] ?? null,
+    'target_amount' => $row['target_amount'] ?? null,
+    'current_amount' => $row['current_amount'] ?? null,
+    'archived_at' => $row['goal_archived_at'] ?? null,
+  ];
+  if (goal_row_is_locked($lockCheck)) {
+    $_SESSION['flash'] = 'This goal is finished and contributions are locked.';
+    redirect('/goals');
+    return;
+  }
 
   if ($currency === '') {
     $currency = $row['goal_currency']
@@ -396,13 +605,32 @@ function goals_tx_delete(PDO $pdo){
 
   // Fetch row + goal for reverse update
   $q = $pdo->prepare('SELECT gc.id, gc.goal_id, gc.amount, gc.currency, gc.occurred_on,
-                             g.currency AS goal_currency
+                             g.currency AS goal_currency, g.archived_at AS goal_archived_at,
+                             g.status AS goal_status, g.target_amount, g.current_amount
                       FROM goal_contributions gc
                       JOIN goals g ON g.id=gc.goal_id
                       WHERE gc.id=? AND g.user_id=?');
   $q->execute([$id,$u]);
   $row = $q->fetch(PDO::FETCH_ASSOC);
   if (!$row){ redirect('/goals'); }
+
+  if (!empty($row['goal_archived_at'])) {
+    $_SESSION['flash'] = 'This goal has been archived and contributions are locked.';
+    redirect('/goals');
+    return;
+  }
+
+  $lockCheck = [
+    'status' => $row['goal_status'] ?? null,
+    'target_amount' => $row['target_amount'] ?? null,
+    'current_amount' => $row['current_amount'] ?? null,
+    'archived_at' => $row['goal_archived_at'] ?? null,
+  ];
+  if (goal_row_is_locked($lockCheck)) {
+    $_SESSION['flash'] = 'This goal is finished and contributions are locked.';
+    redirect('/goals');
+    return;
+  }
 
   $pdo->beginTransaction();
   try {
@@ -432,9 +660,20 @@ function goals_unlink_schedule(PDO $pdo){
   if (!$goalId) { redirect('/goals'); }
 
   // Make sure the goal belongs to the user
-  $chk = $pdo->prepare("SELECT 1 FROM goals WHERE id=? AND user_id=?");
+  $chk = $pdo->prepare('SELECT archived_at, status, target_amount, current_amount FROM goals WHERE id=? AND user_id=?');
   $chk->execute([$goalId,$u]);
-  if (!$chk->fetch()) { redirect('/goals'); }
+  $goalRow = $chk->fetch(PDO::FETCH_ASSOC);
+  if (!$goalRow) { redirect('/goals'); }
+  if (!empty($goalRow['archived_at'])) {
+    $_SESSION['flash'] = 'This goal has been archived and schedules are locked.';
+    redirect('/goals');
+    return;
+  }
+  if (goal_row_is_locked($goalRow)) {
+    $_SESSION['flash'] = 'This goal is finished and schedules are locked.';
+    redirect('/goals');
+    return;
+  }
 
   // Unlink any schedule pointing at this goal (keep schedules intact)
   $pdo->prepare("UPDATE scheduled_payments SET goal_id=NULL WHERE user_id=? AND goal_id=?")

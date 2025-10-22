@@ -28,10 +28,15 @@ function tx_edit(PDO $pdo) {
     verify_csrf(); require_login(); $u = uid();
     $id = (int)$_POST['id'];
 
-    $currentStmt = $pdo->prepare('SELECT kind, category_id, amount, currency, occurred_on FROM transactions WHERE id=? AND user_id=?');
+    $currentStmt = $pdo->prepare('SELECT kind, category_id, amount, currency, occurred_on, locked FROM transactions WHERE id=? AND user_id=?');
     $currentStmt->execute([$id, $u]);
     $previous = $currentStmt->fetch(PDO::FETCH_ASSOC);
     if (!$previous) {
+        return;
+    }
+
+    if (!empty($previous['locked'])) {
+        http_response_code(403);
         return;
     }
 
@@ -66,6 +71,22 @@ function tx_edit(PDO $pdo) {
 function tx_delete(PDO $pdo) {
     verify_csrf(); require_login(); $u = uid();
     $id = (int)$_POST['id'];
+    if ($id <= 0) {
+        return;
+    }
+
+    $rowStmt = $pdo->prepare('SELECT locked FROM transactions WHERE id=? AND user_id=?');
+    $rowStmt->execute([$id, $u]);
+    $row = $rowStmt->fetch(PDO::FETCH_ASSOC);
+    if (!$row) {
+        return;
+    }
+
+    if (!empty($row['locked'])) {
+        http_response_code(403);
+        return;
+    }
+
     $pdo->prepare('DELETE FROM transactions WHERE id=? AND user_id=?')->execute([$id, $u]);
 }
 
