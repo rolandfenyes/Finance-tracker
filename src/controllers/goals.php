@@ -211,9 +211,37 @@ function goals_archive(PDO $pdo){
 
   $pdo->beginTransaction();
   try {
+    $goalCurrency = strtoupper((string)($goal['currency'] ?? ''));
+    if ($goalCurrency === '') {
+      $goalCurrency = function_exists('fx_user_main') ? (fx_user_main($pdo, $u) ?: 'HUF') : 'HUF';
+    }
+
+    $currentAmount = max(0.0, (float)($goal['current_amount'] ?? 0));
+    $payoutAmount = round($currentAmount, 2);
+
+    if ($payoutAmount > 0) {
+      $note = trim('Goal completed · ' . (string)($goal['title'] ?? ''));
+      if ($note === 'Goal completed ·') {
+        $note = 'Goal completed';
+      }
+
+      $txStmt = $pdo->prepare('INSERT INTO transactions(user_id,kind,category_id,amount,currency,occurred_on,note)
+                                VALUES (?,?,?,?,?,?,?)');
+      $txStmt->execute([
+        $u,
+        'income',
+        null,
+        $payoutAmount,
+        $goalCurrency,
+        date('Y-m-d'),
+        $note,
+      ]);
+    }
+
     $pdo->prepare('UPDATE goals
                       SET archived_at = CURRENT_TIMESTAMP,
-                          status = CASE WHEN status IN (\'done\', \'completed\') THEN status ELSE \'done\' END
+                          status = CASE WHEN status IN (\'done\', \'completed\') THEN status ELSE \'done\' END,
+                          current_amount = CASE WHEN target_amount > 0 THEN GREATEST(target_amount, current_amount) ELSE current_amount END
                     WHERE id = ? AND user_id = ?')
         ->execute([$id, $u]);
 
