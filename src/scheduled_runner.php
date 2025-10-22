@@ -102,7 +102,7 @@ function scheduled_apply_loan(PDO $pdo, array $schedule, string $dueDate): void 
   }
 
   $u = (int)($schedule['user_id'] ?? 0);
-  $loanStmt = $pdo->prepare('SELECT id, user_id, currency, name, balance, archived_at FROM loans WHERE id=? AND user_id=?');
+  $loanStmt = $pdo->prepare('SELECT id, user_id, currency, name, balance, interest_rate, archived_at FROM loans WHERE id=? AND user_id=?');
   $loanStmt->execute([$loanId, $u]);
   $loan = $loanStmt->fetch(PDO::FETCH_ASSOC);
   if (!$loan || !empty($loan['archived_at'])) {
@@ -128,24 +128,34 @@ function scheduled_apply_loan(PDO $pdo, array $schedule, string $dueDate): void 
     $note = 'Loan payment';
   }
 
+  $previousBalance = max(0.0, (float)($loan['balance'] ?? 0.0));
+  $monthlyRate = ((float)($loan['interest_rate'] ?? 0.0) / 100.0) / 12.0;
+  $interestComponent = 0.0;
+  if ($monthlyRate > 0.0 && $previousBalance > 0.0) {
+    $interestComponent = round($previousBalance * $monthlyRate, 2);
+  }
+  if ($interestComponent > $amount) {
+    $interestComponent = $amount;
+  }
+  $principalComponent = max(0.0, $amount - $interestComponent);
+
   $tx = $pdo->prepare('INSERT INTO transactions(user_id,kind,category_id,amount,currency,occurred_on,note) VALUES(?,?,?,?,?,?,?) RETURNING id');
   $tx->execute([$u, 'spending', $categoryId, $amount, $currency, $dueDate, $note]);
   $transactionId = (int)$tx->fetchColumn();
 
   $ins = $pdo->prepare('INSERT INTO loan_payments(loan_id,paid_on,amount,principal_component,interest_component,currency,transaction_id) VALUES (?,?,?,?,?,?,?)');
-  $ins->execute([$loanId, $dueDate, $amount, $amount, 0.0, $currency, $transactionId ?: null]);
+  $ins->execute([$loanId, $dueDate, $amount, $principalComponent, $interestComponent, $currency, $transactionId ?: null]);
 
   $loanCurrency = $loan['currency'] ?: $currency;
-  if ($currency === $loanCurrency) {
-    $principalDelta = $amount;
-  } else {
-    $converted = function_exists('fx_convert')
-      ? fx_convert($pdo, $amount, $currency, $loanCurrency, $dueDate)
+  $principalDelta = $principalComponent;
+  if ($currency !== $loanCurrency) {
+    $convertedPrincipal = function_exists('fx_convert')
+      ? fx_convert($pdo, $principalComponent, $currency, $loanCurrency, $dueDate)
       : null;
-    $principalDelta = is_numeric($converted) ? (float)$converted : $amount;
+    if (is_numeric($convertedPrincipal)) {
+      $principalDelta = (float)$convertedPrincipal;
+    }
   }
-
-  $previousBalance = max(0.0, (float)($loan['balance'] ?? 0.0));
 
   $pdo->prepare('UPDATE loans SET balance = GREATEST(0, balance - ?) WHERE id=? AND user_id=?')->execute([$principalDelta, $loanId, $u]);
 

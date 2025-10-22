@@ -64,6 +64,7 @@ function loans_index(PDO $pdo){
     $components = $sumStmt->fetch(PDO::FETCH_ASSOC) ?: ['principal_total' => 0.0, 'interest_total' => 0.0];
     $actualPrincipal = (float)$components['principal_total'];
     $actualInterest  = (float)$components['interest_total'];
+    $hasBreakdown    = ($ratePct <= 0.0) || ($actualInterest > 0.0001);
 
     if (!empty($l['history_confirmed'])) {
       // Compute expected position up to today with bank-like rules
@@ -84,14 +85,17 @@ function loans_index(PDO $pdo){
 
       // If there are recorded payments, prefer the actual ledger figures.
       if ($actualPrincipal > 0.0 || $actualInterest > 0.0) {
-        $l['_principal_paid'] = max($l['_principal_paid'], min($principal, $actualPrincipal));
-        $l['_interest_paid']  = max($l['_interest_paid'], $actualInterest);
+        $l['_interest_paid'] = max($l['_interest_paid'], $actualInterest);
 
-        $recordedBalance = $principal - $actualPrincipal;
-        if (isset($l['balance']) && $l['balance'] !== null) {
-          $recordedBalance = min($recordedBalance, (float)$l['balance']);
+        if ($hasBreakdown) {
+          $l['_principal_paid'] = max($l['_principal_paid'], min($principal, $actualPrincipal));
+
+          $recordedBalance = $principal - $actualPrincipal;
+          if (isset($l['balance']) && $l['balance'] !== null) {
+            $recordedBalance = min($recordedBalance, (float)$l['balance']);
+          }
+          $l['_est_balance'] = max(0.0, min($l['_est_balance'], $recordedBalance));
         }
-        $l['_est_balance'] = max(0.0, min($l['_est_balance'], $recordedBalance));
       }
     } else {
       // Actual recorded payments drive progress when history is not confirmed.
@@ -439,7 +443,9 @@ function loan_payment_add(PDO $pdo){
 
   $loanId   = (int)($_POST['loan_id'] ?? 0);
   $amount   = max(0.0, (float)($_POST['amount'] ?? 0));
-  $interest = max(0.0, (float)($_POST['interest_component'] ?? 0));
+  $interestRaw = $_POST['interest_component'] ?? null;
+  $interestProvided = $interestRaw !== null && trim((string)$interestRaw) !== '';
+  $interest = max(0.0, (float)($interestRaw ?? 0));
   $paidOn   = $_POST['paid_on'] ?: date('Y-m-d');
 
   if ($loanId <= 0 || $amount <= 0.0) {
@@ -448,11 +454,9 @@ function loan_payment_add(PDO $pdo){
     return;
   }
 
-  if ($interest > $amount) { $interest = $amount; }
-  $principal = max(0.0, $amount - $interest);
-
   $loanMeta = $pdo->prepare('
     SELECT l.name, l.balance, l.principal, l.currency, l.scheduled_payment_id, l.finished_at, l.archived_at,
+           l.interest_rate,
             sp.category_id AS sched_category_id
        FROM loans l
       LEFT JOIN scheduled_payments sp
@@ -478,6 +482,18 @@ function loan_payment_add(PDO $pdo){
   if ($currency === '') {
     $currency = strtoupper((string)($loanRow['currency'] ?? 'HUF'));
   }
+
+  if (!$interestProvided) {
+    $monthlyRate = ((float)($loanRow['interest_rate'] ?? 0.0) / 100.0) / 12.0;
+    if ($monthlyRate > 0.0 && $previousBalance > 0.0) {
+      $interest = round($previousBalance * $monthlyRate, 2);
+    } else {
+      $interest = 0.0;
+    }
+  }
+
+  if ($interest > $amount) { $interest = $amount; }
+  $principal = max(0.0, $amount - $interest);
 
   $categoryId = (int)($loanRow['sched_category_id'] ?? 0);
   if ($categoryId <= 0) { $categoryId = null; }
