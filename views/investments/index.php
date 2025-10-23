@@ -347,6 +347,7 @@ $addPanelId = 'investment-add-panel';
           $frequencyKey = strtolower((string)($investment['interest_frequency'] ?? 'monthly'));
           $frequencyLabel = $frequencyOptions[$frequencyKey] ?? ucfirst($frequencyKey);
           $estimatedInterest = (float)($performance['estimated_interest'] ?? 0);
+          $baseBalance = $balance - $estimatedInterest;
           $milestones = $performance['milestones'] ?? [];
           $milestoneCount = is_array($milestones) ? count($milestones) : 0;
           $hasRate = !empty($performance['has_rate']);
@@ -373,18 +374,27 @@ $addPanelId = 'investment-add-panel';
                     <?php endif; ?>
                   </div>
                 </div>
-                <div class="text-right">
-                  <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    <?= __('Current balance') ?>
+                <div class="space-y-1 text-right text-sm leading-5 text-slate-500 dark:text-slate-400">
+                  <div>
+                    <span class="uppercase tracking-wide"><?= __('Current balance') ?></span>:
+                    <span class="ml-2 text-lg font-semibold text-slate-900 dark:text-white">
+                      <?= moneyfmt($balance, $currencyCode) ?>
+                    </span>
+                    <span class="ml-1 text-xs font-normal">(<?= __('Added money + interest') ?>)</span>
                   </div>
-                  <div class="text-xl font-semibold text-slate-900 dark:text-white">
-                    <?= moneyfmt($balance, $currencyCode) ?>
+                  <div>
+                    <span class="uppercase tracking-wide"><?= __('Base balance') ?></span>:
+                    <span class="ml-2 text-base font-semibold text-slate-900 dark:text-white">
+                      <?= moneyfmt($baseBalance, $currencyCode) ?>
+                    </span>
+                    <span class="ml-1 text-xs font-normal">(<?= __('Added money') ?>)</span>
                   </div>
-                  <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    <?= __('Estimated interest earned') ?>:
-                    <span class="font-medium text-slate-900 dark:text-white">
+                  <div>
+                    <span class="uppercase tracking-wide"><?= __('Estimated interest') ?></span>:
+                    <span class="ml-2 text-base font-semibold text-slate-900 dark:text-white">
                       <?= moneyfmt($estimatedInterest, $currencyCode) ?>
                     </span>
+                    <span class="ml-1 text-xs font-normal">(<?= __('Interest') ?>)</span>
                   </div>
                 </div>
               </div>
