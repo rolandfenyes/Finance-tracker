@@ -32,6 +32,7 @@ function loans_index(PDO $pdo){
 
   // Enrich rows with computed progress using amortization
   foreach ($rows as &$l) {
+    loan_backfill_payment_breakdown_if_missing($pdo, $l);
     $principal  = (float)($l['principal'] ?? 0);
     $ratePct    = (float)($l['interest_rate'] ?? 0);
     $start      = $l['start_date'] ?: date('Y-m-d');
@@ -64,6 +65,7 @@ function loans_index(PDO $pdo){
     $components = $sumStmt->fetch(PDO::FETCH_ASSOC) ?: ['principal_total' => 0.0, 'interest_total' => 0.0];
     $actualPrincipal = (float)$components['principal_total'];
     $actualInterest  = (float)$components['interest_total'];
+    $hasBreakdown    = ($ratePct <= 0.0) || ($actualInterest > 0.0001);
 
     if (!empty($l['history_confirmed'])) {
       // Compute expected position up to today with bank-like rules
@@ -84,14 +86,17 @@ function loans_index(PDO $pdo){
 
       // If there are recorded payments, prefer the actual ledger figures.
       if ($actualPrincipal > 0.0 || $actualInterest > 0.0) {
-        $l['_principal_paid'] = max($l['_principal_paid'], min($principal, $actualPrincipal));
-        $l['_interest_paid']  = max($l['_interest_paid'], $actualInterest);
+        $l['_interest_paid'] = max($l['_interest_paid'], $actualInterest);
 
-        $recordedBalance = $principal - $actualPrincipal;
-        if (isset($l['balance']) && $l['balance'] !== null) {
-          $recordedBalance = min($recordedBalance, (float)$l['balance']);
+        if ($hasBreakdown) {
+          $l['_principal_paid'] = max($l['_principal_paid'], min($principal, $actualPrincipal));
+
+          $recordedBalance = $principal - $actualPrincipal;
+          if (isset($l['balance']) && $l['balance'] !== null) {
+            $recordedBalance = min($recordedBalance, (float)$l['balance']);
+          }
+          $l['_est_balance'] = max(0.0, min($l['_est_balance'], $recordedBalance));
         }
-        $l['_est_balance'] = max(0.0, min($l['_est_balance'], $recordedBalance));
       }
     } else {
       // Actual recorded payments drive progress when history is not confirmed.
@@ -439,7 +444,9 @@ function loan_payment_add(PDO $pdo){
 
   $loanId   = (int)($_POST['loan_id'] ?? 0);
   $amount   = max(0.0, (float)($_POST['amount'] ?? 0));
-  $interest = max(0.0, (float)($_POST['interest_component'] ?? 0));
+  $interestRaw = $_POST['interest_component'] ?? null;
+  $interestProvided = $interestRaw !== null && trim((string)$interestRaw) !== '';
+  $interest = max(0.0, (float)($interestRaw ?? 0));
   $paidOn   = $_POST['paid_on'] ?: date('Y-m-d');
 
   if ($loanId <= 0 || $amount <= 0.0) {
@@ -448,11 +455,9 @@ function loan_payment_add(PDO $pdo){
     return;
   }
 
-  if ($interest > $amount) { $interest = $amount; }
-  $principal = max(0.0, $amount - $interest);
-
   $loanMeta = $pdo->prepare('
     SELECT l.name, l.balance, l.principal, l.currency, l.scheduled_payment_id, l.finished_at, l.archived_at,
+           l.interest_rate,
             sp.category_id AS sched_category_id
        FROM loans l
       LEFT JOIN scheduled_payments sp
@@ -478,6 +483,18 @@ function loan_payment_add(PDO $pdo){
   if ($currency === '') {
     $currency = strtoupper((string)($loanRow['currency'] ?? 'HUF'));
   }
+
+  if (!$interestProvided) {
+    $monthlyRate = ((float)($loanRow['interest_rate'] ?? 0.0) / 100.0) / 12.0;
+    if ($monthlyRate > 0.0 && $previousBalance > 0.0) {
+      $interest = round($previousBalance * $monthlyRate, 2);
+    } else {
+      $interest = 0.0;
+    }
+  }
+
+  if ($interest > $amount) { $interest = $amount; }
+  $principal = max(0.0, $amount - $interest);
 
   $categoryId = (int)($loanRow['sched_category_id'] ?? 0);
   if ($categoryId <= 0) { $categoryId = null; }
@@ -667,6 +684,138 @@ function loan_payment_delete(PDO $pdo){ verify_csrf(); require_login(); $u = uid
   }
 
   redirect('/loans');
+}
+
+function loan_backfill_payment_breakdown_if_missing(PDO $pdo, array &$loan): void {
+  $loanId = (int)($loan['id'] ?? 0);
+  $userId = (int)($loan['user_id'] ?? 0);
+  if ($loanId <= 0 || $userId <= 0) {
+    return;
+  }
+
+  $ratePct = (float)($loan['interest_rate'] ?? 0.0);
+  if ($ratePct <= 0.0) {
+    return;
+  }
+
+  $missingStmt = $pdo->prepare('SELECT COUNT(*) FROM loan_payments WHERE loan_id = ? AND amount > 0 AND interest_component <= 0.0001');
+  $missingStmt->execute([$loanId]);
+  if ((int)$missingStmt->fetchColumn() === 0) {
+    return;
+  }
+
+  $paymentsStmt = $pdo->prepare('SELECT id, paid_on, amount, principal_component, interest_component FROM loan_payments WHERE loan_id = ? ORDER BY paid_on ASC, id ASC');
+  $paymentsStmt->execute([$loanId]);
+  $payments = $paymentsStmt->fetchAll(PDO::FETCH_ASSOC);
+  if (!$payments) {
+    return;
+  }
+
+  $monthlyRate = ($ratePct / 100.0) / 12.0;
+  if ($monthlyRate <= 0.0) {
+    return;
+  }
+
+  $balance     = max(0.0, (float)($loan['principal'] ?? 0.0));
+  $startDate   = $loan['start_date'] ?? null;
+  $previousDate = null;
+  $updates = [];
+
+  foreach ($payments as $payment) {
+    $amount = max(0.0, (float)($payment['amount'] ?? 0.0));
+    if ($amount <= 0.0) {
+      $previousDate = $payment['paid_on'] ?: $previousDate;
+      continue;
+    }
+
+    $paymentDate = $payment['paid_on'] ?: ($previousDate ?: $startDate ?: date('Y-m-d'));
+    $storedInterest = (float)($payment['interest_component'] ?? 0.0);
+    $storedPrincipal = (float)($payment['principal_component'] ?? 0.0);
+
+    $monthsElapsed = 0;
+    if ($previousDate !== null) {
+      $monthsElapsed = loan_elapsed_months_for_breakdown($previousDate, $paymentDate);
+    } elseif ($startDate !== null) {
+      $monthsElapsed = loan_elapsed_months_for_breakdown($startDate, $paymentDate);
+    }
+
+    $principalApplied = min($balance, $storedPrincipal);
+
+    if ($storedInterest <= 0.0001 && $monthlyRate > 0.0 && $balance > 0.0) {
+      $effectiveMonths = $previousDate === null ? max(1, $monthsElapsed) : $monthsElapsed;
+
+      if ($effectiveMonths > 0) {
+        $interestGuess = round($balance * $monthlyRate * $effectiveMonths, 2);
+        if ($interestGuess > $amount) {
+          $interestGuess = $amount;
+        }
+        $principalGuess = max(0.0, $amount - $interestGuess);
+        if ($principalGuess > $balance) {
+          $principalGuess = $balance;
+        }
+
+        if (abs($interestGuess - $storedInterest) > 0.009 || abs($principalGuess - $storedPrincipal) > 0.009) {
+          $updates[] = [
+            'id'        => (int)$payment['id'],
+            'principal' => $principalGuess,
+            'interest'  => $interestGuess,
+          ];
+        }
+
+        $principalApplied = $principalGuess;
+      }
+    }
+
+    $balance = max(0.0, $balance - $principalApplied);
+    $previousDate = $paymentDate;
+  }
+
+  $newBalance = max(0.0, round($balance, 2));
+
+  if (!$updates && abs($newBalance - (float)($loan['balance'] ?? 0.0)) <= 0.01) {
+    return;
+  }
+
+  $pdo->beginTransaction();
+  try {
+    if ($updates) {
+      $updateStmt = $pdo->prepare('UPDATE loan_payments SET principal_component = ?, interest_component = ? WHERE id = ?');
+      foreach ($updates as $row) {
+        $updateStmt->execute([$row['principal'], $row['interest'], $row['id']]);
+      }
+    }
+
+    $pdo->prepare('UPDATE loans SET balance = ? WHERE id = ? AND user_id = ?')
+        ->execute([$newBalance, $loanId, $userId]);
+
+    $pdo->commit();
+    $loan['balance'] = $newBalance;
+  } catch (Throwable $e) {
+    $pdo->rollBack();
+  }
+}
+
+function loan_elapsed_months_for_breakdown(?string $fromDate, ?string $toDate): int {
+  if (!$fromDate || !$toDate) {
+    return 0;
+  }
+
+  try {
+    $start = new DateTime($fromDate);
+    $end   = new DateTime($toDate);
+  } catch (Throwable $e) {
+    return 0;
+  }
+
+  if ($end <= $start) {
+    return 0;
+  }
+
+  $yearDiff  = (int)$end->format('Y') - (int)$start->format('Y');
+  $monthDiff = (int)$end->format('n') - (int)$start->format('n');
+
+  $months = $yearDiff * 12 + $monthDiff;
+  return max(0, $months);
 }
 
 function loan_monthly_payment(float $principal, float $annualRatePct, int $months): float {
