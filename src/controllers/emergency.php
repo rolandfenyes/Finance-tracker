@@ -253,6 +253,12 @@ function emergency_add(PDO $pdo){
   $amount = (float)($_POST['amount'] ?? 0);
   $date   = $_POST['occurred_on'] ?: date('Y-m-d');
   $note   = trim($_POST['note'] ?? '');
+  $txDateObj = DateTimeImmutable::createFromFormat('Y-m-d', $date) ?: new DateTimeImmutable('now');
+  if ($txDateObj->format('Y-m-d') !== $date) {
+    $txDateObj = new DateTimeImmutable('now');
+  }
+  $txDateObj = $txDateObj->setTime(0, 0, 0);
+  $investmentOccurredAt = $txDateObj->format('Y-m-d H:i:s');
   if ($amount <= 0) { $_SESSION['flash']='Amount must be positive.'; redirect('/emergency'); }
 
   // EF & main currencies
@@ -317,8 +323,8 @@ function emergency_add(PDO $pdo){
       $invUpdate->execute([$amount, $investmentId, $u]);
       if ($invUpdate->fetchColumn()) {
         $noteText = __('Emergency fund deposit');
-        $invTx = $pdo->prepare('INSERT INTO investment_transactions (investment_id, user_id, amount, note) VALUES (?,?,?,?) RETURNING id');
-        $invTx->execute([$investmentId, $u, $amount, $noteText]);
+        $invTx = $pdo->prepare('INSERT INTO investment_transactions (investment_id, user_id, amount, note, created_at) VALUES (?,?,?,?,?) RETURNING id');
+        $invTx->execute([$investmentId, $u, $amount, $noteText, $investmentOccurredAt]);
         $investmentTxId = (int)$invTx->fetchColumn();
       }
     }
@@ -361,6 +367,12 @@ function emergency_withdraw(PDO $pdo){
   $amount = (float)($_POST['amount'] ?? 0);
   $date   = $_POST['occurred_on'] ?: date('Y-m-d');
   $note   = trim($_POST['note'] ?? '');
+  $txDateObj = DateTimeImmutable::createFromFormat('Y-m-d', $date) ?: new DateTimeImmutable('now');
+  if ($txDateObj->format('Y-m-d') !== $date) {
+    $txDateObj = new DateTimeImmutable('now');
+  }
+  $txDateObj = $txDateObj->setTime(0, 0, 0);
+  $investmentOccurredAt = $txDateObj->format('Y-m-d H:i:s');
   if ($amount <= 0) { $_SESSION['flash']='Amount must be positive.'; redirect('/emergency'); }
 
   $row = $pdo->prepare('SELECT total, target_amount, currency, investment_id FROM emergency_fund WHERE user_id=?');
@@ -429,8 +441,8 @@ function emergency_withdraw(PDO $pdo){
       $invUpdate->execute([$amount, $investmentId, $u]);
       if ($invUpdate->fetchColumn()) {
         $noteText = __('Emergency fund withdrawal');
-        $invTx = $pdo->prepare('INSERT INTO investment_transactions (investment_id, user_id, amount, note) VALUES (?,?,?,?) RETURNING id');
-        $invTx->execute([$investmentId, $u, -$amount, $noteText]);
+        $invTx = $pdo->prepare('INSERT INTO investment_transactions (investment_id, user_id, amount, note, created_at) VALUES (?,?,?,?,?) RETURNING id');
+        $invTx->execute([$investmentId, $u, -$amount, $noteText, $investmentOccurredAt]);
         $investmentTxId = (int)$invTx->fetchColumn();
       }
     }

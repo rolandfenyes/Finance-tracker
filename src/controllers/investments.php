@@ -593,8 +593,14 @@ function investments_add(PDO $pdo): void
         $investmentId = (int)$insert->fetchColumn();
 
         if (abs($initialAmount) > 0.00001) {
-            $txInsert = $pdo->prepare('INSERT INTO investment_transactions (investment_id, user_id, amount, note) VALUES (?,?,?,?)');
-            $txInsert->execute([$investmentId, $userId, $initialAmount, __('Initial balance')]);
+            $txInsert = $pdo->prepare('INSERT INTO investment_transactions (investment_id, user_id, amount, note, created_at) VALUES (?,?,?,?,?)');
+            $txInsert->execute([
+                $investmentId,
+                $userId,
+                $initialAmount,
+                __('Initial balance'),
+                date('Y-m-d H:i:s'),
+            ]);
         }
 
         if ($scheduleId) {
@@ -745,6 +751,26 @@ function investments_adjust(PDO $pdo): void
     $direction = strtolower(trim((string)($_POST['direction'] ?? 'deposit')));
     $amountRaw = trim((string)($_POST['amount'] ?? ''));
     $note = trim((string)($_POST['note'] ?? '')) ?: null;
+    $dateInput = trim((string)($_POST['occurred_on'] ?? ''));
+
+    $now = new DateTimeImmutable('now');
+    $txDate = null;
+    if ($dateInput !== '') {
+        $candidate = DateTimeImmutable::createFromFormat('Y-m-d', $dateInput) ?: null;
+        if ($candidate && $candidate->format('Y-m-d') === $dateInput) {
+            $txDate = $candidate;
+        }
+    }
+
+    if (!$txDate) {
+        $txDate = $now;
+    } elseif ($txDate->format('Y-m-d') === $now->format('Y-m-d')) {
+        $txDate = $now;
+    } else {
+        $txDate = $txDate->setTime(0, 0, 0);
+    }
+
+    $createdAt = $txDate->format('Y-m-d H:i:s');
 
     if ($id <= 0 || $amountRaw === '') {
         redirect('/investments');
@@ -778,8 +804,8 @@ function investments_adjust(PDO $pdo): void
         $update = $pdo->prepare('UPDATE investments SET balance=?, updated_at=NOW() WHERE id=? AND user_id=?');
         $update->execute([$newBalance, $id, $userId]);
 
-        $txInsert = $pdo->prepare('INSERT INTO investment_transactions (investment_id, user_id, amount, note) VALUES (?,?,?,?)');
-        $txInsert->execute([$id, $userId, $delta, $note]);
+        $txInsert = $pdo->prepare('INSERT INTO investment_transactions (investment_id, user_id, amount, note, created_at) VALUES (?,?,?,?,?)');
+        $txInsert->execute([$id, $userId, $delta, $note, $createdAt]);
 
         $pdo->commit();
 

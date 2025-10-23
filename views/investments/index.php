@@ -328,7 +328,9 @@ $addPanelId = 'investment-add-panel';
       </p>
     <?php else: ?>
       <div class="mt-4 space-y-4">
-        <?php foreach ($investments as $investment):
+        <?php
+          $today = date('Y-m-d');
+          foreach ($investments as $investment):
           $currentType = $investment['type'] ?? 'savings';
           $meta = $types[$currentType] ?? $types['savings'];
           $scheduleId = (int)($investment['sched_id'] ?? 0);
@@ -378,6 +380,12 @@ $addPanelId = 'investment-add-panel';
                   <div class="text-xl font-semibold text-slate-900 dark:text-white">
                     <?= moneyfmt($balance, $currencyCode) ?>
                   </div>
+                  <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    <?= __('Estimated interest earned') ?>:
+                    <span class="font-medium text-slate-900 dark:text-white">
+                      <?= moneyfmt($estimatedInterest, $currencyCode) ?>
+                    </span>
+                  </div>
                 </div>
               </div>
           <?php if (!empty($investment['provider']) || !empty($investment['identifier'])): ?>
@@ -415,6 +423,18 @@ $addPanelId = 'investment-add-panel';
                     <input id="deposit-amount-<?= $investmentId ?>" name="amount" type="number" step="0.01" min="0" class="input" required />
                   </div>
                   <div>
+                    <label class="label text-xs uppercase tracking-wide" for="deposit-date-<?= $investmentId ?>"><?= __('Date') ?></label>
+                    <input
+                      id="deposit-date-<?= $investmentId ?>"
+                      name="occurred_on"
+                      type="date"
+                      class="input"
+                      value="<?= htmlspecialchars($today) ?>"
+                      max="<?= htmlspecialchars($today) ?>"
+                      required
+                    />
+                  </div>
+                  <div>
                     <label class="label text-xs uppercase tracking-wide" for="deposit-note-<?= $investmentId ?>"><?= __('Note') ?> <span class="lowercase text-slate-400">(<?= __('Optional') ?>)</span></label>
                     <input id="deposit-note-<?= $investmentId ?>" name="note" class="input" placeholder="<?= __('e.g., Manual top-up') ?>" />
                   </div>
@@ -437,6 +457,18 @@ $addPanelId = 'investment-add-panel';
                   <div>
                     <label class="label text-xs uppercase tracking-wide" for="withdraw-amount-<?= $investmentId ?>"><?= __('Amount') ?></label>
                     <input id="withdraw-amount-<?= $investmentId ?>" name="amount" type="number" step="0.01" min="0" class="input" required />
+                  </div>
+                  <div>
+                    <label class="label text-xs uppercase tracking-wide" for="withdraw-date-<?= $investmentId ?>"><?= __('Date') ?></label>
+                    <input
+                      id="withdraw-date-<?= $investmentId ?>"
+                      name="occurred_on"
+                      type="date"
+                      class="input"
+                      value="<?= htmlspecialchars($today) ?>"
+                      max="<?= htmlspecialchars($today) ?>"
+                      required
+                    />
                   </div>
                   <div>
                     <label class="label text-xs uppercase tracking-wide" for="withdraw-note-<?= $investmentId ?>"><?= __('Note') ?> <span class="lowercase text-slate-400">(<?= __('Optional') ?>)</span></label>

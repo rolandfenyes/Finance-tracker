@@ -15,6 +15,7 @@ return [
     'Keep track of savings accounts, ETFs, and individual stocks. Link scheduled payments to stay on autopilot.' => 'Παρακολούθησε λογαριασμούς αποταμίευσης, ETF και μεμονωμένες μετοχές. Σύνδεσε προγραμματισμένες πληρωμές για πλήρη αυτοματοποίηση.',
     'Institution or broker' => 'Ίδρυμα ή μεσίτης',
     'Currency' => 'Νόμισμα',
+    'Date' => 'Ημερομηνία',
     'Main' => 'Κύρια',
     'Account number / Ticker' => 'Αριθμός λογαριασμού / Ticker',
     'Annual rate (EBKM)' => 'Ετήσιο επιτόκιο (EBKM)',
