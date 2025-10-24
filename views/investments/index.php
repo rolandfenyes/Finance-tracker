@@ -68,7 +68,7 @@ $addPanelId = 'investment-add-panel';
     <details id="<?= $addPanelId ?>" class="mt-4 rounded-2xl border border-slate-200 bg-slate-50/60 p-5 shadow-sm transition dark:border-slate-700 dark:bg-slate-900/40">
       <summary class="sr-only"><?= __('Add new investment') ?></summary>
 
-      <div class="mt-5 space-y-4">
+      <div class="mt-5 space-y-4" data-investment-add-panel>
         <form method="post" action="/investments/add" class="space-y-4">
           <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
 
@@ -361,7 +361,7 @@ $addPanelId = 'investment-add-panel';
                     <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                       <?= htmlspecialchars($meta['label']) ?>
                     </div>
-                    <div class="text-lg font-semibold text-slate-900 dark:text-white">
+                    <div class="text-lg font-semibold text-slate-900 dark:text-white" data-investment-name>
                       <?= htmlspecialchars($investment['name'] ?? '') ?>
                     </div>
                     <?php if ($isEmergency): ?>
@@ -398,7 +398,7 @@ $addPanelId = 'investment-add-panel';
           </div>
         </summary>
 
-            <div class="space-y-6 border-t border-slate-200 bg-white px-5 pb-6 pt-5 dark:border-slate-700 dark:bg-slate-900">
+            <div class="space-y-6 border-t border-slate-200 bg-white px-5 pb-6 pt-5 dark:border-slate-700 dark:bg-slate-900" data-investment-panel>
               <div class="grid gap-4 md:grid-cols-2">
                 <form method="post" action="/investments/adjust" class="space-y-3 rounded-xl border border-slate-200 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/40">
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
@@ -502,8 +502,8 @@ $addPanelId = 'investment-add-panel';
                   </div>
                   <div class="lg:col-span-3">
                     <?php if ($hasRate && !empty($performance['chart_values'])): ?>
-                      <div class="h-64">
-                        <canvas id="investment-chart-<?= $investmentId ?>" aria-label="<?= __('Expected balance over time') ?>" role="img"></canvas>
+                      <div class="h-64 w-full">
+                        <canvas id="investment-chart-<?= $investmentId ?>" class="h-full w-full max-w-full" aria-label="<?= __('Expected balance over time') ?>" role="img"></canvas>
                       </div>
                     <?php else: ?>
                       <p class="rounded-lg border border-dashed border-slate-300 p-4 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
@@ -1225,6 +1225,183 @@ $builderIds = array_values(array_unique(array_filter($builderIds)));
       initScheduleTabs(container);
     });
 
+    const mobileMedia = window.matchMedia('(max-width: 639px)');
+    const closeLabel = <?= json_encode(__('Close'), JSON_UNESCAPED_UNICODE) ?>;
+    const addDialogTitle = <?= json_encode(__('Add new investment'), JSON_UNESCAPED_UNICODE) ?>;
+    const detailDialogFallbackTitle = <?= json_encode(__('Investment details'), JSON_UNESCAPED_UNICODE) ?>;
+
+    const mobileDialogState = {
+      dialog: null,
+      body: null,
+      title: null,
+      activePanel: null,
+      placeholder: null,
+      returnFocus: null,
+      onClose: null,
+    };
+
+    const restoreMobileDialogContent = function () {
+      if (mobileDialogState.activePanel && mobileDialogState.placeholder && mobileDialogState.placeholder.parentNode) {
+        mobileDialogState.placeholder.parentNode.insertBefore(
+          mobileDialogState.activePanel,
+          mobileDialogState.placeholder.nextSibling
+        );
+      }
+      if (typeof mobileDialogState.onClose === 'function') {
+        const callback = mobileDialogState.onClose;
+        mobileDialogState.onClose = null;
+        callback();
+      }
+      mobileDialogState.activePanel = null;
+      mobileDialogState.placeholder = null;
+    };
+
+    const openDialogElement = function (dialog) {
+      if (!dialog) return;
+      if (typeof dialog.showModal === 'function') {
+        try {
+          dialog.showModal();
+        } catch (err) {
+          if (window.console && typeof window.console.warn === 'function') {
+            console.warn(err);
+          }
+        }
+      } else {
+        if (!dialog.__mmOverlayActive) {
+          window.MyMoneyMapOverlay && window.MyMoneyMapOverlay.open();
+          dialog.__mmOverlayActive = true;
+        }
+        dialog.setAttribute('open', '');
+      }
+    };
+
+    const closeDialogElement = function (dialog) {
+      if (!dialog) return;
+      if (typeof dialog.close === 'function') {
+        try {
+          dialog.close();
+        } catch (err) {
+          dialog.removeAttribute('open');
+        }
+      } else {
+        dialog.removeAttribute('open');
+        if (dialog.__mmOverlayActive) {
+          dialog.__mmOverlayActive = false;
+          window.MyMoneyMapOverlay && window.MyMoneyMapOverlay.close();
+        }
+      }
+    };
+
+    const closeMobileDialog = function () {
+      if (!mobileDialogState.dialog) return;
+      const dialog = mobileDialogState.dialog;
+      const supportsNativeClose = typeof dialog.close === 'function';
+      if (!supportsNativeClose && dialog.hasAttribute('open')) {
+        restoreMobileDialogContent();
+        if (mobileDialogState.returnFocus && typeof mobileDialogState.returnFocus.focus === 'function') {
+          window.setTimeout(function () {
+            mobileDialogState.returnFocus.focus();
+          }, 80);
+        }
+        mobileDialogState.returnFocus = null;
+      }
+      closeDialogElement(dialog);
+    };
+
+    const ensureMobileDialog = function () {
+      if (mobileDialogState.dialog) {
+        return mobileDialogState.dialog;
+      }
+      const dialog = document.createElement('dialog');
+      dialog.id = 'investment-mobile-dialog';
+      dialog.className = 'rounded-2xl p-0 w-[720px] max-w-[95vw] shadow-2xl';
+      dialog.innerHTML = `
+        <div class="modal-header px-5 py-4 flex items-center justify-between gap-2">
+          <div class="font-semibold text-base" data-mobile-dialog-title></div>
+          <button type="button" class="icon-btn" data-mobile-dialog-close aria-label="${closeLabel}">
+            <i data-lucide="x" class="h-5 w-5"></i>
+          </button>
+        </div>
+        <div class="modal-body" data-mobile-dialog-body></div>
+      `;
+      document.body.appendChild(dialog);
+      mobileDialogState.dialog = dialog;
+      mobileDialogState.body = dialog.querySelector('[data-mobile-dialog-body]');
+      mobileDialogState.title = dialog.querySelector('[data-mobile-dialog-title]');
+      const closeBtn = dialog.querySelector('[data-mobile-dialog-close]');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', function () {
+          closeMobileDialog();
+        });
+      }
+      dialog.addEventListener('cancel', function (event) {
+        event.preventDefault();
+        closeMobileDialog();
+      });
+      dialog.addEventListener('close', function () {
+        restoreMobileDialogContent();
+        if (mobileDialogState.returnFocus && typeof mobileDialogState.returnFocus.focus === 'function') {
+          window.setTimeout(function () {
+            mobileDialogState.returnFocus.focus();
+          }, 80);
+        }
+        mobileDialogState.returnFocus = null;
+      });
+      dialog.addEventListener('click', function (event) {
+        if (event.target === dialog) {
+          closeMobileDialog();
+        }
+      });
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons(dialog);
+      }
+      return dialog;
+    };
+
+    const openMobileDialog = function (options) {
+      if (!options || !options.panel) return;
+      const dialog = ensureMobileDialog();
+      const body = mobileDialogState.body;
+      const title = mobileDialogState.title;
+      restoreMobileDialogContent();
+      mobileDialogState.placeholder = options.placeholder || null;
+      mobileDialogState.activePanel = options.panel;
+      mobileDialogState.returnFocus = options.focusTarget || null;
+      mobileDialogState.onClose = typeof options.onClose === 'function' ? options.onClose : null;
+      if (title) {
+        title.textContent = options.title || '';
+      }
+      if (body) {
+        while (body.firstChild) {
+          body.removeChild(body.firstChild);
+        }
+        body.appendChild(options.panel);
+      }
+      const alreadyOpen = dialog.hasAttribute('open');
+      if (!alreadyOpen) {
+        openDialogElement(dialog);
+      }
+      window.setTimeout(function () {
+        if (typeof options.onOpen === 'function') {
+          options.onOpen();
+        }
+      }, 100);
+    };
+
+    const handleMediaChangeClose = function (event) {
+      if (!event.matches) {
+        closeMobileDialog();
+      }
+    };
+
+    if (mobileMedia) {
+      if (typeof mobileMedia.addEventListener === 'function') {
+        mobileMedia.addEventListener('change', handleMediaChangeClose);
+      } else if (typeof mobileMedia.addListener === 'function') {
+        mobileMedia.addListener(handleMediaChangeClose);
+      }
+    }
+
     const toggleButton = document.querySelector('[data-investment-add-toggle]');
     if (toggleButton) {
       const targetSelector = toggleButton.getAttribute('data-target');
@@ -1233,15 +1410,51 @@ $builderIds = array_values(array_unique(array_filter($builderIds)));
         const closedLabel = toggleButton.querySelector('[data-add-state="closed"]');
         const openLabel = toggleButton.querySelector('[data-add-state="open"]');
         const firstField = panel.querySelector('input, select, textarea');
+        const addPanelContent = panel.querySelector('[data-investment-add-panel]');
+        let addPanelPlaceholder = null;
+        if (addPanelContent && addPanelContent.parentNode) {
+          addPanelPlaceholder = document.createElement('div');
+          addPanelPlaceholder.style.display = 'none';
+          addPanelPlaceholder.setAttribute('data-mobile-placeholder', 'add-investment');
+          addPanelContent.parentNode.insertBefore(addPanelPlaceholder, addPanelContent);
+        }
 
         const updateState = function () {
-          const isOpen = panel.hasAttribute('open');
+          const isOpen = panel.hasAttribute('open') || panel.dataset.mobileActive === 'true';
           toggleButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
           if (closedLabel) closedLabel.classList.toggle('hidden', isOpen);
           if (openLabel) openLabel.classList.toggle('hidden', !isOpen);
         };
 
         toggleButton.addEventListener('click', function (event) {
+          if (mobileMedia && mobileMedia.matches && addPanelContent) {
+            event.preventDefault();
+            panel.dataset.mobileActive = 'true';
+            openMobileDialog({
+              title: addDialogTitle,
+              panel: addPanelContent,
+              placeholder: addPanelPlaceholder,
+              focusTarget: toggleButton,
+              onOpen: function () {
+                toggleButton.setAttribute('aria-expanded', 'true');
+                if (firstField) {
+                  window.setTimeout(function () {
+                    if (typeof firstField.focus === 'function') {
+                      firstField.focus();
+                    }
+                  }, 120);
+                }
+              },
+              onClose: function () {
+                panel.dataset.mobileActive = '';
+                panel.removeAttribute('open');
+                updateState();
+              },
+            });
+            updateState();
+            return;
+          }
+
           event.preventDefault();
           const isOpen = panel.hasAttribute('open');
           if (isOpen) {
@@ -1263,9 +1476,72 @@ $builderIds = array_values(array_unique(array_filter($builderIds)));
         });
 
         panel.addEventListener('toggle', updateState);
+        if (mobileMedia && mobileMedia.matches) {
+          panel.removeAttribute('open');
+        }
+        const handleAddPanelMedia = function (event) {
+          if (event.matches) {
+            panel.removeAttribute('open');
+            updateState();
+          }
+        };
+        if (mobileMedia) {
+          if (typeof mobileMedia.addEventListener === 'function') {
+            mobileMedia.addEventListener('change', handleAddPanelMedia);
+          } else if (typeof mobileMedia.addListener === 'function') {
+            mobileMedia.addListener(handleAddPanelMedia);
+          }
+        }
         updateState();
       }
     }
+
+    document.querySelectorAll('[data-investment]').forEach(function (details) {
+      const summary = details.querySelector('summary');
+      const content = details.querySelector('[data-investment-panel]');
+      if (!summary || !content) {
+        return;
+      }
+
+      const placeholder = document.createElement('div');
+      placeholder.style.display = 'none';
+      placeholder.setAttribute('data-mobile-placeholder', 'investment');
+      if (content.parentNode) {
+        content.parentNode.insertBefore(placeholder, content);
+      }
+
+      summary.addEventListener('click', function (event) {
+        if (!(mobileMedia && mobileMedia.matches)) {
+          return;
+        }
+        event.preventDefault();
+        details.removeAttribute('open');
+        const nameEl = summary.querySelector('[data-investment-name]');
+        const titleText = nameEl ? nameEl.textContent.trim() : '';
+        openMobileDialog({
+          title: titleText || detailDialogFallbackTitle,
+          panel: content,
+          placeholder: placeholder,
+          focusTarget: summary,
+          onClose: function () {
+            details.removeAttribute('open');
+          },
+        });
+      });
+
+      if (mobileMedia) {
+        const handleDetailMedia = function (event) {
+          if (event.matches) {
+            details.removeAttribute('open');
+          }
+        };
+        if (typeof mobileMedia.addEventListener === 'function') {
+          mobileMedia.addEventListener('change', handleDetailMedia);
+        } else if (typeof mobileMedia.addListener === 'function') {
+          mobileMedia.addListener(handleDetailMedia);
+        }
+      }
+    });
 
     document.querySelectorAll('[data-investment-mode-toggle]').forEach(function (btn) {
       const viewSelector = btn.getAttribute('data-target-view');
