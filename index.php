@@ -88,6 +88,17 @@ if (preg_match('#^/api/stocks/([A-Za-z0-9\.-:]+)/history$#', $path, $m)) {
     return;
 }
 
+if ($path === '/api/stocks/search') {
+    require_login();
+    require __DIR__ . '/src/controllers/stocks.php';
+    if ($method === 'GET') {
+        stocks_search_api($pdo);
+    } else {
+        http_response_code(405);
+    }
+    return;
+}
+
 // Simple routing
 switch ($path) {
     case '/':

@@ -1088,6 +1088,44 @@ function stocks_is_watched(PDO $pdo, int $userId, int $stockId): bool
     return (bool)$stmt->fetchColumn();
 }
 
+function stocks_search_api(PDO $pdo): void
+{
+    if (!stocks_table_exists($pdo, 'stocks')) {
+        json_response(['data' => []]);
+    }
+
+    $query = trim((string)($_GET['q'] ?? ''));
+    if ($query === '') {
+        json_response(['data' => []]);
+    }
+
+    $normalized = preg_replace('/\s+/', ' ', $query);
+    $symbolQuery = strtoupper($normalized);
+    $nameQuery = strtolower($normalized);
+    $likeSymbol = '%' . str_replace(' ', '%', $symbolQuery) . '%';
+    $likeName = '%' . str_replace(' ', '%', $nameQuery) . '%';
+
+    try {
+        $stmt = $pdo->prepare('SELECT id, UPPER(symbol) AS symbol, name, exchange, currency FROM stocks WHERE UPPER(symbol) LIKE ? OR LOWER(name) LIKE ? ORDER BY CASE WHEN UPPER(symbol) = ? THEN 0 WHEN UPPER(symbol) LIKE ? THEN 1 WHEN LOWER(name) LIKE ? THEN 2 ELSE 3 END, symbol LIMIT 20');
+        $stmt->execute([$likeSymbol, $likeName, $symbolQuery, $likeSymbol, $likeName]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        json_response(['data' => []]);
+    }
+
+    $data = array_map(static function ($row) {
+        return [
+            'id' => (int)($row['id'] ?? 0),
+            'symbol' => strtoupper((string)($row['symbol'] ?? '')),
+            'name' => trim((string)($row['name'] ?? '')),
+            'exchange' => trim((string)($row['exchange'] ?? '')),
+            'currency' => strtoupper((string)($row['currency'] ?? '')),
+        ];
+    }, $rows);
+
+    json_response(['data' => $data]);
+}
+
 function stocks_table_exists(PDO $pdo, string $table): bool
 {
     static $cache = [];

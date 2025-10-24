@@ -3,6 +3,14 @@
 require_once __DIR__ . '/../helpers.php';
 require_once __DIR__ . '/../fx.php';
 require_once __DIR__ . '/../recurrence.php';
+require_once __DIR__ . '/../stocks/PriceProviderAdapter.php';
+require_once __DIR__ . '/../stocks/PriceDataService.php';
+require_once __DIR__ . '/../stocks/Adapters/NullPriceProvider.php';
+require_once __DIR__ . '/../stocks/Adapters/FinnhubAdapter.php';
+
+use Stocks\Adapters\FinnhubAdapter;
+use Stocks\Adapters\NullPriceProvider;
+use Stocks\PriceDataService;
 
 function investments_allowed_frequencies(): array
 {
@@ -415,6 +423,36 @@ function investments_index(PDO $pdo): void
     $stmt->execute([$userId]);
     $investments = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
+    $hasStocks = investments_has_stocks_support($pdo);
+    $stockMetaById = [];
+    if ($hasStocks && $investments) {
+        $stockIds = [];
+        foreach ($investments as $row) {
+            $sid = isset($row['stock_id']) ? (int)$row['stock_id'] : 0;
+            if ($sid > 0) {
+                $stockIds[$sid] = true;
+            }
+        }
+        if ($stockIds) {
+            $ids = array_keys($stockIds);
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            try {
+                $stockStmt = $pdo->prepare("SELECT id, UPPER(symbol) AS symbol, name, exchange, currency FROM stocks WHERE id IN ($placeholders)");
+                $stockStmt->execute($ids);
+                while ($row = $stockStmt->fetch(PDO::FETCH_ASSOC)) {
+                    $stockMetaById[(int)$row['id']] = [
+                        'symbol' => strtoupper((string)($row['symbol'] ?? '')),
+                        'name' => trim((string)($row['name'] ?? '')),
+                        'exchange' => trim((string)($row['exchange'] ?? '')),
+                        'currency' => strtoupper((string)($row['currency'] ?? '')),
+                    ];
+                }
+            } catch (Throwable $e) {
+                $stockMetaById = [];
+            }
+        }
+    }
+
     $investmentIds = array_map(static fn ($row) => (int)($row['id'] ?? 0), $investments);
     $transactionsByInvestment = [];
     if ($investmentIds) {
@@ -435,6 +473,7 @@ function investments_index(PDO $pdo): void
     }
 
     $performanceByInvestment = [];
+    $quoteSymbols = [];
     foreach ($investments as $index => $investment) {
         $investmentId = (int)($investment['id'] ?? 0);
         $txList = $transactionsByInvestment[$investmentId] ?? [];
@@ -448,6 +487,122 @@ function investments_index(PDO $pdo): void
         $transactionsByInvestment[$investmentId] = array_reverse($txList);
         $investments[$index]['interest_frequency'] = $performanceByInvestment[$investmentId]['frequency'] ?? ($investment['interest_frequency'] ?? 'monthly');
         $investments[$index]['sched_summary'] = investments_schedule_summary($investment['sched_rrule'] ?? null);
+
+        $rawUnits = $investment['units'] ?? null;
+        $unitsValue = 0.0;
+        $unitsInput = '';
+        if ($rawUnits !== null && $rawUnits !== '') {
+            $unitsValue = (float)$rawUnits;
+            $unitsInput = rtrim(rtrim((string)$rawUnits, '0'), '.');
+            if ($unitsInput === '') {
+                $unitsInput = '0';
+            }
+        }
+        $investments[$index]['units_value'] = $unitsValue;
+        $investments[$index]['units_input'] = $unitsInput;
+
+        $stockId = isset($investment['stock_id']) ? (int)$investment['stock_id'] : 0;
+        if ($stockId > 0 && isset($stockMetaById[$stockId])) {
+            $meta = $stockMetaById[$stockId];
+            $symbol = $meta['symbol'] ?? '';
+            if ($symbol !== '') {
+                $quoteSymbols[$symbol] = true;
+            }
+            $investments[$index]['stock_symbol'] = $symbol;
+            $investments[$index]['stock_name'] = $meta['name'] ?? '';
+            $investments[$index]['stock_exchange'] = $meta['exchange'] ?? '';
+            $investments[$index]['stock_currency'] = $meta['currency'] ?? '';
+        } else {
+            $investments[$index]['stock_symbol'] = null;
+            $investments[$index]['stock_name'] = null;
+            $investments[$index]['stock_exchange'] = null;
+            $investments[$index]['stock_currency'] = null;
+        }
+    }
+
+    $quoteMap = [];
+    if ($hasStocks && !empty($quoteSymbols)) {
+        try {
+            $priceService = investments_price_service($pdo);
+            $quotes = $priceService->getLiveQuotes(array_keys($quoteSymbols));
+        } catch (Throwable $e) {
+            $quotes = [];
+        }
+        foreach ($quotes as $quoteRow) {
+            $symbol = strtoupper((string)($quoteRow['symbol'] ?? ''));
+            if ($symbol === '') {
+                continue;
+            }
+            $quoteMap[$symbol] = $quoteRow;
+        }
+    }
+
+    foreach ($investments as $index => $investment) {
+        $symbol = strtoupper((string)($investments[$index]['stock_symbol'] ?? ''));
+        if ($symbol === '' || !isset($quoteMap[$symbol])) {
+            $investments[$index]['stock_quote'] = null;
+            continue;
+        }
+
+        $quote = $quoteMap[$symbol];
+        $last = isset($quote['last']) ? (float)$quote['last'] : null;
+        $prev = isset($quote['prev_close']) ? (float)$quote['prev_close'] : null;
+        $quoteCurrency = strtoupper((string)($quote['currency'] ?? ($investment['stock_currency'] ?? ($investment['currency'] ?? ''))));
+        $unitsValue = (float)($investments[$index]['units_value'] ?? 0.0);
+
+        $investments[$index]['stock_quote'] = [
+            'last' => $last,
+            'prev_close' => $prev,
+            'day_high' => isset($quote['day_high']) ? (float)$quote['day_high'] : null,
+            'day_low' => isset($quote['day_low']) ? (float)$quote['day_low'] : null,
+            'volume' => isset($quote['volume']) ? (float)$quote['volume'] : null,
+            'currency' => $quoteCurrency !== '' ? $quoteCurrency : null,
+            'provider_ts' => $quote['provider_ts'] ?? null,
+            'stale' => !empty($quote['stale']),
+        ];
+
+        if (!empty($quote['provider_ts'])) {
+            $investments[$index]['stock_updated_at'] = substr((string)$quote['provider_ts'], 0, 16);
+        }
+
+        if ($last !== null && $prev !== null) {
+            $delta = $last - $prev;
+            $investments[$index]['stock_change'] = $delta;
+            if ($prev != 0.0) {
+                $investments[$index]['stock_change_pct'] = ($delta / $prev) * 100.0;
+            }
+            if ($delta > 0) {
+                $investments[$index]['stock_change_direction'] = 'up';
+            } elseif ($delta < 0) {
+                $investments[$index]['stock_change_direction'] = 'down';
+            } else {
+                $investments[$index]['stock_change_direction'] = 'flat';
+            }
+        }
+
+        if ($last !== null && $unitsValue > 0) {
+            $marketValue = $last * $unitsValue;
+            $investments[$index]['market_value'] = $marketValue;
+            $investments[$index]['market_currency'] = $quoteCurrency !== '' ? $quoteCurrency : ($investment['stock_currency'] ?? $investment['currency'] ?? '');
+
+            $balanceValue = isset($investment['balance']) ? (float)$investment['balance'] : 0.0;
+            $marketCurrency = strtoupper((string)($investments[$index]['market_currency'] ?? ''));
+            $balanceCurrency = strtoupper((string)($investment['currency'] ?? ''));
+            if ($marketCurrency !== '' && $marketCurrency === $balanceCurrency) {
+                $diff = $marketValue - $balanceValue;
+                $investments[$index]['market_diff'] = $diff;
+                if ($diff > 0) {
+                    $investments[$index]['market_diff_direction'] = 'up';
+                } elseif ($diff < 0) {
+                    $investments[$index]['market_diff_direction'] = 'down';
+                } else {
+                    $investments[$index]['market_diff_direction'] = 'flat';
+                }
+                if ($balanceValue != 0.0) {
+                    $investments[$index]['market_diff_pct'] = ($diff / $balanceValue) * 100.0;
+                }
+            }
+        }
     }
 
     $scheduleStmt = $pdo->prepare("SELECT id, title, amount, currency, next_due
@@ -522,11 +677,8 @@ function investments_add(PDO $pdo): void
     if (!in_array($frequencyInput, investments_allowed_frequencies(), true)) {
         $frequencyInput = 'monthly';
     }
-    $currencyInput = strtoupper(trim((string)($_POST['currency'] ?? '')));
-    if ($currencyInput === '') {
-        $mainCurrency = fx_user_main($pdo, $userId);
-        $currencyInput = $mainCurrency !== '' ? strtoupper($mainCurrency) : 'HUF';
-    }
+    $currencyPostedRaw = $_POST['currency'] ?? '';
+    $currencyInput = strtoupper(trim((string)$currencyPostedRaw));
     $initialAmountRaw = trim((string)($_POST['initial_amount'] ?? ''));
     $initialAmount = $initialAmountRaw === '' ? 0.0 : (float)str_replace(',', '.', $initialAmountRaw);
     if (!is_finite($initialAmount)) {
@@ -538,6 +690,49 @@ function investments_add(PDO $pdo): void
     $scheduleMode = strtolower(trim((string)($_POST['scheduled_mode'] ?? 'existing')));
     if (!in_array($scheduleMode, ['existing', 'new'], true)) {
         $scheduleMode = 'existing';
+    }
+
+    $stockId = null;
+    $stockMeta = null;
+    $stockIdRaw = $_POST['stock_id'] ?? '';
+    if ($stockIdRaw !== '' && $stockIdRaw !== null) {
+        $stockIdCandidate = (int)$stockIdRaw;
+        if ($stockIdCandidate > 0) {
+            $stockMeta = investments_stock_lookup($pdo, $stockIdCandidate);
+            if ($stockMeta) {
+                $stockId = $stockIdCandidate;
+            }
+        }
+    }
+
+    $unitsRaw = trim((string)($_POST['units'] ?? ''));
+    $units = null;
+    if ($unitsRaw !== '') {
+        $unitsCandidate = (float)str_replace(',', '.', $unitsRaw);
+        if (is_finite($unitsCandidate) && $unitsCandidate >= 0) {
+            $units = $unitsCandidate;
+        }
+    }
+
+    if ($type === 'savings') {
+        $stockId = null;
+        $stockMeta = null;
+        $units = null;
+    } elseif ($stockMeta) {
+        if (!$identifier) {
+            $identifier = strtoupper((string)($stockMeta['symbol'] ?? '')) ?: null;
+        }
+        if (!$provider && !empty($stockMeta['exchange'])) {
+            $provider = $stockMeta['exchange'];
+        }
+        if ($currencyInput === '' && !empty($stockMeta['currency'])) {
+            $currencyInput = strtoupper((string)$stockMeta['currency']);
+        }
+    }
+
+    if ($currencyInput === '') {
+        $mainCurrency = fx_user_main($pdo, $userId);
+        $currencyInput = $mainCurrency !== '' ? strtoupper($mainCurrency) : 'HUF';
     }
 
     $scheduleId = null;
@@ -587,9 +782,22 @@ function investments_add(PDO $pdo): void
 
     $pdo->beginTransaction();
     try {
-        $insert = $pdo->prepare("INSERT INTO investments (user_id, type, name, provider, identifier, interest_rate, interest_frequency, notes, currency, balance, created_at, updated_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,NOW(),NOW()) RETURNING id");
-        $insert->execute([$userId, $type, $name, $provider, $identifier, $interestRate, $frequencyInput, $notes, $currencyInput, $initialAmount]);
+        $insert = $pdo->prepare("INSERT INTO investments (user_id, type, name, provider, identifier, interest_rate, interest_frequency, notes, currency, balance, stock_id, units, created_at, updated_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,NOW(),NOW()) RETURNING id");
+        $insert->execute([
+            $userId,
+            $type,
+            $name,
+            $provider,
+            $identifier,
+            $interestRate,
+            $frequencyInput,
+            $notes,
+            $currencyInput,
+            $initialAmount,
+            $stockId,
+            $units,
+        ]);
         $investmentId = (int)$insert->fetchColumn();
 
         if (abs($initialAmount) > 0.00001) {
@@ -674,7 +882,8 @@ function investments_update(PDO $pdo): void
     if (!in_array($frequencyInput, investments_allowed_frequencies(), true)) {
         $frequencyInput = 'monthly';
     }
-    $currencyInput = strtoupper(trim((string)($_POST['currency'] ?? '')));
+    $currencyPostedRaw = $_POST['currency'] ?? '';
+    $currencyInput = strtoupper(trim((string)$currencyPostedRaw));
     if ($currencyInput === '') {
         $mainCurrency = fx_user_main($pdo, $userId);
         $currencyInput = $mainCurrency !== '' ? strtoupper($mainCurrency) : 'HUF';
@@ -682,10 +891,48 @@ function investments_update(PDO $pdo): void
     $scheduleIdRaw = $_POST['scheduled_payment_id'] ?? '';
     $newScheduleId = ($scheduleIdRaw !== '' && $scheduleIdRaw !== null) ? (int)$scheduleIdRaw : null;
 
+    $stockId = null;
+    $stockMeta = null;
+    $stockIdRaw = $_POST['stock_id'] ?? '';
+    if ($stockIdRaw !== '' && $stockIdRaw !== null) {
+        $candidate = (int)$stockIdRaw;
+        if ($candidate > 0) {
+            $stockMeta = investments_stock_lookup($pdo, $candidate);
+            if ($stockMeta) {
+                $stockId = $candidate;
+            }
+        }
+    }
+
+    $unitsRaw = trim((string)($_POST['units'] ?? ''));
+    $units = null;
+    if ($unitsRaw !== '') {
+        $candidate = (float)str_replace(',', '.', $unitsRaw);
+        if (is_finite($candidate) && $candidate >= 0) {
+            $units = $candidate;
+        }
+    }
+
+    if ($type === 'savings') {
+        $stockId = null;
+        $stockMeta = null;
+        $units = null;
+    } elseif ($stockMeta) {
+        if (!$identifier) {
+            $identifier = strtoupper((string)($stockMeta['symbol'] ?? '')) ?: null;
+        }
+        if (!$provider && !empty($stockMeta['exchange'])) {
+            $provider = $stockMeta['exchange'];
+        }
+        if ($currencyPostedRaw === '' && !empty($stockMeta['currency'])) {
+            $currencyInput = strtoupper((string)$stockMeta['currency']);
+        }
+    }
+
     $pdo->beginTransaction();
     try {
-        $update = $pdo->prepare('UPDATE investments SET type=?, name=?, provider=?, identifier=?, interest_rate=?, interest_frequency=?, notes=?, currency=?, updated_at=NOW() WHERE id=? AND user_id=?');
-        $update->execute([$type, $name, $provider, $identifier, $interestRate, $frequencyInput, $notes, $currencyInput, $id, $userId]);
+        $update = $pdo->prepare('UPDATE investments SET type=?, name=?, provider=?, identifier=?, interest_rate=?, interest_frequency=?, notes=?, currency=?, stock_id=?, units=?, updated_at=NOW() WHERE id=? AND user_id=?');
+        $update->execute([$type, $name, $provider, $identifier, $interestRate, $frequencyInput, $notes, $currencyInput, $stockId, $units, $id, $userId]);
 
         $currentScheduleStmt = $pdo->prepare('SELECT id FROM scheduled_payments WHERE investment_id=? AND user_id=?');
         $currentScheduleStmt->execute([$id, $userId]);
@@ -877,4 +1124,73 @@ function investments_schedule_create(PDO $pdo): void
     }
 
     redirect('/investments');
+}
+
+function investments_has_stocks_support(PDO $pdo): bool
+{
+    static $cache;
+    if ($cache !== null) {
+        return $cache;
+    }
+
+    try {
+        $stmt = $pdo->prepare('SELECT 1 FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = ? LIMIT 1');
+        $stmt->execute(['stocks']);
+        $cache = (bool)$stmt->fetchColumn();
+    } catch (Throwable $e) {
+        $cache = false;
+    }
+
+    return $cache;
+}
+
+function investments_stock_lookup(PDO $pdo, int $stockId): ?array
+{
+    if ($stockId <= 0) {
+        return null;
+    }
+
+    try {
+        $stmt = $pdo->prepare('SELECT id, UPPER(symbol) AS symbol, name, exchange, currency FROM stocks WHERE id = ?');
+        $stmt->execute([$stockId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            return null;
+        }
+        return [
+            'id' => (int)$row['id'],
+            'symbol' => strtoupper((string)($row['symbol'] ?? '')),
+            'name' => trim((string)($row['name'] ?? '')),
+            'exchange' => trim((string)($row['exchange'] ?? '')),
+            'currency' => strtoupper((string)($row['currency'] ?? '')),
+        ];
+    } catch (Throwable $e) {
+        return null;
+    }
+}
+
+function investments_price_service(PDO $pdo): PriceDataService
+{
+    static $service;
+    if ($service instanceof PriceDataService) {
+        return $service;
+    }
+
+    global $config;
+    $providerName = strtolower($config['stocks']['provider'] ?? 'null');
+    $adapter = new NullPriceProvider();
+
+    if ($providerName === 'finnhub') {
+        $providerCfg = $config['stocks']['providers']['finnhub'] ?? [];
+        $apiKey = $providerCfg['api_key'] ?? getenv('FINNHUB_API_KEY');
+        $baseUrl = $providerCfg['base_url'] ?? getenv('FINNHUB_BASE_URL') ?: 'https://finnhub.io/api/v1';
+        if (!empty($apiKey)) {
+            $adapter = new FinnhubAdapter($apiKey, $baseUrl);
+        }
+    }
+
+    $ttl = (int)($config['stocks']['refresh_seconds'] ?? 10);
+    $service = new PriceDataService($pdo, $adapter, $ttl);
+
+    return $service;
 }
