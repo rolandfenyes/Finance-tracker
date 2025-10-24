@@ -1,7 +1,12 @@
 ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'free' CHECK (role IN ('free', 'premium', 'admin'));
+    DROP CONSTRAINT IF EXISTS users_role_check;
 
--- Backfill existing rows to ensure the new constraint passes even if defaults are not applied automatically.
+ALTER TABLE users
+    ALTER COLUMN role SET DEFAULT 'free';
+
+ALTER TABLE users
+    ADD CONSTRAINT users_role_check CHECK (role IN ('free', 'premium', 'admin'));
+
 UPDATE users
 SET role = CASE
         WHEN role = 'admin' THEN 'admin'

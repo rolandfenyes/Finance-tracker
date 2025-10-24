@@ -37,7 +37,7 @@ function admin_dashboard(PDO $pdo): void
                 $recentUsers[] = [
                     'id' => (int)($row['id'] ?? 0),
                     'email' => (string)($row['email'] ?? ''),
-                    'role' => (string)($row['role'] ?? 'user'),
+                    'role' => normalize_user_role($row['role'] ?? null),
                     'full_name' => pii_decrypt($row['full_name'] ?? null),
                     'created_at' => $row['created_at'] ?? null,
                 ];
@@ -72,8 +72,9 @@ function admin_dashboard(PDO $pdo): void
     }
 
     $roleOptions = [
-        'user' => __('User'),
-        'admin' => __('Administrator'),
+        ROLE_FREE => __('Free user'),
+        ROLE_PREMIUM => __('Premium user'),
+        ROLE_ADMIN => __('Administrator'),
     ];
 
     view('admin/dashboard', [
@@ -93,7 +94,7 @@ function admin_update_role(PDO $pdo): void
 
     $userId = (int)($_POST['user_id'] ?? 0);
     $role = strtolower(trim((string)($_POST['role'] ?? '')));
-    $allowedRoles = ['user', 'admin'];
+    $allowedRoles = [ROLE_FREE, ROLE_PREMIUM, ROLE_ADMIN];
 
     if ($userId <= 0 || !in_array($role, $allowedRoles, true)) {
         $_SESSION['flash'] = __('Invalid role selection.');
@@ -109,12 +110,12 @@ function admin_update_role(PDO $pdo): void
         redirect('/admin');
     }
 
-    if ($userId === uid() && $role !== 'admin') {
+    if ($userId === uid() && $role !== ROLE_ADMIN) {
         $_SESSION['flash'] = __('You cannot remove your own administrator access.');
         redirect('/admin');
     }
 
-    if (($user['role'] ?? 'user') === $role) {
+    if (normalize_user_role($user['role'] ?? null) === $role) {
         $_SESSION['flash_success'] = __('No changes were necessary.');
         redirect('/admin');
     }
@@ -132,9 +133,11 @@ function admin_update_role(PDO $pdo): void
     }
 
     $email = $user['email'] ?? '';
-    $message = $role === 'admin'
-        ? __(':email is now an administrator.', ['email' => $email])
-        : __(':email is now a standard user.', ['email' => $email]);
+    $message = match ($role) {
+        ROLE_ADMIN => __(':email is now an administrator.', ['email' => $email]),
+        ROLE_PREMIUM => __(':email is now a premium user.', ['email' => $email]),
+        default => __(':email is now a free user.', ['email' => $email]),
+    };
 
     $_SESSION['flash_success'] = $message;
     redirect('/admin');

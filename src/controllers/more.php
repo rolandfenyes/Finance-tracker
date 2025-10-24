@@ -81,7 +81,9 @@ function more_show(PDO $pdo): void
                 ],
                 [
                     'label' => __('Cashflow rules'),
-                    'description' => __('Adjust envelope allocations and automation preferences.'),
+                    'description' => is_free_user()
+                        ? __('Premium feature — upgrade to edit cashflow rules.')
+                        : __('Adjust envelope allocations and automation preferences.'),
                     'href' => '/settings/cashflow',
                     'icon' => 'sliders-horizontal',
                 ],

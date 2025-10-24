@@ -111,6 +111,13 @@ function goals_index(PDO $pdo){
 function goals_add(PDO $pdo){
   verify_csrf(); require_login(); $u=uid();
 
+  free_user_limit_guard(
+    $pdo,
+    'goals_active',
+    '/goals',
+    __('The Free plan includes up to two active goals. Upgrade to Premium to add more goals.')
+  );
+
   $title   = trim($_POST['title'] ?? '');
   $target  = (float)($_POST['target_amount'] ?? 0);
   $current = (float)($_POST['current_amount'] ?? 0);
@@ -290,6 +297,13 @@ function goals_archive(PDO $pdo){
 function goals_create_schedule(PDO $pdo){
   verify_csrf(); require_login();
   $u = uid();
+
+  free_user_limit_guard(
+    $pdo,
+    'scheduled_active',
+    '/scheduled',
+    __('The Free plan includes up to two scheduled payments. Upgrade to Premium to create more.')
+  );
 
   // Accept BOTH the new names (your form) and the older sched_* names
   $goalId   = (int)($_POST['goal_id'] ?? 0);

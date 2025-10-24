@@ -125,7 +125,7 @@ $stats = array_merge($statDefaults, $stats);
       <?= __('Manage roles & access') ?>
     </h2>
     <p class="card-subtle mt-2 text-sm text-slate-600 dark:text-slate-300/80">
-      <?= __('Promote trusted teammates to administrators or return access to standard user privileges.') ?>
+      <?= __('Promote trusted teammates to administrators or switch members between Free and Premium access.') ?>
     </p>
 
     <div class="mt-6 overflow-hidden rounded-3xl border border-white/60 bg-white/60 shadow-sm backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/40">
@@ -144,9 +144,19 @@ $stats = array_merge($statDefaults, $stats);
               <?php foreach ($recentUsers as $user):
                 $displayName = trim($user['full_name'] ?? '') ?: ($user['email'] ?? __('Unknown'));
                 $email = $user['email'] ?? '';
-                $role = $user['role'] ?? 'user';
+                $role = normalize_user_role($user['role'] ?? null);
                 $createdAt = $user['created_at'] ?? null;
                 $createdLabel = $createdAt ? date('Y-m-d H:i', strtotime((string)$createdAt)) : __('Unknown');
+                $roleBadgeClass = match ($role) {
+                  ROLE_ADMIN => 'border-brand-500/70 bg-brand-500/10 text-brand-700 dark:border-brand-400/50 dark:bg-brand-500/15 dark:text-brand-100',
+                  ROLE_PREMIUM => 'border-amber-400/70 bg-amber-200/30 text-amber-800 dark:border-amber-300/60 dark:bg-amber-300/15 dark:text-amber-200',
+                  default => 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-200',
+                };
+                $roleIcon = match ($role) {
+                  ROLE_ADMIN => 'shield',
+                  ROLE_PREMIUM => 'star',
+                  default => 'user',
+                };
               ?>
                 <tr class="transition hover:bg-brand-50/40 dark:hover:bg-slate-800/30">
                   <td class="px-4 py-4 align-middle text-sm font-medium text-slate-900 dark:text-slate-100">
@@ -161,8 +171,8 @@ $stats = array_merge($statDefaults, $stats);
                     <span class="break-all font-mono text-xs sm:text-sm"><?= htmlspecialchars($email) ?></span>
                   </td>
                   <td class="px-4 py-4 align-middle text-sm text-slate-600 dark:text-slate-300">
-                    <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold <?= $role === 'admin' ? 'border-brand-500/70 bg-brand-500/10 text-brand-700 dark:border-brand-400/50 dark:bg-brand-500/15 dark:text-brand-100' : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-200' ?>">
-                      <i data-lucide="<?= $role === 'admin' ? 'shield' : 'user' ?>" class="h-3.5 w-3.5"></i>
+                    <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold <?= $roleBadgeClass ?>">
+                      <i data-lucide="<?= $roleIcon ?>" class="h-3.5 w-3.5"></i>
                       <?= htmlspecialchars($roleOptions[$role] ?? ucfirst($role)) ?>
                     </span>
                   </td>

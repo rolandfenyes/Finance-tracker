@@ -16,11 +16,10 @@ function handle_register(PDO $pdo) {
         $stmt->execute([$email,$hash,$encryptedName]);
         $uid = (int)$stmt->fetchColumn();
         $_SESSION['uid'] = $uid;
-        $_SESSION['role'] = 'user';
-        // Add default currencies
-        $pdo->prepare('INSERT INTO user_currencies(user_id,code,is_main) VALUES(?,?,true)')->execute([$uid,'HUF']);
-        $pdo->prepare('INSERT INTO user_currencies(user_id,code,is_main) VALUES(?,?,false) ON CONFLICT DO NOTHING')->execute([$uid,'EUR']);
-        $pdo->prepare('INSERT INTO user_currencies(user_id,code,is_main) VALUES(?,?,false) ON CONFLICT DO NOTHING')->execute([$uid,'USD']);
+        $_SESSION['role'] = ROLE_FREE;
+        // Add default currency
+        $pdo->prepare('INSERT INTO user_currencies(user_id,code,is_main) VALUES(?,?,true)')
+            ->execute([$uid,'HUF']);
         // Initialize baby steps
         for ($i=1;$i<=7;$i++) { $pdo->prepare('INSERT INTO baby_steps(user_id,step,status) VALUES(?,?,?)')->execute([$uid,$i,'in_progress']); }
         redirect('/');
@@ -135,8 +134,8 @@ function post_login_redirect_path(PDO $pdo, int $userId): string {
     $stmt->execute([$userId]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
-    $role = (string)($row['role'] ?? 'user');
-    if ($role === 'admin') {
+    $role = normalize_user_role($row['role'] ?? null);
+    if ($role === ROLE_ADMIN) {
         return '/admin';
     }
 
@@ -160,8 +159,8 @@ function handle_login(PDO $pdo) {
     if ($row && password_verify($pass, $row['password_hash'])) {
         $uid = (int)$row['id'];
         $_SESSION['uid'] = $uid;
-        $role = (string)($row['role'] ?? 'user');
-        $_SESSION['role'] = $role === 'admin' ? 'admin' : 'user';
+        $role = normalize_user_role($row['role'] ?? null);
+        $_SESSION['role'] = $role;
 
         if (!empty($_POST['remember'])) {
             remember_login($pdo, $uid);

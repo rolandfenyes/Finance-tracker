@@ -208,11 +208,42 @@ function is_logged_in(): bool { return isset($_SESSION['uid']); }
 function require_login() { if (!is_logged_in()) redirect('/login'); }
 function uid(): int { return (int)($_SESSION['uid'] ?? 0); }
 
+const ROLE_GUEST   = 'guest';
+const ROLE_FREE    = 'free';
+const ROLE_PREMIUM = 'premium';
+const ROLE_ADMIN   = 'admin';
+
+function normalize_user_role($role, bool $allowGuest = false): string
+{
+    $role = strtolower(trim((string)$role));
+
+    if ($role === ROLE_ADMIN) {
+        return ROLE_ADMIN;
+    }
+
+    if ($role === ROLE_PREMIUM) {
+        return ROLE_PREMIUM;
+    }
+
+    if ($role === ROLE_FREE) {
+        return ROLE_FREE;
+    }
+
+    return $allowGuest ? ROLE_GUEST : ROLE_FREE;
+}
+
 function current_user_role(): string
 {
-    return isset($_SESSION['role']) && is_string($_SESSION['role'])
-        ? $_SESSION['role']
-        : 'guest';
+    if (!isset($_SESSION['role'])) {
+        return ROLE_GUEST;
+    }
+
+    $normalized = normalize_user_role($_SESSION['role'], true);
+    if ($normalized !== ROLE_GUEST) {
+        $_SESSION['role'] = $normalized;
+    }
+
+    return $normalized;
 }
 
 function refresh_user_role(PDO $pdo, int $userId): string
@@ -220,12 +251,9 @@ function refresh_user_role(PDO $pdo, int $userId): string
     try {
         $stmt = $pdo->prepare('SELECT role FROM users WHERE id = ? LIMIT 1');
         $stmt->execute([$userId]);
-        $role = (string)$stmt->fetchColumn();
-        if ($role !== 'admin') {
-            $role = 'user';
-        }
+        $role = normalize_user_role($stmt->fetchColumn());
     } catch (Throwable $e) {
-        $role = 'user';
+        $role = ROLE_FREE;
     }
 
     $_SESSION['role'] = $role;
@@ -235,7 +263,88 @@ function refresh_user_role(PDO $pdo, int $userId): string
 
 function is_admin(): bool
 {
-    return current_user_role() === 'admin';
+    return current_user_role() === ROLE_ADMIN;
+}
+
+function is_free_user(): bool
+{
+    return current_user_role() === ROLE_FREE;
+}
+
+function is_premium_user(): bool
+{
+    return current_user_role() === ROLE_PREMIUM;
+}
+
+function free_user_limit_for(string $resource): ?int
+{
+    static $limits = [
+        'currencies'       => 1,
+        'goals_active'     => 2,
+        'loans_active'     => 2,
+        'categories'       => 10,
+        'scheduled_active' => 2,
+    ];
+
+    return $limits[$resource] ?? null;
+}
+
+function free_user_resource_count(PDO $pdo, int $userId, string $resource): int
+{
+    switch ($resource) {
+        case 'currencies':
+            $stmt = $pdo->prepare('SELECT COUNT(*) FROM user_currencies WHERE user_id = ?');
+            $stmt->execute([$userId]);
+            return (int)$stmt->fetchColumn();
+
+        case 'goals_active':
+            $stmt = $pdo->prepare('SELECT COUNT(*) FROM goals WHERE user_id = ? AND archived_at IS NULL');
+            $stmt->execute([$userId]);
+            return (int)$stmt->fetchColumn();
+
+        case 'loans_active':
+            $stmt = $pdo->prepare('SELECT COUNT(*) FROM loans WHERE user_id = ? AND archived_at IS NULL AND (finished_at IS NULL OR finished_at = \'\')');
+            $stmt->execute([$userId]);
+            return (int)$stmt->fetchColumn();
+
+        case 'categories':
+            $stmt = $pdo->prepare('SELECT COUNT(*) FROM categories WHERE user_id = ?');
+            $stmt->execute([$userId]);
+            return (int)$stmt->fetchColumn();
+
+        case 'scheduled_active':
+            $stmt = $pdo->prepare('SELECT COUNT(*) FROM scheduled_payments WHERE user_id = ? AND archived_at IS NULL');
+            $stmt->execute([$userId]);
+            return (int)$stmt->fetchColumn();
+    }
+
+    return 0;
+}
+
+function free_user_limit_guard(PDO $pdo, string $resource, string $redirect, string $message, ?callable $counter = null, ?string $flashType = 'error'): void
+{
+    if (!is_free_user()) {
+        return;
+    }
+
+    $userId = uid();
+    if ($userId <= 0) {
+        return;
+    }
+
+    $limit = free_user_limit_for($resource);
+    if ($limit === null) {
+        return;
+    }
+
+    $count = $counter ? (int)$counter($pdo, $userId) : free_user_resource_count($pdo, $userId, $resource);
+    if ($count >= $limit) {
+        $_SESSION['flash'] = $message;
+        if ($flashType !== null) {
+            $_SESSION['flash_type'] = $flashType;
+        }
+        redirect($redirect);
+    }
 }
 
 function admin_allowed_path(string $path, string $method = 'GET'): bool

@@ -1,4 +1,5 @@
 <section class="max-w-3xl mx-auto">
+  <?php $cashflowReadOnly = is_free_user(); ?>
   <div class="card space-y-6">
     <div class="flex items-center justify-between">
       <h1 class="text-xl font-semibold"><?= __('Cashflow Rules') ?></h1>
@@ -35,18 +36,32 @@
       <?php endif; ?>
     </div>
 
+    <?php if ($cashflowReadOnly): ?>
+      <div class="rounded-3xl border border-amber-200/70 bg-amber-50/80 p-4 text-sm text-amber-800 shadow-sm dark:border-amber-300/50 dark:bg-amber-500/10 dark:text-amber-200">
+        <div class="flex items-start gap-3">
+          <i data-lucide="sparkles" class="mt-0.5 h-5 w-5"></i>
+          <div>
+            <p class="font-semibold"><?= __('Premium feature') ?></p>
+            <p class="mt-1 leading-relaxed">
+              <?= __('Upgrade to Premium to add, edit, or remove cashflow rules and envelope allocations.') ?>
+            </p>
+          </div>
+        </div>
+      </div>
+    <?php endif; ?>
+
     <div>
       <h2 class="font-medium mb-2"><?= __('Add rule') ?></h2>
-      <form method="post" action="/settings/cashflow/add" class="grid gap-2 sm:grid-cols-6">
+      <form method="post" action="/settings/cashflow/add" class="grid gap-2 sm:grid-cols-6" <?= $cashflowReadOnly ? 'aria-disabled="true"' : '' ?>>
         <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-        <input name="label" class="input sm:col-span-4" placeholder="<?= __('e.g. Needs / Investments / Fun') ?>" required />
+        <input name="label" class="input sm:col-span-4" placeholder="<?= __('e.g. Needs / Investments / Fun') ?>" <?= $cashflowReadOnly ? 'disabled' : 'required' ?> />
         <div class="sm:col-span-1">
           <div class="flex items-center gap-2">
-            <input name="percent" type="number" step="0.01" min="0" class="input" placeholder="%" required />
+            <input name="percent" type="number" step="0.01" min="0" class="input" placeholder="%" <?= $cashflowReadOnly ? 'disabled' : 'required' ?> />
             <span class="text-sm text-gray-500">%</span>
           </div>
         </div>
-        <button class="btn btn-primary sm:col-span-1"><?= __('Add') ?></button>
+        <button class="btn btn-primary sm:col-span-1" <?= $cashflowReadOnly ? 'disabled' : '' ?>><?= __('Add') ?></button>
       </form>
     </div>
 
@@ -63,24 +78,25 @@
                 <span class="text-sm font-semibold text-brand-600 dark:text-brand-200"><?= number_format((float)$r['percent'],2) ?>%</span>
               </summary>
               <div class="mt-3 rounded-2xl border border-white/50 bg-white/60 p-3 backdrop-blur dark:border-slate-800 dark:bg-slate-900/50">
-                <form class="grid gap-2 sm:grid-cols-6 items-end" method="post" action="/settings/cashflow/edit">
+                <form class="grid gap-2 sm:grid-cols-6 items-end" method="post" action="/settings/cashflow/edit" <?= $cashflowReadOnly ? 'aria-disabled="true"' : '' ?>>
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                   <input type="hidden" name="id" value="<?= $r['id'] ?>" />
-                  <input name="label" class="input sm:col-span-4" value="<?= htmlspecialchars($r['label']) ?>" />
+                  <input name="label" class="input sm:col-span-4" value="<?= htmlspecialchars($r['label']) ?>" <?= $cashflowReadOnly ? 'disabled' : '' ?> />
                   <div class="sm:col-span-1">
                     <div class="flex items-center gap-2">
                       <input name="percent" type="number" step="0.01" min="0" class="input"
-                             value="<?= number_format((float)$r['percent'],2,'.','') ?>" />
+                             value="<?= number_format((float)$r['percent'],2,'.','') ?>" <?= $cashflowReadOnly ? 'disabled' : '' ?> />
                       <span class="text-sm text-gray-500">%</span>
                     </div>
                   </div>
-                  <button class="btn btn-primary sm:col-span-1"><?= __('Save') ?></button>
+                  <button class="btn btn-primary sm:col-span-1" <?= $cashflowReadOnly ? 'disabled' : '' ?>><?= __('Save') ?></button>
                 </form>
                 <form class="mt-2 flex justify-end" method="post" action="/settings/cashflow/delete"
+                      <?= $cashflowReadOnly ? 'aria-disabled="true"' : '' ?>
                       onsubmit="return confirm('<?= addslashes(__('Delete this rule?')) ?>');">
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                   <input type="hidden" name="id" value="<?= $r['id'] ?>" />
-                  <button class="icon-action icon-action--danger" type="submit" title="<?= __('Remove') ?>">
+                  <button class="icon-action icon-action--danger" type="submit" title="<?= __('Remove') ?>" <?= $cashflowReadOnly ? 'disabled' : '' ?>>
                     <i data-lucide="trash-2" class="h-4 w-4"></i>
                     <span class="sr-only"><?= __('Remove') ?></span>
                   </button>
