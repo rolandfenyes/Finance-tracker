@@ -37,6 +37,9 @@ if (isset($pdo) && $pdo instanceof PDO) {
 }
 
 if (isset($pdo) && $pdo instanceof PDO && is_logged_in()) {
+    if (empty($_SESSION['role'])) {
+        refresh_user_role($pdo, uid());
+    }
     scheduled_process_linked($pdo, uid());
 }
 
@@ -845,6 +848,19 @@ switch ($path) {
         feedback_index($pdo);
         break;
 
+    case '/admin':
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_dashboard($pdo);
+        break;
+
+    case '/admin/users/role':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_update_role($pdo);
+        }
+        redirect('/admin');
+        break;
+
     case '/more':
         require_login();
         require __DIR__ . '/src/controllers/more.php';
@@ -874,6 +890,7 @@ switch ($path) {
 
     // Maintenance utilities
     case '/maintenance/migrations':
+    case '/admin/migrations':
         require __DIR__ . '/src/controllers/migrations.php';
         maintenance_run_migrations($pdo);
         break;

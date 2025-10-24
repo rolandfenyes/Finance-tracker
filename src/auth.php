@@ -16,6 +16,7 @@ function handle_register(PDO $pdo) {
         $stmt->execute([$email,$hash,$encryptedName]);
         $uid = (int)$stmt->fetchColumn();
         $_SESSION['uid'] = $uid;
+        $_SESSION['role'] = 'user';
         // Add default currencies
         $pdo->prepare('INSERT INTO user_currencies(user_id,code,is_main) VALUES(?,?,true)')->execute([$uid,'HUF']);
         $pdo->prepare('INSERT INTO user_currencies(user_id,code,is_main) VALUES(?,?,false) ON CONFLICT DO NOTHING')->execute([$uid,'EUR']);
@@ -107,7 +108,9 @@ function attempt_remembered_login(PDO $pdo): void {
         return;
     }
 
-    $_SESSION['uid'] = (int)$row['user_id'];
+    $userId = (int)$row['user_id'];
+    $_SESSION['uid'] = $userId;
+    refresh_user_role($pdo, $userId);
 
     // Rotate token to prevent replay
     $newValidator = bin2hex(random_bytes(32));
@@ -145,12 +148,14 @@ function handle_login(PDO $pdo) {
     verify_csrf();
     $email = trim($_POST['email'] ?? '');
     $pass = $_POST['password'] ?? '';
-    $stmt = $pdo->prepare('SELECT id, password_hash FROM users WHERE email = ?');
+    $stmt = $pdo->prepare('SELECT id, password_hash, role FROM users WHERE email = ?');
     $stmt->execute([$email]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($row && password_verify($pass, $row['password_hash'])) {
         $uid = (int)$row['id'];
         $_SESSION['uid'] = $uid;
+        $role = (string)($row['role'] ?? 'user');
+        $_SESSION['role'] = $role === 'admin' ? 'admin' : 'user';
 
         if (!empty($_POST['remember'])) {
             remember_login($pdo, $uid);

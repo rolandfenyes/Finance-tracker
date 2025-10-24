@@ -208,6 +208,55 @@ function is_logged_in(): bool { return isset($_SESSION['uid']); }
 function require_login() { if (!is_logged_in()) redirect('/login'); }
 function uid(): int { return (int)($_SESSION['uid'] ?? 0); }
 
+function current_user_role(): string
+{
+    return isset($_SESSION['role']) && is_string($_SESSION['role'])
+        ? $_SESSION['role']
+        : 'guest';
+}
+
+function refresh_user_role(PDO $pdo, int $userId): string
+{
+    try {
+        $stmt = $pdo->prepare('SELECT role FROM users WHERE id = ? LIMIT 1');
+        $stmt->execute([$userId]);
+        $role = (string)$stmt->fetchColumn();
+        if ($role !== 'admin') {
+            $role = 'user';
+        }
+    } catch (Throwable $e) {
+        $role = 'user';
+    }
+
+    $_SESSION['role'] = $role;
+
+    return $role;
+}
+
+function is_admin(): bool
+{
+    return current_user_role() === 'admin';
+}
+
+function require_admin(?string $message = null): void
+{
+    if (!is_logged_in()) {
+        redirect('/login');
+    }
+
+    if (is_admin()) {
+        return;
+    }
+
+    http_response_code(403);
+    view('errors/403', [
+        'pageTitle' => __('Forbidden'),
+        'message' => $message,
+        'fullWidthMain' => true,
+    ]);
+    exit;
+}
+
 function csrf_token(): string {
     if (empty($_SESSION['csrf'])) { $_SESSION['csrf'] = bin2hex(random_bytes(16)); }
     return $_SESSION['csrf'];

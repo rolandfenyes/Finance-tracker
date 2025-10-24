@@ -124,6 +124,26 @@ function more_show(PDO $pdo): void
         ],
     ];
 
+    if (is_admin()) {
+        $navSections[] = [
+            'title' => __('Administration'),
+            'items' => [
+                [
+                    'label' => __('Admin dashboard'),
+                    'description' => __('Review platform health and manage user roles.'),
+                    'href' => '/admin',
+                    'icon' => 'shield',
+                ],
+                [
+                    'label' => __('Run migrations'),
+                    'description' => __('Apply any pending database migrations.'),
+                    'href' => '/admin/migrations',
+                    'icon' => 'database',
+                ],
+            ],
+        ];
+    }
+
     $localeOptions = available_locales();
     $currentLocale = app_locale();
     $localeFlags = [

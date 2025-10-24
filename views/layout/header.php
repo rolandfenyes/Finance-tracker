@@ -1127,6 +1127,9 @@ $ogUrl = $scheme . '://' . $host . $currentRequestPath;
       ['href'=>'/feedback',      'label'=>'Feedback',         'match'=>'#^/feedback$#',            'icon' => 'message-circle'],
       ['href'=>'/settings',      'label'=>'Settings',         'match'=>'#^/settings$#',            'icon' => 'settings'],
     ];
+    if (is_admin()) {
+      $desktopItems[] = ['href'=>'/admin', 'label'=>'Admin', 'match'=>'#^/admin(?:/.*)?$#', 'icon' => 'shield'];
+    }
     $mobileNavItems = [
       ['href'=>'/',              'label'=>'Dashboard',      'match'=>'#^/$#',                                                        'icon' => 'layout-dashboard'],
       ['href'=>'/current-month', 'label'=>'Months',  'match'=>'#^/(current-month(?:/.*)?|months(?:/.*)?|years(?:/.*)?)$#', 'icon' => 'calendar-range'],
