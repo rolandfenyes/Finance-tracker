@@ -1116,27 +1116,35 @@ $ogUrl = $scheme . '://' . $host . $currentRequestPath;
     $onboarding  = str_starts_with($currentPath, '/onboard');
     $hideMenus   = ($onboarding && $currentPath !== '/onboard/done');
 
-    $desktopItems = [
-      ['href'=>'/',              'label'=>'Dashboard',        'match'=>'#^/$#',                    'icon' => 'layout-dashboard'],
-      ['href'=>'/current-month', 'label'=>'Months',    'match'=>'#^/current-month$#',       'icon' => 'calendar'],
-      ['href'=>'/goals',         'label'=>'Goals',            'match'=>'#^/goals(?:/.*)?$#',       'icon' => 'goal'],
-      ['href'=>'/loans',         'label'=>'Loans',            'match'=>'#^/loans(?:/.*)?$#',       'icon' => 'landmark'],
-      ['href'=>'/emergency',     'label'=>'Emergency Fund',   'match'=>'#^/emergency(?:/.*)?$#',   'icon' => 'life-buoy'],
-      ['href'=>'/scheduled',     'label'=>'Scheduled',        'match'=>'#^/scheduled(?:/.*)?$#',   'icon' => 'calendar-clock'],
-      ['href'=>'/investments',   'label'=>'Investments',      'match'=>'#^/investments(?:/.*)?$#', 'icon' => 'trending-up'],
-      ['href'=>'/feedback',      'label'=>'Feedback',         'match'=>'#^/feedback$#',            'icon' => 'message-circle'],
-      ['href'=>'/settings',      'label'=>'Settings',         'match'=>'#^/settings$#',            'icon' => 'settings'],
-    ];
     if (is_admin()) {
-      $desktopItems[] = ['href'=>'/admin', 'label'=>'Admin', 'match'=>'#^/admin(?:/.*)?$#', 'icon' => 'shield'];
+      $desktopItems = [
+        ['href'=>'/admin', 'label'=>'Admin dashboard', 'match'=>'#^/admin(?:/.*)?$#', 'icon' => 'shield'],
+        ['href'=>'/admin/migrations', 'label'=>'Migrations', 'match'=>'#^/(admin|maintenance)/migrations$#', 'icon' => 'database'],
+      ];
+      $mobileNavItems = [
+        ['href'=>'/admin', 'label'=>'Admin', 'match'=>'#^/admin(?:/.*)?$#', 'icon' => 'shield'],
+        ['href'=>'/admin/migrations', 'label'=>'Migrations', 'match'=>'#^/(admin|maintenance)/migrations$#', 'icon' => 'database'],
+      ];
+    } else {
+      $desktopItems = [
+        ['href'=>'/',              'label'=>'Dashboard',        'match'=>'#^/$#',                    'icon' => 'layout-dashboard'],
+        ['href'=>'/current-month', 'label'=>'Months',           'match'=>'#^/current-month$#',       'icon' => 'calendar'],
+        ['href'=>'/goals',         'label'=>'Goals',            'match'=>'#^/goals(?:/.*)?$#',       'icon' => 'goal'],
+        ['href'=>'/loans',         'label'=>'Loans',            'match'=>'#^/loans(?:/.*)?$#',       'icon' => 'landmark'],
+        ['href'=>'/emergency',     'label'=>'Emergency Fund',   'match'=>'#^/emergency(?:/.*)?$#',   'icon' => 'life-buoy'],
+        ['href'=>'/scheduled',     'label'=>'Scheduled',        'match'=>'#^/scheduled(?:/.*)?$#',   'icon' => 'calendar-clock'],
+        ['href'=>'/investments',   'label'=>'Investments',      'match'=>'#^/investments(?:/.*)?$#', 'icon' => 'trending-up'],
+        ['href'=>'/feedback',      'label'=>'Feedback',         'match'=>'#^/feedback$#',            'icon' => 'message-circle'],
+        ['href'=>'/settings',      'label'=>'Settings',         'match'=>'#^/settings$#',            'icon' => 'settings'],
+      ];
+      $mobileNavItems = [
+        ['href'=>'/',              'label'=>'Dashboard',      'match'=>'#^/$#', 'icon' => 'layout-dashboard'],
+        ['href'=>'/current-month', 'label'=>'Months',         'match'=>'#^/(current-month(?:/.*)?|months(?:/.*)?|years(?:/.*)?)$#', 'icon' => 'calendar-range'],
+        ['href'=>'/goals',         'label'=>'Goals',          'match'=>'#^/goals(?:/.*)?$#', 'icon' => 'goal'],
+        // ['href'=>'/emergency',     'label'=>'Emergency', 'match'=>'#^/emergency(?:/.*)?$#', 'icon' => 'life-buoy'],
+        ['href'=>'/more',          'label'=>'More',           'match'=>'#^/more(?:/.*)?$#', 'icon' => 'ellipsis'],
+      ];
     }
-    $mobileNavItems = [
-      ['href'=>'/',              'label'=>'Dashboard',      'match'=>'#^/$#',                                                        'icon' => 'layout-dashboard'],
-      ['href'=>'/current-month', 'label'=>'Months',  'match'=>'#^/(current-month(?:/.*)?|months(?:/.*)?|years(?:/.*)?)$#', 'icon' => 'calendar-range'],
-      ['href'=>'/goals',         'label'=>'Goals',          'match'=>'#^/goals(?:/.*)?$#',                                           'icon' => 'goal'],
-      // ['href'=>'/emergency',     'label'=>'Emergency', 'match'=>'#^/emergency(?:/.*)?$#',                                       'icon' => 'life-buoy'],
-      ['href'=>'/more',          'label'=>'More',           'match'=>'#^/more(?:/.*)?$#',                                            'icon' => 'ellipsis'],
-    ];
     function nav_link(array $item, string $currentPath, string $extra=''): string {
       $active = preg_match($item['match'], $currentPath) === 1;
       $base = 'px-3 py-2 rounded-2xl transition-colors text-sm font-medium flex items-center gap-2';

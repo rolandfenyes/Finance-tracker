@@ -131,10 +131,16 @@ function attempt_remembered_login(PDO $pdo): void {
 }
 
 function post_login_redirect_path(PDO $pdo, int $userId): string {
-    $needs = $pdo->prepare('SELECT needs_tutorial FROM users WHERE id=?');
-    $needs->execute([$userId]);
-    $needsTutorial = (bool)$needs->fetchColumn();
+    $stmt = $pdo->prepare('SELECT needs_tutorial, role FROM users WHERE id=?');
+    $stmt->execute([$userId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
+    $role = (string)($row['role'] ?? 'user');
+    if ($role === 'admin') {
+        return '/admin';
+    }
+
+    $needsTutorial = (bool)($row['needs_tutorial'] ?? false);
     if ($needsTutorial) {
         $pdo->prepare('UPDATE users SET needs_tutorial = FALSE WHERE id = ?')->execute([$userId]);
         return '/tutorial';

@@ -40,7 +40,10 @@ if (isset($pdo) && $pdo instanceof PDO && is_logged_in()) {
     if (empty($_SESSION['role'])) {
         refresh_user_role($pdo, uid());
     }
-    scheduled_process_linked($pdo, uid());
+
+    if (!is_admin()) {
+        scheduled_process_linked($pdo, uid());
+    }
 }
 
 $rawPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
@@ -58,6 +61,26 @@ if ($method === 'POST' && !empty($_POST['_method'])) {
     $override = strtoupper(trim($_POST['_method']));
     if (in_array($override, ['PUT', 'PATCH', 'DELETE'], true)) {
         $method = $override;
+    }
+}
+
+if (is_logged_in() && is_admin()) {
+    if ($path === '/') {
+        redirect('/admin');
+    }
+
+    if (!admin_allowed_path($path, $method)) {
+        if ($method === 'GET') {
+            redirect('/admin');
+        }
+
+        http_response_code(403);
+        view('errors/403', [
+            'pageTitle' => __('Forbidden'),
+            'message' => __('Administrators cannot access personal finance features.'),
+            'fullWidthMain' => true,
+        ]);
+        exit;
     }
 }
 

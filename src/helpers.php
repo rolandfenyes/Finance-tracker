@@ -238,6 +238,25 @@ function is_admin(): bool
     return current_user_role() === 'admin';
 }
 
+function admin_allowed_path(string $path, string $method = 'GET'): bool
+{
+    $method = strtoupper($method);
+
+    if (str_starts_with($path, '/admin')) {
+        return true;
+    }
+
+    if ($path === '/logout' && $method === 'POST') {
+        return true;
+    }
+
+    if ($path === '/maintenance/migrations') {
+        return true;
+    }
+
+    return false;
+}
+
 function require_admin(?string $message = null): void
 {
     if (!is_logged_in()) {
