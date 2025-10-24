@@ -398,7 +398,7 @@ $addPanelId = 'investment-add-panel';
           </div>
         </summary>
 
-            <div class="space-y-6 border-t border-slate-200 bg-white px-5 pb-6 pt-5 dark:border-slate-700 dark:bg-slate-900" data-investment-panel>
+            <div class="space-y-6 border-t border-slate-200 px-0 pb-0 pt-0 dark:border-slate-700 dark:bg-transparent sm:bg-white sm:px-5 sm:pb-6 sm:pt-5 sm:dark:bg-slate-900" data-investment-panel>
               <div class="grid gap-4 md:grid-cols-2">
                 <form method="post" action="/investments/adjust" class="space-y-3 rounded-xl border border-slate-200 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/40">
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
@@ -1314,15 +1314,17 @@ $builderIds = array_values(array_unique(array_filter($builderIds)));
       }
       const dialog = document.createElement('dialog');
       dialog.id = 'investment-mobile-dialog';
-      dialog.className = 'rounded-2xl p-0 w-[720px] max-w-[95vw] shadow-2xl';
+      dialog.className = 'm-0 h-screen w-screen max-w-none border-0 bg-transparent p-0 sm:h-auto sm:w-[720px] sm:max-w-[95vw]';
       dialog.innerHTML = `
-        <div class="modal-header px-5 py-4 flex items-center justify-between gap-2">
-          <div class="font-semibold text-base" data-mobile-dialog-title></div>
-          <button type="button" class="icon-btn" data-mobile-dialog-close aria-label="${closeLabel}">
-            <i data-lucide="x" class="h-5 w-5"></i>
-          </button>
+        <div class="flex h-full flex-col bg-transparent sm:h-auto sm:rounded-2xl sm:bg-white sm:shadow-2xl">
+          <div class="modal-header flex items-center justify-between gap-2 px-4 py-4 sm:px-5 sm:py-4">
+            <div class="font-semibold text-base" data-mobile-dialog-title></div>
+            <button type="button" class="icon-btn" data-mobile-dialog-close aria-label="${closeLabel}">
+              <i data-lucide="x" class="h-5 w-5"></i>
+            </button>
+          </div>
+          <div class="modal-body flex-1 overflow-y-auto p-0" data-mobile-dialog-body></div>
         </div>
-        <div class="modal-body" data-mobile-dialog-body></div>
       `;
       document.body.appendChild(dialog);
       mobileDialogState.dialog = dialog;
