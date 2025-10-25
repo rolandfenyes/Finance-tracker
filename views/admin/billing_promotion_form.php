@@ -15,6 +15,7 @@ $promotion = $promotion ?? [
     'stripe_promo_code_id' => '',
 ];
 $plans = $plans ?? [];
+$currencyOptions = $currencyOptions ?? [];
 $mode = $mode ?? 'create';
 $action = $mode === 'edit' ? '/admin/billing/promotions/update' : '/admin/billing/promotions';
 ?>
@@ -62,7 +63,14 @@ $action = $mode === 'edit' ? '/admin/billing/promotions/update' : '/admin/billin
       </label>
       <label class="block text-sm">
         <span class="font-medium text-slate-700 dark:text-slate-200"><?= __('Currency') ?></span>
-        <input type="text" name="currency" maxlength="3" value="<?= htmlspecialchars((string)($promotion['currency'] ?? ''), ENT_QUOTES) ?>" class="mt-1 w-full uppercase rounded-xl border border-slate-200/70 bg-white/70 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 dark:border-slate-700 dark:bg-slate-900/60 dark:text-white">
+        <select name="currency" class="mt-1 w-full rounded-xl border border-slate-200/70 bg-white/70 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 dark:border-slate-700 dark:bg-slate-900/60 dark:text-white">
+          <option value="" <?= ($promotion['currency'] ?? '') === '' ? 'selected' : '' ?>><?= __('— Select currency —') ?></option>
+          <?php foreach ($currencyOptions as $code => $label): ?>
+            <option value="<?= htmlspecialchars((string)$code, ENT_QUOTES) ?>" <?= strtoupper((string)($promotion['currency'] ?? '')) === strtoupper((string)$code) ? 'selected' : '' ?>>
+              <?= htmlspecialchars((string)$code) ?><?= $label && strtoupper($label) !== strtoupper($code) ? ' · ' . htmlspecialchars((string)$label) : '' ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
       </label>
     </div>
     <div class="grid gap-4 sm:grid-cols-3">

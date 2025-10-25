@@ -368,7 +368,7 @@ function billing_settings(bool $refresh = false): array
         'stripe_secret_key' => null,
         'stripe_publishable_key' => null,
         'stripe_webhook_secret' => null,
-        'default_currency' => 'USD',
+        'default_currency' => 'EUR',
     ];
 
     global $pdo;
@@ -384,7 +384,7 @@ function billing_settings(bool $refresh = false): array
             $settings['stripe_publishable_key'] = $row['stripe_publishable_key'] ?? null;
             $settings['stripe_webhook_secret'] = $row['stripe_webhook_secret'] ?? null;
             $defaultCurrency = strtoupper(trim((string)($row['default_currency'] ?? '')));
-            $settings['default_currency'] = $defaultCurrency !== '' ? $defaultCurrency : 'USD';
+            $settings['default_currency'] = $defaultCurrency !== '' ? $defaultCurrency : 'EUR';
         }
     } catch (Throwable $e) {
         // ignore and keep defaults
@@ -401,9 +401,9 @@ function reset_billing_settings_cache(): void
 function billing_default_currency(): string
 {
     $settings = billing_settings();
-    $currency = strtoupper(trim((string)($settings['default_currency'] ?? 'USD')));
+    $currency = strtoupper(trim((string)($settings['default_currency'] ?? 'EUR')));
 
-    return $currency !== '' ? $currency : 'USD';
+    return $currency !== '' ? $currency : 'EUR';
 }
 
 function billing_has_stripe_keys(): bool

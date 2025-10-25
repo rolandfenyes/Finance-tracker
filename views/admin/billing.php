@@ -13,7 +13,8 @@ $paymentTypeOptions = $paymentTypeOptions ?? [];
 $subscriptionStatusOptions = $subscriptionStatusOptions ?? [];
 $stripeSettings = $stripeSettings ?? [];
 $hasStripeKeys = !empty($hasStripeKeys);
-$defaultCurrency = $defaultCurrency ?? 'USD';
+$defaultCurrency = $defaultCurrency ?? 'EUR';
+$currencyOptions = $currencyOptions ?? [];
 
 $totalPlans = count($plans);
 $totalPromotions = count($promotions);
@@ -85,7 +86,13 @@ $currentPath = htmlspecialchars(parse_url($_SERVER['REQUEST_URI'] ?? '/admin/bil
       </label>
       <label class="block text-sm">
         <span class="font-medium text-slate-700 dark:text-slate-200"><?= __('Default currency') ?></span>
-        <input type="text" name="default_currency" maxlength="3" value="<?= htmlspecialchars((string)$defaultCurrency, ENT_QUOTES) ?>" class="mt-1 w-full uppercase rounded-xl border border-slate-200/70 bg-white/70 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 dark:border-slate-700 dark:bg-slate-900/60 dark:text-white">
+        <select name="default_currency" class="mt-1 w-full rounded-xl border border-slate-200/70 bg-white/70 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 dark:border-slate-700 dark:bg-slate-900/60 dark:text-white">
+          <?php foreach ($currencyOptions as $code => $label): ?>
+            <option value="<?= htmlspecialchars((string)$code, ENT_QUOTES) ?>" <?= strtoupper($defaultCurrency) === strtoupper($code) ? 'selected' : '' ?>>
+              <?= htmlspecialchars((string)$code) ?><?= $label && strtoupper($label) !== strtoupper($code) ? ' · ' . htmlspecialchars((string)$label) : '' ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
       </label>
       <div class="lg:col-span-2 flex justify-end">
         <button class="btn btn-primary inline-flex items-center gap-2">

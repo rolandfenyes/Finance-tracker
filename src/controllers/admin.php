@@ -956,7 +956,7 @@ function admin_users_payment_create(PDO $pdo): void
     }
 
     $amount = (float)$amountInput;
-    $currency = $currency !== '' ? $currency : 'USD';
+    $currency = $currency !== '' ? $currency : billing_default_currency();
     $failureReason = $status === 'failed' ? ($failureReasonInput !== '' ? $failureReasonInput : null) : null;
     $noteValue = $note !== '' ? $note : null;
     $gatewayValue = $gateway !== '' ? $gateway : null;
@@ -1189,6 +1189,39 @@ function admin_billing_role_options(): array
     return $options;
 }
 
+function admin_billing_currency_options(PDO $pdo): array
+{
+    static $cache;
+
+    if ($cache !== null) {
+        return $cache;
+    }
+
+    $options = [];
+
+    try {
+        $stmt = $pdo->query('SELECT code, name FROM currencies ORDER BY code');
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $code = strtoupper(trim((string)($row['code'] ?? '')));
+            if ($code === '') {
+                continue;
+            }
+            $label = trim((string)($row['name'] ?? ''));
+            $options[$code] = $label !== '' ? $label : $code;
+        }
+    } catch (Throwable $e) {
+        // ignore lookup errors and fall back to defaults
+    }
+
+    if (!$options) {
+        $options = [
+            'EUR' => 'Euro',
+        ];
+    }
+
+    return $cache = $options;
+}
+
 function admin_billing_hydrate_plan_row(array $row): array
 {
     $metadata = $row['metadata'] ?? [];
@@ -1208,7 +1241,7 @@ function admin_billing_hydrate_plan_row(array $row): array
         'name' => (string)($row['name'] ?? ''),
         'description' => $row['description'] ?? null,
         'price' => (float)($row['price'] ?? 0),
-        'currency' => strtoupper((string)($row['currency'] ?? 'USD')),
+        'currency' => strtoupper((string)($row['currency'] ?? billing_default_currency())),
         'billing_interval' => (string)($row['billing_interval'] ?? ''),
         'interval_count' => (int)($row['interval_count'] ?? 1),
         'role_slug' => (string)($row['role_slug'] ?? ''),
@@ -1534,6 +1567,8 @@ SQL;
         'expired' => __('Expired'),
     ];
 
+    $currencyOptions = admin_billing_currency_options($pdo);
+
     view('admin/billing', [
         'pageTitle' => __('Billing & plans'),
         'plans' => $plans,
@@ -1551,6 +1586,7 @@ SQL;
         'stripeSettings' => $settings,
         'hasStripeKeys' => billing_has_stripe_keys(),
         'defaultCurrency' => billing_default_currency(),
+        'currencyOptions' => $currencyOptions,
     ]);
 }
 
@@ -1559,6 +1595,7 @@ function admin_billing_plans_create(PDO $pdo): void
     require_admin();
 
     $roleOptions = admin_billing_role_options();
+    $currencyOptions = admin_billing_currency_options($pdo);
     $plan = [
         'id' => null,
         'code' => '',
@@ -1580,6 +1617,7 @@ function admin_billing_plans_create(PDO $pdo): void
         'plan' => $plan,
         'roleOptions' => $roleOptions,
         'intervalLabels' => billing_interval_labels(),
+        'currencyOptions' => $currencyOptions,
         'mode' => 'create',
     ]);
 }
@@ -1605,11 +1643,12 @@ function admin_billing_plans_edit(PDO $pdo): void
         'plan' => $plan,
         'roleOptions' => admin_billing_role_options(),
         'intervalLabels' => billing_interval_labels(),
+        'currencyOptions' => admin_billing_currency_options($pdo),
         'mode' => 'edit',
     ]);
 }
 
-function admin_billing_validate_plan(array $input, array $roleOptions): array
+function admin_billing_validate_plan(array $input, array $roleOptions, array $currencyOptions): array
 {
     $code = strtolower(trim((string)($input['code'] ?? '')));
     $name = trim((string)($input['name'] ?? ''));
@@ -1634,6 +1673,10 @@ function admin_billing_validate_plan(array $input, array $roleOptions): array
 
     if ($currency === '' || !preg_match('/^[A-Z]{3}$/', $currency)) {
         throw new RuntimeException(__('Please provide a valid 3-letter currency code.'));
+    }
+
+    if (!isset($currencyOptions[$currency])) {
+        throw new RuntimeException(__('Please select a valid currency.'));
     }
 
     $intervalOptions = array_keys(billing_interval_labels());
@@ -1682,8 +1725,9 @@ function admin_billing_plans_store(PDO $pdo): void
     verify_csrf();
 
     $roleOptions = admin_billing_role_options();
+    $currencyOptions = admin_billing_currency_options($pdo);
     try {
-        $data = admin_billing_validate_plan($_POST, $roleOptions);
+        $data = admin_billing_validate_plan($_POST, $roleOptions, $currencyOptions);
     } catch (RuntimeException $e) {
         $_SESSION['flash'] = $e->getMessage();
         redirect('/admin/billing/plans/create');
@@ -1742,8 +1786,9 @@ function admin_billing_plans_update(PDO $pdo): void
     }
 
     $roleOptions = admin_billing_role_options();
+    $currencyOptions = admin_billing_currency_options($pdo);
     try {
-        $data = admin_billing_validate_plan($_POST, $roleOptions);
+        $data = admin_billing_validate_plan($_POST, $roleOptions, $currencyOptions);
     } catch (RuntimeException $e) {
         $_SESSION['flash'] = $e->getMessage();
         redirect('/admin/billing/plans/edit?id=' . $planId);
@@ -1854,6 +1899,7 @@ function admin_billing_promotions_create(PDO $pdo): void
         'pageTitle' => __('Create promotion'),
         'promotion' => $promotion,
         'plans' => admin_billing_plan_choices($pdo),
+        'currencyOptions' => admin_billing_currency_options($pdo),
         'mode' => 'create',
     ]);
 }
@@ -1878,6 +1924,7 @@ function admin_billing_promotions_edit(PDO $pdo): void
         'pageTitle' => __('Edit promotion'),
         'promotion' => $promotion,
         'plans' => admin_billing_plan_choices($pdo),
+        'currencyOptions' => admin_billing_currency_options($pdo),
         'mode' => 'edit',
     ]);
 }
@@ -1896,6 +1943,7 @@ function admin_billing_validate_promotion(PDO $pdo, array $input, ?int $promotio
     $planId = (int)($input['plan_id'] ?? 0);
     $stripeCouponId = trim((string)($input['stripe_coupon_id'] ?? ''));
     $stripePromoCodeId = trim((string)($input['stripe_promo_code_id'] ?? ''));
+    $currencyOptions = admin_billing_currency_options($pdo);
 
     if ($code === '' || !preg_match('/^[A-Z0-9_-]+$/', $code)) {
         throw new RuntimeException(__('Code may only contain uppercase letters, numbers, hyphens, and underscores.'));
@@ -1928,10 +1976,17 @@ function admin_billing_validate_promotion(PDO $pdo, array $input, ?int $promotio
         if ($currency === '' || !preg_match('/^[A-Z]{3}$/', $currency)) {
             throw new RuntimeException(__('Please provide a valid currency for fixed discounts.'));
         }
+        if ($currency !== '' && !isset($currencyOptions[$currency])) {
+            throw new RuntimeException(__('Please select a valid currency.'));
+        }
     }
 
     if ($discountAmount === null && $currency !== '' && !preg_match('/^[A-Z]{3}$/', $currency)) {
         throw new RuntimeException(__('Please provide a valid 3-letter currency code.'));
+    }
+
+    if ($currency !== '' && !isset($currencyOptions[$currency])) {
+        throw new RuntimeException(__('Please select a valid currency.'));
     }
 
     $trialDays = null;
@@ -2206,11 +2261,17 @@ function admin_billing_settings_update(PDO $pdo): void
     $secret = trim((string)($_POST['stripe_secret_key'] ?? ''));
     $publishable = trim((string)($_POST['stripe_publishable_key'] ?? ''));
     $webhook = trim((string)($_POST['stripe_webhook_secret'] ?? ''));
-    $defaultCurrency = strtoupper(trim((string)($_POST['default_currency'] ?? 'USD')));
+    $currencyOptions = admin_billing_currency_options($pdo);
+    $defaultCurrency = strtoupper(trim((string)($_POST['default_currency'] ?? billing_default_currency())));
     $redirectTo = admin_normalize_redirect($_POST['redirect'] ?? '/admin/billing', '/admin/billing');
 
     if ($defaultCurrency === '' || !preg_match('/^[A-Z]{3}$/', $defaultCurrency)) {
         $_SESSION['flash'] = __('Please provide a valid default currency.');
+        redirect($redirectTo);
+    }
+
+    if (!isset($currencyOptions[$defaultCurrency])) {
+        $_SESSION['flash'] = __('Please select a valid currency.');
         redirect($redirectTo);
     }
 
