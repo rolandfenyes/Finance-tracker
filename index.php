@@ -954,6 +954,51 @@ switch ($path) {
         }
         break;
 
+    case '/admin/users/invoices/update':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_users_invoice_update($pdo);
+        } else {
+            redirect('/admin/users');
+        }
+        break;
+
+    case '/admin/users/payments/create':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_users_payment_create($pdo);
+        } else {
+            redirect('/admin/users');
+        }
+        break;
+
+    case '/admin/users/payments/update':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_users_payment_update($pdo);
+        } else {
+            redirect('/admin/users');
+        }
+        break;
+
+    case '/admin/users/feedback/update':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_users_feedback_update($pdo);
+        } else {
+            redirect('/admin/users');
+        }
+        break;
+
+    case '/admin/users/feedback/respond':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_users_feedback_respond($pdo);
+        } else {
+            redirect('/admin/users');
+        }
+        break;
+
     case '/more':
         require_login();
         require __DIR__ . '/src/controllers/more.php';
