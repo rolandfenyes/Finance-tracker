@@ -342,6 +342,77 @@ function role_capability(string $role, string $capability, $default = null)
     return $caps[$capability] ?? $default;
 }
 
+function billing_interval_labels(): array
+{
+    return [
+        'weekly' => __('Weekly'),
+        'monthly' => __('Monthly'),
+        'yearly' => __('Yearly'),
+        'lifetime' => __('Lifetime'),
+    ];
+}
+
+function billing_settings(bool $refresh = false): array
+{
+    static $cache;
+
+    if ($refresh) {
+        $cache = null;
+    }
+
+    if ($cache !== null) {
+        return $cache;
+    }
+
+    $settings = [
+        'stripe_secret_key' => null,
+        'stripe_publishable_key' => null,
+        'stripe_webhook_secret' => null,
+        'default_currency' => 'USD',
+    ];
+
+    global $pdo;
+    if (!isset($pdo) || !($pdo instanceof PDO)) {
+        return $cache = $settings;
+    }
+
+    try {
+        $stmt = $pdo->query('SELECT stripe_secret_key, stripe_publishable_key, stripe_webhook_secret, default_currency FROM billing_settings WHERE id = 1');
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $settings['stripe_secret_key'] = $row['stripe_secret_key'] ?? null;
+            $settings['stripe_publishable_key'] = $row['stripe_publishable_key'] ?? null;
+            $settings['stripe_webhook_secret'] = $row['stripe_webhook_secret'] ?? null;
+            $defaultCurrency = strtoupper(trim((string)($row['default_currency'] ?? '')));
+            $settings['default_currency'] = $defaultCurrency !== '' ? $defaultCurrency : 'USD';
+        }
+    } catch (Throwable $e) {
+        // ignore and keep defaults
+    }
+
+    return $cache = $settings;
+}
+
+function reset_billing_settings_cache(): void
+{
+    billing_settings(true);
+}
+
+function billing_default_currency(): string
+{
+    $settings = billing_settings();
+    $currency = strtoupper(trim((string)($settings['default_currency'] ?? 'USD')));
+
+    return $currency !== '' ? $currency : 'USD';
+}
+
+function billing_has_stripe_keys(): bool
+{
+    $settings = billing_settings();
+
+    return !empty($settings['stripe_secret_key']) && !empty($settings['stripe_publishable_key']);
+}
+
 function role_can(string $capability, ?string $role = null): bool
 {
     $role = $role ? strtolower(trim($role)) : current_user_role();

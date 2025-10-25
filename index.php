@@ -999,6 +999,112 @@ switch ($path) {
         }
         break;
 
+    case '/admin/billing':
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_billing_index($pdo);
+        break;
+
+    case '/admin/billing/plans/create':
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_billing_plans_create($pdo);
+        break;
+
+    case '/admin/billing/plans/edit':
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_billing_plans_edit($pdo);
+        break;
+
+    case '/admin/billing/plans':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_billing_plans_store($pdo);
+        } else {
+            redirect('/admin/billing');
+        }
+        break;
+
+    case '/admin/billing/plans/update':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_billing_plans_update($pdo);
+        } else {
+            redirect('/admin/billing');
+        }
+        break;
+
+    case '/admin/billing/plans/delete':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_billing_plans_delete($pdo);
+        } else {
+            redirect('/admin/billing');
+        }
+        break;
+
+    case '/admin/billing/promotions/create':
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_billing_promotions_create($pdo);
+        break;
+
+    case '/admin/billing/promotions/edit':
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_billing_promotions_edit($pdo);
+        break;
+
+    case '/admin/billing/promotions':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_billing_promotions_store($pdo);
+        } else {
+            redirect('/admin/billing');
+        }
+        break;
+
+    case '/admin/billing/promotions/update':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_billing_promotions_update($pdo);
+        } else {
+            redirect('/admin/billing');
+        }
+        break;
+
+    case '/admin/billing/promotions/delete':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_billing_promotions_delete($pdo);
+        } else {
+            redirect('/admin/billing');
+        }
+        break;
+
+    case '/admin/billing/promotions/generate-trial':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_billing_promotions_generate_trial($pdo);
+        } else {
+            redirect('/admin/billing');
+        }
+        break;
+
+    case '/admin/billing/settings':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_billing_settings_update($pdo);
+        } else {
+            redirect('/admin/billing');
+        }
+        break;
+
+    case '/admin/billing/user-plan':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_billing_user_plan_assign($pdo);
+        } else {
+            redirect('/admin/billing');
+        }
+        break;
+
     case '/admin/roles':
         require __DIR__ . '/src/controllers/admin.php';
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {

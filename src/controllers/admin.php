@@ -1175,6 +1175,1222 @@ function admin_users_feedback_respond(PDO $pdo): void
     redirect($redirectTo);
 }
 
+function admin_billing_role_options(): array
+{
+    $definitions = role_definitions();
+    $options = [];
+    foreach ($definitions as $slug => $meta) {
+        if ($slug === ROLE_GUEST) {
+            continue;
+        }
+        $options[$slug] = $meta['name'] ?? ucfirst($slug);
+    }
+
+    return $options;
+}
+
+function admin_billing_hydrate_plan_row(array $row): array
+{
+    $metadata = $row['metadata'] ?? [];
+    if (is_string($metadata) && $metadata !== '') {
+        $decoded = json_decode($metadata, true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            $metadata = $decoded;
+        }
+    }
+    if (!is_array($metadata)) {
+        $metadata = [];
+    }
+
+    return [
+        'id' => (int)($row['id'] ?? 0),
+        'code' => (string)($row['code'] ?? ''),
+        'name' => (string)($row['name'] ?? ''),
+        'description' => $row['description'] ?? null,
+        'price' => (float)($row['price'] ?? 0),
+        'currency' => strtoupper((string)($row['currency'] ?? 'USD')),
+        'billing_interval' => (string)($row['billing_interval'] ?? ''),
+        'interval_count' => (int)($row['interval_count'] ?? 1),
+        'role_slug' => (string)($row['role_slug'] ?? ''),
+        'trial_days' => isset($row['trial_days']) && $row['trial_days'] !== null ? (int)$row['trial_days'] : null,
+        'is_active' => (bool)($row['is_active'] ?? false),
+        'stripe_product_id' => $row['stripe_product_id'] ?? null,
+        'stripe_price_id' => $row['stripe_price_id'] ?? null,
+        'metadata' => $metadata,
+        'created_at' => $row['created_at'] ?? null,
+        'updated_at' => $row['updated_at'] ?? null,
+        'role_name' => $row['role_name'] ?? null,
+        'active_subscriptions' => isset($row['active_subscriptions']) ? (int)$row['active_subscriptions'] : 0,
+    ];
+}
+
+function admin_billing_plan_choices(PDO $pdo): array
+{
+    $choices = [];
+
+    try {
+        $stmt = $pdo->query('SELECT id, code, name FROM billing_plans ORDER BY name');
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $id = (int)($row['id'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+            $choices[$id] = [
+                'id' => $id,
+                'code' => (string)($row['code'] ?? ''),
+                'name' => (string)($row['name'] ?? ''),
+            ];
+        }
+    } catch (Throwable $e) {
+        $choices = [];
+    }
+
+    return $choices;
+}
+
+function admin_billing_fetch_plan(PDO $pdo, int $planId): ?array
+{
+    $stmt = $pdo->prepare(
+        'SELECT p.*, r.name AS role_name, 0 AS active_subscriptions FROM billing_plans p '
+        . 'LEFT JOIN roles r ON LOWER(r.slug) = LOWER(p.role_slug) '
+        . 'WHERE p.id = ? LIMIT 1'
+    );
+    $stmt->execute([$planId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$row) {
+        return null;
+    }
+
+    return admin_billing_hydrate_plan_row($row);
+}
+
+function admin_billing_fetch_plan_by_code(PDO $pdo, string $code): ?array
+{
+    $stmt = $pdo->prepare(
+        'SELECT p.*, r.name AS role_name, 0 AS active_subscriptions FROM billing_plans p '
+        . 'LEFT JOIN roles r ON LOWER(r.slug) = LOWER(p.role_slug) '
+        . 'WHERE LOWER(p.code) = LOWER(?) LIMIT 1'
+    );
+    $stmt->execute([trim($code)]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$row) {
+        return null;
+    }
+
+    return admin_billing_hydrate_plan_row($row);
+}
+
+function admin_billing_hydrate_promotion_row(array $row): array
+{
+    $metadata = $row['metadata'] ?? [];
+    if (is_string($metadata) && $metadata !== '') {
+        $decoded = json_decode($metadata, true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            $metadata = $decoded;
+        }
+    }
+    if (!is_array($metadata)) {
+        $metadata = [];
+    }
+
+    return [
+        'id' => (int)($row['id'] ?? 0),
+        'code' => (string)($row['code'] ?? ''),
+        'name' => (string)($row['name'] ?? ''),
+        'description' => $row['description'] ?? null,
+        'discount_percent' => isset($row['discount_percent']) && $row['discount_percent'] !== null ? (float)$row['discount_percent'] : null,
+        'discount_amount' => isset($row['discount_amount']) && $row['discount_amount'] !== null ? (float)$row['discount_amount'] : null,
+        'currency' => $row['currency'] ?? null,
+        'max_redemptions' => isset($row['max_redemptions']) && $row['max_redemptions'] !== null ? (int)$row['max_redemptions'] : null,
+        'redeem_by' => $row['redeem_by'] ?? null,
+        'trial_days' => isset($row['trial_days']) && $row['trial_days'] !== null ? (int)$row['trial_days'] : null,
+        'plan_code' => $row['plan_code'] ?? null,
+        'plan_name' => $row['plan_name'] ?? null,
+        'stripe_coupon_id' => $row['stripe_coupon_id'] ?? null,
+        'stripe_promo_code_id' => $row['stripe_promo_code_id'] ?? null,
+        'metadata' => $metadata,
+        'created_at' => $row['created_at'] ?? null,
+        'updated_at' => $row['updated_at'] ?? null,
+    ];
+}
+
+function admin_billing_fetch_promotion(PDO $pdo, int $promotionId): ?array
+{
+    $stmt = $pdo->prepare(
+        'SELECT pr.*, bp.name AS plan_name FROM billing_promotions pr '
+        . 'LEFT JOIN billing_plans bp ON bp.code = pr.plan_code '
+        . 'WHERE pr.id = ? LIMIT 1'
+    );
+    $stmt->execute([$promotionId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$row) {
+        return null;
+    }
+
+    return admin_billing_hydrate_promotion_row($row);
+}
+
+function admin_billing_index(PDO $pdo): void
+{
+    require_admin();
+
+    $roleOptions = admin_billing_role_options();
+    $intervalLabels = billing_interval_labels();
+    $settings = billing_settings();
+
+    $plans = [];
+    try {
+        $sql = <<<SQL
+SELECT p.*, r.name AS role_name,
+       COALESCE(s.active_subscriptions, 0) AS active_subscriptions
+  FROM billing_plans p
+  LEFT JOIN roles r ON LOWER(r.slug) = LOWER(p.role_slug)
+  LEFT JOIN (
+        SELECT plan_code, COUNT(*) FILTER (WHERE status IN ('active','trialing')) AS active_subscriptions
+          FROM user_subscriptions
+         GROUP BY plan_code
+  ) s ON s.plan_code = p.code
+ ORDER BY p.is_active DESC, p.price, p.name
+SQL;
+        $stmt = $pdo->query($sql);
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $plans[] = admin_billing_hydrate_plan_row($row);
+        }
+    } catch (Throwable $e) {
+        $plans = [];
+    }
+
+    $planOptions = [];
+    foreach ($plans as $plan) {
+        $label = $plan['name'];
+        if (!empty($plan['code'])) {
+            $label .= ' (' . $plan['code'] . ')';
+        }
+        $planOptions[$plan['id']] = $label;
+    }
+
+    $promotions = [];
+    try {
+        $sql = <<<SQL
+SELECT pr.*, bp.name AS plan_name
+  FROM billing_promotions pr
+  LEFT JOIN billing_plans bp ON bp.code = pr.plan_code
+ ORDER BY pr.redeem_by NULLS LAST, pr.created_at DESC
+SQL;
+        $stmt = $pdo->query($sql);
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $promotions[] = admin_billing_hydrate_promotion_row($row);
+        }
+    } catch (Throwable $e) {
+        $promotions = [];
+    }
+
+    $subscriptions = [];
+    try {
+        $sql = <<<SQL
+SELECT s.id, s.user_id, s.plan_code, s.plan_name, s.status, s.billing_interval, s.interval_count,
+       s.amount, s.currency, s.started_at, s.current_period_start, s.current_period_end,
+       s.cancel_at, s.canceled_at, s.trial_ends_at, s.notes, s.created_at, s.updated_at,
+       u.email, u.full_name, u.role
+  FROM user_subscriptions s
+  LEFT JOIN users u ON u.id = s.user_id
+ ORDER BY COALESCE(s.current_period_end, s.created_at) DESC
+ LIMIT 25
+SQL;
+        $stmt = $pdo->query($sql);
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $subscriptions[] = [
+                'id' => (int)($row['id'] ?? 0),
+                'user_id' => (int)($row['user_id'] ?? 0),
+                'plan_code' => (string)($row['plan_code'] ?? ''),
+                'plan_name' => (string)($row['plan_name'] ?? ''),
+                'status' => (string)($row['status'] ?? ''),
+                'billing_interval' => (string)($row['billing_interval'] ?? ''),
+                'interval_count' => (int)($row['interval_count'] ?? 1),
+                'amount' => (float)($row['amount'] ?? 0),
+                'currency' => (string)($row['currency'] ?? ''),
+                'started_at' => $row['started_at'] ?? null,
+                'current_period_start' => $row['current_period_start'] ?? null,
+                'current_period_end' => $row['current_period_end'] ?? null,
+                'cancel_at' => $row['cancel_at'] ?? null,
+                'canceled_at' => $row['canceled_at'] ?? null,
+                'trial_ends_at' => $row['trial_ends_at'] ?? null,
+                'notes' => $row['notes'] ?? null,
+                'created_at' => $row['created_at'] ?? null,
+                'updated_at' => $row['updated_at'] ?? null,
+                'email' => $row['email'] ?? null,
+                'full_name' => $row['full_name'] ? pii_decrypt($row['full_name']) : null,
+                'role' => normalize_user_role($row['role'] ?? null),
+            ];
+        }
+    } catch (Throwable $e) {
+        $subscriptions = [];
+    }
+
+    $invoices = [];
+    try {
+        $sql = <<<SQL
+SELECT i.id, i.user_id, i.subscription_id, i.invoice_number, i.status, i.total_amount, i.currency,
+       i.issued_at, i.due_at, i.paid_at, i.failure_reason, i.refund_reason, i.notes, i.created_at, i.updated_at,
+       u.email, u.full_name
+  FROM user_invoices i
+  LEFT JOIN users u ON u.id = i.user_id
+ ORDER BY i.created_at DESC
+ LIMIT 25
+SQL;
+        $stmt = $pdo->query($sql);
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $invoices[] = [
+                'id' => (int)($row['id'] ?? 0),
+                'user_id' => (int)($row['user_id'] ?? 0),
+                'subscription_id' => isset($row['subscription_id']) && $row['subscription_id'] !== null ? (int)$row['subscription_id'] : null,
+                'invoice_number' => (string)($row['invoice_number'] ?? ''),
+                'status' => (string)($row['status'] ?? ''),
+                'total_amount' => (float)($row['total_amount'] ?? 0),
+                'currency' => (string)($row['currency'] ?? ''),
+                'issued_at' => $row['issued_at'] ?? null,
+                'due_at' => $row['due_at'] ?? null,
+                'paid_at' => $row['paid_at'] ?? null,
+                'failure_reason' => $row['failure_reason'] ?? null,
+                'refund_reason' => $row['refund_reason'] ?? null,
+                'notes' => $row['notes'] ?? null,
+                'created_at' => $row['created_at'] ?? null,
+                'updated_at' => $row['updated_at'] ?? null,
+                'email' => $row['email'] ?? null,
+                'full_name' => $row['full_name'] ? pii_decrypt($row['full_name']) : null,
+            ];
+        }
+    } catch (Throwable $e) {
+        $invoices = [];
+    }
+
+    $payments = [];
+    try {
+        $sql = <<<SQL
+SELECT p.id, p.user_id, p.invoice_id, p.type, p.status, p.amount, p.currency, p.gateway, p.transaction_reference,
+       p.failure_reason, p.notes, p.processed_at, p.created_at, p.updated_at,
+       u.email, u.full_name
+  FROM user_payments p
+  LEFT JOIN users u ON u.id = p.user_id
+ ORDER BY p.processed_at DESC
+ LIMIT 25
+SQL;
+        $stmt = $pdo->query($sql);
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $payments[] = [
+                'id' => (int)($row['id'] ?? 0),
+                'user_id' => (int)($row['user_id'] ?? 0),
+                'invoice_id' => isset($row['invoice_id']) && $row['invoice_id'] !== null ? (int)$row['invoice_id'] : null,
+                'type' => (string)($row['type'] ?? ''),
+                'status' => (string)($row['status'] ?? ''),
+                'amount' => (float)($row['amount'] ?? 0),
+                'currency' => (string)($row['currency'] ?? ''),
+                'gateway' => $row['gateway'] ?? null,
+                'transaction_reference' => $row['transaction_reference'] ?? null,
+                'failure_reason' => $row['failure_reason'] ?? null,
+                'notes' => $row['notes'] ?? null,
+                'processed_at' => $row['processed_at'] ?? null,
+                'created_at' => $row['created_at'] ?? null,
+                'updated_at' => $row['updated_at'] ?? null,
+                'email' => $row['email'] ?? null,
+                'full_name' => $row['full_name'] ? pii_decrypt($row['full_name']) : null,
+            ];
+        }
+    } catch (Throwable $e) {
+        $payments = [];
+    }
+
+    $invoiceStatusOptions = [
+        'draft' => __('Draft'),
+        'open' => __('Open'),
+        'past_due' => __('Past due'),
+        'paid' => __('Paid'),
+        'failed' => __('Failed'),
+        'refunded' => __('Refunded'),
+        'void' => __('Void'),
+    ];
+
+    $paymentStatusOptions = [
+        'pending' => __('Pending'),
+        'succeeded' => __('Succeeded'),
+        'failed' => __('Failed'),
+        'canceled' => __('Canceled'),
+    ];
+
+    $paymentTypeOptions = [
+        'charge' => __('Charge'),
+        'refund' => __('Refund'),
+        'adjustment' => __('Adjustment'),
+    ];
+
+    $subscriptionStatusOptions = [
+        'active' => __('Active'),
+        'trialing' => __('Trialing'),
+        'past_due' => __('Past due'),
+        'canceled' => __('Canceled'),
+        'expired' => __('Expired'),
+    ];
+
+    view('admin/billing', [
+        'pageTitle' => __('Billing & plans'),
+        'plans' => $plans,
+        'planOptions' => $planOptions,
+        'promotions' => $promotions,
+        'subscriptions' => $subscriptions,
+        'invoices' => $invoices,
+        'payments' => $payments,
+        'roleOptions' => $roleOptions,
+        'intervalLabels' => $intervalLabels,
+        'invoiceStatusOptions' => $invoiceStatusOptions,
+        'paymentStatusOptions' => $paymentStatusOptions,
+        'paymentTypeOptions' => $paymentTypeOptions,
+        'subscriptionStatusOptions' => $subscriptionStatusOptions,
+        'stripeSettings' => $settings,
+        'hasStripeKeys' => billing_has_stripe_keys(),
+        'defaultCurrency' => billing_default_currency(),
+    ]);
+}
+
+function admin_billing_plans_create(PDO $pdo): void
+{
+    require_admin();
+
+    $roleOptions = admin_billing_role_options();
+    $plan = [
+        'id' => null,
+        'code' => '',
+        'name' => '',
+        'description' => '',
+        'price' => 0,
+        'currency' => billing_default_currency(),
+        'billing_interval' => 'monthly',
+        'interval_count' => 1,
+        'role_slug' => '',
+        'trial_days' => null,
+        'is_active' => true,
+        'stripe_product_id' => '',
+        'stripe_price_id' => '',
+    ];
+
+    view('admin/billing_plan_form', [
+        'pageTitle' => __('Create pricing plan'),
+        'plan' => $plan,
+        'roleOptions' => $roleOptions,
+        'intervalLabels' => billing_interval_labels(),
+        'mode' => 'create',
+    ]);
+}
+
+function admin_billing_plans_edit(PDO $pdo): void
+{
+    require_admin();
+
+    $planId = (int)($_GET['id'] ?? 0);
+    if ($planId <= 0) {
+        $_SESSION['flash'] = __('Plan not found.');
+        redirect('/admin/billing');
+    }
+
+    $plan = admin_billing_fetch_plan($pdo, $planId);
+    if (!$plan) {
+        $_SESSION['flash'] = __('Plan not found.');
+        redirect('/admin/billing');
+    }
+
+    view('admin/billing_plan_form', [
+        'pageTitle' => __('Edit pricing plan'),
+        'plan' => $plan,
+        'roleOptions' => admin_billing_role_options(),
+        'intervalLabels' => billing_interval_labels(),
+        'mode' => 'edit',
+    ]);
+}
+
+function admin_billing_validate_plan(array $input, array $roleOptions): array
+{
+    $code = strtolower(trim((string)($input['code'] ?? '')));
+    $name = trim((string)($input['name'] ?? ''));
+    $description = trim((string)($input['description'] ?? ''));
+    $priceInput = trim((string)($input['price'] ?? '0'));
+    $currency = strtoupper(trim((string)($input['currency'] ?? '')));
+    $interval = strtolower(trim((string)($input['billing_interval'] ?? '')));
+    $intervalCount = (int)($input['interval_count'] ?? 1);
+    $roleSlug = strtolower(trim((string)($input['role_slug'] ?? '')));
+    $trialDaysInput = trim((string)($input['trial_days'] ?? ''));
+    $isActive = !empty($input['is_active']);
+    $productId = trim((string)($input['stripe_product_id'] ?? ''));
+    $priceId = trim((string)($input['stripe_price_id'] ?? ''));
+
+    if ($name === '') {
+        throw new RuntimeException(__('Name is required.'));
+    }
+
+    if ($code === '' || !preg_match('/^[a-z0-9._-]+$/', $code)) {
+        throw new RuntimeException(__('Code may only contain lowercase letters, numbers, dots, hyphens, and underscores.'));
+    }
+
+    if ($currency === '' || !preg_match('/^[A-Z]{3}$/', $currency)) {
+        throw new RuntimeException(__('Please provide a valid 3-letter currency code.'));
+    }
+
+    $intervalOptions = array_keys(billing_interval_labels());
+    if (!in_array($interval, $intervalOptions, true)) {
+        throw new RuntimeException(__('Unsupported billing interval.'));
+    }
+
+    $intervalCount = $intervalCount > 0 ? $intervalCount : 1;
+
+    if (!isset($roleOptions[$roleSlug])) {
+        throw new RuntimeException(__('Please select a valid role.'));
+    }
+
+    if ($priceInput === '' || !is_numeric($priceInput)) {
+        throw new RuntimeException(__('Please provide a valid price.'));
+    }
+
+    $price = round((float)$priceInput, 2);
+    $trialDays = null;
+    if ($trialDaysInput !== '') {
+        if (!ctype_digit($trialDaysInput)) {
+            throw new RuntimeException(__('Trial days must be a positive number.'));
+        }
+        $trialDays = (int)$trialDaysInput;
+    }
+
+    return [
+        'code' => $code,
+        'name' => $name,
+        'description' => $description !== '' ? $description : null,
+        'price' => $price,
+        'currency' => $currency,
+        'billing_interval' => $interval,
+        'interval_count' => $intervalCount,
+        'role_slug' => $roleSlug,
+        'trial_days' => $trialDays,
+        'is_active' => $isActive,
+        'stripe_product_id' => $productId !== '' ? $productId : null,
+        'stripe_price_id' => $priceId !== '' ? $priceId : null,
+    ];
+}
+
+function admin_billing_plans_store(PDO $pdo): void
+{
+    require_admin();
+    verify_csrf();
+
+    $roleOptions = admin_billing_role_options();
+    try {
+        $data = admin_billing_validate_plan($_POST, $roleOptions);
+    } catch (RuntimeException $e) {
+        $_SESSION['flash'] = $e->getMessage();
+        redirect('/admin/billing/plans/create');
+    }
+
+    try {
+        $exists = $pdo->prepare('SELECT 1 FROM billing_plans WHERE LOWER(code) = LOWER(?) LIMIT 1');
+        $exists->execute([$data['code']]);
+        if ($exists->fetchColumn()) {
+            $_SESSION['flash'] = __('Plan code must be unique.');
+            redirect('/admin/billing/plans/create');
+        }
+
+        $stmt = $pdo->prepare(
+            'INSERT INTO billing_plans (code, name, description, price, currency, billing_interval, interval_count, role_slug, trial_days, is_active, stripe_product_id, stripe_price_id) '
+            . 'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        );
+        $stmt->execute([
+            $data['code'],
+            $data['name'],
+            $data['description'],
+            $data['price'],
+            $data['currency'],
+            $data['billing_interval'],
+            $data['interval_count'],
+            $data['role_slug'],
+            $data['trial_days'],
+            $data['is_active'] ? 1 : 0,
+            $data['stripe_product_id'],
+            $data['stripe_price_id'],
+        ]);
+    } catch (Throwable $e) {
+        $_SESSION['flash'] = __('Unable to create plan.');
+        redirect('/admin/billing/plans/create');
+    }
+
+    $_SESSION['flash_success'] = __('Plan created successfully.');
+    redirect('/admin/billing');
+}
+
+function admin_billing_plans_update(PDO $pdo): void
+{
+    require_admin();
+    verify_csrf();
+
+    $planId = (int)($_POST['plan_id'] ?? 0);
+    if ($planId <= 0) {
+        $_SESSION['flash'] = __('Plan not found.');
+        redirect('/admin/billing');
+    }
+
+    $plan = admin_billing_fetch_plan($pdo, $planId);
+    if (!$plan) {
+        $_SESSION['flash'] = __('Plan not found.');
+        redirect('/admin/billing');
+    }
+
+    $roleOptions = admin_billing_role_options();
+    try {
+        $data = admin_billing_validate_plan($_POST, $roleOptions);
+    } catch (RuntimeException $e) {
+        $_SESSION['flash'] = $e->getMessage();
+        redirect('/admin/billing/plans/edit?id=' . $planId);
+    }
+
+    try {
+        $conflict = $pdo->prepare('SELECT id FROM billing_plans WHERE LOWER(code) = LOWER(?) AND id <> ? LIMIT 1');
+        $conflict->execute([$data['code'], $planId]);
+        if ($conflict->fetchColumn()) {
+            $_SESSION['flash'] = __('Plan code must be unique.');
+            redirect('/admin/billing/plans/edit?id=' . $planId);
+        }
+
+        $stmt = $pdo->prepare(
+            'UPDATE billing_plans SET code = ?, name = ?, description = ?, price = ?, currency = ?, billing_interval = ?, '
+            . 'interval_count = ?, role_slug = ?, trial_days = ?, is_active = ?, stripe_product_id = ?, stripe_price_id = ? '
+            . 'WHERE id = ?'
+        );
+        $stmt->execute([
+            $data['code'],
+            $data['name'],
+            $data['description'],
+            $data['price'],
+            $data['currency'],
+            $data['billing_interval'],
+            $data['interval_count'],
+            $data['role_slug'],
+            $data['trial_days'],
+            $data['is_active'] ? 1 : 0,
+            $data['stripe_product_id'],
+            $data['stripe_price_id'],
+            $planId,
+        ]);
+    } catch (Throwable $e) {
+        $_SESSION['flash'] = __('Unable to update plan.');
+        redirect('/admin/billing/plans/edit?id=' . $planId);
+    }
+
+    $_SESSION['flash_success'] = __('Plan updated successfully.');
+    redirect('/admin/billing');
+}
+
+function admin_billing_plans_delete(PDO $pdo): void
+{
+    require_admin();
+    verify_csrf();
+
+    $planId = (int)($_POST['plan_id'] ?? 0);
+    $redirectTo = admin_normalize_redirect($_POST['redirect'] ?? '/admin/billing', '/admin/billing');
+
+    if ($planId <= 0) {
+        $_SESSION['flash'] = __('Plan not found.');
+        redirect($redirectTo);
+    }
+
+    $plan = admin_billing_fetch_plan($pdo, $planId);
+    if (!$plan) {
+        $_SESSION['flash'] = __('Plan not found.');
+        redirect($redirectTo);
+    }
+
+    try {
+        $activeStmt = $pdo->prepare("SELECT COUNT(*) FROM user_subscriptions WHERE plan_code = ? AND status IN ('active','trialing','past_due')");
+        $activeStmt->execute([$plan['code']]);
+        $activeCount = (int)$activeStmt->fetchColumn();
+        if ($activeCount > 0) {
+            $_SESSION['flash'] = __('Cannot delete a plan with active subscribers.');
+            redirect($redirectTo);
+        }
+    } catch (Throwable $e) {
+        $_SESSION['flash'] = __('Unable to verify subscriptions for this plan.');
+        redirect($redirectTo);
+    }
+
+    try {
+        $delete = $pdo->prepare('DELETE FROM billing_plans WHERE id = ?');
+        $delete->execute([$planId]);
+    } catch (Throwable $e) {
+        $_SESSION['flash'] = __('Unable to delete plan.');
+        redirect($redirectTo);
+    }
+
+    $_SESSION['flash_success'] = __('Plan removed.');
+    redirect('/admin/billing');
+}
+
+function admin_billing_promotions_create(PDO $pdo): void
+{
+    require_admin();
+
+    $promotion = [
+        'id' => null,
+        'code' => '',
+        'name' => '',
+        'description' => '',
+        'discount_percent' => null,
+        'discount_amount' => null,
+        'currency' => '',
+        'max_redemptions' => null,
+        'redeem_by' => '',
+        'trial_days' => null,
+        'plan_code' => null,
+        'stripe_coupon_id' => '',
+        'stripe_promo_code_id' => '',
+    ];
+
+    view('admin/billing_promotion_form', [
+        'pageTitle' => __('Create promotion'),
+        'promotion' => $promotion,
+        'plans' => admin_billing_plan_choices($pdo),
+        'mode' => 'create',
+    ]);
+}
+
+function admin_billing_promotions_edit(PDO $pdo): void
+{
+    require_admin();
+
+    $promotionId = (int)($_GET['id'] ?? 0);
+    if ($promotionId <= 0) {
+        $_SESSION['flash'] = __('Promotion not found.');
+        redirect('/admin/billing');
+    }
+
+    $promotion = admin_billing_fetch_promotion($pdo, $promotionId);
+    if (!$promotion) {
+        $_SESSION['flash'] = __('Promotion not found.');
+        redirect('/admin/billing');
+    }
+
+    view('admin/billing_promotion_form', [
+        'pageTitle' => __('Edit promotion'),
+        'promotion' => $promotion,
+        'plans' => admin_billing_plan_choices($pdo),
+        'mode' => 'edit',
+    ]);
+}
+
+function admin_billing_validate_promotion(PDO $pdo, array $input, ?int $promotionId = null): array
+{
+    $code = strtoupper(trim((string)($input['code'] ?? '')));
+    $name = trim((string)($input['name'] ?? ''));
+    $description = trim((string)($input['description'] ?? ''));
+    $discountPercentInput = trim((string)($input['discount_percent'] ?? ''));
+    $discountAmountInput = trim((string)($input['discount_amount'] ?? ''));
+    $currency = strtoupper(trim((string)($input['currency'] ?? '')));
+    $maxRedemptionsInput = trim((string)($input['max_redemptions'] ?? ''));
+    $redeemByInput = trim((string)($input['redeem_by'] ?? ''));
+    $trialDaysInput = trim((string)($input['trial_days'] ?? ''));
+    $planId = (int)($input['plan_id'] ?? 0);
+    $stripeCouponId = trim((string)($input['stripe_coupon_id'] ?? ''));
+    $stripePromoCodeId = trim((string)($input['stripe_promo_code_id'] ?? ''));
+
+    if ($code === '' || !preg_match('/^[A-Z0-9_-]+$/', $code)) {
+        throw new RuntimeException(__('Code may only contain uppercase letters, numbers, hyphens, and underscores.'));
+    }
+
+    if ($name === '') {
+        throw new RuntimeException(__('Name is required.'));
+    }
+
+    $discountPercent = null;
+    if ($discountPercentInput !== '') {
+        if (!is_numeric($discountPercentInput)) {
+            throw new RuntimeException(__('Discount percent must be numeric.'));
+        }
+        $discountPercent = (float)$discountPercentInput;
+        if ($discountPercent < 0 || $discountPercent > 100) {
+            throw new RuntimeException(__('Discount percent must be between 0 and 100.'));
+        }
+    }
+
+    $discountAmount = null;
+    if ($discountAmountInput !== '') {
+        if (!is_numeric($discountAmountInput)) {
+            throw new RuntimeException(__('Discount amount must be numeric.'));
+        }
+        $discountAmount = round((float)$discountAmountInput, 2);
+        if ($discountAmount < 0) {
+            throw new RuntimeException(__('Discount amount cannot be negative.'));
+        }
+        if ($currency === '' || !preg_match('/^[A-Z]{3}$/', $currency)) {
+            throw new RuntimeException(__('Please provide a valid currency for fixed discounts.'));
+        }
+    }
+
+    if ($discountAmount === null && $currency !== '' && !preg_match('/^[A-Z]{3}$/', $currency)) {
+        throw new RuntimeException(__('Please provide a valid 3-letter currency code.'));
+    }
+
+    $trialDays = null;
+    if ($trialDaysInput !== '') {
+        if (!ctype_digit($trialDaysInput)) {
+            throw new RuntimeException(__('Trial days must be numeric.'));
+        }
+        $trialDays = (int)$trialDaysInput;
+    }
+
+    if ($discountPercent === null && $discountAmount === null && $trialDays === null) {
+        throw new RuntimeException(__('Provide a discount or a trial period.'));
+    }
+
+    $maxRedemptions = null;
+    if ($maxRedemptionsInput !== '') {
+        if (!ctype_digit($maxRedemptionsInput)) {
+            throw new RuntimeException(__('Max redemptions must be numeric.'));
+        }
+        $maxRedemptions = (int)$maxRedemptionsInput;
+    }
+
+    $redeemBy = null;
+    if ($redeemByInput !== '') {
+        $timestamp = strtotime($redeemByInput);
+        if ($timestamp === false) {
+            throw new RuntimeException(__('Please provide a valid redemption deadline.'));
+        }
+        $redeemBy = gmdate('Y-m-d H:i:sP', $timestamp);
+    }
+
+    $planCode = null;
+    if ($planId > 0) {
+        $plan = admin_billing_fetch_plan($pdo, $planId);
+        if (!$plan) {
+            throw new RuntimeException(__('Selected plan does not exist.'));
+        }
+        $planCode = $plan['code'];
+    }
+
+    return [
+        'code' => $code,
+        'name' => $name,
+        'description' => $description !== '' ? $description : null,
+        'discount_percent' => $discountPercent,
+        'discount_amount' => $discountAmount,
+        'currency' => $currency !== '' ? $currency : null,
+        'max_redemptions' => $maxRedemptions,
+        'redeem_by' => $redeemBy,
+        'trial_days' => $trialDays,
+        'plan_code' => $planCode,
+        'stripe_coupon_id' => $stripeCouponId !== '' ? $stripeCouponId : null,
+        'stripe_promo_code_id' => $stripePromoCodeId !== '' ? $stripePromoCodeId : null,
+    ];
+}
+
+function admin_billing_promotions_store(PDO $pdo): void
+{
+    require_admin();
+    verify_csrf();
+
+    try {
+        $data = admin_billing_validate_promotion($pdo, $_POST, null);
+    } catch (RuntimeException $e) {
+        $_SESSION['flash'] = $e->getMessage();
+        redirect('/admin/billing/promotions/create');
+    }
+
+    try {
+        $conflict = $pdo->prepare('SELECT id FROM billing_promotions WHERE UPPER(code) = UPPER(?) LIMIT 1');
+        $conflict->execute([$data['code']]);
+        if ($conflict->fetchColumn()) {
+            $_SESSION['flash'] = __('Promotion code must be unique.');
+            redirect('/admin/billing/promotions/create');
+        }
+
+        $stmt = $pdo->prepare(
+            'INSERT INTO billing_promotions (code, name, description, discount_percent, discount_amount, currency, max_redemptions, redeem_by, trial_days, plan_code, stripe_coupon_id, stripe_promo_code_id) '
+            . 'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        );
+        $stmt->execute([
+            $data['code'],
+            $data['name'],
+            $data['description'],
+            $data['discount_percent'],
+            $data['discount_amount'],
+            $data['currency'],
+            $data['max_redemptions'],
+            $data['redeem_by'],
+            $data['trial_days'],
+            $data['plan_code'],
+            $data['stripe_coupon_id'],
+            $data['stripe_promo_code_id'],
+        ]);
+    } catch (Throwable $e) {
+        $_SESSION['flash'] = __('Unable to create promotion.');
+        redirect('/admin/billing/promotions/create');
+    }
+
+    $_SESSION['flash_success'] = __('Promotion created successfully.');
+    redirect('/admin/billing');
+}
+
+function admin_billing_promotions_update(PDO $pdo): void
+{
+    require_admin();
+    verify_csrf();
+
+    $promotionId = (int)($_POST['promotion_id'] ?? 0);
+    if ($promotionId <= 0) {
+        $_SESSION['flash'] = __('Promotion not found.');
+        redirect('/admin/billing');
+    }
+
+    $promotion = admin_billing_fetch_promotion($pdo, $promotionId);
+    if (!$promotion) {
+        $_SESSION['flash'] = __('Promotion not found.');
+        redirect('/admin/billing');
+    }
+
+    try {
+        $data = admin_billing_validate_promotion($pdo, $_POST, $promotionId);
+    } catch (RuntimeException $e) {
+        $_SESSION['flash'] = $e->getMessage();
+        redirect('/admin/billing/promotions/edit?id=' . $promotionId);
+    }
+
+    try {
+        $conflict = $pdo->prepare('SELECT id FROM billing_promotions WHERE UPPER(code) = UPPER(?) AND id <> ? LIMIT 1');
+        $conflict->execute([$data['code'], $promotionId]);
+        if ($conflict->fetchColumn()) {
+            $_SESSION['flash'] = __('Promotion code must be unique.');
+            redirect('/admin/billing/promotions/edit?id=' . $promotionId);
+        }
+
+        $stmt = $pdo->prepare(
+            'UPDATE billing_promotions SET code = ?, name = ?, description = ?, discount_percent = ?, discount_amount = ?, currency = ?, '
+            . 'max_redemptions = ?, redeem_by = ?, trial_days = ?, plan_code = ?, stripe_coupon_id = ?, stripe_promo_code_id = ? '
+            . 'WHERE id = ?'
+        );
+        $stmt->execute([
+            $data['code'],
+            $data['name'],
+            $data['description'],
+            $data['discount_percent'],
+            $data['discount_amount'],
+            $data['currency'],
+            $data['max_redemptions'],
+            $data['redeem_by'],
+            $data['trial_days'],
+            $data['plan_code'],
+            $data['stripe_coupon_id'],
+            $data['stripe_promo_code_id'],
+            $promotionId,
+        ]);
+    } catch (Throwable $e) {
+        $_SESSION['flash'] = __('Unable to update promotion.');
+        redirect('/admin/billing/promotions/edit?id=' . $promotionId);
+    }
+
+    $_SESSION['flash_success'] = __('Promotion updated successfully.');
+    redirect('/admin/billing');
+}
+
+function admin_billing_promotions_delete(PDO $pdo): void
+{
+    require_admin();
+    verify_csrf();
+
+    $promotionId = (int)($_POST['promotion_id'] ?? 0);
+    $redirectTo = admin_normalize_redirect($_POST['redirect'] ?? '/admin/billing', '/admin/billing');
+
+    if ($promotionId <= 0) {
+        $_SESSION['flash'] = __('Promotion not found.');
+        redirect($redirectTo);
+    }
+
+    try {
+        $stmt = $pdo->prepare('DELETE FROM billing_promotions WHERE id = ?');
+        $stmt->execute([$promotionId]);
+    } catch (Throwable $e) {
+        $_SESSION['flash'] = __('Unable to delete promotion.');
+        redirect($redirectTo);
+    }
+
+    $_SESSION['flash_success'] = __('Promotion removed.');
+    redirect('/admin/billing');
+}
+
+function admin_billing_promotions_generate_trial(PDO $pdo): void
+{
+    require_admin();
+    verify_csrf();
+
+    $planId = (int)($_POST['plan_id'] ?? 0);
+    $trialDaysInput = trim((string)($_POST['trial_days'] ?? ''));
+    $maxRedemptionsInput = trim((string)($_POST['max_redemptions'] ?? ''));
+    $redirectTo = admin_normalize_redirect($_POST['redirect'] ?? '/admin/billing', '/admin/billing');
+
+    if ($planId <= 0) {
+        $_SESSION['flash'] = __('Plan not found.');
+        redirect($redirectTo);
+    }
+
+    $plan = admin_billing_fetch_plan($pdo, $planId);
+    if (!$plan) {
+        $_SESSION['flash'] = __('Plan not found.');
+        redirect($redirectTo);
+    }
+
+    $trialDays = $plan['trial_days'] ?? 14;
+    if ($trialDaysInput !== '') {
+        if (!ctype_digit($trialDaysInput)) {
+            $_SESSION['flash'] = __('Trial days must be numeric.');
+            redirect($redirectTo);
+        }
+        $trialDays = (int)$trialDaysInput;
+    }
+    if ($trialDays <= 0) {
+        $trialDays = 1;
+    }
+
+    $maxRedemptions = null;
+    if ($maxRedemptionsInput !== '') {
+        if (!ctype_digit($maxRedemptionsInput)) {
+            $_SESSION['flash'] = __('Max redemptions must be numeric.');
+            redirect($redirectTo);
+        }
+        $value = (int)$maxRedemptionsInput;
+        if ($value > 0) {
+            $maxRedemptions = $value;
+        }
+    }
+
+    $attempts = 0;
+    $code = '';
+    do {
+        $attempts++;
+        $raw = strtoupper(substr(str_replace(['+', '/', '='], '', base64_encode(random_bytes(8))), 0, 10));
+        $code = 'TRIAL-' . $raw;
+        $exists = $pdo->prepare('SELECT id FROM billing_promotions WHERE code = ? LIMIT 1');
+        $exists->execute([$code]);
+    } while ($exists->fetchColumn() && $attempts < 5);
+
+    try {
+        $stmt = $pdo->prepare(
+            'INSERT INTO billing_promotions (code, name, description, discount_percent, discount_amount, currency, max_redemptions, redeem_by, trial_days, plan_code) '
+            . 'VALUES (?, ?, ?, NULL, NULL, NULL, ?, NULL, ?, ?)' 
+        );
+        $stmt->execute([
+            $code,
+            __('Trial for :plan', ['plan' => $plan['name']]),
+            __('Auto-generated free trial'),
+            $maxRedemptions,
+            $trialDays,
+            $plan['code'],
+        ]);
+    } catch (Throwable $e) {
+        $_SESSION['flash'] = __('Unable to generate trial promotion.');
+        redirect($redirectTo);
+    }
+
+    $_SESSION['flash_success'] = __('Trial promotion created: :code', ['code' => $code]);
+    redirect('/admin/billing');
+}
+
+function admin_billing_settings_update(PDO $pdo): void
+{
+    require_admin();
+    verify_csrf();
+
+    $secret = trim((string)($_POST['stripe_secret_key'] ?? ''));
+    $publishable = trim((string)($_POST['stripe_publishable_key'] ?? ''));
+    $webhook = trim((string)($_POST['stripe_webhook_secret'] ?? ''));
+    $defaultCurrency = strtoupper(trim((string)($_POST['default_currency'] ?? 'USD')));
+    $redirectTo = admin_normalize_redirect($_POST['redirect'] ?? '/admin/billing', '/admin/billing');
+
+    if ($defaultCurrency === '' || !preg_match('/^[A-Z]{3}$/', $defaultCurrency)) {
+        $_SESSION['flash'] = __('Please provide a valid default currency.');
+        redirect($redirectTo);
+    }
+
+    try {
+        $stmt = $pdo->prepare(
+            'INSERT INTO billing_settings (id, stripe_secret_key, stripe_publishable_key, stripe_webhook_secret, default_currency) '
+            . 'VALUES (1, ?, ?, ?, ?) '
+            . 'ON CONFLICT (id) DO UPDATE '
+            . 'SET stripe_secret_key = EXCLUDED.stripe_secret_key, '
+            . '    stripe_publishable_key = EXCLUDED.stripe_publishable_key, '
+            . '    stripe_webhook_secret = EXCLUDED.stripe_webhook_secret, '
+            . '    default_currency = EXCLUDED.default_currency, '
+            . '    updated_at = NOW()'
+        );
+        $stmt->execute([
+            $secret !== '' ? $secret : null,
+            $publishable !== '' ? $publishable : null,
+            $webhook !== '' ? $webhook : null,
+            $defaultCurrency,
+        ]);
+    } catch (Throwable $e) {
+        $_SESSION['flash'] = __('Unable to update billing settings.');
+        redirect($redirectTo);
+    }
+
+    reset_billing_settings_cache();
+    $_SESSION['flash_success'] = __('Billing settings updated.');
+    redirect('/admin/billing');
+}
+
+function admin_billing_user_plan_assign(PDO $pdo): void
+{
+    require_admin();
+    verify_csrf();
+
+    $identifier = trim((string)($_POST['user_email'] ?? ''));
+    $planId = (int)($_POST['plan_id'] ?? 0);
+    $status = strtolower(trim((string)($_POST['subscription_status'] ?? 'active')));
+    $createSubscription = !empty($_POST['create_subscription']);
+    $note = trim((string)($_POST['note'] ?? ''));
+    $trialOverrideInput = trim((string)($_POST['trial_days'] ?? ''));
+    $redirectTo = admin_normalize_redirect($_POST['redirect'] ?? '/admin/billing', '/admin/billing');
+
+    if ($identifier === '') {
+        $_SESSION['flash'] = __('Please provide an email address.');
+        redirect($redirectTo);
+    }
+
+    if ($planId <= 0) {
+        $_SESSION['flash'] = __('Plan not found.');
+        redirect($redirectTo);
+    }
+
+    $plan = admin_billing_fetch_plan($pdo, $planId);
+    if (!$plan) {
+        $_SESSION['flash'] = __('Plan not found.');
+        redirect($redirectTo);
+    }
+
+    $allowedStatuses = ['active', 'trialing', 'past_due', 'canceled', 'expired'];
+    if (!in_array($status, $allowedStatuses, true)) {
+        $_SESSION['flash'] = __('Unsupported subscription status.');
+        redirect($redirectTo);
+    }
+
+    $user = null;
+    $stmt = $pdo->prepare('SELECT id, email, role FROM users WHERE LOWER(email) = LOWER(?) LIMIT 1');
+    $stmt->execute([$identifier]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$user && ctype_digit($identifier)) {
+        $stmt = $pdo->prepare('SELECT id, email, role FROM users WHERE id = ? LIMIT 1');
+        $stmt->execute([(int)$identifier]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    if (!$user) {
+        $_SESSION['flash'] = __('User not found.');
+        redirect($redirectTo);
+    }
+
+    $userId = (int)($user['id'] ?? 0);
+    if ($userId <= 0) {
+        $_SESSION['flash'] = __('User not found.');
+        redirect($redirectTo);
+    }
+
+    $roleSlug = strtolower($plan['role_slug'] ?? '');
+    try {
+        $update = $pdo->prepare('UPDATE users SET role = ? WHERE id = ?');
+        $update->execute([$roleSlug, $userId]);
+    } catch (Throwable $e) {
+        $_SESSION['flash'] = __('Unable to update user role.');
+        redirect($redirectTo);
+    }
+
+    if ($userId === uid()) {
+        $_SESSION['role'] = $roleSlug;
+    }
+
+    if ($createSubscription) {
+        $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+        $startedAt = $now->format('Y-m-d H:i:sP');
+        $currentPeriodStart = $startedAt;
+        $currentPeriodEnd = null;
+
+        $interval = $plan['billing_interval'] ?? 'monthly';
+        $intervalCount = (int)($plan['interval_count'] ?? 1);
+        if ($intervalCount <= 0) {
+            $intervalCount = 1;
+        }
+
+        if ($interval !== 'lifetime') {
+            $periodEnd = $now;
+            if ($interval === 'weekly') {
+                $periodEnd = $periodEnd->modify('+' . $intervalCount . ' week');
+            } elseif ($interval === 'monthly') {
+                $periodEnd = $periodEnd->modify('+' . $intervalCount . ' month');
+            } elseif ($interval === 'yearly') {
+                $periodEnd = $periodEnd->modify('+' . $intervalCount . ' year');
+            }
+            $currentPeriodEnd = $periodEnd->format('Y-m-d H:i:sP');
+        }
+
+        $trialDays = $plan['trial_days'] ?? null;
+        if ($trialOverrideInput !== '') {
+            if (!ctype_digit($trialOverrideInput)) {
+                $_SESSION['flash'] = __('Trial days must be numeric.');
+                redirect($redirectTo);
+            }
+            $trialDays = (int)$trialOverrideInput;
+        }
+
+        $trialEndsAt = null;
+        if ($status === 'trialing' && $trialDays !== null && $trialDays > 0) {
+            $trialEndsAt = $now->modify('+' . $trialDays . ' day')->format('Y-m-d H:i:sP');
+        }
+
+        $cancelAt = null;
+        $canceledAt = null;
+        if ($status === 'canceled') {
+            $cancelAt = $now->format('Y-m-d H:i:sP');
+            $canceledAt = $cancelAt;
+        } elseif ($status === 'expired') {
+            $currentPeriodEnd = $now->format('Y-m-d H:i:sP');
+        }
+
+        $notes = $note !== '' ? $note : null;
+
+        try {
+            $insert = $pdo->prepare(
+                'INSERT INTO user_subscriptions (user_id, plan_code, plan_name, status, billing_interval, interval_count, amount, currency, started_at, current_period_start, current_period_end, cancel_at, canceled_at, trial_ends_at, notes) '
+                . 'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            );
+            $insert->execute([
+                $userId,
+                $plan['code'],
+                $plan['name'],
+                $status,
+                $plan['billing_interval'],
+                $intervalCount,
+                $plan['price'],
+                $plan['currency'],
+                $startedAt,
+                $currentPeriodStart,
+                $currentPeriodEnd,
+                $cancelAt,
+                $canceledAt,
+                $trialEndsAt,
+                $notes,
+            ]);
+        } catch (Throwable $e) {
+            $_SESSION['flash'] = __('Unable to create subscription record.');
+            redirect($redirectTo);
+        }
+    }
+
+    $_SESSION['flash_success'] = __('User upgraded to :plan.', ['plan' => $plan['name']]);
+    redirect('/admin/billing');
+}
+
 function admin_roles_index(PDO $pdo): void
 {
     require_admin();
