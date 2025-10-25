@@ -213,6 +213,189 @@ const ROLE_FREE    = 'free';
 const ROLE_PREMIUM = 'premium';
 const ROLE_ADMIN   = 'admin';
 
+function role_default_definitions(): array
+{
+    return [
+        ROLE_FREE => [
+            'slug' => ROLE_FREE,
+            'name' => __('Free user'),
+            'description' => 'Default plan with limited access',
+            'is_system' => true,
+            'capabilities' => [
+                'currencies_limit' => 1,
+                'goals_limit' => 2,
+                'loans_limit' => 2,
+                'categories_limit' => 10,
+                'scheduled_payments_limit' => 2,
+                'cashflow_rules_edit' => false,
+            ],
+        ],
+        ROLE_PREMIUM => [
+            'slug' => ROLE_PREMIUM,
+            'name' => __('Premium user'),
+            'description' => 'Full access to financial planning tools',
+            'is_system' => true,
+            'capabilities' => [
+                'currencies_limit' => null,
+                'goals_limit' => null,
+                'loans_limit' => null,
+                'categories_limit' => null,
+                'scheduled_payments_limit' => null,
+                'cashflow_rules_edit' => true,
+            ],
+        ],
+        ROLE_ADMIN => [
+            'slug' => ROLE_ADMIN,
+            'name' => __('Administrator'),
+            'description' => 'Administrative access to manage the platform',
+            'is_system' => true,
+            'capabilities' => [
+                'currencies_limit' => null,
+                'goals_limit' => null,
+                'loans_limit' => null,
+                'categories_limit' => null,
+                'scheduled_payments_limit' => null,
+                'cashflow_rules_edit' => false,
+            ],
+        ],
+    ];
+}
+
+function role_definitions(bool $refresh = false): array
+{
+    static $cache;
+
+    if ($refresh) {
+        $cache = null;
+    }
+
+    if ($cache !== null) {
+        return $cache;
+    }
+
+    $definitions = role_default_definitions();
+
+    global $pdo;
+    if (!isset($pdo) || !($pdo instanceof PDO)) {
+        return $cache = $definitions;
+    }
+
+    try {
+        $stmt = $pdo->query('SELECT slug, name, description, is_system, capabilities FROM roles');
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $slug = strtolower(trim((string)($row['slug'] ?? '')));
+            if ($slug === '') {
+                continue;
+            }
+
+            $caps = [];
+            $rawCaps = $row['capabilities'] ?? [];
+            if (is_string($rawCaps)) {
+                $decoded = json_decode($rawCaps, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    $caps = $decoded;
+                }
+            } elseif (is_array($rawCaps)) {
+                $caps = $rawCaps;
+            }
+
+            $definitions[$slug] = [
+                'slug' => $slug,
+                'name' => (string)($row['name'] ?? $slug),
+                'description' => $row['description'] ?? null,
+                'is_system' => (bool)($row['is_system'] ?? false),
+                'capabilities' => $caps,
+            ];
+        }
+    } catch (Throwable $e) {
+        // ignore and fall back to defaults
+    }
+
+    return $cache = $definitions;
+}
+
+function role_definition(string $slug): ?array
+{
+    $slug = strtolower(trim($slug));
+    $definitions = role_definitions();
+
+    return $definitions[$slug] ?? null;
+}
+
+function reset_role_definitions_cache(): void
+{
+    role_definitions(true);
+}
+
+function role_capability(string $role, string $capability, $default = null)
+{
+    $definition = role_definition($role);
+    if (!$definition) {
+        return $default;
+    }
+
+    $caps = $definition['capabilities'] ?? [];
+    if (!is_array($caps)) {
+        return $default;
+    }
+
+    return $caps[$capability] ?? $default;
+}
+
+function role_can(string $capability, ?string $role = null): bool
+{
+    $role = $role ? strtolower(trim($role)) : current_user_role();
+    $value = role_capability($role, $capability, null);
+
+    if ($value === null) {
+        return true;
+    }
+
+    if (is_bool($value)) {
+        return $value;
+    }
+
+    if (is_numeric($value)) {
+        return (int)$value !== 0;
+    }
+
+    return (bool)$value;
+}
+
+function role_limit_for(string $role, string $resource): ?int
+{
+    $map = [
+        'currencies' => 'currencies_limit',
+        'goals_active' => 'goals_limit',
+        'loans_active' => 'loans_limit',
+        'categories' => 'categories_limit',
+        'scheduled_active' => 'scheduled_payments_limit',
+    ];
+
+    $capabilityKey = $map[$resource] ?? $resource;
+    $value = role_capability($role, $capabilityKey, null);
+
+    if ($value === null || $value === '') {
+        return null;
+    }
+
+    if (is_numeric($value)) {
+        $int = (int)$value;
+        return $int > 0 ? $int : null;
+    }
+
+    if (is_bool($value)) {
+        return $value ? null : 0;
+    }
+
+    return null;
+}
+
+function user_limit_for(string $resource): ?int
+{
+    return role_limit_for(current_user_role(), $resource);
+}
+
 const USER_STATUS_ACTIVE = 'active';
 const USER_STATUS_INACTIVE = 'inactive';
 
@@ -220,16 +403,13 @@ function normalize_user_role($role, bool $allowGuest = false): string
 {
     $role = strtolower(trim((string)$role));
 
-    if ($role === ROLE_ADMIN) {
-        return ROLE_ADMIN;
+    if ($allowGuest && $role === ROLE_GUEST) {
+        return ROLE_GUEST;
     }
 
-    if ($role === ROLE_PREMIUM) {
-        return ROLE_PREMIUM;
-    }
-
-    if ($role === ROLE_FREE) {
-        return ROLE_FREE;
+    $definition = role_definition($role);
+    if ($definition) {
+        return $definition['slug'];
     }
 
     return $allowGuest ? ROLE_GUEST : ROLE_FREE;
@@ -341,15 +521,7 @@ function log_user_login_activity(PDO $pdo, int $userId, bool $success, string $e
 
 function free_user_limit_for(string $resource): ?int
 {
-    static $limits = [
-        'currencies'       => 1,
-        'goals_active'     => 2,
-        'loans_active'     => 2,
-        'categories'       => 10,
-        'scheduled_active' => 2,
-    ];
-
-    return $limits[$resource] ?? null;
+    return role_limit_for(ROLE_FREE, $resource);
 }
 
 function free_user_resource_count(PDO $pdo, int $userId, string $resource): int
@@ -384,18 +556,14 @@ function free_user_resource_count(PDO $pdo, int $userId, string $resource): int
     return 0;
 }
 
-function free_user_limit_guard(PDO $pdo, string $resource, string $redirect, string $message, ?callable $counter = null, ?string $flashType = 'error'): void
+function user_limit_guard(PDO $pdo, string $resource, string $redirect, string $message, ?callable $counter = null, ?string $flashType = 'error'): void
 {
-    if (!is_free_user()) {
-        return;
-    }
-
     $userId = uid();
     if ($userId <= 0) {
         return;
     }
 
-    $limit = free_user_limit_for($resource);
+    $limit = user_limit_for($resource);
     if ($limit === null) {
         return;
     }
@@ -408,6 +576,11 @@ function free_user_limit_guard(PDO $pdo, string $resource, string $redirect, str
         }
         redirect($redirect);
     }
+}
+
+function free_user_limit_guard(PDO $pdo, string $resource, string $redirect, string $message, ?callable $counter = null, ?string $flashType = 'error'): void
+{
+    user_limit_guard($pdo, $resource, $redirect, $message, $counter, $flashType);
 }
 
 function admin_allowed_path(string $path, string $method = 'GET'): bool

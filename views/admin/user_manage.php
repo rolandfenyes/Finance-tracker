@@ -1,6 +1,8 @@
 <?php
 $user = $user ?? [];
 $roleOptions = $roleOptions ?? [];
+$roleDefinition = $roleDefinition ?? null;
+$roleCapabilityFields = $roleCapabilityFields ?? [];
 $statusOptions = $statusOptions ?? [];
 $activity = $activity ?? [];
 $subscriptions = $subscriptions ?? [];
@@ -23,11 +25,7 @@ $email = $user['email'] ?? '';
 $role = normalize_user_role($user['role'] ?? null);
 $status = normalize_user_status($user['status'] ?? null);
 $verified = !empty($user['email_verified_at']);
-$roleLabel = match ($role) {
-    ROLE_ADMIN => __('Administrator'),
-    ROLE_PREMIUM => __('Premium user'),
-    default => __('Free user'),
-};
+$roleLabel = $roleDefinition['name'] ?? ($roleOptions[$role] ?? ucfirst($role));
 $statusLabel = $status === USER_STATUS_ACTIVE ? __('Active') : __('Inactive');
 $verificationLabel = $verified ? __('Verified') : __('Unverified');
 $createdAt = $user['created_at'] ?? null;
@@ -177,6 +175,35 @@ foreach ($invoices as $invoice) {
                 </dt>
                 <dd class="mt-1">
                   <?= htmlspecialchars(strtoupper((string)$language)) ?>
+                </dd>
+              </div>
+            <?php endif; ?>
+            <?php if ($roleDefinition && $roleCapabilityFields): ?>
+              <?php $roleCaps = $roleDefinition['capabilities'] ?? []; ?>
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  <?= __('Role capabilities') ?>
+                </dt>
+                <dd class="mt-2 grid gap-2">
+                  <?php foreach ($roleCapabilityFields as $key => $fieldMeta): ?>
+                    <?php
+                      $capType = $fieldMeta['type'] ?? 'number';
+                      $capValue = $roleCaps[$key] ?? null;
+                      if ($capType === 'boolean') {
+                        $capDisplay = $capValue ? __('Enabled') : __('Disabled');
+                      } elseif ($capValue === null || $capValue === '') {
+                        $capDisplay = __('Unlimited');
+                      } else {
+                        $capDisplay = (string)(int)$capValue;
+                      }
+                    ?>
+                    <div class="flex items-center justify-between rounded-xl bg-slate-100/60 px-3 py-2 text-xs font-medium text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
+                      <span><?= htmlspecialchars((string)($fieldMeta['label'] ?? $key)) ?></span>
+                      <span class="text-slate-900 dark:text-slate-100">
+                        <?= htmlspecialchars($capDisplay) ?>
+                      </span>
+                    </div>
+                  <?php endforeach; ?>
                 </dd>
               </div>
             <?php endif; ?>

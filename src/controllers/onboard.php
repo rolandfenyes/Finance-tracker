@@ -147,7 +147,7 @@ function onboard_categories_submit(PDO $pdo){
         if (trim((string)$label) !== '') { $incoming++; }
       }
       if ($existingCount + $incoming > $limit) {
-        $_SESSION['flash'] = __('The Free plan includes up to ten custom categories. Deselect some items or upgrade to Premium.');
+        $_SESSION['flash'] = __('Your current plan cannot add more custom categories. Deselect some items or adjust the role capabilities.');
         $_SESSION['flash_type'] = 'error';
         redirect('/onboard/categories');
       }
@@ -276,7 +276,7 @@ function onboard_currencies_add(PDO $pdo) {
       $countStmt = $pdo->prepare('SELECT COUNT(*) FROM user_currencies WHERE user_id=?');
       $countStmt->execute([$u]);
       if ((int)$countStmt->fetchColumn() >= $limit) {
-        $_SESSION['flash'] = __('The Free plan includes one currency. Upgrade to Premium to add more.');
+        $_SESSION['flash'] = __('Your current plan cannot add more currencies. Update the role capabilities to increase this limit.');
         $_SESSION['flash_type'] = 'error';
         redirect('/onboard/currencies');
       }
@@ -560,7 +560,7 @@ function onboard_categories_add(PDO $pdo){
     $pdo,
     'categories',
     '/onboard/categories',
-    __('The Free plan includes up to ten custom categories. Upgrade to Premium to add more.')
+    __('Your current plan cannot add more custom categories. Update the role capabilities to increase this limit.')
   );
 
   $kind  = (($_POST['kind'] ?? '') === 'spending') ? 'spending' : 'income';

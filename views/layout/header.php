@@ -1120,11 +1120,13 @@ $ogUrl = $scheme . '://' . $host . $currentRequestPath;
       $desktopItems = [
         ['href'=>'/admin', 'label'=>'Admin dashboard', 'match'=>'#^/admin(?:/.*)?$#', 'icon' => 'shield'],
         ['href'=>'/admin/users', 'label'=>'Users', 'match'=>'#^/admin/users(?:/.*)?$#', 'icon' => 'users'],
+        ['href'=>'/admin/roles', 'label'=>'Roles', 'match'=>'#^/admin/roles(?:/.*)?$#', 'icon' => 'badge-check'],
         ['href'=>'/admin/migrations', 'label'=>'Migrations', 'match'=>'#^/(admin|maintenance)/migrations$#', 'icon' => 'database'],
       ];
       $mobileNavItems = [
         ['href'=>'/admin', 'label'=>'Admin', 'match'=>'#^/admin(?:/.*)?$#', 'icon' => 'shield'],
         ['href'=>'/admin/users', 'label'=>'Users', 'match'=>'#^/admin/users(?:/.*)?$#', 'icon' => 'users'],
+        ['href'=>'/admin/roles', 'label'=>'Roles', 'match'=>'#^/admin/roles(?:/.*)?$#', 'icon' => 'badge-check'],
         ['href'=>'/admin/migrations', 'label'=>'Migrations', 'match'=>'#^/(admin|maintenance)/migrations$#', 'icon' => 'database'],
       ];
     } else {

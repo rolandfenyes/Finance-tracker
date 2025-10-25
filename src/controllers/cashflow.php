@@ -21,8 +21,8 @@ function cashflow_index(PDO $pdo) {
 
 function cashflow_add(PDO $pdo) {
     verify_csrf(); require_login(); $u = uid();
-    if (is_free_user()) {
-        $_SESSION['flash'] = __('Upgrade to Premium to manage cashflow rules.');
+    if (!role_can('cashflow_rules_edit')) {
+        $_SESSION['flash'] = __('This role cannot manage cashflow rules. Update the capabilities to enable editing.');
         $_SESSION['flash_type'] = 'error';
         redirect('/settings/cashflow');
     }
@@ -36,8 +36,8 @@ function cashflow_add(PDO $pdo) {
 
 function cashflow_edit(PDO $pdo) {
     verify_csrf(); require_login(); $u = uid();
-    if (is_free_user()) {
-        $_SESSION['flash'] = __('Upgrade to Premium to manage cashflow rules.');
+    if (!role_can('cashflow_rules_edit')) {
+        $_SESSION['flash'] = __('This role cannot manage cashflow rules. Update the capabilities to enable editing.');
         $_SESSION['flash_type'] = 'error';
         redirect('/settings/cashflow');
     }
@@ -52,8 +52,8 @@ function cashflow_edit(PDO $pdo) {
 
 function cashflow_delete(PDO $pdo) {
     verify_csrf(); require_login(); $u = uid();
-    if (is_free_user()) {
-        $_SESSION['flash'] = __('Upgrade to Premium to manage cashflow rules.');
+    if (!role_can('cashflow_rules_edit')) {
+        $_SESSION['flash'] = __('This role cannot manage cashflow rules. Update the capabilities to enable editing.');
         $_SESSION['flash_type'] = 'error';
         redirect('/settings/cashflow');
     }

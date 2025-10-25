@@ -196,7 +196,7 @@ function loans_add(PDO $pdo){
     $pdo,
     'loans_active',
     '/loans',
-    __('The Free plan includes up to two active loans. Upgrade to Premium to add more loans.')
+    __('Your current plan cannot add more active loans. Update the role capabilities to increase this limit.')
   );
 
   $name        = trim($_POST['name'] ?? '');
@@ -263,7 +263,7 @@ function loans_add(PDO $pdo){
 
     $pdo->commit();
     $_SESSION['flash'] = $skipAutoScheduleForLimit
-      ? __('Loan saved. Upgrade to Premium to create more scheduled payments.')
+      ? __('Loan saved. Adjust the role capabilities to create more scheduled payments.')
       : 'Loan saved.';
   } catch (Throwable $e) {
     $pdo->rollBack();

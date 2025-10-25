@@ -65,7 +65,7 @@ function categories_add(PDO $pdo){
     $pdo,
     'categories',
     '/settings/categories',
-    __('The Free plan includes up to ten custom categories. Upgrade to Premium to add more.')
+    __('Your current plan cannot add more custom categories. Update the role capabilities to increase this limit.')
   );
   $kind  = ($_POST['kind'] ?? '') === 'spending' ? 'spending' : 'income';
   $label = trim($_POST['label'] ?? '');

@@ -102,7 +102,8 @@ function admin_update_role(PDO $pdo): void
 
     $userId = (int)($_POST['user_id'] ?? 0);
     $role = strtolower(trim((string)($_POST['role'] ?? '')));
-    $allowedRoles = [ROLE_FREE, ROLE_PREMIUM, ROLE_ADMIN];
+    $definitions = role_definitions();
+    $allowedRoles = array_values(array_filter(array_keys($definitions), static fn ($slug) => $slug !== ROLE_GUEST));
     $redirectTo = admin_normalize_redirect($_POST['redirect'] ?? null);
 
     if ($userId <= 0 || !in_array($role, $allowedRoles, true)) {
@@ -142,14 +143,48 @@ function admin_update_role(PDO $pdo): void
     }
 
     $email = $user['email'] ?? '';
-    $message = match ($role) {
-        ROLE_ADMIN => __(':email is now an administrator.', ['email' => $email]),
-        ROLE_PREMIUM => __(':email is now a premium user.', ['email' => $email]),
-        default => __(':email is now a free user.', ['email' => $email]),
-    };
+    $roleDefinition = $definitions[$role] ?? null;
+    $roleName = $roleDefinition['name'] ?? ucfirst($role);
+    $message = __(':email is now assigned to :role.', ['email' => $email, 'role' => $roleName]);
 
     $_SESSION['flash_success'] = $message;
     redirect($redirectTo);
+}
+
+function admin_role_capability_fields(): array
+{
+    return [
+        'currencies_limit' => [
+            'type' => 'number',
+            'label' => __('Currency limit'),
+            'help' => __('Leave blank for unlimited.'),
+        ],
+        'goals_limit' => [
+            'type' => 'number',
+            'label' => __('Active goals limit'),
+            'help' => __('Leave blank for unlimited.'),
+        ],
+        'loans_limit' => [
+            'type' => 'number',
+            'label' => __('Active loans limit'),
+            'help' => __('Leave blank for unlimited.'),
+        ],
+        'categories_limit' => [
+            'type' => 'number',
+            'label' => __('Custom categories limit'),
+            'help' => __('Leave blank for unlimited.'),
+        ],
+        'scheduled_payments_limit' => [
+            'type' => 'number',
+            'label' => __('Scheduled payments limit'),
+            'help' => __('Leave blank for unlimited.'),
+        ],
+        'cashflow_rules_edit' => [
+            'type' => 'boolean',
+            'label' => __('Allow editing cashflow rules'),
+            'help' => __('Enable this option so the role can manage cashflow rules.'),
+        ],
+    ];
 }
 function admin_users_index(PDO $pdo): void
 {
@@ -161,6 +196,15 @@ function admin_users_index(PDO $pdo): void
     $roleFilter = trim((string)($_GET['role'] ?? ''));
     $statusFilter = trim((string)($_GET['status'] ?? ''));
     $verifiedFilter = trim((string)($_GET['verified'] ?? ''));
+
+    $roleDefinitions = role_definitions();
+    $roleOptions = [];
+    foreach ($roleDefinitions as $slug => $meta) {
+        if ($slug === ROLE_GUEST) {
+            continue;
+        }
+        $roleOptions[$slug] = $meta['name'] ?? ucfirst($slug);
+    }
 
     $where = [];
     $params = [];
@@ -174,8 +218,8 @@ function admin_users_index(PDO $pdo): void
 
     $roleApplied = '';
     if ($roleFilter !== '') {
-        $normalized = normalize_user_role($roleFilter, true);
-        if (in_array($normalized, [ROLE_FREE, ROLE_PREMIUM, ROLE_ADMIN], true)) {
+        $normalized = strtolower($roleFilter);
+        if (isset($roleOptions[$normalized])) {
             $roleApplied = $normalized;
             $where[] = 'LOWER(u.role) = ?';
             $params[] = $roleApplied;
@@ -278,12 +322,6 @@ SQL;
         : null;
 
     $currentUrl = admin_normalize_redirect($_SERVER['REQUEST_URI'] ?? '/admin/users');
-
-    $roleOptions = [
-        ROLE_FREE => __('Free user'),
-        ROLE_PREMIUM => __('Premium user'),
-        ROLE_ADMIN => __('Administrator'),
-    ];
 
     $statusOptions = [
         USER_STATUS_ACTIVE => __('Active'),
@@ -541,11 +579,15 @@ function admin_users_manage(PDO $pdo): void
         }
     }
 
-    $roleOptions = [
-        ROLE_FREE => __('Free user'),
-        ROLE_PREMIUM => __('Premium user'),
-        ROLE_ADMIN => __('Administrator'),
-    ];
+    $roleDefinitions = role_definitions();
+    $roleOptions = [];
+    foreach ($roleDefinitions as $slug => $meta) {
+        if ($slug === ROLE_GUEST) {
+            continue;
+        }
+        $roleOptions[$slug] = $meta['name'] ?? ucfirst($slug);
+    }
+    $roleMeta = $roleDefinitions[$user['role']] ?? null;
 
     $statusOptions = [
         USER_STATUS_ACTIVE => __('Active'),
@@ -597,6 +639,8 @@ function admin_users_manage(PDO $pdo): void
         'pageTitle' => __('Manage user'),
         'user' => $user,
         'roleOptions' => $roleOptions,
+        'roleDefinition' => $roleMeta,
+        'roleCapabilityFields' => admin_role_capability_fields(),
         'statusOptions' => $statusOptions,
         'activity' => $activity,
         'subscriptions' => $subscriptions,
@@ -1129,4 +1173,372 @@ function admin_users_feedback_respond(PDO $pdo): void
     }
 
     redirect($redirectTo);
+}
+
+function admin_roles_index(PDO $pdo): void
+{
+    require_admin();
+
+    $fields = admin_role_capability_fields();
+    $roles = [];
+
+    try {
+        $sql = <<<SQL
+SELECT r.id, r.slug, r.name, r.description, r.is_system, r.capabilities, r.created_at, r.updated_at,
+       COALESCE(u.user_count, 0) AS user_count
+  FROM roles r
+  LEFT JOIN (
+      SELECT LOWER(role) AS slug, COUNT(*) AS user_count
+        FROM users
+       GROUP BY LOWER(role)
+  ) u ON u.slug = LOWER(r.slug)
+ ORDER BY LOWER(r.name)
+SQL;
+        $stmt = $pdo->query($sql);
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $capabilities = [];
+            $raw = $row['capabilities'] ?? [];
+            if (is_string($raw)) {
+                $decoded = json_decode($raw, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    $raw = $decoded;
+                } else {
+                    $raw = [];
+                }
+            }
+            if (!is_array($raw)) {
+                $raw = [];
+            }
+            foreach ($fields as $key => $meta) {
+                $type = $meta['type'] ?? 'number';
+                $value = $raw[$key] ?? null;
+                if ($type === 'boolean') {
+                    $capabilities[$key] = (bool)$value;
+                } elseif ($value === null || $value === '') {
+                    $capabilities[$key] = null;
+                } else {
+                    $capabilities[$key] = (int)$value;
+                }
+            }
+
+            $roles[] = [
+                'id' => (int)($row['id'] ?? 0),
+                'slug' => (string)($row['slug'] ?? ''),
+                'name' => (string)($row['name'] ?? ''),
+                'description' => $row['description'] ?? null,
+                'is_system' => (bool)($row['is_system'] ?? false),
+                'capabilities' => $capabilities,
+                'created_at' => $row['created_at'] ?? null,
+                'updated_at' => $row['updated_at'] ?? null,
+                'user_count' => (int)($row['user_count'] ?? 0),
+            ];
+        }
+    } catch (Throwable $e) {
+        $roles = [];
+    }
+
+    view('admin/roles', [
+        'pageTitle' => __('Role management'),
+        'roles' => $roles,
+        'fields' => $fields,
+    ]);
+}
+
+function admin_roles_create(PDO $pdo): void
+{
+    require_admin();
+
+    $fields = admin_role_capability_fields();
+    $role = [
+        'id' => null,
+        'slug' => '',
+        'name' => '',
+        'description' => '',
+        'is_system' => false,
+        'capabilities' => array_fill_keys(array_keys($fields), null),
+    ];
+
+    view('admin/role_form', [
+        'pageTitle' => __('Create role'),
+        'role' => $role,
+        'fields' => $fields,
+        'mode' => 'create',
+    ]);
+}
+
+function admin_normalize_role_slug(string $slug): string
+{
+    $slug = strtolower(trim($slug));
+    return $slug;
+}
+
+function admin_parse_role_capabilities(array $input, array $fields): array
+{
+    $capabilities = [];
+    foreach ($fields as $key => $meta) {
+        $type = $meta['type'] ?? 'number';
+        $value = $input[$key] ?? null;
+        if ($type === 'boolean') {
+            $capabilities[$key] = !empty($value);
+            continue;
+        }
+
+        $value = trim((string)$value);
+        if ($value === '') {
+            $capabilities[$key] = null;
+            continue;
+        }
+
+        $int = (int)$value;
+        $capabilities[$key] = $int > 0 ? $int : null;
+    }
+
+    return $capabilities;
+}
+
+function admin_roles_store(PDO $pdo): void
+{
+    require_admin();
+    verify_csrf();
+
+    $fields = admin_role_capability_fields();
+    $name = trim((string)($_POST['name'] ?? ''));
+    $slugInput = admin_normalize_role_slug((string)($_POST['slug'] ?? ''));
+    $description = trim((string)($_POST['description'] ?? ''));
+
+    if ($name === '') {
+        $_SESSION['flash'] = __('Name is required.');
+        redirect('/admin/roles/create');
+    }
+
+    if ($slugInput === '') {
+        $_SESSION['flash'] = __('Slug is required.');
+        redirect('/admin/roles/create');
+    }
+
+    if (!preg_match('/^[a-z0-9_-]+$/', $slugInput)) {
+        $_SESSION['flash'] = __('Slug may only contain lowercase letters, numbers, hyphens, and underscores.');
+        redirect('/admin/roles/create');
+    }
+
+    $existing = role_definition($slugInput);
+    if ($existing !== null) {
+        $_SESSION['flash'] = __('Slug must be unique.');
+        redirect('/admin/roles/create');
+    }
+
+    $capabilities = admin_parse_role_capabilities($_POST['capabilities'] ?? [], $fields);
+
+    try {
+        $stmt = $pdo->prepare('INSERT INTO roles (slug, name, description, capabilities, is_system) VALUES (?, ?, ?, ?::jsonb, FALSE)');
+        $stmt->execute([
+            $slugInput,
+            $name,
+            $description !== '' ? $description : null,
+            json_encode($capabilities, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        ]);
+    } catch (Throwable $e) {
+        $_SESSION['flash'] = __('Unable to create role.');
+        redirect('/admin/roles/create');
+    }
+
+    reset_role_definitions_cache();
+    $_SESSION['flash_success'] = __('Role created successfully.');
+    redirect('/admin/roles');
+}
+
+function admin_fetch_role(PDO $pdo, int $roleId): ?array
+{
+    $fields = admin_role_capability_fields();
+    $stmt = $pdo->prepare('SELECT id, slug, name, description, is_system, capabilities FROM roles WHERE id = ? LIMIT 1');
+    $stmt->execute([$roleId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$row) {
+        return null;
+    }
+
+    $raw = $row['capabilities'] ?? [];
+    if (is_string($raw)) {
+        $decoded = json_decode($raw, true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            $raw = $decoded;
+        } else {
+            $raw = [];
+        }
+    }
+    if (!is_array($raw)) {
+        $raw = [];
+    }
+
+    $capabilities = [];
+    foreach ($fields as $key => $meta) {
+        $type = $meta['type'] ?? 'number';
+        $value = $raw[$key] ?? null;
+        if ($type === 'boolean') {
+            $capabilities[$key] = (bool)$value;
+        } elseif ($value === null || $value === '') {
+            $capabilities[$key] = null;
+        } else {
+            $capabilities[$key] = (int)$value;
+        }
+    }
+
+    return [
+        'id' => (int)($row['id'] ?? 0),
+        'slug' => (string)($row['slug'] ?? ''),
+        'name' => (string)($row['name'] ?? ''),
+        'description' => $row['description'] ?? '',
+        'is_system' => (bool)($row['is_system'] ?? false),
+        'capabilities' => $capabilities,
+    ];
+}
+
+function admin_roles_edit(PDO $pdo): void
+{
+    require_admin();
+
+    $roleId = (int)($_GET['id'] ?? 0);
+    if ($roleId <= 0) {
+        $_SESSION['flash'] = __('Role not found.');
+        redirect('/admin/roles');
+    }
+
+    $role = admin_fetch_role($pdo, $roleId);
+    if (!$role) {
+        $_SESSION['flash'] = __('Role not found.');
+        redirect('/admin/roles');
+    }
+
+    view('admin/role_form', [
+        'pageTitle' => __('Edit role'),
+        'role' => $role,
+        'fields' => admin_role_capability_fields(),
+        'mode' => 'edit',
+    ]);
+}
+
+function admin_roles_update(PDO $pdo): void
+{
+    require_admin();
+    verify_csrf();
+
+    $fields = admin_role_capability_fields();
+    $roleId = (int)($_POST['role_id'] ?? 0);
+    if ($roleId <= 0) {
+        $_SESSION['flash'] = __('Role not found.');
+        redirect('/admin/roles');
+    }
+
+    $existing = admin_fetch_role($pdo, $roleId);
+    if (!$existing) {
+        $_SESSION['flash'] = __('Role not found.');
+        redirect('/admin/roles');
+    }
+
+    $name = trim((string)($_POST['name'] ?? ''));
+    $slugInput = admin_normalize_role_slug((string)($_POST['slug'] ?? $existing['slug']));
+    $description = trim((string)($_POST['description'] ?? ''));
+
+    if ($name === '') {
+        $_SESSION['flash'] = __('Name is required.');
+        redirect('/admin/roles/edit?id=' . $roleId);
+    }
+
+    if ($existing['is_system']) {
+        $slugInput = $existing['slug'];
+    } else {
+        if ($slugInput === '') {
+            $_SESSION['flash'] = __('Slug is required.');
+            redirect('/admin/roles/edit?id=' . $roleId);
+        }
+
+        if (!preg_match('/^[a-z0-9_-]+$/', $slugInput)) {
+            $_SESSION['flash'] = __('Slug may only contain lowercase letters, numbers, hyphens, and underscores.');
+            redirect('/admin/roles/edit?id=' . $roleId);
+        }
+
+        if ($slugInput !== $existing['slug']) {
+            $check = $pdo->prepare('SELECT 1 FROM roles WHERE slug = ? LIMIT 1');
+            $check->execute([$slugInput]);
+            if ($check->fetchColumn()) {
+                $_SESSION['flash'] = __('Slug must be unique.');
+                redirect('/admin/roles/edit?id=' . $roleId);
+            }
+        }
+    }
+
+    $capabilities = admin_parse_role_capabilities($_POST['capabilities'] ?? [], $fields);
+
+    try {
+        $pdo->beginTransaction();
+
+        if (!$existing['is_system'] && $slugInput !== $existing['slug']) {
+            $updateUsers = $pdo->prepare('UPDATE users SET role = ? WHERE role = ?');
+            $updateUsers->execute([$slugInput, $existing['slug']]);
+        }
+
+        $update = $pdo->prepare('UPDATE roles SET slug = ?, name = ?, description = ?, capabilities = ?::jsonb WHERE id = ?');
+        $update->execute([
+            $slugInput,
+            $name,
+            $description !== '' ? $description : null,
+            json_encode($capabilities, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            $roleId,
+        ]);
+
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        $_SESSION['flash'] = __('Unable to update role.');
+        redirect('/admin/roles/edit?id=' . $roleId);
+    }
+
+    reset_role_definitions_cache();
+    $_SESSION['flash_success'] = __('Role updated successfully.');
+    redirect('/admin/roles');
+}
+
+function admin_roles_delete(PDO $pdo): void
+{
+    require_admin();
+    verify_csrf();
+
+    $roleId = (int)($_POST['role_id'] ?? 0);
+    if ($roleId <= 0) {
+        $_SESSION['flash'] = __('Role not found.');
+        redirect('/admin/roles');
+    }
+
+    $role = admin_fetch_role($pdo, $roleId);
+    if (!$role) {
+        $_SESSION['flash'] = __('Role not found.');
+        redirect('/admin/roles');
+    }
+
+    if ($role['is_system']) {
+        $_SESSION['flash'] = __('Unable to delete a system role.');
+        redirect('/admin/roles');
+    }
+
+    $countStmt = $pdo->prepare('SELECT COUNT(*) FROM users WHERE LOWER(role) = LOWER(?)');
+    $countStmt->execute([$role['slug']]);
+    $count = (int)$countStmt->fetchColumn();
+    if ($count > 0) {
+        $_SESSION['flash'] = __('Role still has assigned users and cannot be deleted.');
+        redirect('/admin/roles');
+    }
+
+    try {
+        $delete = $pdo->prepare('DELETE FROM roles WHERE id = ?');
+        $delete->execute([$roleId]);
+    } catch (Throwable $e) {
+        $_SESSION['flash'] = __('Unable to delete role.');
+        redirect('/admin/roles');
+    }
+
+    reset_role_definitions_cache();
+    $_SESSION['flash_success'] = __('Role removed successfully.');
+    redirect('/admin/roles');
 }

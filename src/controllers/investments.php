@@ -641,7 +641,7 @@ function investments_add(PDO $pdo): void
         $pdo->commit();
         $message = __('Investment added.');
         if ($scheduleLimitWarning) {
-            $message .= ' ' . __('Upgrade to Premium to create more scheduled payments.');
+            $message .= ' ' . __('Adjust the role capabilities to allow additional scheduled payments.');
         }
         $_SESSION['flash'] = $message;
     } catch (Throwable $e) {
@@ -844,7 +844,7 @@ function investments_schedule_create(PDO $pdo): void
         $pdo,
         'scheduled_active',
         '/investments',
-        __('The Free plan includes up to two scheduled payments. Upgrade to Premium to create more.')
+        __('Your current plan cannot add more scheduled payments. Update the role capabilities to increase this limit.')
     );
     $investmentId = (int)($_POST['investment_id'] ?? 0);
     if ($investmentId <= 0) {

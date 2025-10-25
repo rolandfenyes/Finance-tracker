@@ -24,16 +24,14 @@ function currency_add(PDO $pdo){
     $exists->execute([$code]);
     if (!$exists->fetchColumn()) return;
 
-    if (is_free_user()) {
-        $limit = free_user_limit_for('currencies');
-        if ($limit !== null) {
-            $has = $pdo->prepare('SELECT COUNT(*) FROM user_currencies WHERE user_id=?');
-            $has->execute([$u]);
-            if ((int)$has->fetchColumn() >= $limit) {
-                $_SESSION['flash'] = __('The Free plan includes one currency. Upgrade to Premium to add more.');
-                $_SESSION['flash_type'] = 'error';
-                redirect('/settings/currencies');
-            }
+    $limit = user_limit_for('currencies');
+    if ($limit !== null) {
+        $has = $pdo->prepare('SELECT COUNT(*) FROM user_currencies WHERE user_id=?');
+        $has->execute([$u]);
+        if ((int)$has->fetchColumn() >= $limit) {
+            $_SESSION['flash'] = __('Your current plan cannot add more currencies. Update the role capabilities to increase this limit.');
+            $_SESSION['flash_type'] = 'error';
+            redirect('/settings/currencies');
         }
     }
 

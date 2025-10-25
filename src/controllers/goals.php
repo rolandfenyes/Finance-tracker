@@ -115,7 +115,7 @@ function goals_add(PDO $pdo){
     $pdo,
     'goals_active',
     '/goals',
-    __('The Free plan includes up to two active goals. Upgrade to Premium to add more goals.')
+    __('Your current plan cannot add more active goals. Update the role capabilities to increase this limit.')
   );
 
   $title   = trim($_POST['title'] ?? '');
@@ -302,7 +302,7 @@ function goals_create_schedule(PDO $pdo){
     $pdo,
     'scheduled_active',
     '/scheduled',
-    __('The Free plan includes up to two scheduled payments. Upgrade to Premium to create more.')
+    __('Your current plan cannot add more scheduled payments. Update the role capabilities to increase this limit.')
   );
 
   // Accept BOTH the new names (your form) and the older sched_* names

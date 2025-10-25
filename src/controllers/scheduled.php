@@ -77,7 +77,7 @@ function scheduled_add(PDO $pdo){
     $pdo,
     'scheduled_active',
     '/scheduled',
-    __('The Free plan includes up to two scheduled payments. Upgrade to Premium to create more.')
+    __('Your current plan cannot add more scheduled payments. Update the role capabilities to increase this limit.')
   );
   $title = trim($_POST['title'] ?? '');
   $amount = (float)($_POST['amount'] ?? 0);

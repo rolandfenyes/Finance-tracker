@@ -999,6 +999,43 @@ switch ($path) {
         }
         break;
 
+    case '/admin/roles':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_roles_store($pdo);
+        } else {
+            admin_roles_index($pdo);
+        }
+        break;
+
+    case '/admin/roles/create':
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_roles_create($pdo);
+        break;
+
+    case '/admin/roles/edit':
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_roles_edit($pdo);
+        break;
+
+    case '/admin/roles/update':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_roles_update($pdo);
+        } else {
+            redirect('/admin/roles');
+        }
+        break;
+
+    case '/admin/roles/delete':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_roles_delete($pdo);
+        } else {
+            redirect('/admin/roles');
+        }
+        break;
+
     case '/more':
         require_login();
         require __DIR__ . '/src/controllers/more.php';

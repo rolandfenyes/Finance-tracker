@@ -1,5 +1,5 @@
 <section class="max-w-3xl mx-auto">
-  <?php $cashflowReadOnly = is_free_user(); ?>
+  <?php $cashflowReadOnly = !role_can('cashflow_rules_edit'); ?>
   <div class="card space-y-6">
     <div class="flex items-center justify-between">
       <h1 class="text-xl font-semibold"><?= __('Cashflow Rules') ?></h1>
@@ -41,9 +41,9 @@
         <div class="flex items-start gap-3">
           <i data-lucide="sparkles" class="mt-0.5 h-5 w-5"></i>
           <div>
-            <p class="font-semibold"><?= __('Premium feature') ?></p>
+            <p class="font-semibold"><?= __('Restricted feature') ?></p>
             <p class="mt-1 leading-relaxed">
-              <?= __('Upgrade to Premium to add, edit, or remove cashflow rules and envelope allocations.') ?>
+              <?= __('Adjust this role\'s capabilities to add, edit, or remove cashflow rules and envelope allocations.') ?>
             </p>
           </div>
         </div>
