@@ -6,9 +6,6 @@ $statusOptions = $statusOptions ?? [];
 $verifiedOptions = $verifiedOptions ?? [];
 $pagination = $pagination ?? ['page' => 1, 'pages' => 1, 'total' => 0];
 $currentUrl = $currentUrl ?? '/admin/users';
-$focusId = (int)($focusId ?? 0);
-$focusUser = $focusUser ?? null;
-$focusActivity = $focusActivity ?? [];
 ?>
 
 <div class="mx-auto w-full max-w-6xl space-y-6 pb-12">
@@ -138,7 +135,6 @@ $focusActivity = $focusActivity ?? [];
             <?php if ($users): ?>
               <?php foreach ($users as $user):
                 $userId = (int)($user['id'] ?? 0);
-                $rowFocus = $focusId === $userId;
                 $displayName = trim($user['full_name'] ?? '') ?: ($user['email'] ?? __('Unknown'));
                 $email = $user['email'] ?? '';
                 $role = normalize_user_role($user['role'] ?? null);
@@ -160,17 +156,12 @@ $focusActivity = $focusActivity ?? [];
                   ROLE_PREMIUM => __('Premium user'),
                   default => __('Free user'),
                 };
-                $activityQuery = http_build_query(array_filter([
-                  'q' => $filters['search'] ?? null,
-                  'role' => $filters['role'] ?? null,
-                  'status' => $filters['status'] ?? null,
-                  'verified' => $filters['verified'] ?? null,
-                  'page' => $filters['page'] ?? null,
-                  'focus' => $userId,
-                ], fn($value) => $value !== null && $value !== '' && $value !== false), '', '&', PHP_QUERY_RFC3986);
-                $activityUrl = '/admin/users' . ($activityQuery !== '' ? '?' . $activityQuery : '');
+                $manageUrl = '/admin/users/manage?id=' . $userId;
+                if ($currentUrl !== '') {
+                  $manageUrl .= '&return=' . rawurlencode($currentUrl);
+                }
               ?>
-                <tr class="transition hover:bg-brand-50/40 dark:hover:bg-slate-800/30 <?= $rowFocus ? 'bg-brand-50/30 dark:bg-slate-800/50' : '' ?>">
+                <tr class="transition hover:bg-brand-50/40 dark:hover:bg-slate-800/30">
                   <td class="px-4 py-4 align-middle text-sm font-medium text-slate-900 dark:text-slate-100">
                     <div class="flex flex-col">
                       <span><?= htmlspecialchars($displayName) ?></span>
@@ -183,24 +174,10 @@ $focusActivity = $focusActivity ?? [];
                     <span class="break-all font-mono text-xs sm:text-sm"><?= htmlspecialchars($email) ?></span>
                   </td>
                   <td class="px-4 py-4 align-middle text-sm text-slate-600 dark:text-slate-300">
-                    <form action="/admin/users/role" method="post" class="flex items-center gap-2">
-                      <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-                      <input type="hidden" name="user_id" value="<?= $userId ?>" />
-                      <input type="hidden" name="redirect" value="<?= htmlspecialchars($currentUrl) ?>" />
-                      <select
-                        name="role"
-                        class="rounded-2xl border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/40 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200"
-                      >
-                        <?php foreach ($roleOptions as $value => $label): ?>
-                          <option value="<?= htmlspecialchars($value) ?>" <?= $role === $value ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($label) ?>
-                          </option>
-                        <?php endforeach; ?>
-                      </select>
-                      <button class="btn btn-muted whitespace-nowrap">
-                        <?= __('Update') ?>
-                      </button>
-                    </form>
+                    <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold <?= $roleBadgeClass ?>">
+                      <i data-lucide="<?= $role === ROLE_ADMIN ? 'shield-check' : ($role === ROLE_PREMIUM ? 'crown' : 'user') ?>" class="h-3.5 w-3.5"></i>
+                      <?= htmlspecialchars($roleLabel) ?>
+                    </span>
                   </td>
                   <td class="px-4 py-4 align-middle text-sm text-slate-600 dark:text-slate-300">
                     <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold <?= $statusBadgeClass ?>">
@@ -227,75 +204,13 @@ $focusActivity = $focusActivity ?? [];
                       <?php if (!empty($user['last_login_ip'])): ?>
                         <span class="text-xs text-slate-500 dark:text-slate-400"><?= __('IP address') ?>: <?= htmlspecialchars($user['last_login_ip']) ?></span>
                       <?php endif; ?>
-                      <a class="text-xs font-semibold text-brand-600 hover:underline dark:text-brand-200" href="<?= htmlspecialchars($activityUrl) ?>">
-                        <?= __('View login activity') ?>
-                      </a>
                     </div>
                   </td>
                   <td class="px-4 py-4 align-middle text-right text-sm">
-                    <details class="group inline-block text-left">
-                      <summary class="flex cursor-pointer items-center justify-end gap-2 text-xs font-semibold text-slate-600 transition hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-200">
-                        <span><?= __('Actions') ?></span>
-                        <i data-lucide="chevron-down" class="h-3.5 w-3.5 transition group-open:rotate-180"></i>
-                      </summary>
-                      <div class="mt-3 min-w-[16rem] space-y-2 rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-lg dark:border-slate-700 dark:bg-slate-900/90">
-                        <form action="/admin/users/reset-password" method="post" class="space-y-2">
-                          <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-                          <input type="hidden" name="user_id" value="<?= $userId ?>" />
-                          <input type="hidden" name="redirect" value="<?= htmlspecialchars($currentUrl) ?>" />
-                          <button class="btn btn-muted w-full justify-start gap-2">
-                            <i data-lucide="key-round" class="h-4 w-4"></i>
-                            <?= __('Reset password') ?>
-                          </button>
-                        </form>
-
-                        <?php if (!$verified): ?>
-                          <form action="/admin/users/resend-verification" method="post" class="space-y-2">
-                            <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-                            <input type="hidden" name="user_id" value="<?= $userId ?>" />
-                            <input type="hidden" name="redirect" value="<?= htmlspecialchars($currentUrl) ?>" />
-                            <button class="btn btn-muted w-full justify-start gap-2">
-                              <i data-lucide="send" class="h-4 w-4"></i>
-                              <?= __('Resend verification email') ?>
-                            </button>
-                          </form>
-                        <?php endif; ?>
-
-                        <form action="/admin/users/reset-email" method="post" class="space-y-2">
-                          <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-                          <input type="hidden" name="user_id" value="<?= $userId ?>" />
-                          <input type="hidden" name="redirect" value="<?= htmlspecialchars($currentUrl) ?>" />
-                          <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400" for="email-<?= $userId ?>">
-                            <?= __('Reset email') ?>
-                          </label>
-                          <div class="flex items-center gap-2">
-                            <input
-                              id="email-<?= $userId ?>"
-                              name="new_email"
-                              type="email"
-                              value=""
-                              placeholder="<?= htmlspecialchars($email) ?>"
-                              class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/40 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200"
-                              required
-                            />
-                            <button class="btn btn-muted whitespace-nowrap">
-                              <?= __('Update') ?>
-                            </button>
-                          </div>
-                        </form>
-
-                        <form action="/admin/users/status" method="post" class="space-y-2">
-                          <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-                          <input type="hidden" name="user_id" value="<?= $userId ?>" />
-                          <input type="hidden" name="redirect" value="<?= htmlspecialchars($currentUrl) ?>" />
-                          <input type="hidden" name="status" value="<?= $status === USER_STATUS_ACTIVE ? USER_STATUS_INACTIVE : USER_STATUS_ACTIVE ?>" />
-                          <button class="btn <?= $status === USER_STATUS_ACTIVE ? 'btn-danger' : 'btn-primary' ?> w-full justify-start gap-2">
-                            <i data-lucide="<?= $status === USER_STATUS_ACTIVE ? 'user-x' : 'user-check' ?>" class="h-4 w-4"></i>
-                            <?= $status === USER_STATUS_ACTIVE ? __('Deactivate') : __('Activate') ?>
-                          </button>
-                        </form>
-                      </div>
-                    </details>
+                    <a class="btn btn-primary inline-flex items-center justify-center gap-2" href="<?= htmlspecialchars($manageUrl) ?>">
+                      <i data-lucide="settings" class="h-4 w-4"></i>
+                      <span><?= __('Manage') ?></span>
+                    </a>
                   </td>
                 </tr>
               <?php endforeach; ?>
@@ -335,60 +250,4 @@ $focusActivity = $focusActivity ?? [];
     <?php endif; ?>
   </section>
 
-  <?php if ($focusUser): ?>
-    <?php $focusName = trim($focusUser['full_name'] ?? '') ?: ($focusUser['email'] ?? __('Unknown')); ?>
-    <section id="activity-<?= (int)$focusUser['id'] ?>" class="card">
-      <div class="card-kicker flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-        <i data-lucide="activity" class="h-4 w-4"></i>
-        <?= __('Login activity') ?>
-      </div>
-      <h2 class="card-title mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
-        <?= __('Recent access for :name', ['name' => $focusName]) ?>
-      </h2>
-      <p class="card-subtle mt-2 text-sm text-slate-600 dark:text-slate-300/80">
-        <?= __('Tracking the most recent successful sign-ins recorded for this account.') ?>
-      </p>
-
-      <?php if ($focusActivity): ?>
-        <ul class="mt-6 space-y-3">
-          <?php foreach ($focusActivity as $entry):
-            $when = $entry['created_at'] ?? null;
-            $whenLabel = $when ? date('Y-m-d H:i', strtotime((string)$when)) : __('Unknown');
-            $method = strtolower(trim((string)($entry['method'] ?? 'password')));
-            $methodLabel = match ($method) {
-              'passkey' => __('Passkey'),
-              'remember' => __('Remember me'),
-              default => __('Password'),
-            };
-          ?>
-            <li class="rounded-3xl border border-white/60 bg-white/70 p-4 shadow-sm backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/40">
-              <div class="flex flex-col gap-2">
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                  <span class="text-sm font-semibold text-slate-800 dark:text-slate-100"><?= htmlspecialchars($whenLabel) ?></span>
-                  <span class="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                    <i data-lucide="fingerprint" class="h-3.5 w-3.5"></i>
-                    <?= htmlspecialchars($methodLabel) ?>
-                  </span>
-                </div>
-                <?php if (!empty($entry['ip_address'])): ?>
-                  <span class="text-xs text-slate-500 dark:text-slate-400">
-                    <?= __('IP address') ?>: <?= htmlspecialchars($entry['ip_address']) ?>
-                  </span>
-                <?php endif; ?>
-                <?php if (!empty($entry['user_agent'])): ?>
-                  <span class="text-xs text-slate-400 dark:text-slate-500">
-                    <?= __('User agent') ?>: <?= htmlspecialchars($entry['user_agent']) ?>
-                  </span>
-                <?php endif; ?>
-              </div>
-            </li>
-          <?php endforeach; ?>
-        </ul>
-      <?php else: ?>
-        <div class="mt-6 rounded-3xl border border-slate-200 bg-slate-50/60 p-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-300">
-          <?= __('No login activity recorded yet.') ?>
-        </div>
-      <?php endif; ?>
-    </section>
-  <?php endif; ?>
-</div>
+  </div>

@@ -161,7 +161,6 @@ function admin_users_index(PDO $pdo): void
     $roleFilter = trim((string)($_GET['role'] ?? ''));
     $statusFilter = trim((string)($_GET['status'] ?? ''));
     $verifiedFilter = trim((string)($_GET['verified'] ?? ''));
-    $focusId = (int)($_GET['focus'] ?? 0);
 
     $where = [];
     $params = [];
@@ -270,9 +269,6 @@ SQL;
     if ($verifiedApplied !== '') {
         $queryBase['verified'] = $verifiedApplied;
     }
-    if ($focusId > 0) {
-        $queryBase['focus'] = $focusId;
-    }
 
     $prevUrl = $page > 1
         ? '/admin/users?' . http_build_query(array_merge($queryBase, ['page' => $page - 1]), '', '&', PHP_QUERY_RFC3986)
@@ -282,46 +278,6 @@ SQL;
         : null;
 
     $currentUrl = admin_normalize_redirect($_SERVER['REQUEST_URI'] ?? '/admin/users');
-
-    $focusUser = null;
-    $focusActivity = [];
-    if ($focusId > 0) {
-        foreach ($users as $candidate) {
-            if ($candidate['id'] === $focusId) {
-                $focusUser = $candidate;
-                break;
-            }
-        }
-
-        if ($focusUser === null) {
-            $detail = $pdo->prepare('SELECT id, email, full_name, role, status, email_verified_at, created_at FROM users WHERE id = ? LIMIT 1');
-            $detail->execute([$focusId]);
-            $row = $detail->fetch(PDO::FETCH_ASSOC);
-            if ($row) {
-                $focusUser = [
-                    'id' => (int)($row['id'] ?? 0),
-                    'email' => (string)($row['email'] ?? ''),
-                    'role' => normalize_user_role($row['role'] ?? null),
-                    'status' => normalize_user_status($row['status'] ?? null),
-                    'full_name' => pii_decrypt($row['full_name'] ?? null),
-                    'created_at' => $row['created_at'] ?? null,
-                    'email_verified_at' => $row['email_verified_at'] ?? null,
-                ];
-            }
-        }
-
-        $activityStmt = $pdo->prepare('SELECT success, method, ip_address, user_agent, created_at FROM user_login_activity WHERE user_id = ? ORDER BY created_at DESC LIMIT 25');
-        $activityStmt->execute([$focusId]);
-        while ($row = $activityStmt->fetch(PDO::FETCH_ASSOC)) {
-            $focusActivity[] = [
-                'success' => (bool)($row['success'] ?? false),
-                'method' => (string)($row['method'] ?? ''),
-                'ip_address' => $row['ip_address'] ?? null,
-                'user_agent' => $row['user_agent'] ?? null,
-                'created_at' => $row['created_at'] ?? null,
-            ];
-        }
-    }
 
     $roleOptions = [
         ROLE_FREE => __('Free user'),
@@ -360,9 +316,95 @@ SQL;
         'statusOptions' => $statusOptions,
         'verifiedOptions' => $verifiedOptions,
         'currentUrl' => $currentUrl,
-        'focusId' => $focusId,
-        'focusUser' => $focusUser,
-        'focusActivity' => $focusActivity,
+    ]);
+}
+
+function admin_users_manage(PDO $pdo): void
+{
+    require_admin();
+
+    $userId = (int)($_GET['id'] ?? 0);
+    if ($userId <= 0) {
+        $_SESSION['flash'] = __('User not found.');
+        redirect('/admin/users');
+    }
+
+    $currentUrl = admin_normalize_redirect($_SERVER['REQUEST_URI'] ?? '/admin/users/manage');
+    $returnParam = (string)($_GET['return'] ?? '');
+    $returnTo = $returnParam !== ''
+        ? admin_normalize_redirect(rawurldecode($returnParam), '/admin/users')
+        : '/admin/users';
+
+    $stmt = $pdo->prepare(
+        'SELECT u.id, u.email, u.full_name, u.role, u.status, u.email_verified_at, u.desired_language, u.created_at, u.updated_at, u.deactivated_at,
+                la.last_login_at, la.last_login_ip, la.last_login_user_agent
+           FROM users u
+           LEFT JOIN LATERAL (
+                SELECT created_at AS last_login_at, ip_address AS last_login_ip, user_agent AS last_login_user_agent
+                  FROM user_login_activity
+                 WHERE user_id = u.id AND success = TRUE
+                 ORDER BY created_at DESC
+                 LIMIT 1
+           ) la ON TRUE
+          WHERE u.id = ?
+          LIMIT 1'
+    );
+    $stmt->execute([$userId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$row) {
+        $_SESSION['flash'] = __('User not found.');
+        redirect('/admin/users');
+    }
+
+    $user = [
+        'id' => (int)($row['id'] ?? 0),
+        'email' => (string)($row['email'] ?? ''),
+        'full_name' => pii_decrypt($row['full_name'] ?? null),
+        'role' => normalize_user_role($row['role'] ?? null),
+        'status' => normalize_user_status($row['status'] ?? null),
+        'email_verified_at' => $row['email_verified_at'] ?? null,
+        'desired_language' => $row['desired_language'] ?? null,
+        'created_at' => $row['created_at'] ?? null,
+        'updated_at' => $row['updated_at'] ?? null,
+        'deactivated_at' => $row['deactivated_at'] ?? null,
+        'last_login_at' => $row['last_login_at'] ?? null,
+        'last_login_ip' => $row['last_login_ip'] ?? null,
+        'last_login_user_agent' => $row['last_login_user_agent'] ?? null,
+    ];
+
+    $activityStmt = $pdo->prepare('SELECT success, method, ip_address, user_agent, created_at FROM user_login_activity WHERE user_id = ? ORDER BY created_at DESC LIMIT 25');
+    $activityStmt->execute([$userId]);
+    $activity = [];
+    while ($activityRow = $activityStmt->fetch(PDO::FETCH_ASSOC)) {
+        $activity[] = [
+            'success' => (bool)($activityRow['success'] ?? false),
+            'method' => (string)($activityRow['method'] ?? ''),
+            'ip_address' => $activityRow['ip_address'] ?? null,
+            'user_agent' => $activityRow['user_agent'] ?? null,
+            'created_at' => $activityRow['created_at'] ?? null,
+        ];
+    }
+
+    $roleOptions = [
+        ROLE_FREE => __('Free user'),
+        ROLE_PREMIUM => __('Premium user'),
+        ROLE_ADMIN => __('Administrator'),
+    ];
+
+    $statusOptions = [
+        USER_STATUS_ACTIVE => __('Active'),
+        USER_STATUS_INACTIVE => __('Inactive'),
+    ];
+
+    view('admin/user_manage', [
+        'pageTitle' => __('Manage user'),
+        'user' => $user,
+        'roleOptions' => $roleOptions,
+        'statusOptions' => $statusOptions,
+        'activity' => $activity,
+        'currentUrl' => $currentUrl,
+        'returnUrl' => $returnTo,
     ]);
 }
 

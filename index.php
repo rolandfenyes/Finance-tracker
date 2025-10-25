@@ -904,6 +904,11 @@ switch ($path) {
         admin_users_index($pdo);
         break;
 
+    case '/admin/users/manage':
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_users_manage($pdo);
+        break;
+
     case '/admin/users/role':
         require __DIR__ . '/src/controllers/admin.php';
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
