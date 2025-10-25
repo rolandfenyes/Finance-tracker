@@ -132,7 +132,12 @@ class FinnhubAdapter implements PriceProviderAdapter
 
         $out = [];
         foreach ($data['result'] as $row) {
-            $symbol = strtoupper(trim((string)($row['symbol'] ?? '')));
+            $rawSymbol = strtoupper(trim((string)($row['symbol'] ?? '')));
+            $displaySymbol = strtoupper(trim((string)($row['displaySymbol'] ?? '')));
+            $symbol = $rawSymbol !== '' ? $rawSymbol : $displaySymbol;
+            if ($displaySymbol !== '' && $displaySymbol !== $symbol) {
+                $symbol = $displaySymbol;
+            }
             if ($symbol === '') {
                 continue;
             }
@@ -141,9 +146,8 @@ class FinnhubAdapter implements PriceProviderAdapter
                 continue;
             }
             $name = trim((string)($row['description'] ?? ''));
-            $display = trim((string)($row['displaySymbol'] ?? ''));
-            $mic = trim((string)($row['mic'] ?? ''));
-            $exchange = $mic !== '' ? $mic : $display;
+            $mic = strtoupper(trim((string)($row['mic'] ?? '')));
+            $exchange = $mic !== '' ? $mic : $displaySymbol;
             if ($exchange === '') {
                 $exchange = null;
             }
