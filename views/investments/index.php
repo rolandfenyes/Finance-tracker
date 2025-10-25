@@ -137,6 +137,7 @@ $addPanelId = 'investment-add-panel';
                 data-stock-empty-label="<?= htmlspecialchars(__('No instrument selected yet.')) ?>"
                 data-stock-no-results="<?= htmlspecialchars(__('No results')) ?>"
                 data-stock-error-label="<?= htmlspecialchars(__('Could not load instruments. Try again.')) ?>"
+                data-stock-interest-target="#investment-interest"
               >
                 <div class="relative">
                   <input
@@ -418,6 +419,7 @@ $addPanelId = 'investment-add-panel';
           if ($unitsDisplay === '' && $unitsValue > 0) {
             $unitsDisplay = number_format($unitsValue, 4);
           }
+          $interestInputId = 'investment-interest-' . $investmentId;
           $stockQuote = $investment['stock_quote'] ?? null;
           $marketValue = isset($investment['market_value']) ? (float)$investment['market_value'] : null;
           $marketCurrency = strtoupper((string)($investment['market_currency'] ?? ($stockQuote['currency'] ?? $currencyCode)));
@@ -929,6 +931,7 @@ $addPanelId = 'investment-add-panel';
                       data-stock-empty-label="<?= htmlspecialchars(__('No instrument selected yet.')) ?>"
                       data-stock-no-results="<?= htmlspecialchars(__('No results')) ?>"
                       data-stock-error-label="<?= htmlspecialchars(__('Could not load instruments. Try again.')) ?>"
+                      data-stock-interest-target="#<?= $interestInputId ?>"
                     >
                       <div class="relative">
                         <input
@@ -979,9 +982,9 @@ $addPanelId = 'investment-add-panel';
 
                 <div class="grid gap-3 md:grid-cols-3">
                   <div>
-                    <label class="label"><?= __('Annual rate (EBKM)') ?></label>
+                    <label class="label" for="<?= $interestInputId ?>"><?= __('Annual rate (EBKM)') ?></label>
                     <div class="relative">
-                      <input name="interest_rate" type="number" step="0.01" min="0" class="input pr-12" value="<?= htmlspecialchars($investment['interest_rate'] ?? '') ?>" />
+                      <input id="<?= $interestInputId ?>" name="interest_rate" type="number" step="0.01" min="0" class="input pr-12" value="<?= htmlspecialchars($investment['interest_rate'] ?? '') ?>" />
                       <span class="absolute inset-y-0 right-3 flex items-center text-sm text-slate-500">%</span>
                     </div>
                   </div>
@@ -1513,6 +1516,8 @@ $builderIds = array_values(array_unique(array_filter($builderIds)));
     const identifierTarget = container.dataset.stockIdentifierTarget ? document.querySelector(container.dataset.stockIdentifierTarget) : null;
     const providerTarget = container.dataset.stockProviderTarget ? document.querySelector(container.dataset.stockProviderTarget) : null;
     const currencyTarget = container.dataset.stockCurrencyTarget ? document.querySelector(container.dataset.stockCurrencyTarget) : null;
+    const interestTarget = container.dataset.stockInterestTarget ? document.querySelector(container.dataset.stockInterestTarget) : null;
+    const form = container.closest('form');
     const emptyLabel = container.dataset.stockEmptyLabel || '';
     const noResultsLabel = container.dataset.stockNoResults || 'No results';
     const errorLabel = container.dataset.stockErrorLabel || 'Could not load instruments. Try again.';
@@ -1522,7 +1527,87 @@ $builderIds = array_values(array_unique(array_filter($builderIds)));
       symbol: container.dataset.stockSelectedSymbol || '',
       name: container.dataset.stockSelectedName || '',
       exchange: container.dataset.stockSelectedExchange || '',
-      currency: container.dataset.stockSelectedCurrency || ''
+      currency: container.dataset.stockSelectedCurrency || '',
+      expectedInterest: null
+    };
+
+    let fetchController = null;
+    let resultsVisible = false;
+    let interestPrefillRequested = false;
+    let interestFetchController = null;
+    let suppressInterestManualFlag = false;
+
+    if (interestTarget) {
+      interestTarget.addEventListener('input', function () {
+        if (suppressInterestManualFlag) {
+          return;
+        }
+        container.__interestManual = true;
+      });
+    }
+
+    const getFormType = function () {
+      if (!form) {
+        return '';
+      }
+      const checkedRadio = form.querySelector('input[name="type"]:checked');
+      if (checkedRadio) {
+        return String(checkedRadio.value || '').toLowerCase();
+      }
+      const select = form.querySelector('select[name="type"]');
+      if (select) {
+        return String(select.value || '').toLowerCase();
+      }
+      return '';
+    };
+
+    const isEtfForm = function () {
+      return getFormType() === 'etf';
+    };
+
+    const hasMeaningfulInterest = function () {
+      if (!interestTarget) {
+        return false;
+      }
+      const raw = String(interestTarget.value ?? '').trim();
+      if (raw === '') {
+        return false;
+      }
+      const numeric = parseFloat(raw);
+      if (Number.isNaN(numeric)) {
+        return true;
+      }
+      return numeric > 0;
+    };
+
+    const formatInterestRate = function (rate) {
+      if (typeof rate !== 'number' || !Number.isFinite(rate)) {
+        return null;
+      }
+      const rounded = Math.round(rate * 100) / 100;
+      if (!Number.isFinite(rounded)) {
+        return null;
+      }
+      if (Number.isInteger(rounded)) {
+        return String(rounded);
+      }
+      return rounded.toFixed(2);
+    };
+
+    const applyInterestRate = function (rate) {
+      if (!interestTarget) {
+        return;
+      }
+      const formatted = formatInterestRate(rate);
+      if (formatted === null) {
+        return;
+      }
+      suppressInterestManualFlag = true;
+      interestTarget.value = formatted;
+      interestTarget.dispatchEvent(new Event('input', { bubbles: true }));
+      interestTarget.dispatchEvent(new Event('change', { bubbles: true }));
+      suppressInterestManualFlag = false;
+      container.__interestManual = false;
     };
 
     const updateSelection = function () {
@@ -1549,10 +1634,64 @@ $builderIds = array_values(array_unique(array_filter($builderIds)));
       }
     };
 
-    updateSelection();
+    const maybePrefillInterest = function (item) {
+      if (!interestTarget || interestPrefillRequested || container.__interestManual || !isEtfForm()) {
+        return;
+      }
+      if (hasMeaningfulInterest()) {
+        return;
+      }
+      const direct = item && typeof item.expected_interest === 'number' && Number.isFinite(item.expected_interest)
+        ? item.expected_interest
+        : null;
+      if (direct !== null) {
+        interestPrefillRequested = true;
+        applyInterestRate(direct);
+        return;
+      }
+      if (!state.id) {
+        return;
+      }
+      interestPrefillRequested = true;
+      if (interestFetchController) {
+        interestFetchController.abort();
+      }
+      interestFetchController = new AbortController();
+      fetch('/api/stocks/' + state.id + '/expected-interest', {
+        credentials: 'same-origin',
+        signal: interestFetchController.signal,
+        headers: { Accept: 'application/json' }
+      })
+        .then(function (response) {
+          if (!response.ok) {
+            throw new Error('bad response');
+          }
+          return response.json();
+        })
+        .then(function (payload) {
+          if (interestFetchController && interestFetchController.signal.aborted) {
+            return;
+          }
+          const rate = payload && typeof payload.rate === 'number' ? payload.rate : null;
+          if (rate !== null && !container.__interestManual && !hasMeaningfulInterest() && isEtfForm()) {
+            applyInterestRate(rate);
+          }
+        })
+        .catch(function () {
+          if (interestFetchController && interestFetchController.signal.aborted) {
+            return;
+          }
+          interestPrefillRequested = false;
+        })
+        .finally(function () {
+          interestFetchController = null;
+        });
+    };
 
-    let fetchController = null;
-    let resultsVisible = false;
+    updateSelection();
+    if (state.id) {
+      maybePrefillInterest(null);
+    }
 
     const hideResults = function () {
       if (resultsEl) {
@@ -1617,6 +1756,7 @@ $builderIds = array_values(array_unique(array_filter($builderIds)));
       state.name = item && item.name ? item.name : '';
       state.exchange = item && item.exchange ? item.exchange : '';
       state.currency = item && item.currency ? item.currency : '';
+      state.expectedInterest = item && typeof item.expected_interest === 'number' ? item.expected_interest : null;
       if (hiddenInput) {
         hiddenInput.value = state.id ? String(state.id) : '';
       }
@@ -1635,6 +1775,8 @@ $builderIds = array_values(array_unique(array_filter($builderIds)));
       updateSelection();
       hideResults();
       clearError();
+      interestPrefillRequested = false;
+      maybePrefillInterest(item || null);
     };
 
     const handleInput = function () {
@@ -1700,12 +1842,14 @@ $builderIds = array_values(array_unique(array_filter($builderIds)));
         state.name = '';
         state.exchange = '';
         state.currency = '';
+        state.expectedInterest = null;
         if (hiddenInput) {
           hiddenInput.value = '';
         }
         if (searchInput) {
           searchInput.value = '';
         }
+        interestPrefillRequested = false;
         updateSelection();
         hideResults();
       });

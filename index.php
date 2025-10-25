@@ -88,6 +88,17 @@ if (preg_match('#^/api/stocks/([A-Za-z0-9\.-:]+)/history$#', $path, $m)) {
     return;
 }
 
+if (preg_match('#^/api/stocks/(\d+)/expected-interest$#', $path, $m)) {
+    require_login();
+    require __DIR__ . '/src/controllers/stocks.php';
+    if ($method === 'GET') {
+        stocks_expected_interest_api($pdo, (int)$m[1]);
+    } else {
+        http_response_code(405);
+    }
+    return;
+}
+
 if ($path === '/api/stocks/search') {
     require_login();
     require __DIR__ . '/src/controllers/stocks.php';

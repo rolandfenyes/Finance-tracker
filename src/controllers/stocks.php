@@ -1088,6 +1088,42 @@ function stocks_is_watched(PDO $pdo, int $userId, int $stockId): bool
     return (bool)$stmt->fetchColumn();
 }
 
+function stocks_expected_interest_api(PDO $pdo, int $stockId): void
+{
+    if (!stocks_table_exists($pdo, 'stocks')) {
+        json_response(['rate' => null]);
+    }
+
+    $stockId = (int)$stockId;
+    if ($stockId <= 0) {
+        json_response(['rate' => null]);
+    }
+
+    try {
+        $stmt = $pdo->prepare('SELECT UPPER(symbol) AS symbol FROM stocks WHERE id=? LIMIT 1');
+        $stmt->execute([$stockId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    } catch (Throwable $e) {
+        $row = null;
+    }
+
+    if (!$row) {
+        json_response(['rate' => null]);
+    }
+
+    $symbol = strtoupper(trim((string)($row['symbol'] ?? '')));
+    if ($symbol === '') {
+        json_response(['rate' => null]);
+    }
+
+    $rate = stocks_estimate_expected_interest($pdo, $symbol);
+    if ($rate === null) {
+        json_response(['rate' => null]);
+    }
+
+    json_response(['rate' => $rate]);
+}
+
 function stocks_search_api(PDO $pdo): void
 {
     $query = trim((string)($_GET['q'] ?? ''));
@@ -1190,6 +1226,88 @@ function stocks_search_remote(PDO $pdo, string $query, int $limit = 20): array
     }
 
     return $out;
+}
+
+function stocks_estimate_expected_interest(PDO $pdo, string $symbol): ?float
+{
+    $symbol = strtoupper(trim($symbol));
+    if ($symbol === '') {
+        return null;
+    }
+
+    try {
+        $priceService = stocks_price_service($pdo);
+        $end = new DateTimeImmutable('today');
+        $start = $end->sub(new DateInterval('P5Y'));
+        $history = $priceService->getDailyHistory($symbol, $start->format('Y-m-d'), $end->format('Y-m-d'));
+    } catch (Throwable $e) {
+        return null;
+    }
+
+    if (empty($history)) {
+        return null;
+    }
+
+    $firstClose = null;
+    $firstDate = null;
+    $lastClose = null;
+    $lastDate = null;
+
+    foreach ($history as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+        $closeRaw = $row['close'] ?? null;
+        if ($closeRaw === null || $closeRaw === '') {
+            continue;
+        }
+        $close = (float)$closeRaw;
+        if ($close <= 0) {
+            continue;
+        }
+        $date = isset($row['date']) ? (string)$row['date'] : '';
+        if ($date === '') {
+            continue;
+        }
+        if ($firstClose === null) {
+            $firstClose = $close;
+            $firstDate = $date;
+        }
+        $lastClose = $close;
+        $lastDate = $date;
+    }
+
+    if ($firstClose === null || $lastClose === null || !$firstDate || !$lastDate) {
+        return null;
+    }
+
+    $firstTs = strtotime($firstDate . ' 00:00:00');
+    $lastTs = strtotime($lastDate . ' 00:00:00');
+    if (!$firstTs || !$lastTs || $lastTs <= $firstTs) {
+        return null;
+    }
+
+    $years = ($lastTs - $firstTs) / 31557600; // average seconds per year (365.25 days)
+    if ($years < 0.75) {
+        return null;
+    }
+
+    $growth = $lastClose / $firstClose;
+    if ($growth <= 0) {
+        return null;
+    }
+
+    $cagr = pow($growth, 1 / $years) - 1;
+    if (!is_finite($cagr)) {
+        return null;
+    }
+
+    $percent = round($cagr * 100, 2);
+    if (!is_finite($percent) || $percent <= 0) {
+        return null;
+    }
+
+    return $percent;
 }
 
 function stocks_upsert_remote_symbol(PDO $pdo, array $row): ?array
