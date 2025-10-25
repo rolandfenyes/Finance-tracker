@@ -2,27 +2,12 @@
 
 require_once __DIR__ . '/../helpers.php';
 
-const MIGRATION_ADMIN_EMAIL = 'roland.fenyes2000@gmail.com';
-
 function maintenance_run_migrations(PDO $pdo): void
 {
-    require_login();
+    require_admin();
 
-    $userId = uid();
-    $allowedEmail = strtolower(trim(MIGRATION_ADMIN_EMAIL));
-
-    $stmt = $pdo->prepare('SELECT email FROM users WHERE id = ? LIMIT 1');
-    $stmt->execute([$userId]);
-    $currentEmail = strtolower(trim((string)$stmt->fetchColumn()));
-
-    if ($currentEmail !== $allowedEmail) {
-        http_response_code(403);
-        view('errors/403', [
-            'pageTitle' => __('Forbidden'),
-            'fullWidthMain' => true,
-            'message' => sprintf(__('Only %s can access this page.'), MIGRATION_ADMIN_EMAIL),
-        ]);
-        return;
+    if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+        verify_csrf();
     }
 
     $runAt = date('Y-m-d H:i:s');
@@ -44,7 +29,7 @@ function maintenance_run_migrations(PDO $pdo): void
             'directory' => null,
             'error' => $e->getMessage(),
             'ranAt' => $runAt,
-            'targetEmail' => MIGRATION_ADMIN_EMAIL,
+            'targetEmail' => null,
         ]);
         return;
     }
@@ -61,7 +46,7 @@ function maintenance_run_migrations(PDO $pdo): void
         'directory' => $result['directory'] ?? null,
         'error' => $result['error'] ?? null,
         'ranAt' => $runAt,
-        'targetEmail' => MIGRATION_ADMIN_EMAIL,
+        'targetEmail' => null,
     ]);
 }
 

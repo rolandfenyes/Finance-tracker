@@ -208,6 +208,490 @@ function is_logged_in(): bool { return isset($_SESSION['uid']); }
 function require_login() { if (!is_logged_in()) redirect('/login'); }
 function uid(): int { return (int)($_SESSION['uid'] ?? 0); }
 
+const ROLE_GUEST   = 'guest';
+const ROLE_FREE    = 'free';
+const ROLE_PREMIUM = 'premium';
+const ROLE_ADMIN   = 'admin';
+
+function role_default_definitions(): array
+{
+    return [
+        ROLE_FREE => [
+            'slug' => ROLE_FREE,
+            'name' => __('Free user'),
+            'description' => 'Default plan with limited access',
+            'is_system' => true,
+            'capabilities' => [
+                'currencies_limit' => 1,
+                'goals_limit' => 2,
+                'loans_limit' => 2,
+                'categories_limit' => 10,
+                'scheduled_payments_limit' => 2,
+                'cashflow_rules_edit' => false,
+            ],
+        ],
+        ROLE_PREMIUM => [
+            'slug' => ROLE_PREMIUM,
+            'name' => __('Premium user'),
+            'description' => 'Full access to financial planning tools',
+            'is_system' => true,
+            'capabilities' => [
+                'currencies_limit' => null,
+                'goals_limit' => null,
+                'loans_limit' => null,
+                'categories_limit' => null,
+                'scheduled_payments_limit' => null,
+                'cashflow_rules_edit' => true,
+            ],
+        ],
+        ROLE_ADMIN => [
+            'slug' => ROLE_ADMIN,
+            'name' => __('Administrator'),
+            'description' => 'Administrative access to manage the platform',
+            'is_system' => true,
+            'capabilities' => [
+                'currencies_limit' => null,
+                'goals_limit' => null,
+                'loans_limit' => null,
+                'categories_limit' => null,
+                'scheduled_payments_limit' => null,
+                'cashflow_rules_edit' => false,
+            ],
+        ],
+    ];
+}
+
+function role_definitions(bool $refresh = false): array
+{
+    static $cache;
+
+    if ($refresh) {
+        $cache = null;
+    }
+
+    if ($cache !== null) {
+        return $cache;
+    }
+
+    $definitions = role_default_definitions();
+
+    global $pdo;
+    if (!isset($pdo) || !($pdo instanceof PDO)) {
+        return $cache = $definitions;
+    }
+
+    try {
+        $stmt = $pdo->query('SELECT slug, name, description, is_system, capabilities FROM roles');
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $slug = strtolower(trim((string)($row['slug'] ?? '')));
+            if ($slug === '') {
+                continue;
+            }
+
+            $caps = [];
+            $rawCaps = $row['capabilities'] ?? [];
+            if (is_string($rawCaps)) {
+                $decoded = json_decode($rawCaps, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    $caps = $decoded;
+                }
+            } elseif (is_array($rawCaps)) {
+                $caps = $rawCaps;
+            }
+
+            $definitions[$slug] = [
+                'slug' => $slug,
+                'name' => (string)($row['name'] ?? $slug),
+                'description' => $row['description'] ?? null,
+                'is_system' => (bool)($row['is_system'] ?? false),
+                'capabilities' => $caps,
+            ];
+        }
+    } catch (Throwable $e) {
+        // ignore and fall back to defaults
+    }
+
+    return $cache = $definitions;
+}
+
+function role_definition(string $slug): ?array
+{
+    $slug = strtolower(trim($slug));
+    $definitions = role_definitions();
+
+    return $definitions[$slug] ?? null;
+}
+
+function reset_role_definitions_cache(): void
+{
+    role_definitions(true);
+}
+
+function role_capability(string $role, string $capability, $default = null)
+{
+    $definition = role_definition($role);
+    if (!$definition) {
+        return $default;
+    }
+
+    $caps = $definition['capabilities'] ?? [];
+    if (!is_array($caps)) {
+        return $default;
+    }
+
+    return $caps[$capability] ?? $default;
+}
+
+function billing_interval_labels(): array
+{
+    return [
+        'weekly' => __('Weekly'),
+        'monthly' => __('Monthly'),
+        'yearly' => __('Yearly'),
+        'lifetime' => __('Lifetime'),
+    ];
+}
+
+function billing_settings(bool $refresh = false): array
+{
+    static $cache;
+
+    if ($refresh) {
+        $cache = null;
+    }
+
+    if ($cache !== null) {
+        return $cache;
+    }
+
+    $settings = [
+        'stripe_secret_key' => null,
+        'stripe_publishable_key' => null,
+        'stripe_webhook_secret' => null,
+        'default_currency' => 'EUR',
+    ];
+
+    global $pdo;
+    if (!isset($pdo) || !($pdo instanceof PDO)) {
+        return $cache = $settings;
+    }
+
+    try {
+        $stmt = $pdo->query('SELECT stripe_secret_key, stripe_publishable_key, stripe_webhook_secret, default_currency FROM billing_settings WHERE id = 1');
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $settings['stripe_secret_key'] = $row['stripe_secret_key'] ?? null;
+            $settings['stripe_publishable_key'] = $row['stripe_publishable_key'] ?? null;
+            $settings['stripe_webhook_secret'] = $row['stripe_webhook_secret'] ?? null;
+            $defaultCurrency = strtoupper(trim((string)($row['default_currency'] ?? '')));
+            $settings['default_currency'] = $defaultCurrency !== '' ? $defaultCurrency : 'EUR';
+        }
+    } catch (Throwable $e) {
+        // ignore and keep defaults
+    }
+
+    return $cache = $settings;
+}
+
+function reset_billing_settings_cache(): void
+{
+    billing_settings(true);
+}
+
+function billing_default_currency(): string
+{
+    $settings = billing_settings();
+    $currency = strtoupper(trim((string)($settings['default_currency'] ?? 'EUR')));
+
+    return $currency !== '' ? $currency : 'EUR';
+}
+
+function billing_has_stripe_keys(): bool
+{
+    $settings = billing_settings();
+
+    return !empty($settings['stripe_secret_key']) && !empty($settings['stripe_publishable_key']);
+}
+
+function role_can(string $capability, ?string $role = null): bool
+{
+    $role = $role ? strtolower(trim($role)) : current_user_role();
+    $value = role_capability($role, $capability, null);
+
+    if ($value === null) {
+        return true;
+    }
+
+    if (is_bool($value)) {
+        return $value;
+    }
+
+    if (is_numeric($value)) {
+        return (int)$value !== 0;
+    }
+
+    return (bool)$value;
+}
+
+function role_limit_for(string $role, string $resource): ?int
+{
+    $map = [
+        'currencies' => 'currencies_limit',
+        'goals_active' => 'goals_limit',
+        'loans_active' => 'loans_limit',
+        'categories' => 'categories_limit',
+        'scheduled_active' => 'scheduled_payments_limit',
+    ];
+
+    $capabilityKey = $map[$resource] ?? $resource;
+    $value = role_capability($role, $capabilityKey, null);
+
+    if ($value === null || $value === '') {
+        return null;
+    }
+
+    if (is_numeric($value)) {
+        $int = (int)$value;
+        return $int > 0 ? $int : null;
+    }
+
+    if (is_bool($value)) {
+        return $value ? null : 0;
+    }
+
+    return null;
+}
+
+function user_limit_for(string $resource): ?int
+{
+    return role_limit_for(current_user_role(), $resource);
+}
+
+const USER_STATUS_ACTIVE = 'active';
+const USER_STATUS_INACTIVE = 'inactive';
+
+function normalize_user_role($role, bool $allowGuest = false): string
+{
+    $role = strtolower(trim((string)$role));
+
+    if ($allowGuest && $role === ROLE_GUEST) {
+        return ROLE_GUEST;
+    }
+
+    $definition = role_definition($role);
+    if ($definition) {
+        return $definition['slug'];
+    }
+
+    return $allowGuest ? ROLE_GUEST : ROLE_FREE;
+}
+
+function normalize_user_status($status): string
+{
+    $status = strtolower(trim((string)$status));
+
+    if ($status === USER_STATUS_INACTIVE) {
+        return USER_STATUS_INACTIVE;
+    }
+
+    return USER_STATUS_ACTIVE;
+}
+
+function current_user_role(): string
+{
+    if (!isset($_SESSION['role'])) {
+        return ROLE_GUEST;
+    }
+
+    $normalized = normalize_user_role($_SESSION['role'], true);
+    if ($normalized !== ROLE_GUEST) {
+        $_SESSION['role'] = $normalized;
+    }
+
+    return $normalized;
+}
+
+function current_user_status(): string
+{
+    if (!isset($_SESSION['status'])) {
+        return USER_STATUS_ACTIVE;
+    }
+
+    $normalized = normalize_user_status($_SESSION['status']);
+    $_SESSION['status'] = $normalized;
+
+    return $normalized;
+}
+
+function refresh_user_role(PDO $pdo, int $userId): string
+{
+    try {
+        $stmt = $pdo->prepare('SELECT role, status FROM users WHERE id = ? LIMIT 1');
+        $stmt->execute([$userId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        $role = normalize_user_role($row['role'] ?? null);
+        $status = normalize_user_status($row['status'] ?? null);
+    } catch (Throwable $e) {
+        $role = ROLE_FREE;
+        $status = USER_STATUS_ACTIVE;
+    }
+
+    $_SESSION['role'] = $role;
+    $_SESSION['status'] = $status;
+
+    return $role;
+}
+
+function is_admin(): bool
+{
+    return current_user_role() === ROLE_ADMIN;
+}
+
+function is_free_user(): bool
+{
+    return current_user_role() === ROLE_FREE;
+}
+
+function is_premium_user(): bool
+{
+    return current_user_role() === ROLE_PREMIUM;
+}
+
+function user_prepare_full_name_fields(?string $name): array
+{
+    $trimmed = trim((string)$name);
+    $search = $trimmed !== '' ? mb_strtolower(preg_replace('/\s+/u', ' ', $trimmed)) : null;
+
+    if ($search !== null && $search === '') {
+        $search = null;
+    }
+
+    $encrypted = $trimmed !== '' ? pii_encrypt($trimmed) : null;
+
+    return [$encrypted, $search];
+}
+
+function log_user_login_activity(PDO $pdo, int $userId, bool $success, string $email = '', string $method = 'password'): void
+{
+    try {
+        $stmt = $pdo->prepare('INSERT INTO user_login_activity (user_id, email, success, method, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?)');
+        $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+        $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+        $stmt->execute([
+            $userId,
+            $email !== '' ? $email : null,
+            $success,
+            $method,
+            $ip,
+            $agent,
+        ]);
+    } catch (Throwable $e) {
+        // Intentionally swallow logging failures.
+    }
+}
+
+function free_user_limit_for(string $resource): ?int
+{
+    return role_limit_for(ROLE_FREE, $resource);
+}
+
+function free_user_resource_count(PDO $pdo, int $userId, string $resource): int
+{
+    switch ($resource) {
+        case 'currencies':
+            $stmt = $pdo->prepare('SELECT COUNT(*) FROM user_currencies WHERE user_id = ?');
+            $stmt->execute([$userId]);
+            return (int)$stmt->fetchColumn();
+
+        case 'goals_active':
+            $stmt = $pdo->prepare('SELECT COUNT(*) FROM goals WHERE user_id = ? AND archived_at IS NULL');
+            $stmt->execute([$userId]);
+            return (int)$stmt->fetchColumn();
+
+        case 'loans_active':
+            $stmt = $pdo->prepare('SELECT COUNT(*) FROM loans WHERE user_id = ? AND archived_at IS NULL AND (finished_at IS NULL OR finished_at = \'\')');
+            $stmt->execute([$userId]);
+            return (int)$stmt->fetchColumn();
+
+        case 'categories':
+            $stmt = $pdo->prepare('SELECT COUNT(*) FROM categories WHERE user_id = ?');
+            $stmt->execute([$userId]);
+            return (int)$stmt->fetchColumn();
+
+        case 'scheduled_active':
+            $stmt = $pdo->prepare('SELECT COUNT(*) FROM scheduled_payments WHERE user_id = ? AND archived_at IS NULL');
+            $stmt->execute([$userId]);
+            return (int)$stmt->fetchColumn();
+    }
+
+    return 0;
+}
+
+function user_limit_guard(PDO $pdo, string $resource, string $redirect, string $message, ?callable $counter = null, ?string $flashType = 'error'): void
+{
+    $userId = uid();
+    if ($userId <= 0) {
+        return;
+    }
+
+    $limit = user_limit_for($resource);
+    if ($limit === null) {
+        return;
+    }
+
+    $count = $counter ? (int)$counter($pdo, $userId) : free_user_resource_count($pdo, $userId, $resource);
+    if ($count >= $limit) {
+        $_SESSION['flash'] = $message;
+        if ($flashType !== null) {
+            $_SESSION['flash_type'] = $flashType;
+        }
+        redirect($redirect);
+    }
+}
+
+function free_user_limit_guard(PDO $pdo, string $resource, string $redirect, string $message, ?callable $counter = null, ?string $flashType = 'error'): void
+{
+    user_limit_guard($pdo, $resource, $redirect, $message, $counter, $flashType);
+}
+
+function admin_allowed_path(string $path, string $method = 'GET'): bool
+{
+    $method = strtoupper($method);
+
+    if (str_starts_with($path, '/admin')) {
+        return true;
+    }
+
+    if ($path === '/logout' && $method === 'POST') {
+        return true;
+    }
+
+    if ($path === '/maintenance/migrations') {
+        return true;
+    }
+
+    return false;
+}
+
+function require_admin(?string $message = null): void
+{
+    if (!is_logged_in()) {
+        redirect('/login');
+    }
+
+    if (is_admin()) {
+        return;
+    }
+
+    http_response_code(403);
+    view('errors/403', [
+        'pageTitle' => __('Forbidden'),
+        'message' => $message,
+        'fullWidthMain' => true,
+    ]);
+    exit;
+}
+
 function csrf_token(): string {
     if (empty($_SESSION['csrf'])) { $_SESSION['csrf'] = bin2hex(random_bytes(16)); }
     return $_SESSION['csrf'];

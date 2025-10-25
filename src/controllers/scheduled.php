@@ -73,6 +73,12 @@ function scheduled_index(PDO $pdo){
 
 function scheduled_add(PDO $pdo){
   verify_csrf(); require_login(); $u=uid();
+  free_user_limit_guard(
+    $pdo,
+    'scheduled_active',
+    '/scheduled',
+    __('Your current plan cannot add more scheduled payments. Update the role capabilities to increase this limit.')
+  );
   $title = trim($_POST['title'] ?? '');
   $amount = (float)($_POST['amount'] ?? 0);
   $currency = strtoupper(trim($_POST['currency'] ?? ''));
