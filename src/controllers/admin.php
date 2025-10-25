@@ -335,26 +335,37 @@ function admin_users_manage(PDO $pdo): void
         ? admin_normalize_redirect(rawurldecode($returnParam), '/admin/users')
         : '/admin/users';
 
-    $stmt = $pdo->prepare(
-        'SELECT u.id, u.email, u.full_name, u.role, u.status, u.email_verified_at, u.desired_language, u.created_at, u.updated_at, u.deactivated_at,
-                la.last_login_at, la.last_login_ip, la.last_login_user_agent
-           FROM users u
-           LEFT JOIN LATERAL (
-                SELECT created_at AS last_login_at, ip_address AS last_login_ip, user_agent AS last_login_user_agent
-                  FROM user_login_activity
-                 WHERE user_id = u.id AND success = TRUE
-                 ORDER BY created_at DESC
-                 LIMIT 1
-           ) la ON TRUE
-          WHERE u.id = ?
-          LIMIT 1'
-    );
+    $stmt = $pdo->prepare(<<<'SQL'
+        SELECT u.id, u.email, u.full_name, u.role, u.status, u.email_verified_at, u.desired_language, u.created_at,
+               GREATEST(
+                   COALESCE(u.created_at, '-infinity'::timestamptz),
+                   COALESCE(u.email_verified_at, '-infinity'::timestamptz),
+                   COALESCE(u.deactivated_at, '-infinity'::timestamptz)
+               ) AS updated_at,
+               u.deactivated_at,
+               la.last_login_at, la.last_login_ip, la.last_login_user_agent
+          FROM users u
+          LEFT JOIN LATERAL (
+               SELECT created_at AS last_login_at, ip_address AS last_login_ip, user_agent AS last_login_user_agent
+                 FROM user_login_activity
+                WHERE user_id = u.id AND success = TRUE
+                ORDER BY created_at DESC
+                LIMIT 1
+          ) la ON TRUE
+         WHERE u.id = ?
+         LIMIT 1
+        SQL);
     $stmt->execute([$userId]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$row) {
         $_SESSION['flash'] = __('User not found.');
         redirect('/admin/users');
+    }
+
+    $updatedAt = $row['updated_at'] ?? null;
+    if ($updatedAt === '-infinity') {
+        $updatedAt = null;
     }
 
     $user = [
@@ -366,7 +377,7 @@ function admin_users_manage(PDO $pdo): void
         'email_verified_at' => $row['email_verified_at'] ?? null,
         'desired_language' => $row['desired_language'] ?? null,
         'created_at' => $row['created_at'] ?? null,
-        'updated_at' => $row['updated_at'] ?? null,
+        'updated_at' => $updatedAt,
         'deactivated_at' => $row['deactivated_at'] ?? null,
         'last_login_at' => $row['last_login_at'] ?? null,
         'last_login_ip' => $row['last_login_ip'] ?? null,
