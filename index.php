@@ -37,11 +37,21 @@ if (isset($pdo) && $pdo instanceof PDO) {
 }
 
 if (isset($pdo) && $pdo instanceof PDO && is_logged_in()) {
-    if (empty($_SESSION['role'])) {
-        refresh_user_role($pdo, uid());
+    $currentRole = refresh_user_role($pdo, uid());
+
+    if (current_user_status() === USER_STATUS_INACTIVE) {
+        $message = __('Your account has been deactivated. Please contact support.');
+        $userId = uid();
+        forget_remember_token($pdo, $userId);
+        $_SESSION = [];
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_regenerate_id(true);
+        }
+        $_SESSION['flash'] = $message;
+        redirect('/login');
     }
 
-    if (!is_admin()) {
+    if ($currentRole !== ROLE_ADMIN) {
         scheduled_process_linked($pdo, uid());
     }
 }
@@ -316,9 +326,22 @@ switch ($path) {
 
         $userId = (int)$result['user_id'];
         $_SESSION['uid'] = $userId;
+        refresh_user_role($pdo, $userId);
+
+        if (current_user_status() === USER_STATUS_INACTIVE) {
+            forget_remember_token($pdo, $userId);
+            $_SESSION = [];
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_regenerate_id(true);
+            }
+            json_error(__('Your account is inactive. Please contact support.'), 403);
+        }
+
         if ($pdo instanceof PDO) {
             forget_remember_token($pdo, $userId);
         }
+
+        log_user_login_activity($pdo, $userId, true, '', 'passkey');
 
         try {
             $redirectTo = post_login_redirect_path($pdo, $userId);
@@ -876,12 +899,54 @@ switch ($path) {
         admin_dashboard($pdo);
         break;
 
+    case '/admin/users':
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_users_index($pdo);
+        break;
+
     case '/admin/users/role':
         require __DIR__ . '/src/controllers/admin.php';
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             admin_update_role($pdo);
+        } else {
+            redirect('/admin/users');
         }
-        redirect('/admin');
+        break;
+
+    case '/admin/users/reset-password':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_users_reset_password($pdo);
+        } else {
+            redirect('/admin/users');
+        }
+        break;
+
+    case '/admin/users/resend-verification':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_users_resend_verification($pdo);
+        } else {
+            redirect('/admin/users');
+        }
+        break;
+
+    case '/admin/users/reset-email':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_users_reset_email($pdo);
+        } else {
+            redirect('/admin/users');
+        }
+        break;
+
+    case '/admin/users/status':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_users_update_status($pdo);
+        } else {
+            redirect('/admin/users');
+        }
         break;
 
     case '/more':

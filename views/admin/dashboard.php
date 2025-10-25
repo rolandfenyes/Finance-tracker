@@ -122,13 +122,23 @@ $stats = array_merge($statDefaults, $stats);
       <?= __('Recent accounts') ?>
     </div>
     <h2 class="card-title mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
-      <?= __('Manage roles & access') ?>
+      <?= __('Recent accounts overview') ?>
     </h2>
     <p class="card-subtle mt-2 text-sm text-slate-600 dark:text-slate-300/80">
-      <?= __('Promote trusted teammates to administrators or switch members between Free and Premium access.') ?>
+      <?= __('Check in on the latest members and jump to the full user management area when you need deeper controls.') ?>
     </p>
 
-    <div class="mt-6 overflow-hidden rounded-3xl border border-white/60 bg-white/60 shadow-sm backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/40">
+    <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <p class="text-sm text-slate-500 dark:text-slate-400">
+        <?= __('For advanced actions like password resets or deactivations, visit the dedicated user management screen.') ?>
+      </p>
+      <a class="btn btn-primary justify-center gap-2" href="<?= htmlspecialchars($userManagementUrl ?? '/admin/users') ?>">
+        <i data-lucide="settings" class="h-4 w-4"></i>
+        <?= __('Open user management') ?>
+      </a>
+    </div>
+
+    <div class="mt-4 overflow-hidden rounded-3xl border border-white/60 bg-white/60 shadow-sm backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/40">
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
           <thead class="bg-slate-50/80 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-900/40 dark:text-slate-400">
@@ -136,7 +146,8 @@ $stats = array_merge($statDefaults, $stats);
               <th scope="col" class="px-4 py-3 font-semibold"><?= __('Name') ?></th>
               <th scope="col" class="px-4 py-3 font-semibold"><?= __('Email') ?></th>
               <th scope="col" class="px-4 py-3 font-semibold"><?= __('Role') ?></th>
-              <th scope="col" class="px-4 py-3 font-semibold text-right"><?= __('Actions') ?></th>
+              <th scope="col" class="px-4 py-3 font-semibold"><?= __('Status') ?></th>
+              <th scope="col" class="px-4 py-3 font-semibold text-right"><?= __('Verified') ?></th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -145,6 +156,7 @@ $stats = array_merge($statDefaults, $stats);
                 $displayName = trim($user['full_name'] ?? '') ?: ($user['email'] ?? __('Unknown'));
                 $email = $user['email'] ?? '';
                 $role = normalize_user_role($user['role'] ?? null);
+                $status = normalize_user_status($user['status'] ?? null);
                 $createdAt = $user['created_at'] ?? null;
                 $createdLabel = $createdAt ? date('Y-m-d H:i', strtotime((string)$createdAt)) : __('Unknown');
                 $roleBadgeClass = match ($role) {
@@ -157,6 +169,11 @@ $stats = array_merge($statDefaults, $stats);
                   ROLE_PREMIUM => 'star',
                   default => 'user',
                 };
+                $statusLabel = $status === USER_STATUS_ACTIVE ? __('Active') : __('Inactive');
+                $statusBadge = $status === USER_STATUS_ACTIVE
+                  ? 'border-emerald-300/70 bg-emerald-100/60 text-emerald-700 dark:border-emerald-300/50 dark:bg-emerald-400/20 dark:text-emerald-100'
+                  : 'border-rose-300/70 bg-rose-100/60 text-rose-700 dark:border-rose-400/60 dark:bg-rose-500/20 dark:text-rose-100';
+                $verified = !empty($user['email_verified_at']);
               ?>
                 <tr class="transition hover:bg-brand-50/40 dark:hover:bg-slate-800/30">
                   <td class="px-4 py-4 align-middle text-sm font-medium text-slate-900 dark:text-slate-100">
@@ -173,35 +190,37 @@ $stats = array_merge($statDefaults, $stats);
                   <td class="px-4 py-4 align-middle text-sm text-slate-600 dark:text-slate-300">
                     <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold <?= $roleBadgeClass ?>">
                       <i data-lucide="<?= $roleIcon ?>" class="h-3.5 w-3.5"></i>
-                      <?= htmlspecialchars($roleOptions[$role] ?? ucfirst($role)) ?>
+                      <?= htmlspecialchars(match ($role) {
+                        ROLE_ADMIN => __('Administrator'),
+                        ROLE_PREMIUM => __('Premium user'),
+                        default => __('Free user'),
+                      }) ?>
                     </span>
                   </td>
-                  <td class="px-4 py-4 align-middle text-right text-sm">
-                    <form action="/admin/users/role" method="post" class="inline-flex items-center justify-end gap-2">
-                      <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
-                      <input type="hidden" name="user_id" value="<?= (int)$user['id'] ?>" />
-                      <label class="sr-only" for="role-<?= (int)$user['id'] ?>"><?= __('Select role') ?></label>
-                      <select
-                        id="role-<?= (int)$user['id'] ?>"
-                        name="role"
-                        class="rounded-2xl border border-slate-200 bg-white px-3 py-1 text-sm font-medium text-slate-600 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/40 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200"
-                      >
-                        <?php foreach ($roleOptions as $value => $label): ?>
-                          <option value="<?= htmlspecialchars($value) ?>" <?= $role === $value ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($label) ?>
-                          </option>
-                        <?php endforeach; ?>
-                      </select>
-                      <button class="btn btn-muted whitespace-nowrap">
-                        <?= __('Update') ?>
-                      </button>
-                    </form>
+                  <td class="px-4 py-4 align-middle text-sm text-slate-600 dark:text-slate-300">
+                    <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold <?= $statusBadge ?>">
+                      <i data-lucide="<?= $status === USER_STATUS_ACTIVE ? 'check-circle' : 'slash' ?>" class="h-3.5 w-3.5"></i>
+                      <?= htmlspecialchars($statusLabel) ?>
+                    </span>
+                  </td>
+                  <td class="px-4 py-4 align-middle text-right text-sm text-slate-600 dark:text-slate-300">
+                    <?php if ($verified): ?>
+                      <span class="inline-flex items-center gap-2 rounded-full border border-emerald-300/60 bg-emerald-100/50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-400/40 dark:bg-emerald-500/20 dark:text-emerald-100">
+                        <i data-lucide="badge-check" class="h-3.5 w-3.5"></i>
+                        <?= __('Verified') ?>
+                      </span>
+                    <?php else: ?>
+                      <span class="inline-flex items-center gap-2 rounded-full border border-amber-300/60 bg-amber-100/50 px-3 py-1 text-xs font-semibold text-amber-700 dark:border-amber-400/40 dark:bg-amber-500/20 dark:text-amber-100">
+                        <i data-lucide="hourglass" class="h-3.5 w-3.5"></i>
+                        <?= __('Unverified') ?>
+                      </span>
+                    <?php endif; ?>
                   </td>
                 </tr>
               <?php endforeach; ?>
             <?php else: ?>
               <tr>
-                <td colspan="4" class="px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400">
+                <td colspan="5" class="px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400">
                   <?= __('No user accounts found yet.') ?>
                 </td>
               </tr>

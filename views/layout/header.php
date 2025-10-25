@@ -1119,10 +1119,12 @@ $ogUrl = $scheme . '://' . $host . $currentRequestPath;
     if (is_admin()) {
       $desktopItems = [
         ['href'=>'/admin', 'label'=>'Admin dashboard', 'match'=>'#^/admin(?:/.*)?$#', 'icon' => 'shield'],
+        ['href'=>'/admin/users', 'label'=>'Users', 'match'=>'#^/admin/users(?:/.*)?$#', 'icon' => 'users'],
         ['href'=>'/admin/migrations', 'label'=>'Migrations', 'match'=>'#^/(admin|maintenance)/migrations$#', 'icon' => 'database'],
       ];
       $mobileNavItems = [
         ['href'=>'/admin', 'label'=>'Admin', 'match'=>'#^/admin(?:/.*)?$#', 'icon' => 'shield'],
+        ['href'=>'/admin/users', 'label'=>'Users', 'match'=>'#^/admin/users(?:/.*)?$#', 'icon' => 'users'],
         ['href'=>'/admin/migrations', 'label'=>'Migrations', 'match'=>'#^/(admin|maintenance)/migrations$#', 'icon' => 'database'],
       ];
     } else {

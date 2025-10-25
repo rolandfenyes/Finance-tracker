@@ -10,13 +10,14 @@ function handle_register(PDO $pdo) {
         redirect('/register');
     }
     $hash = password_hash($pass, PASSWORD_DEFAULT);
-    $stmt = $pdo->prepare('INSERT INTO users(email,password_hash,full_name) VALUES(?,?,?) RETURNING id');
+    $stmt = $pdo->prepare('INSERT INTO users(email,password_hash,full_name,full_name_search) VALUES(?,?,?,?) RETURNING id');
     try {
-        $encryptedName = $name !== '' ? pii_encrypt($name) : null;
-        $stmt->execute([$email,$hash,$encryptedName]);
+        [$encryptedName, $searchName] = user_prepare_full_name_fields($name);
+        $stmt->execute([$email, $hash, $encryptedName, $searchName]);
         $uid = (int)$stmt->fetchColumn();
         $_SESSION['uid'] = $uid;
         $_SESSION['role'] = ROLE_FREE;
+        $_SESSION['status'] = USER_STATUS_ACTIVE;
         // Add default currency
         $pdo->prepare('INSERT INTO user_currencies(user_id,code,is_main) VALUES(?,?,true)')
             ->execute([$uid,'HUF']);
@@ -111,6 +112,17 @@ function attempt_remembered_login(PDO $pdo): void {
     $_SESSION['uid'] = $userId;
     refresh_user_role($pdo, $userId);
 
+    if (current_user_status() === USER_STATUS_INACTIVE) {
+        forget_remember_token($pdo, $userId);
+        $_SESSION = [];
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_regenerate_id(true);
+        }
+        return;
+    }
+
+    log_user_login_activity($pdo, $userId, true, '', 'remember');
+
     // Rotate token to prevent replay
     $newValidator = bin2hex(random_bytes(32));
     $newHash = hash('sha256', $newValidator);
@@ -130,11 +142,19 @@ function attempt_remembered_login(PDO $pdo): void {
 }
 
 function post_login_redirect_path(PDO $pdo, int $userId): string {
-    $stmt = $pdo->prepare('SELECT needs_tutorial, role FROM users WHERE id=?');
+    $stmt = $pdo->prepare('SELECT needs_tutorial, role, status FROM users WHERE id=?');
     $stmt->execute([$userId]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
     $role = normalize_user_role($row['role'] ?? null);
+    $_SESSION['role'] = $role;
+
+    $status = normalize_user_status($row['status'] ?? null);
+    $_SESSION['status'] = $status;
+    if ($status === USER_STATUS_INACTIVE) {
+        return '/login';
+    }
+
     if ($role === ROLE_ADMIN) {
         return '/admin';
     }
@@ -153,7 +173,7 @@ function handle_login(PDO $pdo) {
     verify_csrf();
     $email = trim($_POST['email'] ?? '');
     $pass = $_POST['password'] ?? '';
-    $stmt = $pdo->prepare('SELECT id, password_hash, role FROM users WHERE email = ?');
+    $stmt = $pdo->prepare('SELECT id, password_hash, role, status FROM users WHERE email = ?');
     $stmt->execute([$email]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($row && password_verify($pass, $row['password_hash'])) {
@@ -162,12 +182,23 @@ function handle_login(PDO $pdo) {
         $role = normalize_user_role($row['role'] ?? null);
         $_SESSION['role'] = $role;
 
+        $status = normalize_user_status($row['status'] ?? null);
+        if ($status === USER_STATUS_INACTIVE) {
+            $_SESSION['flash'] = __('Your account is inactive. Please contact support.');
+            forget_remember_token($pdo, $uid);
+            unset($_SESSION['uid']);
+            redirect('/login');
+        }
+
+        $_SESSION['status'] = $status;
+
         if (!empty($_POST['remember'])) {
             remember_login($pdo, $uid);
         } else {
             forget_remember_token($pdo, $uid);
         }
 
+        log_user_login_activity($pdo, $uid, true, $email, 'password');
         $target = post_login_redirect_path($pdo, $uid);
         redirect($target);
     }

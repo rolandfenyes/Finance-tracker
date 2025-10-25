@@ -213,6 +213,9 @@ const ROLE_FREE    = 'free';
 const ROLE_PREMIUM = 'premium';
 const ROLE_ADMIN   = 'admin';
 
+const USER_STATUS_ACTIVE = 'active';
+const USER_STATUS_INACTIVE = 'inactive';
+
 function normalize_user_role($role, bool $allowGuest = false): string
 {
     $role = strtolower(trim((string)$role));
@@ -232,6 +235,17 @@ function normalize_user_role($role, bool $allowGuest = false): string
     return $allowGuest ? ROLE_GUEST : ROLE_FREE;
 }
 
+function normalize_user_status($status): string
+{
+    $status = strtolower(trim((string)$status));
+
+    if ($status === USER_STATUS_INACTIVE) {
+        return USER_STATUS_INACTIVE;
+    }
+
+    return USER_STATUS_ACTIVE;
+}
+
 function current_user_role(): string
 {
     if (!isset($_SESSION['role'])) {
@@ -246,17 +260,33 @@ function current_user_role(): string
     return $normalized;
 }
 
+function current_user_status(): string
+{
+    if (!isset($_SESSION['status'])) {
+        return USER_STATUS_ACTIVE;
+    }
+
+    $normalized = normalize_user_status($_SESSION['status']);
+    $_SESSION['status'] = $normalized;
+
+    return $normalized;
+}
+
 function refresh_user_role(PDO $pdo, int $userId): string
 {
     try {
-        $stmt = $pdo->prepare('SELECT role FROM users WHERE id = ? LIMIT 1');
+        $stmt = $pdo->prepare('SELECT role, status FROM users WHERE id = ? LIMIT 1');
         $stmt->execute([$userId]);
-        $role = normalize_user_role($stmt->fetchColumn());
+        $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        $role = normalize_user_role($row['role'] ?? null);
+        $status = normalize_user_status($row['status'] ?? null);
     } catch (Throwable $e) {
         $role = ROLE_FREE;
+        $status = USER_STATUS_ACTIVE;
     }
 
     $_SESSION['role'] = $role;
+    $_SESSION['status'] = $status;
 
     return $role;
 }
@@ -274,6 +304,39 @@ function is_free_user(): bool
 function is_premium_user(): bool
 {
     return current_user_role() === ROLE_PREMIUM;
+}
+
+function user_prepare_full_name_fields(?string $name): array
+{
+    $trimmed = trim((string)$name);
+    $search = $trimmed !== '' ? mb_strtolower(preg_replace('/\s+/u', ' ', $trimmed)) : null;
+
+    if ($search !== null && $search === '') {
+        $search = null;
+    }
+
+    $encrypted = $trimmed !== '' ? pii_encrypt($trimmed) : null;
+
+    return [$encrypted, $search];
+}
+
+function log_user_login_activity(PDO $pdo, int $userId, bool $success, string $email = '', string $method = 'password'): void
+{
+    try {
+        $stmt = $pdo->prepare('INSERT INTO user_login_activity (user_id, email, success, method, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?)');
+        $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+        $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+        $stmt->execute([
+            $userId,
+            $email !== '' ? $email : null,
+            $success,
+            $method,
+            $ip,
+            $agent,
+        ]);
+    } catch (Throwable $e) {
+        // Intentionally swallow logging failures.
+    }
 }
 
 function free_user_limit_for(string $resource): ?int
