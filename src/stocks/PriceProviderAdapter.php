@@ -24,4 +24,11 @@ interface PriceProviderAdapter
      * @return array{name?: string, exchange?: string, currency?: string, sector?: string, industry?: string, beta?: ?float}
      */
     public function lookupMetadata(string $symbol): array;
+
+    /**
+     * Search the provider for tradable symbols.
+     *
+     * @return array<int, array{symbol:string,name?:string,exchange?:string,currency?:string,market?:?string,type?:?string}>
+     */
+    public function searchSymbols(string $query): array;
 }

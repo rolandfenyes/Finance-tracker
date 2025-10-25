@@ -69,7 +69,7 @@ $addPanelId = 'investment-add-panel';
       <summary class="sr-only"><?= __('Add new investment') ?></summary>
 
       <div class="mt-5 space-y-4" data-investment-add-panel>
-        <form method="post" action="/investments/add" class="space-y-4">
+          <form method="post" action="/investments/add" class="space-y-4" data-investment-form>
           <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
 
           <div class="grid gap-3 md:grid-cols-3">
@@ -122,6 +122,61 @@ $addPanelId = 'investment-add-panel';
                   </option>
                 <?php endforeach; ?>
               </select>
+            </div>
+          </div>
+
+          <div class="grid gap-3 md:grid-cols-3 hidden" data-stock-fields>
+            <div class="md:col-span-2 space-y-2">
+              <label class="label" for="investment-symbol-search"><?= __('Search ETF or stock') ?></label>
+              <div
+                class="space-y-2"
+                data-stock-picker
+                data-stock-identifier-target="#investment-identifier"
+                data-stock-provider-target="#investment-provider"
+                data-stock-currency-target="#investment-currency"
+                data-stock-empty-label="<?= htmlspecialchars(__('No instrument selected yet.')) ?>"
+                data-stock-no-results="<?= htmlspecialchars(__('No results')) ?>"
+                data-stock-error-label="<?= htmlspecialchars(__('Could not load instruments. Try again.')) ?>"
+                data-stock-interest-target="#investment-interest"
+              >
+                <div class="relative">
+                  <input
+                    id="investment-symbol-search"
+                    type="search"
+                    class="input"
+                    placeholder="<?= __('Search ETF or stock') ?>"
+                    data-stock-search
+                    autocomplete="off"
+                    spellcheck="false"
+                  />
+                  <input type="hidden" name="stock_id" data-stock-value />
+                  <div
+                    class="absolute left-0 right-0 z-30 mt-1 max-h-60 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900 hidden"
+                    data-stock-results
+                  ></div>
+                </div>
+                <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50/80 p-3 text-xs text-slate-600 dark:border-slate-600 dark:bg-slate-900/40 dark:text-slate-300">
+                  <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <?= __('Selected instrument') ?>
+                  </div>
+                  <div class="mt-1 text-sm text-slate-700 dark:text-slate-100" data-stock-selection>
+                    <?= __('No instrument selected yet.') ?>
+                  </div>
+                </div>
+                <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-300/80">
+                  <span data-stock-helper><?= __('Start typing to search symbols…') ?></span>
+                  <button type="button" class="btn btn-xs btn-muted hidden" data-stock-clear><?= __('Clear selection') ?></button>
+                </div>
+                <div class="hidden text-xs text-red-500 dark:text-red-300" data-stock-error><?= __('Could not load instruments. Try again.') ?></div>
+                <p class="text-xs text-slate-500 dark:text-slate-300/80"><?= __('Link a real ETF or stock to fetch live prices.') ?></p>
+              </div>
+            </div>
+            <div>
+              <label class="label" for="investment-units"><?= __('Units owned') ?></label>
+              <input id="investment-units" name="units" type="number" step="0.0001" min="0" class="input" data-stock-units />
+              <p class="mt-1 text-xs text-slate-500 dark:text-slate-300/80">
+                <?= __('Enter the number of units you hold. Used to calculate market value automatically.') ?>
+              </p>
             </div>
           </div>
 
@@ -352,6 +407,31 @@ $addPanelId = 'investment-add-panel';
           $milestoneCount = is_array($milestones) ? count($milestones) : 0;
           $hasRate = !empty($performance['has_rate']);
           $noteText = trim((string)($investment['notes'] ?? ''));
+          $hasStockLink = !empty($investment['stock_symbol']);
+          $stockId = isset($investment['stock_id']) ? (int)$investment['stock_id'] : 0;
+          $providerInputId = 'investment-provider-' . $investmentId;
+          $identifierInputId = 'investment-identifier-' . $investmentId;
+          $currencySelectId = 'investment-currency-' . $investmentId;
+          $symbolSearchId = 'investment-symbol-search-' . $investmentId;
+          $unitsInputId = 'investment-units-' . $investmentId;
+          $unitsValue = isset($investment['units_value']) ? (float)$investment['units_value'] : (float)($investment['units'] ?? 0);
+          $unitsDisplay = trim((string)($investment['units_input'] ?? ''));
+          if ($unitsDisplay === '' && $unitsValue > 0) {
+            $unitsDisplay = number_format($unitsValue, 4);
+          }
+          $interestInputId = 'investment-interest-' . $investmentId;
+          $stockQuote = $investment['stock_quote'] ?? null;
+          $marketValue = isset($investment['market_value']) ? (float)$investment['market_value'] : null;
+          $marketCurrency = strtoupper((string)($investment['market_currency'] ?? ($stockQuote['currency'] ?? $currencyCode)));
+          $marketDiff = isset($investment['market_diff']) ? (float)$investment['market_diff'] : null;
+          $marketDiffPct = isset($investment['market_diff_pct']) ? (float)$investment['market_diff_pct'] : null;
+          $marketDiffDirection = $investment['market_diff_direction'] ?? null;
+          $stockChange = isset($investment['stock_change']) ? (float)$investment['stock_change'] : null;
+          $stockChangePct = isset($investment['stock_change_pct']) ? (float)$investment['stock_change_pct'] : null;
+          $stockChangeDirection = $investment['stock_change_direction'] ?? null;
+          $stockLast = is_array($stockQuote) && isset($stockQuote['last']) ? (float)$stockQuote['last'] : null;
+          $stockCurrency = strtoupper((string)($stockQuote['currency'] ?? ($investment['stock_currency'] ?? $currencyCode)));
+          $stockUpdatedAt = $investment['stock_updated_at'] ?? null;
         ?>
           <details class="panel overflow-hidden" data-investment="<?= $investmentId ?>">
             <summary class="flex cursor-pointer flex-col gap-4 p-5 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-500">
@@ -375,6 +455,31 @@ $addPanelId = 'investment-add-panel';
                   </div>
                 </div>
                 <div class="space-y-1 text-right text-sm leading-5 text-slate-500 dark:text-slate-400">
+                  <?php if ($hasStockLink && $marketValue !== null): ?>
+                    <div>
+                      <span class="uppercase tracking-wide"><?= __('Market value') ?></span>:
+                      <span class="ml-2 text-lg font-semibold text-slate-900 dark:text-white">
+                        <?= moneyfmt($marketValue, $marketCurrency ?: $currencyCode) ?>
+                      </span>
+                    </div>
+                  <?php endif; ?>
+                  <?php if ($hasStockLink && $marketDiff !== null):
+                    $diffClass = $marketDiffDirection === 'up'
+                      ? 'text-emerald-600 dark:text-emerald-300'
+                      : ($marketDiffDirection === 'down'
+                        ? 'text-red-600 dark:text-red-300'
+                        : 'text-slate-500 dark:text-slate-400');
+                  ?>
+                    <div>
+                      <span class="text-xs uppercase tracking-wide"><?= __('Unrealized change') ?></span>:
+                      <span class="ml-2 text-xs font-semibold <?= $diffClass ?>">
+                        <?= moneyfmt($marketDiff, $marketCurrency ?: $currencyCode) ?>
+                        <?php if ($marketDiffPct !== null): ?>
+                          (<?= number_format($marketDiffPct, 2) ?>%)
+                        <?php endif; ?>
+                      </span>
+                    </div>
+                  <?php endif; ?>
                   <div>
                     <span class="uppercase tracking-wide"><?= __('Current balance') ?></span>:
                     <span class="ml-2 text-lg font-semibold text-slate-900 dark:text-white">
@@ -400,6 +505,25 @@ $addPanelId = 'investment-add-panel';
               <?= htmlspecialchars($investment['provider'] ?? '') ?><?= (!empty($investment['provider']) && !empty($investment['identifier'])) ? ' · ' : '' ?><?= htmlspecialchars($investment['identifier'] ?? '') ?>
             </div>
           <?php endif; ?>
+          <?php if ($hasStockLink):
+            $instrumentMeta = [];
+            if (!empty($investment['stock_exchange'])) {
+              $instrumentMeta[] = $investment['stock_exchange'];
+            }
+            if (!empty($investment['stock_currency'])) {
+              $instrumentMeta[] = strtoupper((string)$investment['stock_currency']);
+            }
+          ?>
+            <div class="text-xs text-slate-500 dark:text-slate-400">
+              <span class="font-semibold text-slate-700 dark:text-slate-200"><?= htmlspecialchars($investment['stock_symbol'] ?? '') ?></span>
+              <?php if (!empty($investment['stock_name'])): ?>
+                · <?= htmlspecialchars($investment['stock_name']) ?>
+              <?php endif; ?>
+              <?php if ($instrumentMeta): ?>
+                <span>(<?= htmlspecialchars(implode(' · ', $instrumentMeta)) ?>)</span>
+              <?php endif; ?>
+            </div>
+          <?php endif; ?>
           <div class="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
             <span><?= __('Payout frequency: :frequency', ['frequency' => htmlspecialchars($frequencyLabel)]) ?></span>
             <?php if ($investment['interest_rate'] !== null && $investment['interest_rate'] !== ''): ?>
@@ -407,6 +531,38 @@ $addPanelId = 'investment-add-panel';
               <span><?= __('Rate: :rate%', ['rate' => number_format((float)$investment['interest_rate'], 2)]) ?></span>
             <?php endif; ?>
           </div>
+          <?php if ($hasStockLink):
+            $changeClass = $stockChangeDirection === 'up'
+              ? 'text-emerald-600 dark:text-emerald-300'
+              : ($stockChangeDirection === 'down'
+                ? 'text-red-600 dark:text-red-300'
+                : 'text-slate-500 dark:text-slate-400');
+          ?>
+            <div class="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+              <?php if ($unitsValue > 0): ?>
+                <span><?= __('Units') ?>:
+                  <span class="font-semibold text-slate-900 dark:text-white"><?= htmlspecialchars($unitsDisplay) ?></span>
+                </span>
+              <?php endif; ?>
+              <?php if ($stockLast !== null): ?>
+                <span><?= __('Last price') ?>:
+                  <span class="font-semibold text-slate-900 dark:text-white"><?= moneyfmt($stockLast, $stockCurrency ?: $currencyCode) ?></span>
+                </span>
+              <?php endif; ?>
+              <?php if ($stockChange !== null && $stockChangePct !== null): ?>
+                <span class="<?= $changeClass ?>">
+                  <?= __('Daily change') ?>:
+                  <?= moneyfmt($stockChange, $stockCurrency ?: $currencyCode) ?>
+                  (<?= number_format($stockChangePct, 2) ?>%)
+                </span>
+              <?php endif; ?>
+            </div>
+            <?php if ($stockUpdatedAt): ?>
+              <div class="text-[11px] text-slate-400 dark:text-slate-500">
+                <?= __('Last updated :date', ['date' => htmlspecialchars($stockUpdatedAt)]) ?>
+              </div>
+            <?php endif; ?>
+          <?php endif; ?>
           <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
             <span><?= __('View details') ?></span>
             <span><?= __('Updated :date', ['date' => htmlspecialchars(substr((string)($investment['updated_at'] ?? ''), 0, 16))]) ?></span>
@@ -588,6 +744,30 @@ $addPanelId = 'investment-add-panel';
                     <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400"><?= __('Currency') ?></div>
                     <div class="mt-1 text-sm font-medium text-slate-900 dark:text-white"><?= htmlspecialchars($currencyCode) ?></div>
                   </div>
+                  <?php if ($hasStockLink):
+                    $instrumentMeta = [];
+                    if (!empty($investment['stock_exchange'])) {
+                      $instrumentMeta[] = $investment['stock_exchange'];
+                    }
+                    if (!empty($investment['stock_currency'])) {
+                      $instrumentMeta[] = strtoupper((string)$investment['stock_currency']);
+                    }
+                  ?>
+                    <div>
+                      <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400"><?= __('Selected instrument') ?></div>
+                      <div class="mt-1 text-sm text-slate-900 dark:text-white">
+                        <span class="font-semibold text-slate-900 dark:text-white"><?= htmlspecialchars($investment['stock_symbol'] ?? '') ?></span>
+                        <?php if (!empty($investment['stock_name'])): ?>
+                          · <?= htmlspecialchars($investment['stock_name']) ?>
+                        <?php endif; ?>
+                      </div>
+                      <?php if ($instrumentMeta): ?>
+                        <div class="text-xs text-slate-500 dark:text-slate-400">
+                          <?= htmlspecialchars(implode(' · ', $instrumentMeta)) ?>
+                        </div>
+                      <?php endif; ?>
+                    </div>
+                  <?php endif; ?>
                   <?php if (!empty($investment['provider'])): ?>
                     <div>
                       <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400"><?= __('Institution or broker') ?></div>
@@ -608,6 +788,54 @@ $addPanelId = 'investment-add-panel';
                     <div>
                       <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400"><?= __('Annual rate (EBKM)') ?></div>
                       <div class="mt-1 text-sm text-slate-900 dark:text-white"><?= number_format((float)$investment['interest_rate'], 2) ?>%</div>
+                    </div>
+                  <?php endif; ?>
+                  <?php if ($hasStockLink && $unitsValue > 0): ?>
+                    <div>
+                      <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400"><?= __('Units owned') ?></div>
+                      <div class="mt-1 text-sm font-medium text-slate-900 dark:text-white"><?= htmlspecialchars($unitsDisplay) ?></div>
+                    </div>
+                  <?php endif; ?>
+                  <?php if ($hasStockLink && $stockLast !== null): ?>
+                    <div>
+                      <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400"><?= __('Last price') ?></div>
+                      <div class="mt-1 text-sm font-medium text-slate-900 dark:text-white"><?= moneyfmt($stockLast, $stockCurrency ?: $currencyCode) ?></div>
+                    </div>
+                  <?php endif; ?>
+                  <?php if ($hasStockLink && $stockChange !== null && $stockChangePct !== null):
+                    $changeClass = $stockChangeDirection === 'up'
+                      ? 'text-emerald-600 dark:text-emerald-300'
+                      : ($stockChangeDirection === 'down'
+                        ? 'text-red-600 dark:text-red-300'
+                        : 'text-slate-500 dark:text-slate-400');
+                  ?>
+                    <div>
+                      <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400"><?= __('Daily change') ?></div>
+                      <div class="mt-1 text-sm font-medium <?= $changeClass ?>">
+                        <?= moneyfmt($stockChange, $stockCurrency ?: $currencyCode) ?>
+                        (<?= number_format($stockChangePct, 2) ?>%)
+                      </div>
+                    </div>
+                  <?php endif; ?>
+                  <?php if ($hasStockLink && $marketValue !== null):
+                    $diffClass = $marketDiffDirection === 'up'
+                      ? 'text-emerald-600 dark:text-emerald-300'
+                      : ($marketDiffDirection === 'down'
+                        ? 'text-red-600 dark:text-red-300'
+                        : 'text-slate-500 dark:text-slate-400');
+                  ?>
+                    <div>
+                      <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400"><?= __('Market value') ?></div>
+                      <div class="mt-1 text-sm font-medium text-slate-900 dark:text-white"><?= moneyfmt($marketValue, $marketCurrency ?: $currencyCode) ?></div>
+                      <?php if ($marketDiff !== null): ?>
+                        <div class="text-xs <?= $diffClass ?>">
+                          <?= __('Unrealized change') ?>:
+                          <?= moneyfmt($marketDiff, $marketCurrency ?: $currencyCode) ?>
+                          <?php if ($marketDiffPct !== null): ?>
+                            (<?= number_format($marketDiffPct, 2) ?>%)
+                          <?php endif; ?>
+                        </div>
+                      <?php endif; ?>
                     </div>
                   <?php endif; ?>
                   <div class="md:col-span-2">
@@ -635,6 +863,11 @@ $addPanelId = 'investment-add-panel';
                       <p class="mt-1 whitespace-pre-wrap text-sm text-slate-900 dark:text-white"><?= nl2br(htmlspecialchars($noteText, ENT_QUOTES)) ?></p>
                     </div>
                   <?php endif; ?>
+                  <?php if ($hasStockLink && $stockUpdatedAt): ?>
+                    <div class="md:col-span-2 text-xs text-slate-500 dark:text-slate-400">
+                      <?= __('Last updated :date', ['date' => htmlspecialchars($stockUpdatedAt)]) ?>
+                    </div>
+                  <?php endif; ?>
                   <div class="md:col-span-2 text-xs text-slate-500 dark:text-slate-400">
                     <div><?= __('Created on :date', ['date' => htmlspecialchars(substr((string)($investment['created_at'] ?? ''), 0, 10))]) ?></div>
                     <div><?= __('Updated :date', ['date' => htmlspecialchars(substr((string)($investment['updated_at'] ?? ''), 0, 16))]) ?></div>
@@ -642,14 +875,21 @@ $addPanelId = 'investment-add-panel';
                 </div>
               </div>
 
-              <form method="post" action="/investments/update" class="hidden space-y-4 border-t border-slate-200 px-4 py-4 dark:border-slate-700" id="investment-update-<?= $investmentId ?>" data-investment-edit>
+                <form
+                  method="post"
+                  action="/investments/update"
+                  class="hidden space-y-4 border-t border-slate-200 px-4 py-4 dark:border-slate-700"
+                  id="investment-update-<?= $investmentId ?>"
+                  data-investment-edit
+                  data-investment-form
+                >
                 <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                 <input type="hidden" name="id" value="<?= $investmentId ?>" />
 
                 <div class="grid gap-3 md:grid-cols-2">
                   <div>
-                    <label class="label"><?= __('Investment type') ?></label>
-                    <select name="type" class="select">
+                    <label class="label" for="investment-type-<?= $investmentId ?>"><?= __('Investment type') ?></label>
+                    <select name="type" class="select" id="investment-type-<?= $investmentId ?>">
                       <?php foreach ($types as $value => $metaOption): ?>
                         <option value="<?= htmlspecialchars($value) ?>" <?= $value === $currentType ? 'selected' : '' ?>>
                           <?= htmlspecialchars($metaOption['label']) ?>
@@ -665,20 +905,86 @@ $addPanelId = 'investment-add-panel';
 
                 <div class="grid gap-3 md:grid-cols-2">
                   <div>
-                    <label class="label"><?= __('Institution or broker') ?></label>
-                    <input name="provider" class="input" value="<?= htmlspecialchars($investment['provider'] ?? '') ?>" />
+                    <label class="label" for="<?= $providerInputId ?>"><?= __('Institution or broker') ?></label>
+                    <input id="<?= $providerInputId ?>" name="provider" class="input" value="<?= htmlspecialchars($investment['provider'] ?? '') ?>" />
                   </div>
                   <div>
-                    <label class="label"><?= __('Account number / Ticker') ?></label>
-                    <input name="identifier" class="input" value="<?= htmlspecialchars($investment['identifier'] ?? '') ?>" />
+                    <label class="label" for="<?= $identifierInputId ?>"><?= __('Account number / Ticker') ?></label>
+                    <input id="<?= $identifierInputId ?>" name="identifier" class="input" value="<?= htmlspecialchars($investment['identifier'] ?? '') ?>" />
+                  </div>
+                </div>
+
+                <div class="grid gap-3 md:grid-cols-3 <?= in_array($currentType, ['etf', 'stock'], true) ? '' : 'hidden' ?>" data-stock-fields>
+                  <div class="md:col-span-2 space-y-2">
+                    <label class="label" for="<?= $symbolSearchId ?>"><?= __('Search ETF or stock') ?></label>
+                    <div
+                      class="space-y-2"
+                      data-stock-picker
+                      data-stock-selected-id="<?= $stockId > 0 ? $stockId : '' ?>"
+                      data-stock-selected-symbol="<?= htmlspecialchars($investment['stock_symbol'] ?? '') ?>"
+                      data-stock-selected-name="<?= htmlspecialchars($investment['stock_name'] ?? '') ?>"
+                      data-stock-selected-exchange="<?= htmlspecialchars($investment['stock_exchange'] ?? '') ?>"
+                      data-stock-selected-currency="<?= htmlspecialchars($investment['stock_currency'] ?? '') ?>"
+                      data-stock-identifier-target="#<?= $identifierInputId ?>"
+                      data-stock-provider-target="#<?= $providerInputId ?>"
+                      data-stock-currency-target="#<?= $currencySelectId ?>"
+                      data-stock-empty-label="<?= htmlspecialchars(__('No instrument selected yet.')) ?>"
+                      data-stock-no-results="<?= htmlspecialchars(__('No results')) ?>"
+                      data-stock-error-label="<?= htmlspecialchars(__('Could not load instruments. Try again.')) ?>"
+                      data-stock-interest-target="#<?= $interestInputId ?>"
+                    >
+                      <div class="relative">
+                        <input
+                          id="<?= $symbolSearchId ?>"
+                          type="search"
+                          class="input"
+                          placeholder="<?= __('Search ETF or stock') ?>"
+                          data-stock-search
+                          autocomplete="off"
+                          spellcheck="false"
+                          value="<?= htmlspecialchars($investment['stock_symbol'] ?? '') ?>"
+                        />
+                        <input type="hidden" name="stock_id" data-stock-value value="<?= $stockId > 0 ? $stockId : '' ?>" />
+                        <div
+                          class="absolute left-0 right-0 z-30 mt-1 max-h-60 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900 hidden"
+                          data-stock-results
+                        ></div>
+                      </div>
+                      <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50/80 p-3 text-xs text-slate-600 dark:border-slate-600 dark:bg-slate-900/40 dark:text-slate-300">
+                        <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                          <?= __('Selected instrument') ?>
+                        </div>
+                        <div class="mt-1 text-sm text-slate-700 dark:text-slate-100" data-stock-selection>
+                          <?php if ($hasStockLink): ?>
+                            <span class="font-semibold text-slate-900 dark:text-white"><?= htmlspecialchars($investment['stock_symbol'] ?? '') ?></span>
+                            <?php if (!empty($investment['stock_name'])): ?> · <?= htmlspecialchars($investment['stock_name']) ?><?php endif; ?>
+                          <?php else: ?>
+                            <?= __('No instrument selected yet.') ?>
+                          <?php endif; ?>
+                        </div>
+                      </div>
+                      <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-300/80">
+                        <span data-stock-helper><?= __('Start typing to search symbols…') ?></span>
+                        <button type="button" class="btn btn-xs btn-muted <?= $hasStockLink ? '' : 'hidden' ?>" data-stock-clear><?= __('Clear selection') ?></button>
+                      </div>
+                      <div class="hidden text-xs text-red-500 dark:text-red-300" data-stock-error><?= __('Could not load instruments. Try again.') ?></div>
+                      <p class="text-xs text-slate-500 dark:text-slate-300/80"><?= __('Link a real ETF or stock to fetch live prices.') ?></p>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="label" for="<?= $unitsInputId ?>"><?= __('Units owned') ?></label>
+                    <input id="<?= $unitsInputId ?>" name="units" type="number" step="0.0001" min="0" class="input" data-stock-units value="<?= htmlspecialchars($investment['units_input'] ?? '') ?>" />
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-300/80">
+                      <?= __('Enter the number of units you hold. Used to calculate market value automatically.') ?>
+                    </p>
                   </div>
                 </div>
 
                 <div class="grid gap-3 md:grid-cols-3">
                   <div>
-                    <label class="label"><?= __('Annual rate (EBKM)') ?></label>
+                    <label class="label" for="<?= $interestInputId ?>"><?= __('Annual rate (EBKM)') ?></label>
                     <div class="relative">
-                      <input name="interest_rate" type="number" step="0.01" min="0" class="input pr-12" value="<?= htmlspecialchars($investment['interest_rate'] ?? '') ?>" />
+                      <input id="<?= $interestInputId ?>" name="interest_rate" type="number" step="0.01" min="0" class="input pr-12" value="<?= htmlspecialchars($investment['interest_rate'] ?? '') ?>" />
                       <span class="absolute inset-y-0 right-3 flex items-center text-sm text-slate-500">%</span>
                     </div>
                   </div>
@@ -693,8 +999,8 @@ $addPanelId = 'investment-add-panel';
                     </select>
                   </div>
                   <div>
-                    <label class="label"><?= __('Currency') ?></label>
-                    <select name="currency" class="select">
+                    <label class="label" for="<?= $currencySelectId ?>"><?= __('Currency') ?></label>
+                    <select name="currency" class="select" id="<?= $currencySelectId ?>">
                       <option value="<?= htmlspecialchars($currencyCode) ?>" selected>
                         <?= htmlspecialchars($currencyCode) ?><?= strtoupper($currencyCode) === strtoupper($mainCurrency) ? ' · ' . __('Main') : '' ?>
                       </option>
@@ -1195,6 +1501,412 @@ $builderIds = array_values(array_unique(array_filter($builderIds)));
     build();
   }
 
+  function wireStockPicker(container) {
+    if (!container || container.__stockPickerInit) {
+      return;
+    }
+    container.__stockPickerInit = true;
+
+    const searchInput = container.querySelector('[data-stock-search]');
+    const hiddenInput = container.querySelector('[data-stock-value]');
+    const resultsEl = container.querySelector('[data-stock-results]');
+    const selectionEl = container.querySelector('[data-stock-selection]');
+    const clearBtn = container.querySelector('[data-stock-clear]');
+    const errorEl = container.querySelector('[data-stock-error]');
+    const identifierTarget = container.dataset.stockIdentifierTarget ? document.querySelector(container.dataset.stockIdentifierTarget) : null;
+    const providerTarget = container.dataset.stockProviderTarget ? document.querySelector(container.dataset.stockProviderTarget) : null;
+    const currencyTarget = container.dataset.stockCurrencyTarget ? document.querySelector(container.dataset.stockCurrencyTarget) : null;
+    const interestTarget = container.dataset.stockInterestTarget ? document.querySelector(container.dataset.stockInterestTarget) : null;
+    const form = container.closest('form');
+    const emptyLabel = container.dataset.stockEmptyLabel || '';
+    const noResultsLabel = container.dataset.stockNoResults || 'No results';
+    const errorLabel = container.dataset.stockErrorLabel || 'Could not load instruments. Try again.';
+
+    const state = {
+      id: container.dataset.stockSelectedId ? parseInt(container.dataset.stockSelectedId, 10) || null : (hiddenInput && hiddenInput.value ? parseInt(hiddenInput.value, 10) || null : null),
+      symbol: container.dataset.stockSelectedSymbol || '',
+      name: container.dataset.stockSelectedName || '',
+      exchange: container.dataset.stockSelectedExchange || '',
+      currency: container.dataset.stockSelectedCurrency || '',
+      expectedInterest: null
+    };
+
+    let fetchController = null;
+    let resultsVisible = false;
+    let interestPrefillRequested = false;
+    let interestFetchController = null;
+    let suppressInterestManualFlag = false;
+
+    if (interestTarget) {
+      interestTarget.addEventListener('input', function () {
+        if (suppressInterestManualFlag) {
+          return;
+        }
+        container.__interestManual = true;
+      });
+    }
+
+    const getFormType = function () {
+      if (!form) {
+        return '';
+      }
+      const checkedRadio = form.querySelector('input[name="type"]:checked');
+      if (checkedRadio) {
+        return String(checkedRadio.value || '').toLowerCase();
+      }
+      const select = form.querySelector('select[name="type"]');
+      if (select) {
+        return String(select.value || '').toLowerCase();
+      }
+      return '';
+    };
+
+    const isEtfForm = function () {
+      return getFormType() === 'etf';
+    };
+
+    const hasMeaningfulInterest = function () {
+      if (!interestTarget) {
+        return false;
+      }
+      const raw = String(interestTarget.value ?? '').trim();
+      if (raw === '') {
+        return false;
+      }
+      const numeric = parseFloat(raw);
+      if (Number.isNaN(numeric)) {
+        return true;
+      }
+      return numeric > 0;
+    };
+
+    const formatInterestRate = function (rate) {
+      if (typeof rate !== 'number' || !Number.isFinite(rate)) {
+        return null;
+      }
+      const rounded = Math.round(rate * 100) / 100;
+      if (!Number.isFinite(rounded)) {
+        return null;
+      }
+      if (Number.isInteger(rounded)) {
+        return String(rounded);
+      }
+      return rounded.toFixed(2);
+    };
+
+    const applyInterestRate = function (rate) {
+      if (!interestTarget) {
+        return;
+      }
+      const formatted = formatInterestRate(rate);
+      if (formatted === null) {
+        return;
+      }
+      suppressInterestManualFlag = true;
+      interestTarget.value = formatted;
+      interestTarget.dispatchEvent(new Event('input', { bubbles: true }));
+      interestTarget.dispatchEvent(new Event('change', { bubbles: true }));
+      suppressInterestManualFlag = false;
+      container.__interestManual = false;
+    };
+
+    const updateSelection = function () {
+      if (!selectionEl) {
+        return;
+      }
+      if (state.id && state.symbol) {
+        let text = state.symbol;
+        if (state.name) {
+          text += ' · ' + state.name;
+        }
+        const meta = [];
+        if (state.exchange) meta.push(state.exchange);
+        if (state.currency) meta.push(state.currency);
+        if (meta.length) {
+          text += ' (' + meta.join(' · ') + ')';
+        }
+        selectionEl.textContent = text;
+      } else {
+        selectionEl.textContent = emptyLabel;
+      }
+      if (clearBtn) {
+        clearBtn.classList.toggle('hidden', !(state.id && state.symbol));
+      }
+    };
+
+    const maybePrefillInterest = function (item) {
+      if (!interestTarget || interestPrefillRequested || container.__interestManual || !isEtfForm()) {
+        return;
+      }
+      if (hasMeaningfulInterest()) {
+        return;
+      }
+      const direct = item && typeof item.expected_interest === 'number' && Number.isFinite(item.expected_interest)
+        ? item.expected_interest
+        : null;
+      if (direct !== null) {
+        interestPrefillRequested = true;
+        applyInterestRate(direct);
+        return;
+      }
+      if (!state.id) {
+        return;
+      }
+      interestPrefillRequested = true;
+      if (interestFetchController) {
+        interestFetchController.abort();
+      }
+      interestFetchController = new AbortController();
+      fetch('/api/stocks/' + state.id + '/expected-interest', {
+        credentials: 'same-origin',
+        signal: interestFetchController.signal,
+        headers: { Accept: 'application/json' }
+      })
+        .then(function (response) {
+          if (!response.ok) {
+            throw new Error('bad response');
+          }
+          return response.json();
+        })
+        .then(function (payload) {
+          if (interestFetchController && interestFetchController.signal.aborted) {
+            return;
+          }
+          const rate = payload && typeof payload.rate === 'number' ? payload.rate : null;
+          if (rate !== null && !container.__interestManual && !hasMeaningfulInterest() && isEtfForm()) {
+            applyInterestRate(rate);
+          }
+        })
+        .catch(function () {
+          if (interestFetchController && interestFetchController.signal.aborted) {
+            return;
+          }
+          interestPrefillRequested = false;
+        })
+        .finally(function () {
+          interestFetchController = null;
+        });
+    };
+
+    updateSelection();
+    if (state.id) {
+      maybePrefillInterest(null);
+    }
+
+    const hideResults = function () {
+      if (resultsEl) {
+        resultsEl.classList.add('hidden');
+        resultsEl.innerHTML = '';
+      }
+      resultsVisible = false;
+    };
+
+    const showResults = function (items) {
+      if (!resultsEl) {
+        return;
+      }
+      resultsEl.innerHTML = '';
+      if (!items.length) {
+        const emptyItem = document.createElement('div');
+        emptyItem.className = 'px-3 py-2 text-xs text-slate-500 dark:text-slate-300/80';
+        emptyItem.textContent = noResultsLabel;
+        resultsEl.appendChild(emptyItem);
+      } else {
+        items.forEach(function (item) {
+          const option = document.createElement('button');
+          option.type = 'button';
+          option.className = 'flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left hover:bg-slate-100 focus:bg-slate-100 dark:hover:bg-slate-800 dark:focus:bg-slate-800';
+          const label = document.createElement('span');
+          label.className = 'text-sm font-semibold text-slate-900 dark:text-white';
+          label.textContent = item.symbol + (item.name ? ' · ' + item.name : '');
+          const meta = document.createElement('span');
+          meta.className = 'text-xs text-slate-500 dark:text-slate-400';
+          const metaParts = [];
+          if (item.exchange) metaParts.push(item.exchange);
+          if (item.currency) metaParts.push(item.currency);
+          meta.textContent = metaParts.join(' · ');
+          option.appendChild(label);
+          option.appendChild(meta);
+          option.addEventListener('click', function () {
+            applySelection(item);
+          });
+          resultsEl.appendChild(option);
+        });
+      }
+      resultsEl.classList.remove('hidden');
+      resultsVisible = true;
+    };
+
+    const showError = function () {
+      if (errorEl) {
+        errorEl.textContent = errorLabel;
+        errorEl.classList.remove('hidden');
+      }
+    };
+
+    const clearError = function () {
+      if (errorEl) {
+        errorEl.classList.add('hidden');
+      }
+    };
+
+    const applySelection = function (item) {
+      state.id = item && item.id ? item.id : null;
+      state.symbol = item && item.symbol ? item.symbol : '';
+      state.name = item && item.name ? item.name : '';
+      state.exchange = item && item.exchange ? item.exchange : '';
+      state.currency = item && item.currency ? item.currency : '';
+      state.expectedInterest = item && typeof item.expected_interest === 'number' ? item.expected_interest : null;
+      if (hiddenInput) {
+        hiddenInput.value = state.id ? String(state.id) : '';
+      }
+      if (searchInput && state.symbol) {
+        searchInput.value = state.symbol;
+      }
+      if (identifierTarget && state.symbol) {
+        identifierTarget.value = state.symbol;
+      }
+      if (providerTarget && state.exchange && !providerTarget.value) {
+        providerTarget.value = state.exchange;
+      }
+      if (currencyTarget && state.currency) {
+        currencyTarget.value = state.currency;
+      }
+      updateSelection();
+      hideResults();
+      clearError();
+      interestPrefillRequested = false;
+      maybePrefillInterest(item || null);
+    };
+
+    const handleInput = function () {
+      if (!searchInput) {
+        return;
+      }
+      const query = searchInput.value.trim();
+      if (query.length < 2) {
+        hideResults();
+        return;
+      }
+      if (fetchController) {
+        fetchController.abort();
+      }
+      fetchController = new AbortController();
+      clearError();
+      fetch('/api/stocks/search?q=' + encodeURIComponent(query), {
+        credentials: 'same-origin',
+        signal: fetchController.signal,
+        headers: { Accept: 'application/json' }
+      })
+        .then(function (response) {
+          if (!response.ok) {
+            throw new Error('bad response');
+          }
+          return response.json();
+        })
+        .then(function (payload) {
+          if (fetchController && fetchController.signal.aborted) {
+            return;
+          }
+          const list = Array.isArray(payload.data) ? payload.data : [];
+          showResults(list);
+        })
+        .catch(function () {
+          if (fetchController && fetchController.signal.aborted) {
+            return;
+          }
+          hideResults();
+          showError();
+        });
+    };
+
+    if (searchInput) {
+      searchInput.addEventListener('input', handleInput);
+      searchInput.addEventListener('focus', function () {
+        if (searchInput.value.trim().length >= 2) {
+          handleInput();
+        }
+      });
+      searchInput.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+          hideResults();
+        }
+      });
+    }
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function (event) {
+        event.preventDefault();
+        state.id = null;
+        state.symbol = '';
+        state.name = '';
+        state.exchange = '';
+        state.currency = '';
+        state.expectedInterest = null;
+        if (hiddenInput) {
+          hiddenInput.value = '';
+        }
+        if (searchInput) {
+          searchInput.value = '';
+        }
+        interestPrefillRequested = false;
+        updateSelection();
+        hideResults();
+      });
+    }
+
+    document.addEventListener('mousedown', function (event) {
+      if (!resultsVisible) {
+        return;
+      }
+      if (!container.contains(event.target)) {
+        hideResults();
+      }
+    });
+  }
+
+  function wireInvestmentForm(form) {
+    if (!form || form.__investmentFormInit) {
+      return;
+    }
+    form.__investmentFormInit = true;
+
+    const stockFields = form.querySelector('[data-stock-fields]');
+    const typeRadios = form.querySelectorAll('input[name="type"]');
+    const typeSelect = form.querySelector('select[name="type"]');
+
+    const toggleStockFields = function () {
+      if (!stockFields) {
+        return;
+      }
+      let value = '';
+      if (typeRadios.length) {
+        typeRadios.forEach(function (radio) {
+          if (radio.checked) {
+            value = radio.value;
+          }
+        });
+      } else if (typeSelect) {
+        value = typeSelect.value;
+      }
+      value = (value || '').toLowerCase();
+      const shouldShow = value === 'etf' || value === 'stock';
+      stockFields.classList.toggle('hidden', !shouldShow);
+    };
+
+    typeRadios.forEach(function (radio) {
+      radio.addEventListener('change', toggleStockFields);
+    });
+    if (typeSelect) {
+      typeSelect.addEventListener('change', toggleStockFields);
+    }
+    toggleStockFields();
+
+    form.querySelectorAll('[data-stock-picker]').forEach(function (picker) {
+      wireStockPicker(picker);
+    });
+  }
+
   function initScheduleTabs(container) {
     const modeInput = container.querySelector('[data-schedule-mode]');
     const triggers = Array.from(container.querySelectorAll('[data-schedule-tab]'));
@@ -1262,6 +1974,10 @@ $builderIds = array_values(array_unique(array_filter($builderIds)));
 
     document.querySelectorAll('[data-schedule-tabs]').forEach(function (container) {
       initScheduleTabs(container);
+    });
+
+    document.querySelectorAll('[data-investment-form]').forEach(function (form) {
+      wireInvestmentForm(form);
     });
 
     const mobileMedia = window.matchMedia('(max-width: 639px)');

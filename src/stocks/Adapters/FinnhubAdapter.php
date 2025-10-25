@@ -107,6 +107,69 @@ class FinnhubAdapter implements PriceProviderAdapter
         ], static fn($value) => $value !== null && $value !== '');
     }
 
+    public function searchSymbols(string $query): array
+    {
+        $query = trim($query);
+        if ($query === '') {
+            return [];
+        }
+
+        $url = sprintf('%s/search?q=%s&token=%s',
+            $this->baseUrl,
+            rawurlencode($query),
+            rawurlencode($this->apiKey)
+        );
+        $json = $this->httpGet($url);
+        if (!$json) {
+            return [];
+        }
+        $data = json_decode($json, true);
+        if (!is_array($data) || !isset($data['result']) || !is_array($data['result'])) {
+            return [];
+        }
+
+        $allowedPatterns = '/STOCK|ETF|ETP|FUND|TRUST|ADR|REIT|NOTE|PREF|INDEX|ETN|EQUITY/i';
+
+        $out = [];
+        foreach ($data['result'] as $row) {
+            $rawSymbol = strtoupper(trim((string)($row['symbol'] ?? '')));
+            $displaySymbol = strtoupper(trim((string)($row['displaySymbol'] ?? '')));
+            $symbol = $rawSymbol !== '' ? $rawSymbol : $displaySymbol;
+            if ($displaySymbol !== '' && $displaySymbol !== $symbol) {
+                $symbol = $displaySymbol;
+            }
+            if ($symbol === '') {
+                continue;
+            }
+            $type = (string)($row['type'] ?? '');
+            if ($type !== '' && !preg_match($allowedPatterns, $type)) {
+                continue;
+            }
+            $name = trim((string)($row['description'] ?? ''));
+            $mic = strtoupper(trim((string)($row['mic'] ?? '')));
+            $exchange = $mic !== '' ? $mic : $displaySymbol;
+            if ($exchange === '') {
+                $exchange = null;
+            }
+
+            $currency = strtoupper(trim((string)($row['currency'] ?? '')));
+            if ($currency === '') {
+                $currency = null;
+            }
+
+            $out[] = [
+                'symbol' => $symbol,
+                'name' => $name !== '' ? $name : $symbol,
+                'exchange' => $exchange,
+                'market' => $mic !== '' ? $mic : null,
+                'currency' => $currency,
+                'type' => $type !== '' ? $type : null,
+            ];
+        }
+
+        return $out;
+    }
+
     private function httpGet(string $url): ?string
     {
         if (function_exists('curl_init')) {

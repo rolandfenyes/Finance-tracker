@@ -34,4 +34,9 @@ class NullPriceProvider implements PriceProviderAdapter
     {
         return [];
     }
+
+    public function searchSymbols(string $query): array
+    {
+        return [];
+    }
 }

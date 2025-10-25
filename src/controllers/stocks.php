@@ -1088,6 +1088,310 @@ function stocks_is_watched(PDO $pdo, int $userId, int $stockId): bool
     return (bool)$stmt->fetchColumn();
 }
 
+function stocks_expected_interest_api(PDO $pdo, int $stockId): void
+{
+    if (!stocks_table_exists($pdo, 'stocks')) {
+        json_response(['rate' => null]);
+    }
+
+    $stockId = (int)$stockId;
+    if ($stockId <= 0) {
+        json_response(['rate' => null]);
+    }
+
+    try {
+        $stmt = $pdo->prepare('SELECT UPPER(symbol) AS symbol FROM stocks WHERE id=? LIMIT 1');
+        $stmt->execute([$stockId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    } catch (Throwable $e) {
+        $row = null;
+    }
+
+    if (!$row) {
+        json_response(['rate' => null]);
+    }
+
+    $symbol = strtoupper(trim((string)($row['symbol'] ?? '')));
+    if ($symbol === '') {
+        json_response(['rate' => null]);
+    }
+
+    $rate = stocks_estimate_expected_interest($pdo, $symbol);
+    if ($rate === null) {
+        json_response(['rate' => null]);
+    }
+
+    json_response(['rate' => $rate]);
+}
+
+function stocks_search_api(PDO $pdo): void
+{
+    $query = trim((string)($_GET['q'] ?? ''));
+    if ($query === '') {
+        json_response(['data' => []]);
+    }
+
+    $limit = 20;
+    $results = [];
+    $seen = [];
+
+    $append = static function (array $row) use (&$results, &$seen, $limit): void {
+        if (count($results) >= $limit) {
+            return;
+        }
+        $symbol = strtoupper((string)($row['symbol'] ?? ''));
+        if ($symbol === '') {
+            return;
+        }
+        $exchange = strtoupper((string)($row['exchange'] ?? ''));
+        $key = $symbol . '|' . $exchange;
+        if (isset($seen[$key])) {
+            return;
+        }
+        $seen[$key] = true;
+        $results[] = [
+            'id' => (int)($row['id'] ?? 0),
+            'symbol' => $symbol,
+            'name' => trim((string)($row['name'] ?? '')),
+            'exchange' => $exchange,
+            'currency' => strtoupper((string)($row['currency'] ?? '')),
+        ];
+    };
+
+    if (stocks_table_exists($pdo, 'stocks')) {
+        $normalized = preg_replace('/\s+/', ' ', $query);
+        $symbolQuery = strtoupper($normalized);
+        $nameQuery = strtolower($normalized);
+        $likeSymbol = '%' . str_replace(' ', '%', $symbolQuery) . '%';
+        $likeName = '%' . str_replace(' ', '%', $nameQuery) . '%';
+
+        try {
+            $stmt = $pdo->prepare('SELECT id, UPPER(symbol) AS symbol, name, exchange, currency FROM stocks WHERE UPPER(symbol) LIKE ? OR LOWER(name) LIKE ? ORDER BY CASE WHEN UPPER(symbol) = ? THEN 0 WHEN UPPER(symbol) LIKE ? THEN 1 WHEN LOWER(name) LIKE ? THEN 2 ELSE 3 END, symbol LIMIT 20');
+            $stmt->execute([$likeSymbol, $likeName, $symbolQuery, $likeSymbol, $likeName]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Throwable $e) {
+            $rows = [];
+        }
+
+        foreach ($rows as $row) {
+            $append($row);
+        }
+    }
+
+    if (count($results) < $limit) {
+        $remaining = $limit - count($results);
+        $remoteRows = stocks_search_remote($pdo, $query, $remaining);
+        foreach ($remoteRows as $row) {
+            $append($row);
+        }
+    }
+
+    json_response(['data' => $results]);
+}
+
+function stocks_search_remote(PDO $pdo, string $query, int $limit = 20): array
+{
+    if (!stocks_table_exists($pdo, 'stocks') || $limit <= 0) {
+        return [];
+    }
+
+    global $config;
+    $providerName = strtolower($config['stocks']['provider'] ?? '');
+    if ($providerName !== 'finnhub') {
+        return [];
+    }
+
+    $providerCfg = $config['stocks']['providers']['finnhub'] ?? [];
+    $apiKey = $providerCfg['api_key'] ?? getenv('FINNHUB_API_KEY');
+    $baseUrl = $providerCfg['base_url'] ?? getenv('FINNHUB_BASE_URL') ?: 'https://finnhub.io/api/v1';
+    if (empty($apiKey)) {
+        return [];
+    }
+
+    $adapter = new FinnhubAdapter($apiKey, $baseUrl);
+    $remote = $adapter->searchSymbols($query);
+    if (empty($remote)) {
+        return [];
+    }
+
+    $out = [];
+    foreach ($remote as $row) {
+        if (count($out) >= $limit) {
+            break;
+        }
+        $upserted = stocks_upsert_remote_symbol($pdo, $row);
+        if ($upserted) {
+            $out[] = $upserted;
+        }
+    }
+
+    return $out;
+}
+
+function stocks_estimate_expected_interest(PDO $pdo, string $symbol): ?float
+{
+    $symbol = strtoupper(trim($symbol));
+    if ($symbol === '') {
+        return null;
+    }
+
+    try {
+        $priceService = stocks_price_service($pdo);
+        $end = new DateTimeImmutable('today');
+        $start = $end->sub(new DateInterval('P5Y'));
+        $history = $priceService->getDailyHistory($symbol, $start->format('Y-m-d'), $end->format('Y-m-d'));
+    } catch (Throwable $e) {
+        return null;
+    }
+
+    if (empty($history)) {
+        return null;
+    }
+
+    $firstClose = null;
+    $firstDate = null;
+    $lastClose = null;
+    $lastDate = null;
+
+    foreach ($history as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+        $closeRaw = $row['close'] ?? null;
+        if ($closeRaw === null || $closeRaw === '') {
+            continue;
+        }
+        $close = (float)$closeRaw;
+        if ($close <= 0) {
+            continue;
+        }
+        $date = isset($row['date']) ? (string)$row['date'] : '';
+        if ($date === '') {
+            continue;
+        }
+        if ($firstClose === null) {
+            $firstClose = $close;
+            $firstDate = $date;
+        }
+        $lastClose = $close;
+        $lastDate = $date;
+    }
+
+    if ($firstClose === null || $lastClose === null || !$firstDate || !$lastDate) {
+        return null;
+    }
+
+    $firstTs = strtotime($firstDate . ' 00:00:00');
+    $lastTs = strtotime($lastDate . ' 00:00:00');
+    if (!$firstTs || !$lastTs || $lastTs <= $firstTs) {
+        return null;
+    }
+
+    $years = ($lastTs - $firstTs) / 31557600; // average seconds per year (365.25 days)
+    if ($years < 0.75) {
+        return null;
+    }
+
+    $growth = $lastClose / $firstClose;
+    if ($growth <= 0) {
+        return null;
+    }
+
+    $cagr = pow($growth, 1 / $years) - 1;
+    if (!is_finite($cagr)) {
+        return null;
+    }
+
+    $percent = round($cagr * 100, 2);
+    if (!is_finite($percent) || $percent <= 0) {
+        return null;
+    }
+
+    return $percent;
+}
+
+function stocks_upsert_remote_symbol(PDO $pdo, array $row): ?array
+{
+    $symbol = strtoupper(trim((string)($row['symbol'] ?? '')));
+    if ($symbol === '') {
+        return null;
+    }
+
+    $name = trim((string)($row['name'] ?? ''));
+    $exchange = trim((string)($row['exchange'] ?? ''));
+    $market = trim((string)($row['market'] ?? ''));
+    $currency = strtoupper(trim((string)($row['currency'] ?? '')));
+
+    if ($exchange === '') {
+        $exchange = null;
+    }
+    if ($market === '') {
+        $market = null;
+    }
+    if ($currency === '' || !stocks_currency_exists($pdo, $currency)) {
+        $currency = null;
+    }
+
+    try {
+        $sql = <<<'SQL'
+INSERT INTO stocks(symbol, exchange, market, name, currency)
+VALUES (?,?,?,?,?)
+ON CONFLICT (UPPER(symbol), COALESCE(market, '')) DO UPDATE
+  SET exchange = COALESCE(NULLIF(EXCLUDED.exchange, ''), stocks.exchange),
+      market = COALESCE(NULLIF(EXCLUDED.market, ''), stocks.market),
+      name = COALESCE(NULLIF(EXCLUDED.name, ''), stocks.name),
+      currency = COALESCE(NULLIF(EXCLUDED.currency, ''), stocks.currency),
+      updated_at = NOW()
+RETURNING id, UPPER(symbol) AS symbol, name, exchange, currency
+SQL;
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            $symbol,
+            $exchange,
+            $market,
+            $name !== '' ? $name : null,
+            $currency,
+        ]);
+        $stored = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        return null;
+    }
+
+    if (!$stored) {
+        return null;
+    }
+
+    return [
+        'id' => (int)($stored['id'] ?? 0),
+        'symbol' => strtoupper((string)($stored['symbol'] ?? $symbol)),
+        'name' => trim((string)($stored['name'] ?? $name)),
+        'exchange' => trim((string)($stored['exchange'] ?? ($exchange ?? ''))),
+        'currency' => strtoupper((string)($stored['currency'] ?? ($currency ?? ''))),
+    ];
+}
+
+function stocks_currency_exists(PDO $pdo, string $code): bool
+{
+    static $cache = [];
+    $code = strtoupper(trim($code));
+    if ($code === '') {
+        return false;
+    }
+    if (array_key_exists($code, $cache)) {
+        return $cache[$code];
+    }
+
+    try {
+        $stmt = $pdo->prepare('SELECT 1 FROM currencies WHERE code = ?');
+        $stmt->execute([$code]);
+        $cache[$code] = (bool)$stmt->fetchColumn();
+    } catch (Throwable $e) {
+        $cache[$code] = false;
+    }
+
+    return $cache[$code];
+}
+
 function stocks_table_exists(PDO $pdo, string $table): bool
 {
     static $cache = [];
