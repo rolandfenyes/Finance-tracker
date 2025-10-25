@@ -229,15 +229,15 @@ SELECT u.id, u.email, u.full_name, u.role, u.status, u.created_at, u.email_verif
   ) la ON TRUE
 {$whereClause}
  ORDER BY u.created_at DESC
- LIMIT :limit OFFSET :offset
+ LIMIT ? OFFSET ?
 SQL;
 
     $stmt = $pdo->prepare($sql);
     foreach ($params as $index => $value) {
         $stmt->bindValue($index + 1, $value);
     }
-    $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
-    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt->bindValue(count($params) + 1, $perPage, PDO::PARAM_INT);
+    $stmt->bindValue(count($params) + 2, $offset, PDO::PARAM_INT);
     $stmt->execute();
 
     $users = [];
