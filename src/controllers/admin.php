@@ -530,6 +530,621 @@ function admin_analytics_index(PDO $pdo): void
     ]);
 }
 
+function admin_system_mask_secret(?string $value): string
+{
+    $value = trim((string)($value ?? ''));
+
+    if ($value === '') {
+        return '';
+    }
+
+    $length = strlen($value);
+    if ($length <= 4) {
+        return str_repeat('•', max(0, $length - 1)) . substr($value, -1);
+    }
+
+    $prefix = substr($value, 0, 4);
+    $suffix = substr($value, -4);
+    $maskLength = max(0, $length - 8);
+
+    return $prefix . str_repeat('•', $maskLength) . $suffix;
+}
+
+function admin_system_fetch_integrations(PDO $pdo): array
+{
+    $integrations = [];
+
+    try {
+        $stmt = $pdo->query('SELECT id, name, service, api_key_encrypted, status, metadata, last_used_at, created_at, updated_at FROM api_integrations ORDER BY name');
+        if ($stmt instanceof PDOStatement) {
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $apiKey = pii_decrypt($row['api_key_encrypted'] ?? null);
+                $metadata = $row['metadata'] ?? [];
+                if (is_string($metadata)) {
+                    $decoded = json_decode($metadata, true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                        $metadata = $decoded;
+                    } else {
+                        $metadata = [];
+                    }
+                } elseif (!is_array($metadata)) {
+                    $metadata = [];
+                }
+
+                $integrations[] = [
+                    'id' => (int)($row['id'] ?? 0),
+                    'name' => (string)($row['name'] ?? ''),
+                    'service' => (string)($row['service'] ?? ''),
+                    'api_key' => $apiKey,
+                    'api_key_masked' => admin_system_mask_secret($apiKey),
+                    'status' => strtolower((string)($row['status'] ?? 'active')),
+                    'metadata' => $metadata,
+                    'metadata_raw' => $metadata ? json_encode($metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : '',
+                    'last_used_at' => $row['last_used_at'] ?? null,
+                    'created_at' => $row['created_at'] ?? null,
+                    'updated_at' => $row['updated_at'] ?? null,
+                ];
+            }
+        }
+    } catch (Throwable $e) {
+        return [];
+    }
+
+    return $integrations;
+}
+
+function admin_system_fetch_email_templates(PDO $pdo): array
+{
+    $templates = [];
+
+    try {
+        $stmt = $pdo->query('SELECT id, code, name, subject, body, locale, last_tested_at, created_at, updated_at FROM email_templates ORDER BY name');
+        if ($stmt instanceof PDOStatement) {
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $templates[] = [
+                    'id' => (int)($row['id'] ?? 0),
+                    'code' => (string)($row['code'] ?? ''),
+                    'name' => (string)($row['name'] ?? ''),
+                    'subject' => (string)($row['subject'] ?? ''),
+                    'body' => (string)($row['body'] ?? ''),
+                    'locale' => (string)($row['locale'] ?? 'en'),
+                    'last_tested_at' => $row['last_tested_at'] ?? null,
+                    'created_at' => $row['created_at'] ?? null,
+                    'updated_at' => $row['updated_at'] ?? null,
+                ];
+            }
+        }
+    } catch (Throwable $e) {
+        return [];
+    }
+
+    return $templates;
+}
+
+function admin_system_fetch_notifications(PDO $pdo): array
+{
+    $channels = [];
+
+    try {
+        $stmt = $pdo->query('SELECT id, channel, name, is_enabled, config, created_at, updated_at FROM notification_channels ORDER BY name');
+        if ($stmt instanceof PDOStatement) {
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $config = $row['config'] ?? [];
+                if (is_string($config)) {
+                    $decoded = json_decode($config, true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                        $config = $decoded;
+                    } else {
+                        $config = [];
+                    }
+                } elseif (!is_array($config)) {
+                    $config = [];
+                }
+
+                $channels[] = [
+                    'id' => (int)($row['id'] ?? 0),
+                    'channel' => (string)($row['channel'] ?? ''),
+                    'name' => (string)($row['name'] ?? ''),
+                    'is_enabled' => !empty($row['is_enabled']),
+                    'config' => $config,
+                    'config_raw' => $config ? json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : '',
+                    'created_at' => $row['created_at'] ?? null,
+                    'updated_at' => $row['updated_at'] ?? null,
+                ];
+            }
+        }
+    } catch (Throwable $e) {
+        return [];
+    }
+
+    return $channels;
+}
+
+function admin_system_environment(PDO $pdo): array
+{
+    $settings = system_settings();
+    $appConfig = require __DIR__ . '/../../config/config.php';
+
+    $environment = strtolower(trim((string)(getenv('APP_ENV') ?: getenv('MM_APP_ENV') ?: 'production')));
+    $debug = filter_var(getenv('APP_DEBUG') ?: getenv('MM_APP_DEBUG'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+    $debug = $debug === null ? false : $debug;
+    $version = trim((string)(getenv('APP_VERSION') ?: getenv('MM_APP_VERSION') ?: ($appConfig['app']['version'] ?? '1.0.0')));
+    $timezone = date_default_timezone_get();
+    $phpVersion = PHP_VERSION;
+    $server = php_uname();
+    $databaseVersion = null;
+    $lastMigration = null;
+
+    try {
+        $stmt = $pdo->query('SELECT version()');
+        if ($stmt instanceof PDOStatement) {
+            $databaseVersion = (string)$stmt->fetchColumn();
+        }
+    } catch (Throwable $e) {
+        $databaseVersion = null;
+    }
+
+    try {
+        $stmt = $pdo->query('SELECT MAX(version) FROM schema_migrations');
+        if ($stmt instanceof PDOStatement) {
+            $lastMigration = $stmt->fetchColumn();
+        }
+    } catch (Throwable $e) {
+        $lastMigration = null;
+    }
+
+    return [
+        'environment' => $environment !== '' ? $environment : 'production',
+        'debug' => (bool)$debug,
+        'version' => $version !== '' ? $version : '1.0.0',
+        'timezone' => $timezone ?: 'UTC',
+        'php_version' => $phpVersion,
+        'database_version' => $databaseVersion,
+        'last_migration' => $lastMigration,
+        'app_name' => $settings['site_name'] ?: ($appConfig['app']['name'] ?? 'MyMoneyMap'),
+        'app_url' => $settings['primary_url'] ?: ($appConfig['app']['url'] ?? null),
+        'maintenance_mode' => !empty($settings['maintenance_mode']),
+        'server' => $server,
+    ];
+}
+
+function admin_system_index(PDO $pdo): void
+{
+    require_admin();
+
+    $settings = system_settings();
+    $integrations = admin_system_fetch_integrations($pdo);
+    $templates = admin_system_fetch_email_templates($pdo);
+    $notificationChannels = admin_system_fetch_notifications($pdo);
+    $environment = admin_system_environment($pdo);
+
+    view('admin/system', [
+        'pageTitle' => __('System & configuration'),
+        'settings' => $settings,
+        'integrations' => $integrations,
+        'templates' => $templates,
+        'notificationChannels' => $notificationChannels,
+        'environment' => $environment,
+    ]);
+}
+
+function admin_system_settings_update(PDO $pdo): void
+{
+    require_admin();
+    verify_csrf();
+
+    $redirectTo = admin_normalize_redirect($_POST['redirect'] ?? '/admin/system', '/admin/system');
+    $siteName = trim((string)($_POST['site_name'] ?? ''));
+    $primaryUrl = trim((string)($_POST['primary_url'] ?? ''));
+    $supportEmail = trim((string)($_POST['support_email'] ?? ''));
+    $contactEmail = trim((string)($_POST['contact_email'] ?? ''));
+    $logoUrl = trim((string)($_POST['logo_url'] ?? ''));
+    $faviconUrl = trim((string)($_POST['favicon_url'] ?? ''));
+    $maintenanceMode = !empty($_POST['maintenance_mode']);
+    $maintenanceMessage = trim((string)($_POST['maintenance_message'] ?? ''));
+
+    if ($siteName === '') {
+        $_SESSION['flash'] = __('Site name is required.');
+        redirect($redirectTo);
+    }
+
+    if ($primaryUrl !== '' && !filter_var($primaryUrl, FILTER_VALIDATE_URL)) {
+        $_SESSION['flash'] = __('Please provide a valid primary URL.');
+        redirect($redirectTo);
+    }
+
+    if ($logoUrl !== '' && !filter_var($logoUrl, FILTER_VALIDATE_URL)) {
+        $_SESSION['flash'] = __('Please provide a valid logo URL.');
+        redirect($redirectTo);
+    }
+
+    if ($faviconUrl !== '' && !filter_var($faviconUrl, FILTER_VALIDATE_URL)) {
+        $_SESSION['flash'] = __('Please provide a valid favicon URL.');
+        redirect($redirectTo);
+    }
+
+    if ($supportEmail !== '' && !filter_var($supportEmail, FILTER_VALIDATE_EMAIL)) {
+        $_SESSION['flash'] = __('Please provide a valid support email.');
+        redirect($redirectTo);
+    }
+
+    if ($contactEmail !== '' && !filter_var($contactEmail, FILTER_VALIDATE_EMAIL)) {
+        $_SESSION['flash'] = __('Please provide a valid contact email.');
+        redirect($redirectTo);
+    }
+
+    try {
+        $stmt = $pdo->prepare(
+            'INSERT INTO system_settings (id, site_name, primary_url, support_email, contact_email, logo_url, favicon_url, maintenance_mode, maintenance_message) '
+            . 'VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?) '
+            . 'ON CONFLICT (id) DO UPDATE '
+            . 'SET site_name = EXCLUDED.site_name, '
+            . '    primary_url = EXCLUDED.primary_url, '
+            . '    support_email = EXCLUDED.support_email, '
+            . '    contact_email = EXCLUDED.contact_email, '
+            . '    logo_url = EXCLUDED.logo_url, '
+            . '    favicon_url = EXCLUDED.favicon_url, '
+            . '    maintenance_mode = EXCLUDED.maintenance_mode, '
+            . '    maintenance_message = EXCLUDED.maintenance_message, '
+            . '    updated_at = NOW()'
+        );
+        $stmt->execute([
+            $siteName,
+            $primaryUrl !== '' ? $primaryUrl : null,
+            $supportEmail !== '' ? $supportEmail : null,
+            $contactEmail !== '' ? $contactEmail : null,
+            $logoUrl !== '' ? $logoUrl : null,
+            $faviconUrl !== '' ? $faviconUrl : null,
+            $maintenanceMode,
+            $maintenanceMessage !== '' ? $maintenanceMessage : null,
+        ]);
+    } catch (Throwable $e) {
+        $_SESSION['flash'] = __('Unable to save system settings.');
+        redirect($redirectTo);
+    }
+
+    reset_system_settings_cache();
+
+    $_SESSION['flash_success'] = __('System settings updated.');
+    redirect($redirectTo);
+}
+
+function admin_system_api_save(PDO $pdo): void
+{
+    require_admin();
+    verify_csrf();
+
+    $redirectTo = admin_normalize_redirect($_POST['redirect'] ?? '/admin/system', '/admin/system');
+    $id = (int)($_POST['id'] ?? 0);
+    $name = trim((string)($_POST['name'] ?? ''));
+    $service = trim((string)($_POST['service'] ?? ''));
+    $apiKey = trim((string)($_POST['api_key'] ?? ''));
+    $status = strtolower(trim((string)($_POST['status'] ?? 'active')));
+    $metadataRaw = trim((string)($_POST['metadata'] ?? ''));
+
+    if ($name === '') {
+        $_SESSION['flash'] = __('Integration name is required.');
+        redirect($redirectTo);
+    }
+
+    if ($apiKey === '') {
+        $_SESSION['flash'] = __('API key is required.');
+        redirect($redirectTo);
+    }
+
+    $allowedStatuses = ['active', 'inactive', 'revoked'];
+    if (!in_array($status, $allowedStatuses, true)) {
+        $status = 'active';
+    }
+
+    $metadata = [];
+    if ($metadataRaw !== '') {
+        $decoded = json_decode($metadataRaw, true);
+        if (!is_array($decoded)) {
+            $_SESSION['flash'] = __('Metadata must be valid JSON.');
+            redirect($redirectTo);
+        }
+        $metadata = $decoded;
+    }
+
+    try {
+        $encryptedKey = pii_encrypt($apiKey);
+    } catch (Throwable $e) {
+        $_SESSION['flash'] = __('Unable to secure the API key.');
+        redirect($redirectTo);
+    }
+
+    $metadataJson = json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    if ($metadataJson === false) {
+        $metadataJson = '{}';
+    }
+
+    try {
+        if ($id > 0) {
+            $stmt = $pdo->prepare('UPDATE api_integrations SET name = ?, service = ?, api_key_encrypted = ?, status = ?, metadata = ?::jsonb, updated_at = NOW() WHERE id = ?');
+            $stmt->execute([
+                $name,
+                $service !== '' ? $service : null,
+                $encryptedKey,
+                $status,
+                $metadataJson,
+                $id,
+            ]);
+
+            $_SESSION['flash_success'] = __('Integration updated.');
+        } else {
+            $stmt = $pdo->prepare('INSERT INTO api_integrations (name, service, api_key_encrypted, status, metadata) VALUES (?, ?, ?, ?, ?::jsonb)');
+            $stmt->execute([
+                $name,
+                $service !== '' ? $service : null,
+                $encryptedKey,
+                $status,
+                $metadataJson,
+            ]);
+
+            $_SESSION['flash_success'] = __('Integration added.');
+        }
+    } catch (Throwable $e) {
+        $_SESSION['flash'] = __('Unable to save the integration.');
+        redirect($redirectTo);
+    }
+
+    redirect($redirectTo);
+}
+
+function admin_system_api_delete(PDO $pdo): void
+{
+    require_admin();
+    verify_csrf();
+
+    $redirectTo = admin_normalize_redirect($_POST['redirect'] ?? '/admin/system', '/admin/system');
+    $id = (int)($_POST['id'] ?? 0);
+
+    if ($id <= 0) {
+        $_SESSION['flash'] = __('Integration not found.');
+        redirect($redirectTo);
+    }
+
+    try {
+        $stmt = $pdo->prepare('DELETE FROM api_integrations WHERE id = ?');
+        $stmt->execute([$id]);
+    } catch (Throwable $e) {
+        $_SESSION['flash'] = __('Unable to delete the integration.');
+        redirect($redirectTo);
+    }
+
+    $_SESSION['flash_success'] = __('Integration removed.');
+    redirect($redirectTo);
+}
+
+function admin_system_email_save(PDO $pdo): void
+{
+    require_admin();
+    verify_csrf();
+
+    $redirectTo = admin_normalize_redirect($_POST['redirect'] ?? '/admin/system', '/admin/system');
+    $id = (int)($_POST['id'] ?? 0);
+    $code = trim((string)($_POST['code'] ?? ''));
+    $name = trim((string)($_POST['name'] ?? ''));
+    $subject = trim((string)($_POST['subject'] ?? ''));
+    $body = trim((string)($_POST['body'] ?? ''));
+    $locale = trim((string)($_POST['locale'] ?? 'en'));
+
+    if ($code === '' || $name === '' || $subject === '' || $body === '') {
+        $_SESSION['flash'] = __('Code, name, subject, and body are required.');
+        redirect($redirectTo);
+    }
+
+    $locale = $locale !== '' ? $locale : 'en';
+
+    try {
+        $stmt = $pdo->prepare('SELECT id FROM email_templates WHERE LOWER(code) = LOWER(?) AND LOWER(locale) = LOWER(?) AND id <> ? LIMIT 1');
+        $stmt->execute([$code, $locale, $id]);
+        if ($stmt->fetchColumn()) {
+            $_SESSION['flash'] = __('Another template already uses this code and locale.');
+            redirect($redirectTo);
+        }
+    } catch (Throwable $e) {
+        $_SESSION['flash'] = __('Unable to validate the template.');
+        redirect($redirectTo);
+    }
+
+    try {
+        if ($id > 0) {
+            $stmt = $pdo->prepare('UPDATE email_templates SET code = ?, name = ?, subject = ?, body = ?, locale = ?, updated_at = NOW() WHERE id = ?');
+            $stmt->execute([$code, $name, $subject, $body, $locale, $id]);
+            $_SESSION['flash_success'] = __('Email template updated.');
+        } else {
+            $stmt = $pdo->prepare('INSERT INTO email_templates (code, name, subject, body, locale) VALUES (?, ?, ?, ?, ?)');
+            $stmt->execute([$code, $name, $subject, $body, $locale]);
+            $_SESSION['flash_success'] = __('Email template created.');
+        }
+    } catch (Throwable $e) {
+        $_SESSION['flash'] = __('Unable to save the email template.');
+        redirect($redirectTo);
+    }
+
+    redirect($redirectTo);
+}
+
+function admin_system_email_test(PDO $pdo): void
+{
+    require_admin();
+    verify_csrf();
+
+    $redirectTo = admin_normalize_redirect($_POST['redirect'] ?? '/admin/system', '/admin/system');
+    $templateId = (int)($_POST['template_id'] ?? 0);
+    $testEmail = trim((string)($_POST['test_email'] ?? ''));
+
+    if ($templateId <= 0) {
+        $_SESSION['flash'] = __('Template not found.');
+        redirect($redirectTo);
+    }
+
+    if ($testEmail === '' || !filter_var($testEmail, FILTER_VALIDATE_EMAIL)) {
+        $_SESSION['flash'] = __('Please provide a valid test email address.');
+        redirect($redirectTo);
+    }
+
+    try {
+        $stmt = $pdo->prepare('SELECT code, name, subject, body, locale FROM email_templates WHERE id = ?');
+        $stmt->execute([$templateId]);
+        $template = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        $template = false;
+    }
+
+    if (!$template) {
+        $_SESSION['flash'] = __('Template not found.');
+        redirect($redirectTo);
+    }
+
+    $logDir = __DIR__ . '/../../storage/logs';
+    if (!is_dir($logDir)) {
+        @mkdir($logDir, 0775, true);
+    }
+
+    $logPath = $logDir . '/email_tests.log';
+    $timestamp = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->format('c');
+    $entry = sprintf(
+        "[%s] Template: %s (%s) to %s\nSubject: %s\nBody:\n%s\n---\n",
+        $timestamp,
+        $template['code'] ?? 'unknown',
+        $template['locale'] ?? 'en',
+        $testEmail,
+        $template['subject'] ?? '',
+        $template['body'] ?? ''
+    );
+
+    try {
+        file_put_contents($logPath, $entry, FILE_APPEND | LOCK_EX);
+        $stmt = $pdo->prepare('UPDATE email_templates SET last_tested_at = NOW() WHERE id = ?');
+        $stmt->execute([$templateId]);
+    } catch (Throwable $e) {
+        $_SESSION['flash'] = __('Unable to record the test email.');
+        redirect($redirectTo);
+    }
+
+    $_SESSION['flash_success'] = __('Test email logged for :email', ['email' => $testEmail]);
+    redirect($redirectTo);
+}
+
+function admin_system_notifications_save(PDO $pdo): void
+{
+    require_admin();
+    verify_csrf();
+
+    $redirectTo = admin_normalize_redirect($_POST['redirect'] ?? '/admin/system', '/admin/system');
+    $channels = $_POST['channels'] ?? [];
+
+    if (!is_array($channels)) {
+        $channels = [];
+    }
+
+    foreach ($channels as $channelId => $payload) {
+        $id = (int)($payload['id'] ?? $channelId);
+        $name = trim((string)($payload['name'] ?? ''));
+        $channelKey = trim((string)($payload['channel'] ?? ''));
+        $enabled = !empty($payload['enabled']);
+        $configRaw = trim((string)($payload['config'] ?? ''));
+
+        if ($id <= 0) {
+            continue;
+        }
+
+        if ($name === '' || $channelKey === '') {
+            $_SESSION['flash'] = __('Channel name and identifier are required.');
+            redirect($redirectTo);
+        }
+
+        $config = [];
+        if ($configRaw !== '') {
+            $decoded = json_decode($configRaw, true);
+            if (!is_array($decoded)) {
+                $_SESSION['flash'] = __('Channel configuration must be valid JSON.');
+                redirect($redirectTo);
+            }
+            $config = $decoded;
+        }
+
+        $configJson = json_encode($config, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($configJson === false) {
+            $configJson = '{}';
+        }
+
+        try {
+            $stmt = $pdo->prepare('UPDATE notification_channels SET name = ?, channel = ?, is_enabled = ?, config = ?::jsonb, updated_at = NOW() WHERE id = ?');
+            $stmt->execute([
+                $name,
+                strtolower($channelKey),
+                $enabled,
+                $configJson,
+                $id,
+            ]);
+        } catch (Throwable $e) {
+            $_SESSION['flash'] = __('Unable to save notification settings.');
+            redirect($redirectTo);
+        }
+    }
+
+    reset_system_notification_channels_cache();
+
+    $_SESSION['flash_success'] = __('Notification settings updated.');
+    redirect($redirectTo);
+}
+
+function admin_system_notifications_add(PDO $pdo): void
+{
+    require_admin();
+    verify_csrf();
+
+    $redirectTo = admin_normalize_redirect($_POST['redirect'] ?? '/admin/system', '/admin/system');
+    $channelKey = strtolower(trim((string)($_POST['channel'] ?? '')));
+    $name = trim((string)($_POST['name'] ?? ''));
+    $enabled = !empty($_POST['enabled']);
+    $configRaw = trim((string)($_POST['config'] ?? ''));
+
+    if ($channelKey === '' || $name === '') {
+        $_SESSION['flash'] = __('Channel identifier and name are required.');
+        redirect($redirectTo);
+    }
+
+    $config = [];
+    if ($configRaw !== '') {
+        $decoded = json_decode($configRaw, true);
+        if (!is_array($decoded)) {
+            $_SESSION['flash'] = __('Channel configuration must be valid JSON.');
+            redirect($redirectTo);
+        }
+        $config = $decoded;
+    }
+
+    $configJson = json_encode($config, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    if ($configJson === false) {
+        $configJson = '{}';
+    }
+
+    try {
+        $stmt = $pdo->prepare('SELECT 1 FROM notification_channels WHERE LOWER(channel) = LOWER(?) LIMIT 1');
+        $stmt->execute([$channelKey]);
+        if ($stmt->fetchColumn()) {
+            $_SESSION['flash'] = __('A channel with this identifier already exists.');
+            redirect($redirectTo);
+        }
+
+        $stmt = $pdo->prepare('INSERT INTO notification_channels (channel, name, is_enabled, config) VALUES (?, ?, ?, ?::jsonb)');
+        $stmt->execute([$channelKey, $name, $enabled, $configJson]);
+    } catch (Throwable $e) {
+        $_SESSION['flash'] = __('Unable to add the notification channel.');
+        redirect($redirectTo);
+    }
+
+    reset_system_notification_channels_cache();
+
+    $_SESSION['flash_success'] = __('Notification channel added.');
+    redirect($redirectTo);
+}
+
 function admin_update_role(PDO $pdo): void
 {
     require_admin();

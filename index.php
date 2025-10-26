@@ -904,6 +904,74 @@ switch ($path) {
         admin_analytics_index($pdo);
         break;
 
+    case '/admin/system':
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_system_index($pdo);
+        break;
+
+    case '/admin/system/settings':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_system_settings_update($pdo);
+        } else {
+            redirect('/admin/system');
+        }
+        break;
+
+    case '/admin/system/api/save':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_system_api_save($pdo);
+        } else {
+            redirect('/admin/system');
+        }
+        break;
+
+    case '/admin/system/api/delete':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_system_api_delete($pdo);
+        } else {
+            redirect('/admin/system');
+        }
+        break;
+
+    case '/admin/system/email/save':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_system_email_save($pdo);
+        } else {
+            redirect('/admin/system');
+        }
+        break;
+
+    case '/admin/system/email/test':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_system_email_test($pdo);
+        } else {
+            redirect('/admin/system');
+        }
+        break;
+
+    case '/admin/system/notifications/save':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_system_notifications_save($pdo);
+        } else {
+            redirect('/admin/system');
+        }
+        break;
+
+    case '/admin/system/notifications/add':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_system_notifications_add($pdo);
+        } else {
+            redirect('/admin/system');
+        }
+        break;
+
     case '/admin/users':
         require __DIR__ . '/src/controllers/admin.php';
         admin_users_index($pdo);

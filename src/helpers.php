@@ -413,6 +413,113 @@ function billing_has_stripe_keys(): bool
     return !empty($settings['stripe_secret_key']) && !empty($settings['stripe_publishable_key']);
 }
 
+function system_settings(bool $refresh = false): array
+{
+    static $cache;
+
+    if ($refresh) {
+        $cache = null;
+    }
+
+    if ($cache !== null) {
+        return $cache;
+    }
+
+    $settings = [
+        'site_name' => 'MyMoneyMap',
+        'primary_url' => null,
+        'support_email' => null,
+        'contact_email' => null,
+        'logo_url' => null,
+        'favicon_url' => null,
+        'maintenance_mode' => false,
+        'maintenance_message' => null,
+    ];
+
+    global $pdo;
+    if (!isset($pdo) || !($pdo instanceof PDO)) {
+        return $cache = $settings;
+    }
+
+    try {
+        $stmt = $pdo->query('SELECT site_name, primary_url, support_email, contact_email, logo_url, favicon_url, maintenance_mode, maintenance_message FROM system_settings WHERE id = 1');
+        $row = $stmt ? $stmt->fetch(PDO::FETCH_ASSOC) : false;
+        if ($row) {
+            $settings['site_name'] = (string)($row['site_name'] ?? $settings['site_name']);
+            $settings['primary_url'] = ($row['primary_url'] ?? null) ?: null;
+            $settings['support_email'] = ($row['support_email'] ?? null) ?: null;
+            $settings['contact_email'] = ($row['contact_email'] ?? null) ?: null;
+            $settings['logo_url'] = ($row['logo_url'] ?? null) ?: null;
+            $settings['favicon_url'] = ($row['favicon_url'] ?? null) ?: null;
+            $settings['maintenance_mode'] = !empty($row['maintenance_mode']);
+            $settings['maintenance_message'] = ($row['maintenance_message'] ?? null) ?: null;
+        }
+    } catch (Throwable $e) {
+        // ignore and fall back to defaults
+    }
+
+    return $cache = $settings;
+}
+
+function reset_system_settings_cache(): void
+{
+    system_settings(true);
+}
+
+function system_notification_channels(bool $refresh = false): array
+{
+    static $cache;
+
+    if ($refresh) {
+        $cache = null;
+    }
+
+    if ($cache !== null) {
+        return $cache;
+    }
+
+    $channels = [];
+
+    global $pdo;
+    if (!isset($pdo) || !($pdo instanceof PDO)) {
+        return $cache = $channels;
+    }
+
+    try {
+        $stmt = $pdo->query('SELECT id, channel, name, is_enabled, config, created_at, updated_at FROM notification_channels ORDER BY name');
+        if ($stmt instanceof PDOStatement) {
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $config = $row['config'] ?? [];
+                if (is_string($config)) {
+                    $decoded = json_decode($config, true);
+                    $config = json_last_error() === JSON_ERROR_NONE && is_array($decoded) ? $decoded : [];
+                } elseif (!is_array($config)) {
+                    $config = [];
+                }
+
+                $channels[] = [
+                    'id' => (int)($row['id'] ?? 0),
+                    'channel' => (string)($row['channel'] ?? ''),
+                    'name' => (string)($row['name'] ?? ''),
+                    'is_enabled' => !empty($row['is_enabled']),
+                    'config' => $config,
+                    'created_at' => $row['created_at'] ?? null,
+                    'updated_at' => $row['updated_at'] ?? null,
+                ];
+            }
+        }
+    } catch (Throwable $e) {
+        // ignore and return empty list
+    }
+
+    return $cache = $channels;
+}
+
+function reset_system_notification_channels_cache(): void
+{
+    system_notification_channels(true);
+}
+
 function role_can(string $capability, ?string $role = null): bool
 {
     $role = $role ? strtolower(trim($role)) : current_user_role();

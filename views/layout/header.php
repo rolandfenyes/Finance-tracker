@@ -1120,6 +1120,7 @@ $ogUrl = $scheme . '://' . $host . $currentRequestPath;
       $desktopItems = [
         ['href'=>'/admin', 'label'=>'Admin dashboard', 'match'=>'#^/admin(?:/.*)?$#', 'icon' => 'shield'],
         ['href'=>'/admin/analytics', 'label'=>'Analytics', 'match'=>'#^/admin/analytics(?:/.*)?$#', 'icon' => 'area-chart'],
+        ['href'=>'/admin/system', 'label'=>'System', 'match'=>'#^/admin/system(?:/.*)?$#', 'icon' => 'settings-2'],
         ['href'=>'/admin/users', 'label'=>'Users', 'match'=>'#^/admin/users(?:/.*)?$#', 'icon' => 'users'],
         ['href'=>'/admin/billing', 'label'=>'Billing', 'match'=>'#^/admin/billing(?:/.*)?$#', 'icon' => 'credit-card'],
         ['href'=>'/admin/roles', 'label'=>'Roles', 'match'=>'#^/admin/roles(?:/.*)?$#', 'icon' => 'badge-check'],
@@ -1128,6 +1129,7 @@ $ogUrl = $scheme . '://' . $host . $currentRequestPath;
       $mobileNavItems = [
         ['href'=>'/admin', 'label'=>'Admin', 'match'=>'#^/admin(?:/.*)?$#', 'icon' => 'shield'],
         ['href'=>'/admin/analytics', 'label'=>'Analytics', 'match'=>'#^/admin/analytics(?:/.*)?$#', 'icon' => 'area-chart'],
+        ['href'=>'/admin/system', 'label'=>'System', 'match'=>'#^/admin/system(?:/.*)?$#', 'icon' => 'settings-2'],
         ['href'=>'/admin/users', 'label'=>'Users', 'match'=>'#^/admin/users(?:/.*)?$#', 'icon' => 'users'],
         ['href'=>'/admin/billing', 'label'=>'Billing', 'match'=>'#^/admin/billing(?:/.*)?$#', 'icon' => 'credit-card'],
         ['href'=>'/admin/roles', 'label'=>'Roles', 'match'=>'#^/admin/roles(?:/.*)?$#', 'icon' => 'badge-check'],
