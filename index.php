@@ -37,7 +37,23 @@ if (isset($pdo) && $pdo instanceof PDO) {
 }
 
 if (isset($pdo) && $pdo instanceof PDO && is_logged_in()) {
-    scheduled_process_linked($pdo, uid());
+    $currentRole = refresh_user_role($pdo, uid());
+
+    if (current_user_status() === USER_STATUS_INACTIVE) {
+        $message = __('Your account has been deactivated. Please contact support.');
+        $userId = uid();
+        forget_remember_token($pdo, $userId);
+        $_SESSION = [];
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_regenerate_id(true);
+        }
+        $_SESSION['flash'] = $message;
+        redirect('/login');
+    }
+
+    if ($currentRole !== ROLE_ADMIN) {
+        scheduled_process_linked($pdo, uid());
+    }
 }
 
 $rawPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
@@ -55,6 +71,26 @@ if ($method === 'POST' && !empty($_POST['_method'])) {
     $override = strtoupper(trim($_POST['_method']));
     if (in_array($override, ['PUT', 'PATCH', 'DELETE'], true)) {
         $method = $override;
+    }
+}
+
+if (is_logged_in() && is_admin()) {
+    if ($path === '/') {
+        redirect('/admin');
+    }
+
+    if (!admin_allowed_path($path, $method)) {
+        if ($method === 'GET') {
+            redirect('/admin');
+        }
+
+        http_response_code(403);
+        view('errors/403', [
+            'pageTitle' => __('Forbidden'),
+            'message' => __('Administrators cannot access personal finance features.'),
+            'fullWidthMain' => true,
+        ]);
+        exit;
     }
 }
 
@@ -290,9 +326,22 @@ switch ($path) {
 
         $userId = (int)$result['user_id'];
         $_SESSION['uid'] = $userId;
+        refresh_user_role($pdo, $userId);
+
+        if (current_user_status() === USER_STATUS_INACTIVE) {
+            forget_remember_token($pdo, $userId);
+            $_SESSION = [];
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_regenerate_id(true);
+            }
+            json_error(__('Your account is inactive. Please contact support.'), 403);
+        }
+
         if ($pdo instanceof PDO) {
             forget_remember_token($pdo, $userId);
         }
+
+        log_user_login_activity($pdo, $userId, true, '', 'passkey');
 
         try {
             $redirectTo = post_login_redirect_path($pdo, $userId);
@@ -845,6 +894,327 @@ switch ($path) {
         feedback_index($pdo);
         break;
 
+    case '/admin':
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_dashboard($pdo);
+        break;
+
+    case '/admin/analytics':
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_analytics_index($pdo);
+        break;
+
+    case '/admin/system':
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_system_index($pdo);
+        break;
+
+    case '/admin/system/settings':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_system_settings_update($pdo);
+        } else {
+            redirect('/admin/system');
+        }
+        break;
+
+    case '/admin/system/api/save':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_system_api_save($pdo);
+        } else {
+            redirect('/admin/system');
+        }
+        break;
+
+    case '/admin/system/api/delete':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_system_api_delete($pdo);
+        } else {
+            redirect('/admin/system');
+        }
+        break;
+
+    case '/admin/system/email/save':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_system_email_save($pdo);
+        } else {
+            redirect('/admin/system');
+        }
+        break;
+
+    case '/admin/system/email/test':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_system_email_test($pdo);
+        } else {
+            redirect('/admin/system');
+        }
+        break;
+
+    case '/admin/system/notifications/save':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_system_notifications_save($pdo);
+        } else {
+            redirect('/admin/system');
+        }
+        break;
+
+    case '/admin/system/notifications/add':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_system_notifications_add($pdo);
+        } else {
+            redirect('/admin/system');
+        }
+        break;
+
+    case '/admin/users':
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_users_index($pdo);
+        break;
+
+    case '/admin/users/manage':
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_users_manage($pdo);
+        break;
+
+    case '/admin/users/role':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_update_role($pdo);
+        } else {
+            redirect('/admin/users');
+        }
+        break;
+
+    case '/admin/users/reset-password':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_users_reset_password($pdo);
+        } else {
+            redirect('/admin/users');
+        }
+        break;
+
+    case '/admin/users/resend-verification':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_users_resend_verification($pdo);
+        } else {
+            redirect('/admin/users');
+        }
+        break;
+
+    case '/admin/users/reset-email':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_users_reset_email($pdo);
+        } else {
+            redirect('/admin/users');
+        }
+        break;
+
+    case '/admin/users/status':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_users_update_status($pdo);
+        } else {
+            redirect('/admin/users');
+        }
+        break;
+
+    case '/admin/users/invoices/update':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_users_invoice_update($pdo);
+        } else {
+            redirect('/admin/users');
+        }
+        break;
+
+    case '/admin/users/payments/create':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_users_payment_create($pdo);
+        } else {
+            redirect('/admin/users');
+        }
+        break;
+
+    case '/admin/users/payments/update':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_users_payment_update($pdo);
+        } else {
+            redirect('/admin/users');
+        }
+        break;
+
+    case '/admin/users/feedback/update':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_users_feedback_update($pdo);
+        } else {
+            redirect('/admin/users');
+        }
+        break;
+
+    case '/admin/users/feedback/respond':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_users_feedback_respond($pdo);
+        } else {
+            redirect('/admin/users');
+        }
+        break;
+
+    case '/admin/billing':
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_billing_index($pdo);
+        break;
+
+    case '/admin/billing/plans/create':
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_billing_plans_create($pdo);
+        break;
+
+    case '/admin/billing/plans/edit':
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_billing_plans_edit($pdo);
+        break;
+
+    case '/admin/billing/plans':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_billing_plans_store($pdo);
+        } else {
+            redirect('/admin/billing');
+        }
+        break;
+
+    case '/admin/billing/plans/update':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_billing_plans_update($pdo);
+        } else {
+            redirect('/admin/billing');
+        }
+        break;
+
+    case '/admin/billing/plans/delete':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_billing_plans_delete($pdo);
+        } else {
+            redirect('/admin/billing');
+        }
+        break;
+
+    case '/admin/billing/promotions/create':
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_billing_promotions_create($pdo);
+        break;
+
+    case '/admin/billing/promotions/edit':
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_billing_promotions_edit($pdo);
+        break;
+
+    case '/admin/billing/promotions':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_billing_promotions_store($pdo);
+        } else {
+            redirect('/admin/billing');
+        }
+        break;
+
+    case '/admin/billing/promotions/update':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_billing_promotions_update($pdo);
+        } else {
+            redirect('/admin/billing');
+        }
+        break;
+
+    case '/admin/billing/promotions/delete':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_billing_promotions_delete($pdo);
+        } else {
+            redirect('/admin/billing');
+        }
+        break;
+
+    case '/admin/billing/promotions/generate-trial':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_billing_promotions_generate_trial($pdo);
+        } else {
+            redirect('/admin/billing');
+        }
+        break;
+
+    case '/admin/billing/settings':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_billing_settings_update($pdo);
+        } else {
+            redirect('/admin/billing');
+        }
+        break;
+
+    case '/admin/billing/user-plan':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_billing_user_plan_assign($pdo);
+        } else {
+            redirect('/admin/billing');
+        }
+        break;
+
+    case '/admin/roles':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_roles_store($pdo);
+        } else {
+            admin_roles_index($pdo);
+        }
+        break;
+
+    case '/admin/roles/create':
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_roles_create($pdo);
+        break;
+
+    case '/admin/roles/edit':
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_roles_edit($pdo);
+        break;
+
+    case '/admin/roles/update':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_roles_update($pdo);
+        } else {
+            redirect('/admin/roles');
+        }
+        break;
+
+    case '/admin/roles/delete':
+        require __DIR__ . '/src/controllers/admin.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            admin_roles_delete($pdo);
+        } else {
+            redirect('/admin/roles');
+        }
+        break;
+
     case '/more':
         require_login();
         require __DIR__ . '/src/controllers/more.php';
@@ -874,6 +1244,7 @@ switch ($path) {
 
     // Maintenance utilities
     case '/maintenance/migrations':
+    case '/admin/migrations':
         require __DIR__ . '/src/controllers/migrations.php';
         maintenance_run_migrations($pdo);
         break;

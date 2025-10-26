@@ -21,6 +21,11 @@ function cashflow_index(PDO $pdo) {
 
 function cashflow_add(PDO $pdo) {
     verify_csrf(); require_login(); $u = uid();
+    if (!role_can('cashflow_rules_edit')) {
+        $_SESSION['flash'] = __('This role cannot manage cashflow rules. Update the capabilities to enable editing.');
+        $_SESSION['flash_type'] = 'error';
+        redirect('/settings/cashflow');
+    }
     $label = trim($_POST['label'] ?? '');
     $percent = (float)($_POST['percent'] ?? 0);
     if ($label === '' || $percent < 0) return;
@@ -31,6 +36,11 @@ function cashflow_add(PDO $pdo) {
 
 function cashflow_edit(PDO $pdo) {
     verify_csrf(); require_login(); $u = uid();
+    if (!role_can('cashflow_rules_edit')) {
+        $_SESSION['flash'] = __('This role cannot manage cashflow rules. Update the capabilities to enable editing.');
+        $_SESSION['flash_type'] = 'error';
+        redirect('/settings/cashflow');
+    }
     $id = (int)($_POST['id'] ?? 0);
     $label = trim($_POST['label'] ?? '');
     $percent = (float)($_POST['percent'] ?? 0);
@@ -42,6 +52,11 @@ function cashflow_edit(PDO $pdo) {
 
 function cashflow_delete(PDO $pdo) {
     verify_csrf(); require_login(); $u = uid();
+    if (!role_can('cashflow_rules_edit')) {
+        $_SESSION['flash'] = __('This role cannot manage cashflow rules. Update the capabilities to enable editing.');
+        $_SESSION['flash_type'] = 'error';
+        redirect('/settings/cashflow');
+    }
     $id = (int)($_POST['id'] ?? 0);
     if (!$id) return;
 

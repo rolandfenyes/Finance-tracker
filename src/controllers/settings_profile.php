@@ -21,15 +21,15 @@ function settings_profile_update(PDO $pdo){
   $dob  = $_POST['date_of_birth'] ?? null;
 
   try {
-    $nameToStore = $full !== '' ? pii_encrypt($full) : null;
+    [$nameToStore, $nameSearch] = user_prepare_full_name_fields($full);
   } catch (Throwable $e) {
     $_SESSION['flash'] = __('We could not secure your profile. Please contact an administrator.');
     redirect('/settings/profile');
   }
 
   try {
-    $stmt = $pdo->prepare('UPDATE users SET full_name=?, date_of_birth=? WHERE id=?');
-    $stmt->execute([$nameToStore, $dob ?: null, $u]);
+    $stmt = $pdo->prepare('UPDATE users SET full_name=?, full_name_search=?, date_of_birth=? WHERE id=?');
+    $stmt->execute([$nameToStore, $nameSearch, $dob ?: null, $u]);
     $_SESSION['flash_success'] = __('Profile details updated.');
   } catch (Throwable $e){
     $_SESSION['flash'] = __('Could not update profile.');

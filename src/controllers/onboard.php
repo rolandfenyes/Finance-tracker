@@ -133,6 +133,27 @@ function onboard_categories_submit(PDO $pdo){
   $selOut = $_POST['spending'] ?? [];
   $color  = '#6B7280';
 
+  if (is_free_user()) {
+    $limit = free_user_limit_for('categories');
+    if ($limit !== null) {
+      $countStmt = $pdo->prepare('SELECT COUNT(*) FROM categories WHERE user_id=?');
+      $countStmt->execute([$u]);
+      $existingCount = (int)$countStmt->fetchColumn();
+      $incoming = 0;
+      foreach ($selIn as $label) {
+        if (trim((string)$label) !== '') { $incoming++; }
+      }
+      foreach ($selOut as $label) {
+        if (trim((string)$label) !== '') { $incoming++; }
+      }
+      if ($existingCount + $incoming > $limit) {
+        $_SESSION['flash'] = __('Your current plan cannot add more custom categories. Deselect some items or adjust the role capabilities.');
+        $_SESSION['flash_type'] = 'error';
+        redirect('/onboard/categories');
+      }
+    }
+  }
+
   $pdo->beginTransaction();
   try {
     foreach ($selIn as $label) {
@@ -247,6 +268,19 @@ function onboard_currencies_add(PDO $pdo) {
     $_SESSION['flash']='Pick a currency.';
     $_SESSION['flash_type'] = 'error';
     redirect('/onboard/currencies');
+  }
+
+  if (is_free_user()) {
+    $limit = free_user_limit_for('currencies');
+    if ($limit !== null) {
+      $countStmt = $pdo->prepare('SELECT COUNT(*) FROM user_currencies WHERE user_id=?');
+      $countStmt->execute([$u]);
+      if ((int)$countStmt->fetchColumn() >= $limit) {
+        $_SESSION['flash'] = __('Your current plan cannot add more currencies. Update the role capabilities to increase this limit.');
+        $_SESSION['flash_type'] = 'error';
+        redirect('/onboard/currencies');
+      }
+    }
   }
 
   // validate code
@@ -521,6 +555,13 @@ function onboard_categories_add(PDO $pdo){
   verify_csrf(); require_login();
   require_onboarding_gate($pdo, 4);
   $u = uid();
+
+  free_user_limit_guard(
+    $pdo,
+    'categories',
+    '/onboard/categories',
+    __('Your current plan cannot add more custom categories. Update the role capabilities to increase this limit.')
+  );
 
   $kind  = (($_POST['kind'] ?? '') === 'spending') ? 'spending' : 'income';
   $label = trim($_POST['label'] ?? '');

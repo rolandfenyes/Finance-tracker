@@ -585,6 +585,18 @@ function investments_add(PDO $pdo): void
         ];
     }
 
+    $scheduleLimitWarning = false;
+    if ($newSchedule && is_free_user()) {
+        $limit = free_user_limit_for('scheduled_active');
+        if ($limit !== null) {
+            $current = free_user_resource_count($pdo, $userId, 'scheduled_active');
+            if ($current >= $limit) {
+                $scheduleLimitWarning = true;
+                $newSchedule = null;
+            }
+        }
+    }
+
     $pdo->beginTransaction();
     try {
         $insert = $pdo->prepare("INSERT INTO investments (user_id, type, name, provider, identifier, interest_rate, interest_frequency, notes, currency, balance, created_at, updated_at)
@@ -627,7 +639,11 @@ function investments_add(PDO $pdo): void
         }
 
         $pdo->commit();
-        $_SESSION['flash'] = __('Investment added.');
+        $message = __('Investment added.');
+        if ($scheduleLimitWarning) {
+            $message .= ' ' . __('Adjust the role capabilities to allow additional scheduled payments.');
+        }
+        $_SESSION['flash'] = $message;
     } catch (Throwable $e) {
         $pdo->rollBack();
         $_SESSION['flash'] = __('Could not add investment.');
@@ -824,6 +840,12 @@ function investments_schedule_create(PDO $pdo): void
     require_login();
 
     $userId = uid();
+    free_user_limit_guard(
+        $pdo,
+        'scheduled_active',
+        '/investments',
+        __('Your current plan cannot add more scheduled payments. Update the role capabilities to increase this limit.')
+    );
     $investmentId = (int)($_POST['investment_id'] ?? 0);
     if ($investmentId <= 0) {
         redirect('/investments');

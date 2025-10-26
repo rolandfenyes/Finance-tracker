@@ -61,6 +61,12 @@ function categories_index(PDO $pdo){
 
 function categories_add(PDO $pdo){
   verify_csrf(); require_login(); $u=uid();
+  free_user_limit_guard(
+    $pdo,
+    'categories',
+    '/settings/categories',
+    __('Your current plan cannot add more custom categories. Update the role capabilities to increase this limit.')
+  );
   $kind  = ($_POST['kind'] ?? '') === 'spending' ? 'spending' : 'income';
   $label = trim($_POST['label'] ?? '');
   $color = normalize_hex($_POST['color'] ?? '');

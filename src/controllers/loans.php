@@ -192,6 +192,13 @@ function months_between(string $start, ?string $end): int {
 function loans_add(PDO $pdo){
   verify_csrf(); require_login(); $u=uid();
 
+  free_user_limit_guard(
+    $pdo,
+    'loans_active',
+    '/loans',
+    __('Your current plan cannot add more active loans. Update the role capabilities to increase this limit.')
+  );
+
   $name        = trim($_POST['name'] ?? '');
   $principal   = (float)($_POST['principal'] ?? 0);
   $interest    = (float)($_POST['interest_rate'] ?? 0);
@@ -210,6 +217,18 @@ function loans_add(PDO $pdo){
   $first_due            = $_POST['first_due'] ?: $start_date;
   $due_day              = (int)($_POST['due_day'] ?? ($payment_day ?: (int)date('j', strtotime($first_due))));
   $sched_currency       = strtoupper(trim($_POST['currency'] ?? $loan_currency));
+
+  $skipAutoScheduleForLimit = false;
+  if (is_free_user() && $autoCreateSched && !$scheduled_payment_id) {
+    $limit = free_user_limit_for('scheduled_active');
+    if ($limit !== null) {
+      $currentSchedules = free_user_resource_count($pdo, $u, 'scheduled_active');
+      if ($currentSchedules >= $limit) {
+        $skipAutoScheduleForLimit = true;
+        $autoCreateSched = false;
+      }
+    }
+  }
 
   $months = months_between($start_date, $end_date);
   $monthly_amount = isset($_POST['monthly_amount']) && $_POST['monthly_amount'] !== ''
@@ -243,7 +262,9 @@ function loans_add(PDO $pdo){
     }
 
     $pdo->commit();
-    $_SESSION['flash']='Loan saved.';
+    $_SESSION['flash'] = $skipAutoScheduleForLimit
+      ? __('Loan saved. Adjust the role capabilities to create more scheduled payments.')
+      : 'Loan saved.';
   } catch (Throwable $e) {
     $pdo->rollBack();
     $_SESSION['flash']='Failed to save loan.';
