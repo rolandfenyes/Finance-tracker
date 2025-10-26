@@ -899,6 +899,11 @@ switch ($path) {
         admin_dashboard($pdo);
         break;
 
+    case '/admin/analytics':
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_analytics_index($pdo);
+        break;
+
     case '/admin/users':
         require __DIR__ . '/src/controllers/admin.php';
         admin_users_index($pdo);

@@ -95,6 +95,441 @@ function admin_dashboard(PDO $pdo): void
     ]);
 }
 
+function admin_analytics_index(PDO $pdo): void
+{
+    require_admin();
+
+    $currency = billing_default_currency();
+    $kpis = [
+        'total_users' => 0,
+        'active_users' => 0,
+        'premium_users' => 0,
+        'active_subscriptions' => 0,
+        'mrr' => 0.0,
+        'arr' => 0.0,
+        'revenue_30d' => 0.0,
+        'churn_rate' => null,
+        'conversion_rate' => null,
+        'churned_30d' => 0,
+    ];
+    $growthSeries = [
+        'daily' => [],
+        'weekly' => [],
+        'monthly' => [],
+    ];
+    $conversionSeries = [];
+    $revenueSeries = [];
+    $churnSeries = [];
+    $errorMetrics = [
+        'login_error_rate' => null,
+        'login_total' => 0,
+        'payment_failure_rate' => null,
+        'payment_total' => 0,
+        'avg_payment_latency_hours' => null,
+        'auth_success_rate' => null,
+    ];
+
+    $tz = new DateTimeZone('UTC');
+    $today = new DateTimeImmutable('today', $tz);
+
+    try {
+        $stmt = $pdo->query('SELECT COUNT(*) FROM users');
+        if ($stmt instanceof PDOStatement) {
+            $kpis['total_users'] = (int)$stmt->fetchColumn();
+        }
+    } catch (Throwable $e) {
+        $kpis['total_users'] = 0;
+    }
+
+    try {
+        $stmt = $pdo->prepare('SELECT COUNT(*) FROM users WHERE status = ?');
+        if ($stmt instanceof PDOStatement) {
+            $stmt->execute([USER_STATUS_ACTIVE]);
+            $kpis['active_users'] = (int)$stmt->fetchColumn();
+        }
+    } catch (Throwable $e) {
+        $kpis['active_users'] = 0;
+    }
+
+    try {
+        $stmt = $pdo->prepare('SELECT COUNT(*) FROM users WHERE status = ? AND LOWER(role) = ?');
+        if ($stmt instanceof PDOStatement) {
+            $stmt->execute([USER_STATUS_ACTIVE, strtolower(ROLE_PREMIUM)]);
+            $kpis['premium_users'] = (int)$stmt->fetchColumn();
+        }
+    } catch (Throwable $e) {
+        $kpis['premium_users'] = 0;
+    }
+
+    if ($kpis['total_users'] > 0) {
+        $kpis['conversion_rate'] = ($kpis['premium_users'] / $kpis['total_users']) * 100;
+    }
+
+    $activeSubscriptions = 0;
+    $mrr = 0.0;
+    try {
+        $stmt = $pdo->query("SELECT amount, currency, billing_interval, interval_count FROM user_subscriptions WHERE status IN ('active','trialing','past_due')");
+        if ($stmt instanceof PDOStatement) {
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $currencyCode = strtoupper(trim((string)($row['currency'] ?? '')));
+                if ($currencyCode !== '' && $currencyCode !== $currency) {
+                    continue;
+                }
+
+                $amount = (float)($row['amount'] ?? 0);
+                $interval = strtolower(trim((string)($row['billing_interval'] ?? 'monthly')));
+                $intervalCount = (int)($row['interval_count'] ?? 1);
+                if ($intervalCount <= 0) {
+                    $intervalCount = 1;
+                }
+
+                $normalized = 0.0;
+                switch ($interval) {
+                    case 'weekly':
+                        $normalized = $amount * (52 / 12) / $intervalCount;
+                        break;
+                    case 'yearly':
+                        $normalized = $amount / (12 * $intervalCount);
+                        break;
+                    case 'lifetime':
+                        $normalized = 0.0;
+                        break;
+                    default:
+                        $normalized = $amount / $intervalCount;
+                        break;
+                }
+
+                $mrr += $normalized;
+                $activeSubscriptions++;
+            }
+        }
+    } catch (Throwable $e) {
+        $activeSubscriptions = 0;
+        $mrr = 0.0;
+    }
+
+    $kpis['active_subscriptions'] = $activeSubscriptions;
+    $kpis['mrr'] = $mrr;
+    $kpis['arr'] = $mrr * 12;
+
+    try {
+        $stmt = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) FROM user_payments WHERE status = 'succeeded' AND type = 'charge' AND currency = ? AND processed_at >= NOW() - INTERVAL '30 days'");
+        if ($stmt instanceof PDOStatement) {
+            $stmt->execute([$currency]);
+            $kpis['revenue_30d'] = (float)$stmt->fetchColumn();
+        }
+    } catch (Throwable $e) {
+        $kpis['revenue_30d'] = 0.0;
+    }
+
+    try {
+        $stmt = $pdo->query("SELECT COUNT(*) FROM user_subscriptions WHERE status IN ('canceled','expired') AND COALESCE(canceled_at, cancel_at, current_period_end, updated_at, created_at) >= NOW() - INTERVAL '30 days'");
+        if ($stmt instanceof PDOStatement) {
+            $kpis['churned_30d'] = (int)$stmt->fetchColumn();
+        }
+    } catch (Throwable $e) {
+        $kpis['churned_30d'] = 0;
+    }
+
+    if ($kpis['active_subscriptions'] > 0 && $kpis['churned_30d'] > 0) {
+        $kpis['churn_rate'] = ($kpis['churned_30d'] / $kpis['active_subscriptions']) * 100;
+    }
+
+    // Daily growth (14 days)
+    try {
+        $dailyStart = $today->modify('-13 days');
+        if (!$dailyStart) {
+            $dailyStart = $today;
+        }
+        $stmt = $pdo->prepare('SELECT DATE(created_at) AS bucket, COUNT(*) AS total FROM users WHERE created_at >= ? GROUP BY 1 ORDER BY 1');
+        if ($stmt instanceof PDOStatement) {
+            $stmt->execute([$dailyStart->format('Y-m-d')]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $map = [];
+            foreach ($rows as $row) {
+                $bucket = substr((string)($row['bucket'] ?? ''), 0, 10);
+                if ($bucket !== '') {
+                    $map[$bucket] = (int)$row['total'];
+                }
+            }
+
+            for ($i = 0; $i < 14; $i++) {
+                $date = $dailyStart->modify('+' . $i . ' days');
+                if (!$date) {
+                    continue;
+                }
+                $key = $date->format('Y-m-d');
+                $growthSeries['daily'][] = [
+                    'date' => $key,
+                    'value' => $map[$key] ?? 0,
+                ];
+            }
+        }
+    } catch (Throwable $e) {
+        $growthSeries['daily'] = [];
+    }
+
+    // Weekly growth (12 weeks)
+    try {
+        $weekAnchor = $today->modify('monday this week');
+        if (!$weekAnchor) {
+            $weekAnchor = $today;
+        }
+        $weeklyStart = $weekAnchor->modify('-11 weeks');
+        if (!$weeklyStart) {
+            $weeklyStart = $weekAnchor;
+        }
+        $stmt = $pdo->prepare("SELECT date_trunc('week', created_at) AS bucket, COUNT(*) AS total FROM users WHERE created_at >= ? GROUP BY 1 ORDER BY 1");
+        if ($stmt instanceof PDOStatement) {
+            $stmt->execute([$weeklyStart->format('Y-m-d')]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $map = [];
+            foreach ($rows as $row) {
+                $bucket = $row['bucket'] ?? null;
+                if ($bucket) {
+                    try {
+                        $dt = new DateTimeImmutable((string)$bucket, $tz);
+                        $map[$dt->format('Y-m-d')] = (int)$row['total'];
+                    } catch (Throwable $e) {
+                        continue;
+                    }
+                }
+            }
+
+            for ($i = 0; $i < 12; $i++) {
+                $date = $weeklyStart->modify('+' . $i . ' weeks');
+                if (!$date) {
+                    continue;
+                }
+                $key = $date->format('Y-m-d');
+                $end = $date->modify('+6 days');
+                $growthSeries['weekly'][] = [
+                    'date' => $key,
+                    'end' => $end ? $end->format('Y-m-d') : null,
+                    'value' => $map[$key] ?? 0,
+                ];
+            }
+        }
+    } catch (Throwable $e) {
+        $growthSeries['weekly'] = [];
+    }
+
+    // Monthly growth, conversion, revenue, churn (12 months)
+    $monthAnchor = $today->modify('first day of this month');
+    if (!$monthAnchor) {
+        $monthAnchor = $today;
+    }
+    $monthlyStart = $monthAnchor->modify('-11 months');
+    if (!$monthlyStart) {
+        $monthlyStart = $monthAnchor;
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT date_trunc('month', created_at) AS bucket, COUNT(*) AS total FROM users WHERE created_at >= ? GROUP BY 1 ORDER BY 1");
+        if ($stmt instanceof PDOStatement) {
+            $stmt->execute([$monthlyStart->format('Y-m-d')]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $map = [];
+            foreach ($rows as $row) {
+                $bucket = $row['bucket'] ?? null;
+                if ($bucket) {
+                    try {
+                        $dt = new DateTimeImmutable((string)$bucket, $tz);
+                        $map[$dt->format('Y-m-01')] = (int)$row['total'];
+                    } catch (Throwable $e) {
+                        continue;
+                    }
+                }
+            }
+
+            for ($i = 0; $i < 12; $i++) {
+                $date = $monthlyStart->modify('+' . $i . ' months');
+                if (!$date) {
+                    continue;
+                }
+                $key = $date->format('Y-m-01');
+                $end = $date->modify('last day of this month');
+                $growthSeries['monthly'][] = [
+                    'date' => $key,
+                    'end' => $end ? $end->format('Y-m-d') : null,
+                    'value' => $map[$key] ?? 0,
+                ];
+            }
+        }
+    } catch (Throwable $e) {
+        $growthSeries['monthly'] = [];
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT date_trunc('month', created_at) AS bucket, COUNT(*) AS total, SUM(CASE WHEN LOWER(role) = ? THEN 1 ELSE 0 END) AS premium FROM users WHERE created_at >= ? GROUP BY 1 ORDER BY 1");
+        if ($stmt instanceof PDOStatement) {
+            $stmt->execute([strtolower(ROLE_PREMIUM), $monthlyStart->format('Y-m-d')]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $map = [];
+            foreach ($rows as $row) {
+                $bucket = $row['bucket'] ?? null;
+                if ($bucket) {
+                    try {
+                        $dt = new DateTimeImmutable((string)$bucket, $tz);
+                        $map[$dt->format('Y-m-01')] = [
+                            'total' => (int)$row['total'],
+                            'premium' => (int)($row['premium'] ?? 0),
+                        ];
+                    } catch (Throwable $e) {
+                        continue;
+                    }
+                }
+            }
+
+            for ($i = 0; $i < 12; $i++) {
+                $date = $monthlyStart->modify('+' . $i . ' months');
+                if (!$date) {
+                    continue;
+                }
+                $key = $date->format('Y-m-01');
+                $entry = $map[$key] ?? ['total' => 0, 'premium' => 0];
+                $total = (int)$entry['total'];
+                $premium = (int)$entry['premium'];
+                $conversionSeries[] = [
+                    'date' => $date->format('Y-m'),
+                    'start' => $key,
+                    'total' => $total,
+                    'premium' => $premium,
+                    'value' => $total > 0 ? ($premium / $total) * 100 : null,
+                ];
+            }
+        }
+    } catch (Throwable $e) {
+        $conversionSeries = [];
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT date_trunc('month', processed_at) AS bucket, SUM(amount) AS total FROM user_payments WHERE processed_at >= ? AND status = 'succeeded' AND type = 'charge' AND currency = ? GROUP BY 1 ORDER BY 1");
+        if ($stmt instanceof PDOStatement) {
+            $stmt->execute([$monthlyStart->format('Y-m-d'), $currency]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $map = [];
+            foreach ($rows as $row) {
+                $bucket = $row['bucket'] ?? null;
+                if ($bucket) {
+                    try {
+                        $dt = new DateTimeImmutable((string)$bucket, $tz);
+                        $map[$dt->format('Y-m-01')] = (float)$row['total'];
+                    } catch (Throwable $e) {
+                        continue;
+                    }
+                }
+            }
+
+            for ($i = 0; $i < 12; $i++) {
+                $date = $monthlyStart->modify('+' . $i . ' months');
+                if (!$date) {
+                    continue;
+                }
+                $key = $date->format('Y-m-01');
+                $revenueSeries[] = [
+                    'date' => $date->format('Y-m'),
+                    'start' => $key,
+                    'value' => (float)($map[$key] ?? 0.0),
+                ];
+            }
+        }
+    } catch (Throwable $e) {
+        $revenueSeries = [];
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT date_trunc('month', COALESCE(canceled_at, cancel_at, current_period_end, updated_at, created_at)) AS bucket, COUNT(*) AS total FROM user_subscriptions WHERE status IN ('canceled','expired') AND COALESCE(canceled_at, cancel_at, current_period_end, updated_at, created_at) >= ? GROUP BY 1 ORDER BY 1");
+        if ($stmt instanceof PDOStatement) {
+            $stmt->execute([$monthlyStart->format('Y-m-d')]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $map = [];
+            foreach ($rows as $row) {
+                $bucket = $row['bucket'] ?? null;
+                if ($bucket) {
+                    try {
+                        $dt = new DateTimeImmutable((string)$bucket, $tz);
+                        $map[$dt->format('Y-m-01')] = (int)$row['total'];
+                    } catch (Throwable $e) {
+                        continue;
+                    }
+                }
+            }
+
+            for ($i = 0; $i < 12; $i++) {
+                $date = $monthlyStart->modify('+' . $i . ' months');
+                if (!$date) {
+                    continue;
+                }
+                $key = $date->format('Y-m-01');
+                $churnSeries[] = [
+                    'date' => $date->format('Y-m'),
+                    'start' => $key,
+                    'value' => (int)($map[$key] ?? 0),
+                ];
+            }
+        }
+    } catch (Throwable $e) {
+        $churnSeries = [];
+    }
+
+    try {
+        $stmt = $pdo->query("SELECT SUM(CASE WHEN success = FALSE THEN 1 ELSE 0 END) AS failures, SUM(CASE WHEN success = TRUE THEN 1 ELSE 0 END) AS successes, COUNT(*) AS total FROM user_login_activity WHERE created_at >= NOW() - INTERVAL '7 days'");
+        if ($stmt instanceof PDOStatement) {
+            $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+            $failures = (int)($row['failures'] ?? 0);
+            $total = (int)($row['total'] ?? 0);
+            $successes = (int)($row['successes'] ?? ($total - $failures));
+            $errorMetrics['login_total'] = $total;
+            if ($total > 0) {
+                $errorMetrics['login_error_rate'] = ($failures / $total) * 100;
+                $errorMetrics['auth_success_rate'] = ($successes / $total) * 100;
+            }
+        }
+    } catch (Throwable $e) {
+        // ignore
+    }
+
+    try {
+        $stmt = $pdo->query("SELECT SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed, COUNT(*) AS total FROM user_payments WHERE processed_at >= NOW() - INTERVAL '30 days' AND type = 'charge'");
+        if ($stmt instanceof PDOStatement) {
+            $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+            $failed = (int)($row['failed'] ?? 0);
+            $total = (int)($row['total'] ?? 0);
+            $errorMetrics['payment_total'] = $total;
+            if ($total > 0) {
+                $errorMetrics['payment_failure_rate'] = ($failed / $total) * 100;
+            }
+        }
+    } catch (Throwable $e) {
+        // ignore
+    }
+
+    try {
+        $stmt = $pdo->query("SELECT AVG(EXTRACT(EPOCH FROM (processed_at - created_at))) AS seconds FROM user_payments WHERE processed_at >= NOW() - INTERVAL '30 days' AND type = 'charge' AND status = 'succeeded'");
+        if ($stmt instanceof PDOStatement) {
+            $seconds = $stmt->fetchColumn();
+            if ($seconds !== false && $seconds !== null) {
+                $hours = ((float)$seconds) / 3600;
+                $errorMetrics['avg_payment_latency_hours'] = $hours;
+            }
+        }
+    } catch (Throwable $e) {
+        // ignore
+    }
+
+    view('admin/analytics', [
+        'pageTitle' => __('Analytics & insights'),
+        'currency' => $currency,
+        'kpis' => $kpis,
+        'growthSeries' => $growthSeries,
+        'conversionSeries' => $conversionSeries,
+        'revenueSeries' => $revenueSeries,
+        'churnSeries' => $churnSeries,
+        'errorMetrics' => $errorMetrics,
+    ]);
+}
+
 function admin_update_role(PDO $pdo): void
 {
     require_admin();
