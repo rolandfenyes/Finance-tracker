@@ -1,11 +1,11 @@
 ALTER TABLE loans
-    ADD COLUMN archived_at TIMESTAMP NULL;
+    ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP NULL;
 
 ALTER TABLE scheduled_payments
-    ADD COLUMN archived_at TIMESTAMP NULL;
+    ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP NULL;
 
 ALTER TABLE goals
-    ADD COLUMN archived_at TIMESTAMP NULL;
+    ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP NULL;
 
 UPDATE loans
    SET archived_at = finished_at
