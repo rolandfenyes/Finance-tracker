@@ -703,7 +703,7 @@ function admin_system_environment(PDO $pdo): array
         'last_migration' => $lastMigration,
         'app_name' => $settings['site_name'] ?: ($appConfig['app']['name'] ?? 'MyMoneyMap'),
         'app_url' => $settings['primary_url'] ?: ($appConfig['app']['url'] ?? null),
-        'maintenance_mode' => !empty($settings['maintenance_mode']),
+        'maintenance_mode' => (bool)($settings['maintenance_mode'] ?? false),
         'server' => $server,
     ];
 }
@@ -740,7 +740,18 @@ function admin_system_settings_update(PDO $pdo): void
     $contactEmail = trim((string)($_POST['contact_email'] ?? ''));
     $logoUrl = trim((string)($_POST['logo_url'] ?? ''));
     $faviconUrl = trim((string)($_POST['favicon_url'] ?? ''));
-    $maintenanceMode = !empty($_POST['maintenance_mode']);
+    $maintenanceModeInput = $_POST['maintenance_mode'] ?? null;
+    if ($maintenanceModeInput === null) {
+        $maintenanceMode = false;
+    } else {
+        $normalizedInput = filter_var($maintenanceModeInput, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        if ($normalizedInput !== null) {
+            $maintenanceMode = $normalizedInput;
+        } else {
+            $normalizedToken = strtolower((string)$maintenanceModeInput);
+            $maintenanceMode = in_array($normalizedToken, ['1', 'true', 't', 'on', 'yes'], true);
+        }
+    }
     $maintenanceMessage = trim((string)($_POST['maintenance_message'] ?? ''));
 
     if ($siteName === '') {
@@ -776,7 +787,7 @@ function admin_system_settings_update(PDO $pdo): void
     try {
         $stmt = $pdo->prepare(
             'INSERT INTO system_settings (id, site_name, primary_url, support_email, contact_email, logo_url, favicon_url, maintenance_mode, maintenance_message) '
-            . 'VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?) '
+            . 'VALUES (1, :site_name, :primary_url, :support_email, :contact_email, :logo_url, :favicon_url, :maintenance_mode, :maintenance_message) '
             . 'ON CONFLICT (id) DO UPDATE '
             . 'SET site_name = EXCLUDED.site_name, '
             . '    primary_url = EXCLUDED.primary_url, '
@@ -788,16 +799,47 @@ function admin_system_settings_update(PDO $pdo): void
             . '    maintenance_message = EXCLUDED.maintenance_message, '
             . '    updated_at = NOW()'
         );
-        $stmt->execute([
-            $siteName,
-            $primaryUrl !== '' ? $primaryUrl : null,
-            $supportEmail !== '' ? $supportEmail : null,
-            $contactEmail !== '' ? $contactEmail : null,
-            $logoUrl !== '' ? $logoUrl : null,
-            $faviconUrl !== '' ? $faviconUrl : null,
-            $maintenanceMode,
-            $maintenanceMessage !== '' ? $maintenanceMessage : null,
-        ]);
+        $stmt->bindValue(':site_name', $siteName, PDO::PARAM_STR);
+
+        if ($primaryUrl !== '') {
+            $stmt->bindValue(':primary_url', $primaryUrl, PDO::PARAM_STR);
+        } else {
+            $stmt->bindValue(':primary_url', null, PDO::PARAM_NULL);
+        }
+
+        if ($supportEmail !== '') {
+            $stmt->bindValue(':support_email', $supportEmail, PDO::PARAM_STR);
+        } else {
+            $stmt->bindValue(':support_email', null, PDO::PARAM_NULL);
+        }
+
+        if ($contactEmail !== '') {
+            $stmt->bindValue(':contact_email', $contactEmail, PDO::PARAM_STR);
+        } else {
+            $stmt->bindValue(':contact_email', null, PDO::PARAM_NULL);
+        }
+
+        if ($logoUrl !== '') {
+            $stmt->bindValue(':logo_url', $logoUrl, PDO::PARAM_STR);
+        } else {
+            $stmt->bindValue(':logo_url', null, PDO::PARAM_NULL);
+        }
+
+        if ($faviconUrl !== '') {
+            $stmt->bindValue(':favicon_url', $faviconUrl, PDO::PARAM_STR);
+        } else {
+            $stmt->bindValue(':favicon_url', null, PDO::PARAM_NULL);
+        }
+
+        $stmt->bindValue(':maintenance_mode', $maintenanceMode, PDO::PARAM_BOOL);
+
+        if ($maintenanceMessage !== '') {
+            $stmt->bindValue(':maintenance_message', $maintenanceMessage, PDO::PARAM_STR);
+        } else {
+            $stmt->bindValue(':maintenance_message', null, PDO::PARAM_NULL);
+        }
+
+        $stmt->execute();
     } catch (Throwable $e) {
         $_SESSION['flash'] = __('Unable to save system settings.');
         redirect($redirectTo);

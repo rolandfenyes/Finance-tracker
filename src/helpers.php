@@ -451,14 +451,27 @@ function system_settings(bool $refresh = false): array
             $settings['contact_email'] = ($row['contact_email'] ?? null) ?: null;
             $settings['logo_url'] = ($row['logo_url'] ?? null) ?: null;
             $settings['favicon_url'] = ($row['favicon_url'] ?? null) ?: null;
-            $maintenanceMode = $row['maintenance_mode'] ?? false;
-            if (is_string($maintenanceMode)) {
-                $maintenanceMode = strtolower($maintenanceMode);
-                $maintenanceMode = in_array($maintenanceMode, ['1', 'true', 't', 'on', 'yes'], true);
+            $maintenanceModeRaw = $row['maintenance_mode'] ?? false;
+            if (is_bool($maintenanceModeRaw)) {
+                $maintenanceMode = $maintenanceModeRaw;
+            } elseif ($maintenanceModeRaw === null) {
+                $maintenanceMode = false;
             } else {
-                $maintenanceMode = (bool)$maintenanceMode;
+                $filtered = filter_var($maintenanceModeRaw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+                if ($filtered !== null) {
+                    $maintenanceMode = $filtered;
+                } else {
+                    $normalized = strtolower((string)$maintenanceModeRaw);
+                    if ($normalized === 't') {
+                        $maintenanceMode = true;
+                    } elseif ($normalized === 'f') {
+                        $maintenanceMode = false;
+                    } else {
+                        $maintenanceMode = in_array($normalized, ['1', 'true', 'on', 'yes'], true);
+                    }
+                }
             }
-            $settings['maintenance_mode'] = $maintenanceMode;
+            $settings['maintenance_mode'] = $maintenanceMode ? true : false;
             $settings['maintenance_message'] = ($row['maintenance_message'] ?? null) ?: null;
         }
     } catch (Throwable $e) {
