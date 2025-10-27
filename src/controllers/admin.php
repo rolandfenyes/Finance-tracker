@@ -1449,6 +1449,183 @@ SQL;
     ]);
 }
 
+function admin_feedbacks_index(PDO $pdo): void
+{
+    require_admin();
+
+    $search = trim((string)($_GET['q'] ?? ''));
+    $statusFilter = strtolower(trim((string)($_GET['status'] ?? '')));
+    $kindFilter = strtolower(trim((string)($_GET['kind'] ?? '')));
+    $severityFilter = strtolower(trim((string)($_GET['severity'] ?? '')));
+    $page = max(1, (int)($_GET['page'] ?? 1));
+    $perPage = 50;
+
+    $statusOptions = [
+        'open' => __('Open'),
+        'in_progress' => __('In progress'),
+        'resolved' => __('Resolved'),
+        'closed' => __('Closed'),
+    ];
+
+    $kindOptions = [
+        'bug' => __('Bug'),
+        'idea' => __('Suggestion'),
+    ];
+
+    $severityOptions = [
+        'high' => __('High'),
+        'medium' => __('Medium'),
+        'low' => __('Low'),
+    ];
+
+    $where = [];
+    $params = [];
+
+    $statusApplied = '';
+    if ($statusFilter !== '' && array_key_exists($statusFilter, $statusOptions)) {
+        $where[] = 'f.status = ?';
+        $params[] = $statusFilter;
+        $statusApplied = $statusFilter;
+    }
+
+    $kindApplied = '';
+    if ($kindFilter !== '' && array_key_exists($kindFilter, $kindOptions)) {
+        $where[] = 'f.kind = ?';
+        $params[] = $kindFilter;
+        $kindApplied = $kindFilter;
+    }
+
+    $severityApplied = '';
+    if ($severityFilter === 'none') {
+        $where[] = 'f.severity IS NULL';
+        $severityApplied = 'none';
+    } elseif ($severityFilter !== '' && array_key_exists($severityFilter, $severityOptions)) {
+        $where[] = 'f.severity = ?';
+        $params[] = $severityFilter;
+        $severityApplied = $severityFilter;
+    }
+
+    if ($search !== '') {
+        $where[] = '(f.title ILIKE ? OR f.message ILIKE ? OR u.email ILIKE ?)';
+        $params[] = '%' . $search . '%';
+        $params[] = '%' . $search . '%';
+        $params[] = '%' . $search . '%';
+    }
+
+    $whereClause = $where ? ' WHERE ' . implode(' AND ', $where) : '';
+
+    $countSql = 'SELECT COUNT(*) FROM feedback f JOIN users u ON u.id = f.user_id' . $whereClause;
+    $countStmt = $pdo->prepare($countSql);
+    foreach ($params as $index => $value) {
+        $countStmt->bindValue($index + 1, $value);
+    }
+    $countStmt->execute();
+    $total = (int)$countStmt->fetchColumn();
+
+    $pageCount = max(1, (int)ceil($total / $perPage));
+    if ($page > $pageCount) {
+        $page = $pageCount;
+    }
+
+    $offset = ($page - 1) * $perPage;
+
+    $sql = <<<SQL
+SELECT f.id, f.kind, f.severity, f.status, f.title, f.message, f.created_at, f.updated_at,
+       u.id AS user_id, u.email, u.full_name, u.role, u.status AS user_status
+  FROM feedback f
+  JOIN users u ON u.id = f.user_id
+{$whereClause}
+ ORDER BY f.created_at DESC, f.id DESC
+ LIMIT ? OFFSET ?
+SQL;
+
+    $stmt = $pdo->prepare($sql);
+    foreach ($params as $index => $value) {
+        $stmt->bindValue($index + 1, $value);
+    }
+    $stmt->bindValue(count($params) + 1, $perPage, PDO::PARAM_INT);
+    $stmt->bindValue(count($params) + 2, $offset, PDO::PARAM_INT);
+    $stmt->execute();
+
+    $feedback = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $message = (string)($row['message'] ?? '');
+        $preview = $message;
+        if ($message !== '') {
+            if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+                $preview = mb_strlen($message) > 160 ? rtrim(mb_substr($message, 0, 160)) . '…' : $message;
+            } else {
+                $preview = strlen($message) > 160 ? rtrim(substr($message, 0, 160)) . '…' : $message;
+            }
+        }
+
+        $feedback[] = [
+            'id' => (int)($row['id'] ?? 0),
+            'kind' => (string)($row['kind'] ?? ''),
+            'severity' => $row['severity'] !== null ? (string)$row['severity'] : null,
+            'status' => (string)($row['status'] ?? ''),
+            'title' => (string)($row['title'] ?? ''),
+            'message' => $message,
+            'message_preview' => $preview,
+            'created_at' => $row['created_at'] ?? null,
+            'updated_at' => $row['updated_at'] ?? null,
+            'user_id' => (int)($row['user_id'] ?? 0),
+            'user_email' => (string)($row['email'] ?? ''),
+            'user_name' => pii_decrypt($row['full_name'] ?? null),
+            'user_role' => normalize_user_role($row['role'] ?? null),
+            'user_status' => normalize_user_status($row['user_status'] ?? null),
+        ];
+    }
+
+    $queryBase = [];
+    if ($search !== '') {
+        $queryBase['q'] = $search;
+    }
+    if ($statusApplied !== '') {
+        $queryBase['status'] = $statusApplied;
+    }
+    if ($kindApplied !== '') {
+        $queryBase['kind'] = $kindApplied;
+    }
+    if ($severityApplied !== '') {
+        $queryBase['severity'] = $severityApplied;
+    }
+
+    $prevUrl = $page > 1
+        ? '/admin/feedbacks?' . http_build_query(array_merge($queryBase, ['page' => $page - 1]), '', '&', PHP_QUERY_RFC3986)
+        : null;
+    $nextUrl = $page < $pageCount
+        ? '/admin/feedbacks?' . http_build_query(array_merge($queryBase, ['page' => $page + 1]), '', '&', PHP_QUERY_RFC3986)
+        : null;
+
+    $currentUrl = admin_normalize_redirect($_SERVER['REQUEST_URI'] ?? '/admin/feedbacks');
+
+    $severityOptionsWithNone = ['none' => __('None')] + $severityOptions;
+
+    view('admin/feedbacks', [
+        'pageTitle' => __('Feedback overview'),
+        'feedbackEntries' => $feedback,
+        'filters' => [
+            'search' => $search,
+            'status' => $statusApplied,
+            'kind' => $kindApplied,
+            'severity' => $severityApplied,
+            'page' => $page,
+        ],
+        'pagination' => [
+            'page' => $page,
+            'pages' => $pageCount,
+            'total' => $total,
+            'prev' => $prevUrl,
+            'next' => $nextUrl,
+        ],
+        'statusOptions' => $statusOptions,
+        'kindOptions' => $kindOptions,
+        'severityOptions' => $severityOptionsWithNone,
+        'currentUrl' => $currentUrl,
+    ]);
+}
+
 function admin_users_manage(PDO $pdo): void
 {
     require_admin();

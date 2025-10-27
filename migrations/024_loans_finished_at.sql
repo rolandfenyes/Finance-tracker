@@ -1,5 +1,5 @@
 ALTER TABLE loans
-    ADD COLUMN finished_at TIMESTAMP NULL;
+    ADD COLUMN IF NOT EXISTS finished_at TIMESTAMP NULL;
 
 UPDATE loans
    SET finished_at = CURRENT_TIMESTAMP
