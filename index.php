@@ -977,6 +977,11 @@ switch ($path) {
         admin_users_index($pdo);
         break;
 
+    case '/admin/feedbacks':
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_feedbacks_index($pdo);
+        break;
+
     case '/admin/users/manage':
         require __DIR__ . '/src/controllers/admin.php';
         admin_users_manage($pdo);
