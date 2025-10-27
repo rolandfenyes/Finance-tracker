@@ -14,6 +14,23 @@
         <meta name="color-scheme" content="light dark" />
         <meta name="supported-color-schemes" content="light dark" />
         <!--<![endif]-->
+        <style>
+            /* Preheader text is hidden visually but picked up by inboxes to improve
+               deliverability. Keep it at the top of the head to ensure consistent
+               rendering across providers. */
+            .preheader {
+                display: none !important;
+                visibility: hidden;
+                mso-hide: all;
+                font-size: 1px;
+                line-height: 1px;
+                max-height: 0;
+                max-width: 0;
+                opacity: 0;
+                overflow: hidden;
+                color: transparent;
+            }
+        </style>
     </head>
     <body
         style="
@@ -23,6 +40,10 @@
             color: #1f1f1f;
             font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
         ">
+        <div class="preheader">
+            You created a MyMoneyMap account and just need to confirm your email to
+            start using your dashboard.
+        </div>
         <center
             role="article"
             aria-roledescription="email"
@@ -131,10 +152,13 @@
                                                     line-height: 24px;
                                                     color: #1f1f1f;
                                                 ">
-                                                Welcome to MyMoneyMap — your smarter way to master
-                                                money. Hi {{user_first_name}}, please confirm your
-                                                email address to secure your account and unlock
-                                                personalized finance tools.
+                                                Hi {{user_first_name}},
+                                                <br /><br />
+                                                Thanks for signing up for MyMoneyMap. We double-check
+                                                every new registration to keep accounts safe, so please
+                                                confirm that this email address belongs to you. Once
+                                                confirmed, we will help you monitor your budget, plan
+                                                goals, and stay on top of every transaction.
                                             </td>
                                         </tr>
                                         <tr>
@@ -197,9 +221,15 @@
                                                     line-height: 24px;
                                                     color: #1f1f1f;
                                                 ">
+                                                <strong>Why you received this email</strong><br />
+                                                You (or someone using this email address) created a
+                                                MyMoneyMap account and asked us to verify the contact
+                                                information. If this wasn’t you, please ignore this
+                                                message and your email address will stay unverified.
+                                                <br /><br />
                                                 <strong>Need help?</strong><br />
-                                                If the button above doesn’t work, copy and paste
-                                                this link into your browser:<br />
+                                                If the button above doesn’t work, copy and paste this
+                                                link into your browser:<br />
                                                 <a
                                                     href="{{verification_link}}"
                                                     style="
@@ -214,7 +244,7 @@
                                                     href="mailto:{{support_email}}"
                                                     style="color: #2f8857; text-decoration: none"
                                                     >{{support_email}}</a
-                                                >.
+                                                > and we’ll be happy to help.
                                             </td>
                                         </tr>
                                         <tr>
@@ -227,7 +257,14 @@
                                                 ">
                                                 Once verified, you’ll gain access to your dashboard,
                                                 personalized spending insights, and smart
-                                                recommendations.
+                                                recommendations to keep your finances healthy.
+                                                <br /><br />
+                                                To make sure you keep receiving important updates,
+                                                add <a
+                                                    href="mailto:{{support_email}}"
+                                                    style="color: #2f8857; text-decoration: none"
+                                                    >{{support_email}}</a
+                                                > to your contacts.
                                             </td>
                                         </tr>
                                     </table>
