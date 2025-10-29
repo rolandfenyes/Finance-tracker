@@ -972,6 +972,16 @@ switch ($path) {
         }
         break;
 
+    case '/admin/emails':
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_emails_index($pdo);
+        break;
+
+    case '/admin/emails/preview':
+        require __DIR__ . '/src/controllers/admin.php';
+        admin_emails_preview($pdo);
+        break;
+
     case '/admin/users':
         require __DIR__ . '/src/controllers/admin.php';
         admin_users_index($pdo);

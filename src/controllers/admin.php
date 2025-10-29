@@ -530,6 +530,255 @@ function admin_analytics_index(PDO $pdo): void
     ]);
 }
 
+function admin_emails_template_human_name(string $slug): string
+{
+    $name = preg_replace('/^email[_-]?/i', '', $slug) ?? $slug;
+    $name = str_replace(['_', '-'], ' ', (string)$name);
+    $name = trim($name);
+
+    if ($name === '') {
+        $name = $slug;
+    }
+
+    return ucwords($name);
+}
+
+function admin_emails_collect_templates(string $locale = 'en'): array
+{
+    $locale = trim($locale) !== '' ? trim($locale) : 'en';
+    $baseDir = realpath(__DIR__ . '/../../docs/email_templates/' . $locale);
+
+    if ($baseDir === false || !is_dir($baseDir)) {
+        return [];
+    }
+
+    $files = glob($baseDir . '/*.html');
+    if ($files === false) {
+        return [];
+    }
+
+    sort($files, SORT_NATURAL | SORT_FLAG_CASE);
+
+    $templates = [];
+    foreach ($files as $file) {
+        if (!is_file($file) || !is_readable($file)) {
+            continue;
+        }
+
+        $basename = basename($file);
+        $slug = pathinfo($basename, PATHINFO_FILENAME);
+        $raw = file_get_contents($file);
+        if ($raw === false) {
+            $raw = '';
+        }
+
+        $placeholders = admin_emails_extract_placeholders($raw);
+        $testData = admin_emails_extract_test_data($raw);
+
+        $templates[] = [
+            'slug' => $slug,
+            'name' => admin_emails_template_human_name($slug),
+            'filename' => $basename,
+            'relative_path' => 'docs/email_templates/' . $locale . '/' . $basename,
+            'absolute_path' => $file,
+            'placeholder_count' => count($placeholders),
+            'has_test_data' => !empty($testData),
+        ];
+    }
+
+    return $templates;
+}
+
+function admin_emails_extract_test_data(string $html): array
+{
+    if ($html === '') {
+        return [];
+    }
+
+    if (!preg_match('/<!--\s*Test Data:\s*(\{.*?\})\s*-->/si', $html, $matches)) {
+        return [];
+    }
+
+    $json = trim($matches[1] ?? '');
+    if ($json === '') {
+        return [];
+    }
+
+    $data = json_decode($json, true);
+    if (!is_array($data) || json_last_error() !== JSON_ERROR_NONE) {
+        return [];
+    }
+
+    return $data;
+}
+
+function admin_emails_default_mock_data(): array
+{
+    $appConfig = app_config('app') ?? [];
+    $mailConfig = app_config('mail') ?? [];
+
+    $appName = (string)($appConfig['name'] ?? 'MyMoneyMap');
+
+    $appUrlConfig = trim((string)($appConfig['url'] ?? ''));
+    if ($appUrlConfig === '' || stripos($appUrlConfig, 'localhost') !== false) {
+        $appUrlConfig = 'https://app.mymoneymap.com';
+    }
+    $appUrl = rtrim($appUrlConfig, '/');
+    if ($appUrl === '') {
+        $appUrl = 'https://app.mymoneymap.com';
+    }
+
+    $supportEmail = (string)($mailConfig['reply_to'] ?? $mailConfig['from_email'] ?? 'support@mymoneymap.com');
+    if ($supportEmail === '' || str_contains($supportEmail, '.local')) {
+        $supportEmail = 'support@mymoneymap.com';
+    }
+
+    return [
+        'app_name' => $appName,
+        'app_url' => $appUrl,
+        'settings_url' => $appUrl . '/settings',
+        'privacy_url' => $appUrl . '/privacy',
+        'unsubscribe_url' => $appUrl . '/unsubscribe',
+        'support_email' => $supportEmail,
+        'year' => date('Y'),
+    ];
+}
+
+function admin_emails_render_template(string $html, array $data): string
+{
+    $normalized = [];
+    foreach ($data as $key => $value) {
+        if (!is_string($key)) {
+            continue;
+        }
+
+        if ($value instanceof DateTimeInterface) {
+            $normalized[$key] = $value->format('Y-m-d H:i');
+        } elseif (is_scalar($value)) {
+            $normalized[$key] = (string)$value;
+        }
+    }
+
+    $rendered = preg_replace_callback('/\{\{\s*([A-Za-z0-9_.-]+)\s*\}\}/', function ($matches) use ($normalized) {
+        $key = $matches[1];
+        if (array_key_exists($key, $normalized)) {
+            return $normalized[$key];
+        }
+
+        return $matches[0];
+    }, $html);
+
+    return $rendered === null ? $html : $rendered;
+}
+
+function admin_emails_strip_test_data_comment(string $html): string
+{
+    $stripped = preg_replace('/<!--\s*Test Data:\s*\{.*?\}\s*-->\s*/si', '', $html, 1);
+    return $stripped === null ? $html : $stripped;
+}
+
+function admin_emails_extract_placeholders(string $html): array
+{
+    if ($html === '') {
+        return [];
+    }
+
+    if (!preg_match_all('/\{\{\s*([A-Za-z0-9_.-]+)\s*\}\}/', $html, $matches)) {
+        return [];
+    }
+
+    $keys = array_unique($matches[1]);
+    sort($keys, SORT_NATURAL | SORT_FLAG_CASE);
+
+    return $keys;
+}
+
+function admin_emails_index(PDO $pdo): void
+{
+    require_admin();
+
+    $locale = 'en';
+    $templates = admin_emails_collect_templates($locale);
+    $displayTemplates = array_map(function (array $template) {
+        return [
+            'slug' => $template['slug'],
+            'name' => $template['name'],
+            'filename' => $template['filename'],
+            'relative_path' => $template['relative_path'],
+            'placeholder_count' => $template['placeholder_count'],
+            'has_test_data' => (bool)$template['has_test_data'],
+        ];
+    }, $templates);
+
+    view('admin/emails', [
+        'pageTitle' => __('Email templates'),
+        'templates' => $displayTemplates,
+        'locale' => $locale,
+    ]);
+}
+
+function admin_emails_preview(PDO $pdo): void
+{
+    require_admin();
+
+    $locale = 'en';
+    $slug = trim((string)($_GET['template'] ?? ''));
+    if ($slug === '') {
+        $_SESSION['flash'] = __('Select an email template to preview.');
+        redirect('/admin/emails');
+    }
+
+    $templates = admin_emails_collect_templates($locale);
+    $selected = null;
+    foreach ($templates as $template) {
+        if ($template['slug'] === $slug) {
+            $selected = $template;
+            break;
+        }
+    }
+
+    if (!$selected) {
+        $_SESSION['flash'] = __('The requested email template could not be found.');
+        redirect('/admin/emails');
+    }
+
+    $path = $selected['absolute_path'] ?? '';
+    $rawHtml = ($path && is_readable($path)) ? file_get_contents($path) : false;
+    if ($rawHtml === false || trim((string)$rawHtml) === '') {
+        $_SESSION['flash'] = __('Unable to load the email template content.');
+        redirect('/admin/emails');
+    }
+
+    $rawHtml = (string)$rawHtml;
+    $placeholders = admin_emails_extract_placeholders($rawHtml);
+    $testData = admin_emails_extract_test_data($rawHtml);
+    $mockData = array_merge(admin_emails_default_mock_data(), $testData);
+    ksort($mockData, SORT_NATURAL | SORT_FLAG_CASE);
+
+    $renderedHtml = admin_emails_strip_test_data_comment(admin_emails_render_template($rawHtml, $mockData));
+
+    $missingPlaceholders = array_values(array_diff($placeholders, array_keys($mockData)));
+    sort($placeholders, SORT_NATURAL | SORT_FLAG_CASE);
+    sort($missingPlaceholders, SORT_NATURAL | SORT_FLAG_CASE);
+
+    view('admin/email_preview', [
+        'pageTitle' => sprintf(__('Preview: %s'), $selected['name']),
+        'template' => [
+            'name' => $selected['name'],
+            'slug' => $selected['slug'],
+            'filename' => $selected['filename'],
+            'relative_path' => $selected['relative_path'],
+            'placeholder_count' => $selected['placeholder_count'],
+            'has_test_data' => (bool)$selected['has_test_data'],
+        ],
+        'locale' => $locale,
+        'renderedHtml' => $renderedHtml,
+        'mockData' => $mockData,
+        'placeholders' => $placeholders,
+        'missingPlaceholders' => $missingPlaceholders,
+    ]);
+}
+
 function admin_system_mask_secret(?string $value): string
 {
     $value = trim((string)($value ?? ''));

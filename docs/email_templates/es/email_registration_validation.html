@@ -14,6 +14,20 @@
         <meta name="color-scheme" content="light dark" />
         <meta name="supported-color-schemes" content="light dark" />
         <!--<![endif]-->
+        <style>
+            .preheader {
+                display: none !important;
+                visibility: hidden;
+                mso-hide: all;
+                font-size: 1px;
+                line-height: 1px;
+                max-height: 0;
+                max-width: 0;
+                opacity: 0;
+                overflow: hidden;
+                color: transparent;
+            }
+        </style>
     </head>
     <body
         style="
@@ -23,6 +37,10 @@
             color: #1f1f1f;
             font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
         ">
+        <div class="preheader">
+            Creaste una cuenta de MyMoneyMap y solo necesitas confirmar tu correo
+            electrónico para empezar a usar tu panel.
+        </div>
         <center
             role="article"
             aria-roledescription="email"
@@ -118,11 +136,13 @@
                                                     line-height: 24px;
                                                     color: #1f1f1f;
                                                 ">
-                                                Bienvenido a MyMoneyMap: una forma más inteligente
-                                                de gestionar tu dinero. Hola {{user_first_name}},
-                                                confirma tu dirección de correo electrónico para
-                                                proteger tu cuenta y desbloquear herramientas
-                                                financieras personalizadas.
+                                                Hola {{user_first_name}},
+                                                <br /><br />
+                                                Gracias por registrarte en MyMoneyMap. Verificamos
+                                                cada nueva cuenta para mantener la seguridad, así que
+                                                confirma que este correo electrónico es tuyo. Una vez
+                                                confirmado, podrás seguir tu presupuesto, planificar
+                                                metas y controlar cada movimiento de dinero.
                                             </td>
                                         </tr>
                                         <tr>
@@ -185,9 +205,15 @@
                                                     line-height: 24px;
                                                     color: #1f1f1f;
                                                 ">
+                                                <strong>Por qué recibiste este correo</strong><br />
+                                                Tú (o alguien que usó esta dirección) creó una cuenta
+                                                en MyMoneyMap y solicitó verificar el contacto. Si no
+                                                fuiste tú, simplemente ignora este mensaje y tu correo
+                                                seguirá sin verificarse.
+                                                <br /><br />
                                                 <strong>¿Necesitas ayuda?</strong><br />
-                                                Si el botón no funciona, copia y pega este enlace en
-                                                tu navegador:<br />
+                                                Si el botón no funciona, copia y pega este enlace en tu
+                                                navegador:<br />
                                                 <a
                                                     href="{{verification_link}}"
                                                     style="
@@ -202,7 +228,7 @@
                                                     href="mailto:{{support_email}}"
                                                     style="color: #2f8857; text-decoration: none"
                                                     >{{support_email}}</a
-                                                >.
+                                                > y con gusto te atenderemos.
                                             </td>
                                         </tr>
                                         <tr>
@@ -213,9 +239,17 @@
                                                     line-height: 24px;
                                                     color: #1f1f1f;
                                                 ">
-                                                Una vez verificado, tendrás acceso a tu panel, a
-                                                información personalizada sobre tus gastos y a
-                                                recomendaciones inteligentes.
+                                                Una vez verificado, tendrás acceso a tu panel,
+                                                información personalizada sobre tus gastos y
+                                                recomendaciones inteligentes para mantener tus
+                                                finanzas en orden.
+                                                <br /><br />
+                                                Para seguir recibiendo nuestros avisos importantes,
+                                                agrega <a
+                                                    href="mailto:{{support_email}}"
+                                                    style="color: #2f8857; text-decoration: none"
+                                                    >{{support_email}}</a
+                                                > a tus contactos.
                                             </td>
                                         </tr>
                                     </table>
