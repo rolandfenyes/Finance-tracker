@@ -17,11 +17,7 @@ function goal_row_is_completed(array $goal): bool {
 }
 
 function goal_row_is_locked(array $goal): bool {
-  if (!goal_row_is_completed($goal)) {
-    return false;
-  }
-
-  return empty($goal['archived_at']);
+  return !empty($goal['archived_at']);
 }
 
 function goals_index(PDO $pdo){
