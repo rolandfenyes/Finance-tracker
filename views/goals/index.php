@@ -260,8 +260,9 @@ $allGoals = $allGoals ?? array_merge($activeGoals, $archivedGoals);
       <span class="text-xs text-gray-500"><?= count($archivedGoals) ?></span>
     </summary>
 
-    <div class="mt-3 text-sm text-gray-500">
-      <?= __('Completed goals live here for safekeeping. Balances and schedules are locked, but you can still review their history.') ?>
+    <div class="mt-3 text-sm text-gray-500 space-y-1">
+      <p><?= __('Completed goals live here for safekeeping. Balances and schedules are locked, but you can still review their history.') ?></p>
+      <p><?= __('Changed your mind? Unarchive a goal to reopen it and resume saving.') ?></p>
     </div>
 
     <div class="hidden md:block overflow-x-auto mt-4">
@@ -333,10 +334,11 @@ $allGoals = $allGoals ?? array_merge($activeGoals, $archivedGoals);
                   <i data-lucide="history" class="h-4 w-4"></i>
                   <span class="sr-only"><?= __('View history') ?></span>
                 </button>
-                <span class="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:border-slate-500/40 dark:bg-slate-500/10 dark:text-slate-200">
-                  <span aria-hidden="true">✅</span>
-                  <?= __('Complete') ?>
-                </span>
+                <form method="post" action="/goals/unarchive" onsubmit="return confirm('<?= __('Unarchive this goal and reopen it?') ?>');" class="shrink-0">
+                  <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+                  <input type="hidden" name="id" value="<?= (int)$g['id'] ?>" />
+                  <button type="submit" class="btn !px-3"><?= __('Unarchive') ?></button>
+                </form>
               </div>
             </td>
           </tr>
@@ -389,6 +391,14 @@ $allGoals = $allGoals ?? array_merge($activeGoals, $archivedGoals);
                 <span class="text-gray-500"> · <?= moneyfmt($g['sched_amount'], $g['sched_currency']) ?></span>
               </div>
             <?php endif; ?>
+          </div>
+
+          <div class="mt-3">
+            <form method="post" action="/goals/unarchive" onsubmit="return confirm('<?= __('Unarchive this goal and reopen it?') ?>');" class="w-full">
+              <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
+              <input type="hidden" name="id" value="<?= (int)$g['id'] ?>" />
+              <button type="submit" class="btn w-full"><?= __('Unarchive') ?></button>
+            </form>
           </div>
         </div>
       <?php endforeach; ?>

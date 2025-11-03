@@ -309,6 +309,61 @@ function goals_archive(PDO $pdo){
   redirect('/goals');
 }
 
+function goals_unarchive(PDO $pdo){
+  verify_csrf(); require_login(); $u = uid();
+
+  $id = (int)($_POST['id'] ?? 0);
+  if ($id <= 0) {
+    redirect('/goals');
+    return;
+  }
+
+  $goalStmt = $pdo->prepare('SELECT id, title, target_amount, current_amount, status, archived_at FROM goals WHERE id=? AND user_id=?');
+  $goalStmt->execute([$id, $u]);
+  $goal = $goalStmt->fetch(PDO::FETCH_ASSOC);
+
+  if (!$goal) {
+    redirect('/goals');
+    return;
+  }
+
+  if (empty($goal['archived_at'])) {
+    $_SESSION['flash'] = 'Goal is already active.';
+    redirect('/goals');
+    return;
+  }
+
+  $pdo->beginTransaction();
+  try {
+    $payoutStmt = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE user_id = ? AND source = 'goal_archive' AND source_ref_id = ?");
+    $payoutStmt->execute([$u, $id]);
+    $payoutAmount = max(0.0, (float)$payoutStmt->fetchColumn());
+
+    if ($payoutAmount > 0) {
+      $deleteTx = $pdo->prepare("DELETE FROM transactions WHERE user_id = ? AND source = 'goal_archive' AND source_ref_id = ?");
+      $deleteTx->execute([$u, $id]);
+    }
+
+    $currentAmount = max(0.0, (float)($goal['current_amount'] ?? 0));
+    $newAmount = max(0.0, $currentAmount - $payoutAmount);
+
+    $rawStatus = (string)($goal['status'] ?? 'active');
+    $statusKey = strtolower($rawStatus);
+    $newStatus = in_array($statusKey, ['done', 'completed'], true) ? 'active' : $rawStatus;
+
+    $update = $pdo->prepare('UPDATE goals SET archived_at = NULL, status = ?, current_amount = ? WHERE id = ? AND user_id = ?');
+    $update->execute([$newStatus, $newAmount, $id, $u]);
+
+    $pdo->commit();
+    $_SESSION['flash'] = 'Goal unarchived. You can start saving again.';
+  } catch (Throwable $e) {
+    $pdo->rollBack();
+    $_SESSION['flash'] = 'Failed to unarchive goal.';
+  }
+
+  redirect('/goals');
+}
+
 function goals_create_schedule(PDO $pdo){
   verify_csrf(); require_login();
   $u = uid();
