@@ -225,7 +225,7 @@ function goals_archive(PDO $pdo){
     return;
   }
 
-  $goalStmt = $pdo->prepare('SELECT id, title, target_amount, current_amount, status, archived_at FROM goals WHERE id=? AND user_id=?');
+  $goalStmt = $pdo->prepare('SELECT id, title, target_amount, current_amount, currency, status, archived_at FROM goals WHERE id=? AND user_id=?');
   $goalStmt->execute([$id, $u]);
   $goal = $goalStmt->fetch(PDO::FETCH_ASSOC);
 
@@ -403,7 +403,7 @@ function goals_unarchive(PDO $pdo){
     return;
   }
 
-  $goalStmt = $pdo->prepare('SELECT id, title, target_amount, current_amount, status, archived_at FROM goals WHERE id=? AND user_id=?');
+  $goalStmt = $pdo->prepare('SELECT id, title, target_amount, current_amount, currency, status, archived_at FROM goals WHERE id=? AND user_id=?');
   $goalStmt->execute([$id, $u]);
   $goal = $goalStmt->fetch(PDO::FETCH_ASSOC);
 

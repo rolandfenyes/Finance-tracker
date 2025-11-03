@@ -149,7 +149,7 @@ $allGoals = $allGoals ?? array_merge($activeGoals, $archivedGoals);
                 <form method="post" action="/goals/archive" onsubmit="return confirm('<?= $archiveConfirm ?>');" class="shrink-0">
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                   <input type="hidden" name="id" value="<?= (int)$g['id'] ?>" />
-                  <button type="submit" class="btn !px-3"><?= $archiveLabel ?></button>
+                  <button type="submit" class="btn btn-primary !px-3"><?= $archiveLabel ?></button>
                 </form>
               <?php endif; ?>
             </div>
@@ -243,7 +243,7 @@ $allGoals = $allGoals ?? array_merge($activeGoals, $archivedGoals);
             <form method="post" action="/goals/archive" onsubmit="return confirm('<?= $archiveConfirm ?>');" class="w-full">
               <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
               <input type="hidden" name="id" value="<?= (int)$g['id'] ?>" />
-              <button type="submit" class="btn w-full"><?= $archiveLabel ?></button>
+              <button type="submit" class="btn btn-primary w-full"><?= $archiveLabel ?></button>
             </form>
           <?php endif; ?>
         </div>
