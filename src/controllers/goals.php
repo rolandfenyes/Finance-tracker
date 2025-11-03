@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../helpers.php';
 require_once __DIR__ . '/../fx.php';
 require_once __DIR__ . '/../services/email_notifications.php';
+require_once __DIR__ . '/../scheduled_runner.php';
 
 function goal_row_is_completed(array $goal): bool {
   $statusKey = strtolower((string)($goal['status'] ?? ''));
@@ -16,11 +17,7 @@ function goal_row_is_completed(array $goal): bool {
 }
 
 function goal_row_is_locked(array $goal): bool {
-  if (!goal_row_is_completed($goal)) {
-    return false;
-  }
-
-  return empty($goal['archived_at']);
+  return !empty($goal['archived_at']);
 }
 
 function goals_index(PDO $pdo){
@@ -50,23 +47,6 @@ function goals_index(PDO $pdo){
   $q->execute([$u]);
   $rows = $q->fetchAll(PDO::FETCH_ASSOC);
 
-  $activeGoals = [];
-  $archivedGoals = [];
-  foreach ($rows as &$goalRow) {
-    $isCompleted = goal_row_is_completed($goalRow);
-
-    $goalRow['_is_completed'] = $isCompleted;
-    $goalRow['_can_archive'] = $isCompleted && empty($goalRow['archived_at']);
-
-    $isArchived = !empty($goalRow['archived_at']) || $isCompleted;
-    if ($isArchived) {
-      $archivedGoals[] = $goalRow;
-    } else {
-      $activeGoals[] = $goalRow;
-    }
-  }
-  unset($goalRow);
-
   $allGoals = $rows;
 
   // Only schedules that are free (not linked to any loan or goal) OR already linked to this record
@@ -92,6 +72,38 @@ function goals_index(PDO $pdo){
     $goalId = (int)($tx['goal_id'] ?? 0);
     if (!$goalId) { continue; }
     $goalTransactions[$goalId][] = $tx;
+  }
+
+  foreach ($allGoals as &$goalRow) {
+    $isCompleted = goal_row_is_completed($goalRow);
+
+    $goalRow['_is_completed'] = $isCompleted;
+    $goalRow['_can_archive'] = $isCompleted && empty($goalRow['archived_at']);
+
+    $goalId = (int)($goalRow['id'] ?? 0);
+    $latestContribution = $goalId && !empty($goalTransactions[$goalId])
+      ? $goalTransactions[$goalId][0]
+      : null;
+
+    $noteRaw = $latestContribution ? trim((string)($latestContribution['note'] ?? '')) : '';
+    $completedBySchedule = $isCompleted
+      && empty($goalRow['archived_at'])
+      && !empty($goalRow['sched_id'])
+      && $noteRaw !== ''
+      && stripos($noteRaw, 'scheduled:') === 0;
+
+    $goalRow['_completed_by_schedule'] = $completedBySchedule;
+  }
+  unset($goalRow);
+
+  $activeGoals = [];
+  $archivedGoals = [];
+  foreach ($allGoals as $goalRow) {
+    if (!empty($goalRow['archived_at'])) {
+      $archivedGoals[] = $goalRow;
+    } else {
+      $activeGoals[] = $goalRow;
+    }
   }
 
   // currencies (if you show currency selectors on the page)
@@ -213,7 +225,7 @@ function goals_archive(PDO $pdo){
     return;
   }
 
-  $goalStmt = $pdo->prepare('SELECT id, title, target_amount, current_amount, status, archived_at FROM goals WHERE id=? AND user_id=?');
+  $goalStmt = $pdo->prepare('SELECT id, title, target_amount, current_amount, currency, status, archived_at FROM goals WHERE id=? AND user_id=?');
   $goalStmt->execute([$id, $u]);
   $goal = $goalStmt->fetch(PDO::FETCH_ASSOC);
 
@@ -241,7 +253,94 @@ function goals_archive(PDO $pdo){
 
   $pdo->beginTransaction();
   try {
+    $today = date('Y-m-d');
     $goalCurrency = strtoupper((string)($goal['currency'] ?? ''));
+    if ($goalCurrency === '') {
+      $goalCurrency = function_exists('fx_user_main') ? (fx_user_main($pdo, $u) ?: 'HUF') : 'HUF';
+    }
+
+    $scheduleStmt = $pdo->prepare('SELECT * FROM scheduled_payments WHERE goal_id = ? AND user_id = ? FOR UPDATE');
+    $scheduleStmt->execute([$id, $u]);
+    $schedules = $scheduleStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $checkStmt = $pdo->prepare('SELECT 1 FROM goal_contributions WHERE goal_id = ? AND user_id = ? AND occurred_on = ? AND note = ? AND amount = ? AND currency = ? LIMIT 1');
+    $goalNeedsRefresh = false;
+
+    foreach ($schedules as &$scheduleRow) {
+      $due = isset($scheduleRow['next_due']) ? (string)$scheduleRow['next_due'] : '';
+      if ($due === '' || $due > $today) {
+        continue;
+      }
+
+      $rruleString = trim((string)($scheduleRow['rrule'] ?? ''));
+      if ($rruleString === '') {
+        continue;
+      }
+
+      $title = trim((string)($scheduleRow['title'] ?? 'Goal contribution'));
+      $expectedNote = 'Scheduled: ' . $title;
+      if ($expectedNote === 'Scheduled: ') {
+        $expectedNote = 'Scheduled: ';
+      }
+
+      $expectedCurrency = strtoupper((string)($scheduleRow['currency'] ?? ''));
+      if ($expectedCurrency === '') {
+        $expectedCurrency = $goalCurrency;
+        if ($expectedCurrency === '') {
+          $expectedCurrency = function_exists('fx_user_main') ? (fx_user_main($pdo, $u) ?: 'HUF') : 'HUF';
+        }
+      }
+
+      $rruleParts = rrule_parse($rruleString);
+      $countRemaining = $rruleParts['COUNT'];
+      $currentDue = $due;
+
+      while ($currentDue !== null && $currentDue <= $today) {
+        $checkStmt->execute([$id, $u, $currentDue, $expectedNote, (float)$scheduleRow['amount'], $expectedCurrency]);
+        $alreadyExists = (bool)$checkStmt->fetchColumn();
+
+        if (!$alreadyExists) {
+          scheduled_apply_goal($pdo, $scheduleRow, $currentDue);
+          $goalNeedsRefresh = true;
+        }
+
+        if ($countRemaining !== null) {
+          $countRemaining--;
+          if ($countRemaining <= 0) {
+            $rruleParts['COUNT'] = null;
+            $rruleString = scheduled_build_rrule($rruleParts);
+            $scheduleRow['rrule'] = $rruleString;
+            $scheduleRow['next_due'] = null;
+            $currentDue = null;
+            break;
+          }
+          $rruleParts['COUNT'] = $countRemaining;
+          $rruleString = scheduled_build_rrule($rruleParts);
+          $scheduleRow['rrule'] = $rruleString;
+        }
+
+        $nextDue = scheduled_next_occurrence($currentDue, $rruleString, $currentDue);
+        if ($nextDue === null || $nextDue <= $currentDue) {
+          $scheduleRow['next_due'] = null;
+          $currentDue = null;
+          break;
+        }
+
+        $scheduleRow['next_due'] = $nextDue;
+        $currentDue = $nextDue;
+      }
+    }
+    unset($scheduleRow);
+
+    if ($goalNeedsRefresh) {
+      $goalStmt->execute([$id, $u]);
+      $goal = $goalStmt->fetch(PDO::FETCH_ASSOC) ?: $goal;
+      $goalCurrency = strtoupper((string)($goal['currency'] ?? $goalCurrency));
+      if ($goalCurrency === '') {
+        $goalCurrency = function_exists('fx_user_main') ? (fx_user_main($pdo, $u) ?: 'HUF') : 'HUF';
+      }
+    }
+
     if ($goalCurrency === '') {
       $goalCurrency = function_exists('fx_user_main') ? (fx_user_main($pdo, $u) ?: 'HUF') : 'HUF';
     }
@@ -278,17 +377,78 @@ function goals_archive(PDO $pdo){
                     WHERE id = ? AND user_id = ?')
         ->execute([$id, $u]);
 
-    $pdo->prepare('UPDATE scheduled_payments
-                      SET archived_at = COALESCE(archived_at, CURRENT_TIMESTAMP),
-                          next_due = NULL
-                    WHERE goal_id = ? AND user_id = ?')
-        ->execute([$id, $u]);
+    if (!empty($schedules)) {
+      $updateSched = $pdo->prepare('UPDATE scheduled_payments SET rrule = ?, next_due = NULL, archived_at = NULL WHERE id = ? AND user_id = ?');
+      foreach ($schedules as $rowToUpdate) {
+        $updateSched->execute([$rowToUpdate['rrule'] ?? '', (int)$rowToUpdate['id'], $u]);
+      }
+    }
 
     $pdo->commit();
     $_SESSION['flash'] = 'Goal withdrawn and archived.';
   } catch (Throwable $e) {
     $pdo->rollBack();
     $_SESSION['flash'] = 'Failed to archive goal.';
+  }
+
+  redirect('/goals');
+}
+
+function goals_unarchive(PDO $pdo){
+  verify_csrf(); require_login(); $u = uid();
+
+  $id = (int)($_POST['id'] ?? 0);
+  if ($id <= 0) {
+    redirect('/goals');
+    return;
+  }
+
+  $goalStmt = $pdo->prepare('SELECT id, title, target_amount, current_amount, currency, status, archived_at FROM goals WHERE id=? AND user_id=?');
+  $goalStmt->execute([$id, $u]);
+  $goal = $goalStmt->fetch(PDO::FETCH_ASSOC);
+
+  if (!$goal) {
+    redirect('/goals');
+    return;
+  }
+
+  if (empty($goal['archived_at'])) {
+    $_SESSION['flash'] = 'Goal is already active.';
+    redirect('/goals');
+    return;
+  }
+
+  $pdo->beginTransaction();
+  try {
+    $payoutStmt = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE user_id = ? AND source = 'goal_archive' AND source_ref_id = ?");
+    $payoutStmt->execute([$u, $id]);
+    $payoutAmount = max(0.0, (float)$payoutStmt->fetchColumn());
+
+    if ($payoutAmount > 0) {
+      $deleteTx = $pdo->prepare("DELETE FROM transactions WHERE user_id = ? AND source = 'goal_archive' AND source_ref_id = ?");
+      $deleteTx->execute([$u, $id]);
+    }
+
+    $currentAmount = max(0.0, (float)($goal['current_amount'] ?? 0));
+    $newAmount = $currentAmount;
+    if ($payoutAmount > 0) {
+      // Restore the goal's saved progress to its pre-archive amount instead of
+      // wiping it out when we removed the archive payout transaction.
+      $newAmount = max(0.0, $payoutAmount);
+    }
+
+    $rawStatus = (string)($goal['status'] ?? 'active');
+    $statusKey = strtolower($rawStatus);
+    $newStatus = in_array($statusKey, ['done', 'completed'], true) ? 'active' : $rawStatus;
+
+    $update = $pdo->prepare('UPDATE goals SET archived_at = NULL, status = ?, current_amount = ? WHERE id = ? AND user_id = ?');
+    $update->execute([$newStatus, $newAmount, $id, $u]);
+
+    $pdo->commit();
+    $_SESSION['flash'] = 'Goal unarchived. You can start saving again.';
+  } catch (Throwable $e) {
+    $pdo->rollBack();
+    $_SESSION['flash'] = 'Failed to unarchive goal.';
   }
 
   redirect('/goals');
