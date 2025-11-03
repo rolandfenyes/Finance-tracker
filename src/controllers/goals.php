@@ -430,7 +430,12 @@ function goals_unarchive(PDO $pdo){
     }
 
     $currentAmount = max(0.0, (float)($goal['current_amount'] ?? 0));
-    $newAmount = max(0.0, $currentAmount - $payoutAmount);
+    $newAmount = $currentAmount;
+    if ($payoutAmount > 0) {
+      // Restore the goal's saved progress to its pre-archive amount instead of
+      // wiping it out when we removed the archive payout transaction.
+      $newAmount = max(0.0, $payoutAmount);
+    }
 
     $rawStatus = (string)($goal['status'] ?? 'active');
     $statusKey = strtolower($rawStatus);
