@@ -82,7 +82,12 @@ $allGoals = $allGoals ?? array_merge($activeGoals, $archivedGoals);
         };
         $isCompleted = !empty($g['_is_completed']);
         $canArchive = !empty($g['_can_archive']);
+        $completedBySchedule = !empty($g['_completed_by_schedule']);
         $goalLocked = $isCompleted && empty($g['archived_at']);
+        $archiveLabel = $completedBySchedule ? __('Complete and withdraw') : __('Withdraw and Archive');
+        $archiveConfirm = $completedBySchedule
+          ? __('Complete this goal, withdraw the balance, and archive the linked schedule?')
+          : __('Withdraw and archive this goal?');
       ?>
         <tr class="border-b align-top">
           <td class="py-3 pr-3">
@@ -141,10 +146,10 @@ $allGoals = $allGoals ?? array_merge($activeGoals, $archivedGoals);
                 </span>
               <?php endif; ?>
               <?php if ($canArchive): ?>
-                <form method="post" action="/goals/archive" onsubmit="return confirm('<?= __('Withdraw and archive this goal?') ?>');" class="shrink-0">
+                <form method="post" action="/goals/archive" onsubmit="return confirm('<?= $archiveConfirm ?>');" class="shrink-0">
                   <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
                   <input type="hidden" name="id" value="<?= (int)$g['id'] ?>" />
-                  <button type="submit" class="btn !px-3"><?= __('Withdraw and Archive') ?></button>
+                  <button type="submit" class="btn !px-3"><?= $archiveLabel ?></button>
                 </form>
               <?php endif; ?>
             </div>
@@ -172,7 +177,12 @@ $allGoals = $allGoals ?? array_merge($activeGoals, $archivedGoals);
       };
       $isCompleted = !empty($g['_is_completed']);
       $canArchive = !empty($g['_can_archive']);
+      $completedBySchedule = !empty($g['_completed_by_schedule']);
       $goalLocked = $isCompleted && empty($g['archived_at']);
+      $archiveLabel = $completedBySchedule ? __('Complete and withdraw') : __('Withdraw and Archive');
+      $archiveConfirm = $completedBySchedule
+        ? __('Complete this goal, withdraw the balance, and archive the linked schedule?')
+        : __('Withdraw and archive this goal?');
     ?>
       <div class="panel p-4">
         <div class="flex items-center justify-between gap-3">
@@ -230,10 +240,10 @@ $allGoals = $allGoals ?? array_merge($activeGoals, $archivedGoals);
             <button type="button" class="btn btn-primary" data-open="#goal-add-<?= (int)$g['id'] ?>"><?= __('Add money') ?></button>
           <?php endif; ?>
           <?php if ($canArchive): ?>
-            <form method="post" action="/goals/archive" onsubmit="return confirm('<?= __('Withdraw and archive this goal?') ?>');" class="w-full">
+            <form method="post" action="/goals/archive" onsubmit="return confirm('<?= $archiveConfirm ?>');" class="w-full">
               <input type="hidden" name="csrf" value="<?= csrf_token() ?>" />
               <input type="hidden" name="id" value="<?= (int)$g['id'] ?>" />
-              <button type="submit" class="btn w-full"><?= __('Withdraw and Archive') ?></button>
+              <button type="submit" class="btn w-full"><?= $archiveLabel ?></button>
             </form>
           <?php endif; ?>
         </div>
@@ -387,7 +397,7 @@ $allGoals = $allGoals ?? array_merge($activeGoals, $archivedGoals);
 </section>
 <?php endif; ?>
 
-<?php foreach ($allGoals as $g): $goalId=(int)$g['id']; $cur=$g['currency'] ?: 'HUF'; $goalTxList = $goalTransactions[$goalId] ?? []; $statusForArchive = strtolower((string)($g['status'] ?? '')); $isArchivedGoal = !empty($g['archived_at']) || in_array($statusForArchive, ['done','completed'], true); $goalLockedForModal = !empty($g['_is_completed']) && empty($g['archived_at']); ?>
+<?php foreach ($allGoals as $g): $goalId=(int)$g['id']; $cur=$g['currency'] ?: 'HUF'; $goalTxList = $goalTransactions[$goalId] ?? []; $statusForArchive = strtolower((string)($g['status'] ?? '')); $isArchivedGoal = !empty($g['archived_at']) || in_array($statusForArchive, ['done','completed'], true); $goalLockedForModal = !empty($g['_is_completed']) && empty($g['archived_at']); $completedByScheduleModal = !empty($g['_completed_by_schedule']); ?>
 <div id="goal-edit-<?= $goalId ?>" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="goal-edit-title-<?= $goalId ?>">
   <div class="modal-backdrop" data-close></div>
 
@@ -404,7 +414,9 @@ $allGoals = $allGoals ?? array_merge($activeGoals, $archivedGoals);
     <div class="modal-body flex flex-col gap-6">
       <?php if ($goalLockedForModal && !$isArchivedGoal): ?>
         <div class="rounded-xl border border-amber-300/70 bg-amber-50/80 p-4 text-sm text-amber-700 dark:border-amber-500/50 dark:bg-amber-500/10 dark:text-amber-200">
-          <?= __('This goal is finished. Withdraw and archive it to make further changes.') ?>
+          <?= $completedByScheduleModal
+            ? __('This goal is finished. Complete and withdraw it to make further changes.')
+            : __('This goal is finished. Withdraw and archive it to make further changes.') ?>
         </div>
       <?php endif; ?>
       <div class="grid gap-4 md:grid-cols-12">

@@ -318,11 +318,21 @@ function month_show(PDO $pdo, ?int $year = null, ?int $month = null) {
         gc.amount,
         gc.currency,
         gc.occurred_on,
-        g.title AS goal_title
+        gc.note,
+        g.title AS goal_title,
+        sp.category_id      AS scheduled_category_id,
+        c.label             AS scheduled_cat_label,
+        COALESCE(NULLIF(c.color,''),'#10B981') AS scheduled_cat_color
     FROM goal_contributions gc
     JOIN goals g
       ON g.id = gc.goal_id
     AND g.user_id = ?
+    LEFT JOIN scheduled_payments sp
+           ON sp.goal_id = gc.goal_id
+          AND sp.user_id = gc.user_id
+    LEFT JOIN categories c
+           ON c.id = sp.category_id
+          AND c.user_id = sp.user_id
     WHERE gc.user_id = ?
       AND gc.occurred_on BETWEEN ?::date AND ?::date
     ORDER BY gc.occurred_on, gc.id
@@ -331,15 +341,33 @@ function month_show(PDO $pdo, ?int $year = null, ?int $month = null) {
   $goalTx = $q->fetchAll();
 
   foreach ($goalTx as $gc) {
+    $noteRaw = trim((string)($gc['note'] ?? ''));
+    $isScheduledContribution = stripos($noteRaw, 'scheduled:') === 0;
+
+    $schedCategoryId = isset($gc['scheduled_category_id']) ? (int)$gc['scheduled_category_id'] : 0;
+    if ($schedCategoryId <= 0) {
+      $schedCategoryId = null;
+    }
+
+    $categoryId = null;
+    $catLabel = 'Goal';
+    $catColor = '#10B981';
+
+    if ($isScheduledContribution && $schedCategoryId !== null) {
+      $categoryId = $schedCategoryId;
+      $catLabel = $gc['scheduled_cat_label'] ?: $catLabel;
+      $catColor = $gc['scheduled_cat_color'] ?: $catColor;
+    }
+
     $rowV = [
       'id'            => null,
       'is_virtual'    => true,
       'virtual_type'  => 'goal_contribution',
       'occurred_on'   => $gc['occurred_on'],
       'kind'          => 'spending',
-      'category_id'   => null,
-      'cat_label'     => 'Goal',
-      'cat_color'     => '#10B981',
+      'category_id'   => $categoryId,
+      'cat_label'     => $catLabel,
+      'cat_color'     => $catColor,
       'amount'        => (float)$gc['amount'],
       'currency'      => strtoupper($gc['currency'] ?: $main),
       'note'          => 'Goal: ' . ($gc['goal_title'] ?: 'Contribution'),

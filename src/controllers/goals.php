@@ -50,23 +50,6 @@ function goals_index(PDO $pdo){
   $q->execute([$u]);
   $rows = $q->fetchAll(PDO::FETCH_ASSOC);
 
-  $activeGoals = [];
-  $archivedGoals = [];
-  foreach ($rows as &$goalRow) {
-    $isCompleted = goal_row_is_completed($goalRow);
-
-    $goalRow['_is_completed'] = $isCompleted;
-    $goalRow['_can_archive'] = $isCompleted && empty($goalRow['archived_at']);
-
-    $isArchived = !empty($goalRow['archived_at']) || $isCompleted;
-    if ($isArchived) {
-      $archivedGoals[] = $goalRow;
-    } else {
-      $activeGoals[] = $goalRow;
-    }
-  }
-  unset($goalRow);
-
   $allGoals = $rows;
 
   // Only schedules that are free (not linked to any loan or goal) OR already linked to this record
@@ -92,6 +75,38 @@ function goals_index(PDO $pdo){
     $goalId = (int)($tx['goal_id'] ?? 0);
     if (!$goalId) { continue; }
     $goalTransactions[$goalId][] = $tx;
+  }
+
+  foreach ($allGoals as &$goalRow) {
+    $isCompleted = goal_row_is_completed($goalRow);
+
+    $goalRow['_is_completed'] = $isCompleted;
+    $goalRow['_can_archive'] = $isCompleted && empty($goalRow['archived_at']);
+
+    $goalId = (int)($goalRow['id'] ?? 0);
+    $latestContribution = $goalId && !empty($goalTransactions[$goalId])
+      ? $goalTransactions[$goalId][0]
+      : null;
+
+    $noteRaw = $latestContribution ? trim((string)($latestContribution['note'] ?? '')) : '';
+    $completedBySchedule = $isCompleted
+      && empty($goalRow['archived_at'])
+      && !empty($goalRow['sched_id'])
+      && $noteRaw !== ''
+      && stripos($noteRaw, 'scheduled:') === 0;
+
+    $goalRow['_completed_by_schedule'] = $completedBySchedule;
+  }
+  unset($goalRow);
+
+  $activeGoals = [];
+  $archivedGoals = [];
+  foreach ($allGoals as $goalRow) {
+    if (!empty($goalRow['archived_at'])) {
+      $archivedGoals[] = $goalRow;
+    } else {
+      $activeGoals[] = $goalRow;
+    }
   }
 
   // currencies (if you show currency selectors on the page)
