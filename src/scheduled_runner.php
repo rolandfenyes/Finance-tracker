@@ -163,7 +163,77 @@ function scheduled_apply_loan(PDO $pdo, array $schedule, string $dueDate): void 
 }
 
 /**
- * Process due scheduled payments linked to goals or loans for the given user.
+ * Apply scheduled payments linked to investments.
+ */
+function scheduled_apply_investment(PDO $pdo, array $schedule, string $dueDate): void {
+  $investmentId = (int)($schedule['investment_id'] ?? 0);
+  if (!$investmentId) {
+    return;
+  }
+
+  $userId = (int)($schedule['user_id'] ?? 0);
+  if ($userId <= 0) {
+    return;
+  }
+
+  $amount = (float)($schedule['amount'] ?? 0);
+  if ($amount <= 0) {
+    return;
+  }
+
+  $investmentStmt = $pdo->prepare('SELECT id, currency FROM investments WHERE id=? AND user_id=? FOR UPDATE');
+  $investmentStmt->execute([$investmentId, $userId]);
+  $investment = $investmentStmt->fetch(PDO::FETCH_ASSOC);
+  if (!$investment) {
+    return;
+  }
+
+  $scheduleCurrency = strtoupper((string)($schedule['currency'] ?? ''));
+  $investmentCurrency = strtoupper((string)($investment['currency'] ?? ''));
+
+  if ($scheduleCurrency === '') {
+    $scheduleCurrency = $investmentCurrency ?: 'HUF';
+  }
+
+  if ($investmentCurrency === '') {
+    $investmentCurrency = $scheduleCurrency;
+  }
+
+  $delta = $amount;
+  if ($scheduleCurrency !== $investmentCurrency) {
+    $converted = function_exists('fx_convert')
+      ? fx_convert($pdo, $amount, $scheduleCurrency, $investmentCurrency, $dueDate)
+      : null;
+    if (is_numeric($converted)) {
+      $delta = (float)$converted;
+    }
+  }
+
+  if ($delta <= 0) {
+    return;
+  }
+
+  $update = $pdo->prepare('UPDATE investments SET balance = balance + ?, updated_at=NOW() WHERE id=? AND user_id=?');
+  $update->execute([$delta, $investmentId, $userId]);
+
+  $noteTitle = trim((string)($schedule['title'] ?? 'Investment contribution'));
+  if ($noteTitle === '') {
+    $noteTitle = 'Investment contribution';
+  }
+  $note = 'Scheduled: ' . $noteTitle;
+
+  try {
+    $createdAt = (new DateTimeImmutable($dueDate))->setTime(0, 0, 0)->format('Y-m-d H:i:s');
+  } catch (Throwable $e) {
+    $createdAt = $dueDate . ' 00:00:00';
+  }
+
+  $txInsert = $pdo->prepare('INSERT INTO investment_transactions (investment_id, user_id, amount, note, created_at) VALUES (?,?,?,?,?)');
+  $txInsert->execute([$investmentId, $userId, $delta, $note, $createdAt]);
+}
+
+/**
+ * Process due scheduled payments linked to goals, loans, or investments for the given user.
  */
 function scheduled_process_linked(PDO $pdo, int $userId, ?string $today = null): void {
   if ($userId <= 0) {
@@ -172,7 +242,7 @@ function scheduled_process_linked(PDO $pdo, int $userId, ?string $today = null):
 
   $today = $today ?: date('Y-m-d');
 
-  $listStmt = $pdo->prepare('SELECT id FROM scheduled_payments WHERE user_id=? AND archived_at IS NULL AND next_due IS NOT NULL AND next_due <= ? AND (goal_id IS NOT NULL OR loan_id IS NOT NULL) ORDER BY next_due, id');
+  $listStmt = $pdo->prepare('SELECT id FROM scheduled_payments WHERE user_id=? AND archived_at IS NULL AND next_due IS NOT NULL AND next_due <= ? AND (goal_id IS NOT NULL OR loan_id IS NOT NULL OR investment_id IS NOT NULL) ORDER BY next_due, id');
   $listStmt->execute([$userId, $today]);
   $ids = $listStmt->fetchAll(PDO::FETCH_COLUMN);
 
@@ -203,6 +273,9 @@ function scheduled_process_linked(PDO $pdo, int $userId, ?string $today = null):
         }
         if (!empty($schedule['loan_id'])) {
           scheduled_apply_loan($pdo, $schedule, $due);
+        }
+        if (!empty($schedule['investment_id'])) {
+          scheduled_apply_investment($pdo, $schedule, $due);
         }
 
         $processedDue = $schedule['next_due'];
