@@ -250,6 +250,41 @@ function scheduled_maybe_sync_emergency_fund(
     return;
   }
 
+  $note = 'Scheduled: ' . ($scheduleTitle === '' ? 'Emergency fund contribution' : $scheduleTitle);
+  scheduled_emergency_fund_record_contribution(
+    $pdo,
+    $userId,
+    $investmentId,
+    $amount,
+    $investmentCurrency,
+    $dueDate,
+    $note,
+    $investmentTxId
+  );
+}
+
+function scheduled_emergency_fund_record_contribution(
+  PDO $pdo,
+  int $userId,
+  int $investmentId,
+  float $amount,
+  string $investmentCurrency,
+  string $occurredOn,
+  string $note,
+  ?int $investmentTxId
+): void {
+  if ($userId <= 0 || $investmentId <= 0 || $amount <= 0) {
+    return;
+  }
+
+  if ($investmentTxId) {
+    $existing = $pdo->prepare('SELECT id FROM emergency_fund_tx WHERE investment_tx_id=? AND user_id=?');
+    $existing->execute([$investmentTxId, $userId]);
+    if ($existing->fetchColumn()) {
+      return;
+    }
+  }
+
   $efStmt = $pdo->prepare('SELECT currency FROM emergency_fund WHERE user_id=? AND investment_id=?');
   $efStmt->execute([$userId, $investmentId]);
   $efRow = $efStmt->fetch(PDO::FETCH_ASSOC) ?: null;
@@ -257,15 +292,33 @@ function scheduled_maybe_sync_emergency_fund(
     return;
   }
 
+  $investmentCurrency = strtoupper((string)$investmentCurrency);
   $efCurrency = strtoupper((string)($efRow['currency'] ?? ''));
   if ($efCurrency === '') {
-    $efCurrency = $investmentCurrency !== '' ? strtoupper($investmentCurrency) : 'HUF';
+    $efCurrency = $investmentCurrency !== '' ? $investmentCurrency : 'HUF';
+  }
+  if ($investmentCurrency === '') {
+    $investmentCurrency = $efCurrency;
   }
 
+  $occurredDate = trim($occurredOn);
+  if ($occurredDate === '') {
+    $occurredDate = date('Y-m-d');
+  }
+  $dateObj = DateTimeImmutable::createFromFormat('Y-m-d', $occurredDate) ?: null;
+  if (!$dateObj || $dateObj->format('Y-m-d') !== $occurredDate) {
+    try {
+      $dateObj = new DateTimeImmutable($occurredDate);
+    } catch (Throwable $e) {
+      $dateObj = new DateTimeImmutable('now');
+    }
+  }
+  $occurredDate = $dateObj->format('Y-m-d');
+
   $amountNative = $amount;
-  if ($investmentCurrency !== '' && $efCurrency !== '' && strtoupper($investmentCurrency) !== $efCurrency) {
+  if ($investmentCurrency !== '' && $efCurrency !== '' && $investmentCurrency !== $efCurrency) {
     $converted = function_exists('fx_convert')
-      ? fx_convert($pdo, $amount, $investmentCurrency, $efCurrency, $dueDate)
+      ? fx_convert($pdo, $amount, $investmentCurrency, $efCurrency, $occurredDate)
       : null;
     if (is_numeric($converted)) {
       $amountNative = (float)$converted;
@@ -278,25 +331,21 @@ function scheduled_maybe_sync_emergency_fund(
 
   $mainCurrency = fx_user_main($pdo, $userId) ?: $efCurrency;
   if ($mainCurrency === '') {
-    $mainCurrency = $efCurrency;
-  }
-
-  if ($mainCurrency === '') {
-    $mainCurrency = 'HUF';
+    $mainCurrency = $efCurrency !== '' ? $efCurrency : 'HUF';
   }
 
   $amountMain = $amountNative;
   $rateUsed = 1.0;
   if ($efCurrency !== '' && strtoupper($mainCurrency) !== $efCurrency) {
     $amountMainRaw = function_exists('fx_convert')
-      ? fx_convert($pdo, $amountNative, $efCurrency, $mainCurrency, $dueDate)
+      ? fx_convert($pdo, $amountNative, $efCurrency, $mainCurrency, $occurredDate)
       : null;
     if (is_numeric($amountMainRaw)) {
       $amountMain = (float)$amountMainRaw;
     }
 
     $oneRaw = function_exists('fx_convert')
-      ? fx_convert($pdo, 1, $efCurrency, $mainCurrency, $dueDate)
+      ? fx_convert($pdo, 1, $efCurrency, $mainCurrency, $occurredDate)
       : null;
     if (is_numeric($oneRaw) && (float)$oneRaw > 0) {
       $rateUsed = (float)$oneRaw;
@@ -305,19 +354,22 @@ function scheduled_maybe_sync_emergency_fund(
     }
   }
 
-  $note = 'Scheduled: ' . ($scheduleTitle === '' ? 'Emergency fund contribution' : $scheduleTitle);
+  $noteText = trim($note);
+  if ($noteText === '') {
+    $noteText = 'Emergency fund contribution';
+  }
 
   $efInsert = $pdo->prepare('INSERT INTO emergency_fund_tx (user_id, occurred_on, kind, amount_native, currency_native, amount_main, main_currency, rate_used, note, investment_tx_id) VALUES (?,?,?,?,?,?,?,?,?,?) RETURNING id');
   $efInsert->execute([
     $userId,
-    $dueDate,
+    $occurredDate,
     'add',
     $amountNative,
     $efCurrency,
     $amountMain,
     $mainCurrency,
     $rateUsed,
-    $note,
+    $noteText,
     $investmentTxId,
   ]);
   $efTxId = (int)$efInsert->fetchColumn();
@@ -330,8 +382,83 @@ function scheduled_maybe_sync_emergency_fund(
     $categoryId = isset($categories['ef_add']) ? (int)$categories['ef_add'] : 0;
     if ($categoryId > 0) {
       $txInsert = $pdo->prepare("INSERT INTO transactions (user_id, occurred_on, kind, amount, currency, category_id, note, source, source_ref_id, locked, ef_tx_id) VALUES (?, ?, 'spending', ?, ?, ?, ?, 'ef', ?, TRUE, ?)");
-      $txInsert->execute([$userId, $dueDate, $amountNative, $efCurrency, $categoryId, $note, $efTxId, $efTxId]);
+      $txInsert->execute([$userId, $occurredDate, $amountNative, $efCurrency, $categoryId, $noteText, $efTxId, $efTxId]);
     }
+  }
+}
+
+function scheduled_sync_emergency_fund_for_transactions(
+  PDO $pdo,
+  int $userId,
+  int $investmentId,
+  string $investmentCurrency
+): void {
+  $txStmt = $pdo->prepare('SELECT id, amount, note, created_at FROM investment_transactions WHERE investment_id=? AND user_id=? AND amount > 0 AND NOT EXISTS (SELECT 1 FROM emergency_fund_tx WHERE investment_tx_id = investment_transactions.id)');
+  $txStmt->execute([$investmentId, $userId]);
+  $pending = $txStmt->fetchAll(PDO::FETCH_ASSOC);
+
+  foreach ($pending as $tx) {
+    $txId = (int)($tx['id'] ?? 0);
+    $amount = (float)($tx['amount'] ?? 0);
+    if ($txId <= 0 || $amount <= 0) {
+      continue;
+    }
+
+    $createdAt = (string)($tx['created_at'] ?? '');
+    $occurredOn = '';
+    if ($createdAt !== '') {
+      $occurredOn = substr($createdAt, 0, 10);
+    }
+    if ($occurredOn === '' || strlen($occurredOn) !== 10) {
+      try {
+        $occurredOn = (new DateTimeImmutable($createdAt ?: 'now'))->format('Y-m-d');
+      } catch (Throwable $e) {
+        $occurredOn = date('Y-m-d');
+      }
+    }
+
+    $note = trim((string)($tx['note'] ?? ''));
+    if ($note === '') {
+      $note = 'Investment contribution';
+    }
+
+    scheduled_emergency_fund_record_contribution(
+      $pdo,
+      $userId,
+      $investmentId,
+      $amount,
+      $investmentCurrency,
+      $occurredOn,
+      $note,
+      $txId
+    );
+  }
+}
+
+function scheduled_sync_emergency_fund_backlog(PDO $pdo, int $userId): void {
+  $fundStmt = $pdo->prepare('SELECT investment_id FROM emergency_fund WHERE user_id=? AND investment_id IS NOT NULL');
+  $fundStmt->execute([$userId]);
+  $investmentIds = $fundStmt->fetchAll(PDO::FETCH_COLUMN);
+
+  foreach ($investmentIds as $rawInvestmentId) {
+    $investmentId = (int)$rawInvestmentId;
+    if ($investmentId <= 0) {
+      continue;
+    }
+
+    $invStmt = $pdo->prepare('SELECT currency FROM investments WHERE id=? AND user_id=?');
+    $invStmt->execute([$investmentId, $userId]);
+    $investment = $invStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    if (!$investment) {
+      continue;
+    }
+
+    $investmentCurrency = strtoupper((string)($investment['currency'] ?? ''));
+    if ($investmentCurrency === '') {
+      $investmentCurrency = 'HUF';
+    }
+
+    scheduled_sync_emergency_fund_for_transactions($pdo, $userId, $investmentId, $investmentCurrency);
   }
 }
 
@@ -418,4 +545,6 @@ function scheduled_process_linked(PDO $pdo, int $userId, ?string $today = null):
       // Optionally log in the future.
     }
   }
+
+  scheduled_sync_emergency_fund_backlog($pdo, $userId);
 }
