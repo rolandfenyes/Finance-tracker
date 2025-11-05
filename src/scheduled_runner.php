@@ -4,6 +4,7 @@
 require_once __DIR__ . '/recurrence.php';
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/services/loan_completion.php';
+require_once __DIR__ . '/helpers_ef.php';
 
 /**
  * Compute the next occurrence of a schedule after a given date.
@@ -228,8 +229,110 @@ function scheduled_apply_investment(PDO $pdo, array $schedule, string $dueDate):
     $createdAt = $dueDate . ' 00:00:00';
   }
 
-  $txInsert = $pdo->prepare('INSERT INTO investment_transactions (investment_id, user_id, amount, note, created_at) VALUES (?,?,?,?,?)');
+  $txInsert = $pdo->prepare('INSERT INTO investment_transactions (investment_id, user_id, amount, note, created_at) VALUES (?,?,?,?,?) RETURNING id');
   $txInsert->execute([$investmentId, $userId, $delta, $note, $createdAt]);
+  $investmentTxId = (int)$txInsert->fetchColumn();
+
+  scheduled_maybe_sync_emergency_fund($pdo, $userId, $investmentId, $delta, $investmentCurrency, $dueDate, $noteTitle, $investmentTxId ?: null);
+}
+
+function scheduled_maybe_sync_emergency_fund(
+  PDO $pdo,
+  int $userId,
+  int $investmentId,
+  float $amount,
+  string $investmentCurrency,
+  string $dueDate,
+  string $scheduleTitle,
+  ?int $investmentTxId
+): void {
+  if ($userId <= 0 || $investmentId <= 0 || $amount <= 0) {
+    return;
+  }
+
+  $efStmt = $pdo->prepare('SELECT currency FROM emergency_fund WHERE user_id=? AND investment_id=?');
+  $efStmt->execute([$userId, $investmentId]);
+  $efRow = $efStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+  if (!$efRow) {
+    return;
+  }
+
+  $efCurrency = strtoupper((string)($efRow['currency'] ?? ''));
+  if ($efCurrency === '') {
+    $efCurrency = $investmentCurrency !== '' ? strtoupper($investmentCurrency) : 'HUF';
+  }
+
+  $amountNative = $amount;
+  if ($investmentCurrency !== '' && $efCurrency !== '' && strtoupper($investmentCurrency) !== $efCurrency) {
+    $converted = function_exists('fx_convert')
+      ? fx_convert($pdo, $amount, $investmentCurrency, $efCurrency, $dueDate)
+      : null;
+    if (is_numeric($converted)) {
+      $amountNative = (float)$converted;
+    }
+  }
+
+  if ($amountNative <= 0) {
+    return;
+  }
+
+  $mainCurrency = fx_user_main($pdo, $userId) ?: $efCurrency;
+  if ($mainCurrency === '') {
+    $mainCurrency = $efCurrency;
+  }
+
+  if ($mainCurrency === '') {
+    $mainCurrency = 'HUF';
+  }
+
+  $amountMain = $amountNative;
+  $rateUsed = 1.0;
+  if ($efCurrency !== '' && strtoupper($mainCurrency) !== $efCurrency) {
+    $amountMainRaw = function_exists('fx_convert')
+      ? fx_convert($pdo, $amountNative, $efCurrency, $mainCurrency, $dueDate)
+      : null;
+    if (is_numeric($amountMainRaw)) {
+      $amountMain = (float)$amountMainRaw;
+    }
+
+    $oneRaw = function_exists('fx_convert')
+      ? fx_convert($pdo, 1, $efCurrency, $mainCurrency, $dueDate)
+      : null;
+    if (is_numeric($oneRaw) && (float)$oneRaw > 0) {
+      $rateUsed = (float)$oneRaw;
+    } else {
+      $rateUsed = $amountMain / max($amountNative, 1e-9);
+    }
+  }
+
+  $note = 'Scheduled: ' . ($scheduleTitle === '' ? 'Emergency fund contribution' : $scheduleTitle);
+
+  $efInsert = $pdo->prepare('INSERT INTO emergency_fund_tx (user_id, occurred_on, kind, amount_native, currency_native, amount_main, main_currency, rate_used, note, investment_tx_id) VALUES (?,?,?,?,?,?,?,?,?,?) RETURNING id');
+  $efInsert->execute([
+    $userId,
+    $dueDate,
+    'add',
+    $amountNative,
+    $efCurrency,
+    $amountMain,
+    $mainCurrency,
+    $rateUsed,
+    $note,
+    $investmentTxId,
+  ]);
+  $efTxId = (int)$efInsert->fetchColumn();
+
+  $upsert = $pdo->prepare('INSERT INTO emergency_fund (user_id, total, target_amount, currency, investment_id) VALUES (?, ?, 0, ?, ?) ON CONFLICT (user_id) DO UPDATE SET total = emergency_fund.total + EXCLUDED.total, currency = EXCLUDED.currency, investment_id = COALESCE(emergency_fund.investment_id, EXCLUDED.investment_id)');
+  $upsert->execute([$userId, $amountNative, $efCurrency, $investmentId]);
+
+  if ($efTxId > 0) {
+    $categories = ef_ensure_categories($pdo, $userId);
+    $categoryId = isset($categories['ef_add']) ? (int)$categories['ef_add'] : 0;
+    if ($categoryId > 0) {
+      $txInsert = $pdo->prepare("INSERT INTO transactions (user_id, occurred_on, kind, amount, currency, category_id, note, source, source_ref_id, locked, ef_tx_id) VALUES (?, ?, 'spending', ?, ?, ?, ?, 'ef', ?, TRUE, ?)");
+      $txInsert->execute([$userId, $dueDate, $amountNative, $efCurrency, $categoryId, $note, $efTxId, $efTxId]);
+    }
+  }
 }
 
 /**
