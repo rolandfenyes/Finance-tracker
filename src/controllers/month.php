@@ -320,6 +320,9 @@ function month_show(PDO $pdo, ?int $year = null, ?int $month = null) {
         gc.occurred_on,
         gc.note,
         g.title AS goal_title,
+        g.category_id       AS goal_category_id,
+        cg.label            AS goal_cat_label,
+        COALESCE(NULLIF(cg.color,''),'#10B981') AS goal_cat_color,
         sp.category_id      AS scheduled_category_id,
         c.label             AS scheduled_cat_label,
         COALESCE(NULLIF(c.color,''),'#10B981') AS scheduled_cat_color
@@ -327,6 +330,9 @@ function month_show(PDO $pdo, ?int $year = null, ?int $month = null) {
     JOIN goals g
       ON g.id = gc.goal_id
     AND g.user_id = ?
+    LEFT JOIN categories cg
+           ON cg.id = g.category_id
+          AND cg.user_id = g.user_id
     LEFT JOIN scheduled_payments sp
            ON sp.goal_id = gc.goal_id
           AND sp.user_id = gc.user_id
@@ -349,6 +355,11 @@ function month_show(PDO $pdo, ?int $year = null, ?int $month = null) {
       $schedCategoryId = null;
     }
 
+    $goalCategoryId = isset($gc['goal_category_id']) ? (int)$gc['goal_category_id'] : 0;
+    if ($goalCategoryId <= 0) {
+      $goalCategoryId = null;
+    }
+
     $categoryId = null;
     $catLabel = 'Goal';
     $catColor = '#10B981';
@@ -357,6 +368,10 @@ function month_show(PDO $pdo, ?int $year = null, ?int $month = null) {
       $categoryId = $schedCategoryId;
       $catLabel = $gc['scheduled_cat_label'] ?: $catLabel;
       $catColor = $gc['scheduled_cat_color'] ?: $catColor;
+    } elseif ($goalCategoryId !== null) {
+      $categoryId = $goalCategoryId;
+      $catLabel = $gc['goal_cat_label'] ?: $catLabel;
+      $catColor = $gc['goal_cat_color'] ?: $catColor;
     }
 
     $rowV = [
