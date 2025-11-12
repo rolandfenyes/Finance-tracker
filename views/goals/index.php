@@ -37,9 +37,18 @@ $allGoals = $allGoals ?? array_merge($activeGoals, $archivedGoals);
         <label class="label"><?= __('Current (optional)') ?></label>
         <input name="current_amount" type="number" step="0.01" class="input" placeholder="0.00" />
       </div>
-      <div class="sm:col-span-12">
+      <div class="sm:col-span-6">
+        <label class="label"><?= __('Category') ?></label>
+        <select name="category_id" class="select">
+          <option value=""><?= __('No category') ?></option>
+          <?php foreach ($categories as $c): ?>
+            <option value="<?= (int)$c['id'] ?>"><?= htmlspecialchars($c['label']) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="sm:col-span-6">
         <label class="label"><?= __('Status') ?></label>
-        <select name="status" class="select w-full max-w-xs">
+        <select name="status" class="select w-full">
           <option value="active"><?= __('Active') ?></option>
           <option value="paused"><?= __('Paused') ?></option>
           <option value="done"><?= __('Done') ?></option>
@@ -407,7 +416,7 @@ $allGoals = $allGoals ?? array_merge($activeGoals, $archivedGoals);
 </section>
 <?php endif; ?>
 
-<?php foreach ($allGoals as $g): $goalId=(int)$g['id']; $cur=$g['currency'] ?: 'HUF'; $goalTxList = $goalTransactions[$goalId] ?? []; $statusForArchive = strtolower((string)($g['status'] ?? '')); $isArchivedGoal = !empty($g['archived_at']) || in_array($statusForArchive, ['done','completed'], true); $goalLockedForModal = !empty($g['_is_completed']) && empty($g['archived_at']); $completedByScheduleModal = !empty($g['_completed_by_schedule']); ?>
+<?php foreach ($allGoals as $g): $goalId=(int)$g['id']; $cur=$g['currency'] ?: 'HUF'; $goalCategoryId=(int)($g['category_id'] ?? 0); $goalTxList = $goalTransactions[$goalId] ?? []; $statusForArchive = strtolower((string)($g['status'] ?? '')); $isArchivedGoal = !empty($g['archived_at']) || in_array($statusForArchive, ['done','completed'], true); $goalLockedForModal = !empty($g['_is_completed']) && empty($g['archived_at']); $completedByScheduleModal = !empty($g['_completed_by_schedule']); ?>
 <div id="goal-edit-<?= $goalId ?>" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="goal-edit-title-<?= $goalId ?>">
   <div class="modal-backdrop" data-close></div>
 
@@ -451,6 +460,16 @@ $allGoals = $allGoals ?? array_merge($activeGoals, $archivedGoals);
                 <select name="currency" class="select">
                   <?php foreach ($userCurrencies as $uc): $code=$uc['code']; ?>
                     <option value="<?= htmlspecialchars($code) ?>" <?= strtoupper($code)===strtoupper($cur)?'selected':'' ?>><?= htmlspecialchars($code) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+
+              <div class="sm:col-span-6">
+                <label class="label"><?= __('Category') ?></label>
+                <select name="category_id" class="select">
+                  <option value=""><?= __('No category') ?></option>
+                  <?php foreach ($categories as $c): $cid=(int)$c['id']; ?>
+                    <option value="<?= $cid ?>" <?= (int)($g['category_id'] ?? 0) === $cid ? 'selected' : '' ?>><?= htmlspecialchars($c['label']) ?></option>
                   <?php endforeach; ?>
                 </select>
               </div>
@@ -537,8 +556,8 @@ $allGoals = $allGoals ?? array_merge($activeGoals, $archivedGoals);
                 <label class="label"><?= __('Category') ?></label>
                 <select name="category_id" class="select">
                     <option value=""><?= __('No category') ?></option>
-                    <?php foreach ($categories as $c): ?>
-                      <option value="<?= (int)$c['id'] ?>"><?= htmlspecialchars($c['label']) ?></option>
+                    <?php foreach ($categories as $c): $cid=(int)$c['id']; ?>
+                      <option value="<?= $cid ?>" <?= $goalCategoryId === $cid ? 'selected' : '' ?>><?= htmlspecialchars($c['label']) ?></option>
                     <?php endforeach; ?>
                   </select>
                 </div>
@@ -603,8 +622,8 @@ $allGoals = $allGoals ?? array_merge($activeGoals, $archivedGoals);
                 <label class="label"><?= __('Category') ?></label>
                 <select name="category_id" class="select">
                   <option value=""><?= __('No category') ?></option>
-                  <?php foreach ($categories as $c): ?>
-                    <option value="<?= (int)$c['id'] ?>"><?= htmlspecialchars($c['label']) ?></option>
+                  <?php foreach ($categories as $c): $cid=(int)$c['id']; ?>
+                    <option value="<?= $cid ?>" <?= $goalCategoryId === $cid ? 'selected' : '' ?>><?= htmlspecialchars($c['label']) ?></option>
                   <?php endforeach; ?>
                 </select>
               </div>

@@ -135,14 +135,23 @@ function goals_add(PDO $pdo){
   $current = (float)($_POST['current_amount'] ?? 0);
   $currency= strtoupper(trim($_POST['currency'] ?? 'HUF'));
   $status  = in_array($_POST['status'] ?? 'active', ['active','paused','done'], true) ? $_POST['status'] : 'active';
+  $catId   = ($_POST['category_id'] ?? '') !== '' ? (int)$_POST['category_id'] : null;
 
   if ($title==='') redirect('/goals');
 
+  if ($catId !== null) {
+    $check = $pdo->prepare('SELECT 1 FROM categories WHERE id=? AND user_id=?');
+    $check->execute([$catId, $u]);
+    if (!$check->fetchColumn()) {
+      $catId = null;
+    }
+  }
+
   $archivedAt = $status === 'done' ? date('Y-m-d H:i:s') : null;
 
-  $pdo->prepare("INSERT INTO goals(user_id,title,target_amount,current_amount,currency,status,archived_at)
-                 VALUES (?,?,?,?,?,?,?)")
-      ->execute([$u,$title,$target,$current,$currency,$status,$archivedAt]);
+  $pdo->prepare("INSERT INTO goals(user_id,title,target_amount,current_amount,currency,status,archived_at,category_id)
+                 VALUES (?,?,?,?,?,?,?,?)")
+      ->execute([$u,$title,$target,$current,$currency,$status,$archivedAt,$catId]);
 
   $_SESSION['flash'] = 'Goal added.';
   redirect('/goals');
@@ -155,7 +164,7 @@ function goals_edit(PDO $pdo){
   $id       = (int)($_POST['id'] ?? 0);
   if (!$id) redirect('/goals');
 
-  $existing = $pdo->prepare('SELECT title, target_amount, current_amount, currency, status, archived_at FROM goals WHERE id=? AND user_id=?');
+  $existing = $pdo->prepare('SELECT title, target_amount, current_amount, currency, status, archived_at, category_id FROM goals WHERE id=? AND user_id=?');
   $existing->execute([$id,$u]);
   $previous = $existing->fetch(PDO::FETCH_ASSOC);
   if (!$previous) {
@@ -178,15 +187,25 @@ function goals_edit(PDO $pdo){
   $target   = (float)($_POST['target_amount'] ?? 0);
   $currency = strtoupper(trim($_POST['currency'] ?? 'HUF'));
   $status   = in_array($_POST['status'] ?? 'active', ['active','paused','done'], true) ? $_POST['status'] : 'active';
+  $catId    = ($_POST['category_id'] ?? '') !== '' ? (int)$_POST['category_id'] : null;
+
+  if ($catId !== null) {
+    $check = $pdo->prepare('SELECT 1 FROM categories WHERE id=? AND user_id=?');
+    $check->execute([$catId, $u]);
+    if (!$check->fetchColumn()) {
+      $catId = null;
+    }
+  }
 
   $pdo->prepare("UPDATE goals
                     SET title=?,
                         target_amount=?,
                         currency=?,
                         status=?,
+                        category_id=?,
                         archived_at = CASE WHEN ? = 'done' THEN COALESCE(archived_at, CURRENT_TIMESTAMP) ELSE NULL END
                   WHERE id=? AND user_id=?")
-      ->execute([$title,$target,$currency,$status,$status,$id,$u]);
+      ->execute([$title,$target,$currency,$status,$catId,$status,$id,$u]);
 
   $_SESSION['flash'] = 'Goal updated.';
   email_maybe_send_goal_completion($pdo, $u, $id, $previous);
