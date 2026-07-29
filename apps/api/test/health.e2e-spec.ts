@@ -71,7 +71,7 @@ describe('platform HTTP contract', () => {
     });
   });
 
-  it('publishes the completed platform and identity API operations in OpenAPI', async () => {
+  it('publishes the completed API operations in OpenAPI', async () => {
     const response = await request(app.getHttpServer()).get('/api/docs/openapi.json').expect(200);
 
     expect(Object.keys(response.body.paths).sort()).toEqual([
@@ -87,6 +87,9 @@ describe('platform HTTP contract', () => {
       '/api/v1/auth/sessions',
       '/api/v1/health/live',
       '/api/v1/health/ready',
+      '/api/v1/journal/entries',
+      '/api/v1/journal/entries/{id}/corrections',
+      '/api/v1/journal/entries/{id}/reversals',
       '/api/v1/users/me',
       '/api/v1/users/me/onboarding',
       '/api/v1/users/me/password',

@@ -44,11 +44,18 @@ describe('PostgreSQL baseline and migration system', () => {
           name: '20260729030000_users_settings',
           executedAt: expect.any(Date),
         }),
+        expect.objectContaining({
+          name: '20260729040000_ledger_journal',
+          executedAt: expect.any(Date),
+        }),
       ]);
 
       expect(fingerprint.relations.map(({ schema, name }) => `${schema}.${name}`)).toEqual([
         'mymoneymap.email_verification_tokens',
         'mymoneymap.idempotency_keys',
+        'mymoneymap.journal_entries',
+        'mymoneymap.journal_legs',
+        'mymoneymap.ledger_accounts',
         'mymoneymap.login_audit_events',
         'mymoneymap.passkeys',
         'mymoneymap.users',
@@ -73,7 +80,7 @@ describe('PostgreSQL baseline and migration system', () => {
       const rollback = await migrateOneDown(database);
       expect(rollback.results).toEqual([
         {
-          migrationName: '20260729030000_users_settings',
+          migrationName: '20260729040000_ledger_journal',
           direction: 'Down',
           status: 'Success',
         },
@@ -83,7 +90,8 @@ describe('PostgreSQL baseline and migration system', () => {
       expect(rolledBack.relations.map(({ name }) => name)).toContain('users');
       expect(
         rolledBack.columns.some(({ relation, name }) => relation === 'users' && name === 'theme'),
-      ).toBe(false);
+      ).toBe(true);
+      expect(rolledBack.relations.map(({ name }) => name)).not.toContain('journal_entries');
 
       await migrateToLatest(database);
       expect(await readSchemaFingerprint(pool)).toEqual(firstFingerprint);
@@ -102,7 +110,7 @@ describe('PostgreSQL baseline and migration system', () => {
       const ledger = await pool.query<{ count: string }>(
         'SELECT count(*)::text AS count FROM mymoneymap_meta.kysely_migration',
       );
-      expect(ledger.rows[0]?.count).toBe('5');
+      expect(ledger.rows[0]?.count).toBe('6');
       const concurrentFingerprint = await readSchemaFingerprint(pool);
       expect(() => assertSchemaMatchesExpected(concurrentFingerprint)).not.toThrow();
     });
@@ -157,6 +165,7 @@ describe('PostgreSQL baseline and migration system', () => {
       '20260729020000_identity_access',
       '20260729020100_passkey_revision',
       '20260729030000_users_settings',
+      '20260729040000_ledger_journal',
     ]);
     expect(targetStatusNames).not.toContain('028_default_admin');
   });

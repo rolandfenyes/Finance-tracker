@@ -249,6 +249,137 @@
         "tags": ["Users and settings"]
       }
     },
+    "/api/v1/journal/entries": {
+      "post": {
+        "operationId": "LedgerController_create",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateJournalEntryDto" },
+              "examples": {
+                "income": {
+                  "summary": "External income to the default cash account",
+                  "value": {
+                    "economicType": "external_income",
+                    "amount": "1000.00",
+                    "currency": "HUF",
+                    "postedOn": "2026-07-29",
+                    "note": "Synthetic salary fixture"
+                  }
+                },
+                "transfer": {
+                  "summary": "Internal transfer between owned accounts",
+                  "value": {
+                    "economicType": "internal_transfer",
+                    "amount": "300.00",
+                    "currency": "HUF",
+                    "postedOn": "2026-07-29",
+                    "sourceAccountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                    "destinationAccountId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JournalEntryResponseDto" }
+              }
+            }
+          },
+          "422": { "description": "Financial or journal semantic validation failed" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Post an immutable balanced journal entry",
+        "tags": ["Ledger"]
+      },
+      "get": {
+        "operationId": "LedgerController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JournalListResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "List posted journal entries using stable cursor and date filters",
+        "tags": ["Ledger"]
+      }
+    },
+    "/api/v1/journal/entries/{id}/reversals": {
+      "post": {
+        "operationId": "LedgerController_reverse",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JournalEntryResponseDto" }
+              }
+            }
+          },
+          "404": { "description": "The owned journal entry was not found" },
+          "409": { "description": "The entry was already reversed or is a reversal" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Reverse a posted journal entry without deleting history",
+        "tags": ["Ledger"]
+      }
+    },
+    "/api/v1/journal/entries/{id}/corrections": {
+      "post": {
+        "operationId": "LedgerController_correct",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JournalCorrectionResponseDto" }
+              }
+            }
+          },
+          "404": { "description": "The owned journal entry was not found" },
+          "409": { "description": "The entry was already corrected or reversed" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Atomically reverse and replace a posted journal entry",
+        "tags": ["Ledger"]
+      }
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "HealthController_live",
@@ -480,6 +611,194 @@
           "tutorialRequired",
           "tutorialCompleted"
         ]
+      },
+      "CreateJournalEntryDto": {
+        "type": "object",
+        "properties": {
+          "economicType": {
+            "type": "string",
+            "enum": [
+              "external_income",
+              "external_expense",
+              "internal_transfer",
+              "adjustment",
+              "fee",
+              "interest",
+              "dividend"
+            ],
+            "example": "external_expense"
+          },
+          "amount": {
+            "type": "string",
+            "example": "125.50",
+            "description": "Positive exact base-10 decimal string; direction comes from economicType."
+          },
+          "currency": { "type": "string", "example": "HUF", "pattern": "^[A-Z]{3}$" },
+          "postedOn": { "type": "string", "format": "date", "example": "2026-07-29" },
+          "effectiveAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-07-29T10:15:00.000Z"
+          },
+          "accountId": { "type": "string", "format": "uuid" },
+          "sourceAccountId": { "type": "string", "format": "uuid" },
+          "destinationAccountId": { "type": "string", "format": "uuid" },
+          "adjustmentDirection": { "type": "string", "enum": ["increase", "decrease"] },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Reserved nullable linkage for the Step 08 owned-category model."
+          },
+          "note": { "type": "string", "maxLength": 1000 }
+        },
+        "required": ["economicType", "amount", "currency", "postedOn"]
+      },
+      "CorrectJournalEntryDto": {
+        "type": "object",
+        "properties": {
+          "economicType": {
+            "type": "string",
+            "enum": [
+              "external_income",
+              "external_expense",
+              "internal_transfer",
+              "adjustment",
+              "fee",
+              "interest",
+              "dividend"
+            ],
+            "example": "external_expense"
+          },
+          "amount": {
+            "type": "string",
+            "example": "125.50",
+            "description": "Positive exact base-10 decimal string; direction comes from economicType."
+          },
+          "currency": { "type": "string", "example": "HUF", "pattern": "^[A-Z]{3}$" },
+          "postedOn": { "type": "string", "format": "date", "example": "2026-07-29" },
+          "effectiveAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-07-29T10:15:00.000Z"
+          },
+          "accountId": { "type": "string", "format": "uuid" },
+          "sourceAccountId": { "type": "string", "format": "uuid" },
+          "destinationAccountId": { "type": "string", "format": "uuid" },
+          "adjustmentDirection": { "type": "string", "enum": ["increase", "decrease"] },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Reserved nullable linkage for the Step 08 owned-category model."
+          },
+          "note": { "type": "string", "maxLength": 1000 }
+        },
+        "required": ["economicType", "amount", "currency", "postedOn"]
+      },
+      "ReverseJournalEntryDto": {
+        "type": "object",
+        "properties": {
+          "postedOn": { "type": "string", "format": "date", "example": "2026-07-30" },
+          "effectiveAt": { "type": "string", "format": "date-time" },
+          "note": { "type": "string", "maxLength": 1000 }
+        },
+        "required": ["postedOn"]
+      },
+      "JournalSourceResponseDto": {
+        "type": "object",
+        "properties": {
+          "module": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "scheduling",
+              "goals",
+              "emergency_fund",
+              "loans",
+              "investments",
+              "securities",
+              "migration"
+            ]
+          },
+          "referenceId": { "type": "string", "format": "uuid", "nullable": true }
+        },
+        "required": ["module", "referenceId"]
+      },
+      "JournalLegResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "accountId": { "type": "string", "format": "uuid", "nullable": true },
+          "side": { "type": "string", "enum": ["debit", "credit"] },
+          "amount": { "type": "string", "example": "125.50" },
+          "currency": { "type": "string", "example": "HUF" }
+        },
+        "required": ["id", "accountId", "side", "amount", "currency"]
+      },
+      "JournalEntryResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "economicType": {
+            "type": "string",
+            "enum": [
+              "external_income",
+              "external_expense",
+              "internal_transfer",
+              "adjustment",
+              "fee",
+              "interest",
+              "dividend",
+              "loan_repayment",
+              "trade_cash"
+            ]
+          },
+          "categoryId": { "type": "string", "format": "uuid", "nullable": true },
+          "note": { "type": "string", "nullable": true },
+          "source": { "$ref": "#/components/schemas/JournalSourceResponseDto" },
+          "postedOn": { "type": "string", "format": "date" },
+          "effectiveAt": { "type": "string", "format": "date-time" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "actorUserId": { "type": "string", "format": "uuid" },
+          "reversesEntryId": { "type": "string", "format": "uuid", "nullable": true },
+          "replacesEntryId": { "type": "string", "format": "uuid", "nullable": true },
+          "legs": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/JournalLegResponseDto" }
+          }
+        },
+        "required": [
+          "id",
+          "economicType",
+          "categoryId",
+          "note",
+          "source",
+          "postedOn",
+          "effectiveAt",
+          "createdAt",
+          "actorUserId",
+          "reversesEntryId",
+          "replacesEntryId",
+          "legs"
+        ]
+      },
+      "JournalCorrectionResponseDto": {
+        "type": "object",
+        "properties": {
+          "reversal": { "$ref": "#/components/schemas/JournalEntryResponseDto" },
+          "replacement": { "$ref": "#/components/schemas/JournalEntryResponseDto" }
+        },
+        "required": ["reversal", "replacement"]
+      },
+      "JournalListResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/JournalEntryResponseDto" }
+          },
+          "nextCursor": { "type": "string", "nullable": true }
+        },
+        "required": ["items", "nextCursor"]
       },
       "ApiViolationResponse": {
         "type": "object",

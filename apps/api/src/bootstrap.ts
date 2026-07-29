@@ -29,7 +29,11 @@ export function configureApiApplication(
   app.use(helmet());
   const redis = app.get(RedisSecurityService);
   app.use((request: Request, _response: Response, next: NextFunction) => {
-    if (!request.path.startsWith('/api/v1/auth') && !request.path.startsWith('/api/v1/users/me')) {
+    if (
+      !request.path.startsWith('/api/v1/auth') &&
+      !request.path.startsWith('/api/v1/users/me') &&
+      !request.path.startsWith('/api/v1/journal')
+    ) {
       next();
       return;
     }

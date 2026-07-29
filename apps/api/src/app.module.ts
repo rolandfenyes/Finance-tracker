@@ -7,6 +7,7 @@ import { IdempotencyModule } from './platform/idempotency/idempotency.module';
 import { PlatformLoggingModule } from './platform/logging/logging.module';
 import { IdentityModule } from './identity/identity.module';
 import { UsersModule } from './users/users.module';
+import { LedgerModule } from './ledger/ledger.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { UsersModule } from './users/users.module';
     IdempotencyModule,
     IdentityModule,
     UsersModule,
+    LedgerModule,
     HealthModule,
   ],
 })
