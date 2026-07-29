@@ -109,7 +109,7 @@ describe('ledger HTTP contract', () => {
         .post('/api/v1/journal/entries')
         .set('Idempotency-Key', randomUUID())
         .send(body)
-        .expect((response) => expect([400, 422]).toContain(response.status));
+        .expect((response) => expect([400, 404, 422]).toContain(response.status));
     }
     await agent.post('/api/v1/journal/entries').send(entryBody('external_income', '1')).expect(400);
   });

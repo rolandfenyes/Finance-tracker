@@ -482,6 +482,309 @@
         "tags": ["Ledger"]
       }
     },
+    "/api/v1/budget-rules": {
+      "get": {
+        "operationId": "BudgetingController_rules",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BudgetRulesResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "List exact percentage rules, assignments, allocation status, and optional month plan",
+        "tags": ["Budgeting", "Budgeting"]
+      },
+      "put": {
+        "operationId": "BudgetingController_initialize",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReplaceBudgetRulesDto" },
+              "examples": {
+                "initialRules": {
+                  "value": {
+                    "rules": [
+                      { "label": "Needs", "percent": "50" },
+                      { "label": "Goals", "percent": "30", "targetHint": "Descriptive target only" }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BudgetRulesResponseDto" }
+              }
+            }
+          },
+          "409": { "description": "Initial rules were already configured" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Configure the initial onboarding budget-rule set atomically",
+        "tags": ["Budgeting", "Budgeting"]
+      },
+      "post": {
+        "operationId": "BudgetingController_createRule",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateBudgetRuleDto" },
+              "examples": { "rule": { "value": { "label": "Needs", "percent": "50" } } }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BudgetRulesResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Create a premium cash-flow rule",
+        "tags": ["Budgeting", "Budgeting"]
+      }
+    },
+    "/api/v1/budget-rules/{id}": {
+      "patch": {
+        "operationId": "BudgetingController_updateRule",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BudgetRulesResponseDto" }
+              }
+            }
+          },
+          "404": { "description": "The owned rule was not found" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Update an owned premium cash-flow rule",
+        "tags": ["Budgeting", "Budgeting"]
+      },
+      "delete": {
+        "operationId": "BudgetingController_deleteRule",
+        "parameters": [],
+        "responses": { "204": { "description": "" } },
+        "security": [{ "cookie": [] }],
+        "summary": "Delete an owned rule and leave assigned categories unassigned",
+        "tags": ["Budgeting", "Budgeting"]
+      }
+    },
+    "/api/v1/categories": {
+      "get": {
+        "operationId": "BudgetingController_categories",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CategoriesResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "List owned income and spending categories",
+        "tags": ["Budgeting", "Categories"]
+      },
+      "post": {
+        "operationId": "BudgetingController_createCategory",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateCategoryDto" },
+              "examples": {
+                "spending": {
+                  "value": { "label": "Groceries", "kind": "spending", "color": "#FACC15" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CategoriesResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Create an owned category within the current plan quota",
+        "tags": ["Budgeting", "Categories"]
+      }
+    },
+    "/api/v1/categories/{id}": {
+      "patch": {
+        "operationId": "BudgetingController_updateCategory",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CategoriesResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Update an unprotected owned category",
+        "tags": ["Budgeting", "Categories"]
+      },
+      "delete": {
+        "operationId": "BudgetingController_deleteCategory",
+        "parameters": [],
+        "responses": {
+          "204": { "description": "" },
+          "409": { "description": "The category is protected or referenced by financial data" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Delete an unprotected, unreferenced owned category",
+        "tags": ["Budgeting", "Categories"]
+      }
+    },
+    "/api/v1/categories/{id}/budget-rule": {
+      "put": {
+        "operationId": "BudgetingController_assignRule",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AssignBudgetRuleDto" },
+              "examples": {
+                "assign": { "value": { "budgetRuleId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" } },
+                "clear": { "value": { "budgetRuleId": null } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CategoriesResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Assign or clear a premium rule on an owned spending category",
+        "tags": ["Budgeting", "Categories", "Budgeting"]
+      }
+    },
+    "/api/v1/basic-incomes": {
+      "get": {
+        "operationId": "BudgetingController_basicIncomes",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BasicIncomesResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "List recurring baseline income planning definitions",
+        "tags": ["Budgeting", "Basic income"]
+      },
+      "post": {
+        "operationId": "BudgetingController_createBasicIncome",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateBasicIncomeDto" },
+              "examples": {
+                "salary": {
+                  "value": {
+                    "label": "Salary",
+                    "amount": "1000.00",
+                    "currency": "HUF",
+                    "validFrom": "2026-07-01"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BasicIncomesResponseDto" }
+              }
+            }
+          },
+          "422": {
+            "description": "Amount, currency, income category, or date-range invariant failed"
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Create a forecast-only baseline income definition",
+        "tags": ["Budgeting", "Basic income"]
+      }
+    },
+    "/api/v1/basic-incomes/{id}": {
+      "patch": {
+        "operationId": "BudgetingController_updateBasicIncome",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BasicIncomesResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Update an owned baseline income definition without posting income",
+        "tags": ["Budgeting", "Basic income"]
+      },
+      "delete": {
+        "operationId": "BudgetingController_deleteBasicIncome",
+        "parameters": [],
+        "responses": { "204": { "description": "" } },
+        "security": [{ "cookie": [] }],
+        "summary": "Delete an owned baseline income planning definition",
+        "tags": ["Budgeting", "Basic income"]
+      }
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "HealthController_live",
@@ -977,6 +1280,225 @@
           "nextCursor": { "type": "string", "nullable": true }
         },
         "required": ["items", "nextCursor"]
+      },
+      "BudgetRulePlanResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "enum": ["available", "stale", "unavailable"] },
+          "currency": { "type": "string", "example": "HUF" },
+          "plannedAmount": { "type": "string", "example": "500" },
+          "assignedCategorySpending": { "type": "string", "example": "575" },
+          "signedVariance": {
+            "type": "string",
+            "example": "-75",
+            "description": "Signed planned minus spending value; overspend remains negative."
+          }
+        },
+        "required": ["status", "currency"]
+      },
+      "BudgetRuleResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "label": { "type": "string" },
+          "percent": { "type": "string", "example": "50" },
+          "targetHint": { "type": "string", "nullable": true },
+          "assignedCategoryIds": {
+            "type": "array",
+            "items": { "type": "string", "format": "uuid" }
+          },
+          "plan": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [{ "$ref": "#/components/schemas/BudgetRulePlanResponseDto" }]
+          },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": [
+          "id",
+          "label",
+          "percent",
+          "targetHint",
+          "assignedCategoryIds",
+          "plan",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "BudgetAllocationResponseDto": {
+        "type": "object",
+        "properties": {
+          "totalPercent": { "type": "string", "example": "120" },
+          "status": { "type": "string", "enum": ["within_allocation", "over_allocated"] },
+          "overAllocatedBy": {
+            "type": "string",
+            "example": "20",
+            "description": "Exact percentage points above 100; never normalized."
+          }
+        },
+        "required": ["totalPercent", "status", "overAllocatedBy"]
+      },
+      "BudgetPlanPeriodResponseDto": {
+        "type": "object",
+        "properties": {
+          "month": { "type": "string", "example": "2026-07" },
+          "currency": { "type": "string", "example": "HUF" },
+          "forecastIncomeStatus": {
+            "type": "string",
+            "enum": ["available", "stale", "unavailable"]
+          },
+          "forecastIncome": { "type": "string", "example": "1000" }
+        },
+        "required": ["month", "currency", "forecastIncomeStatus"]
+      },
+      "BudgetRulesResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/BudgetRuleResponseDto" }
+          },
+          "allocation": { "$ref": "#/components/schemas/BudgetAllocationResponseDto" },
+          "period": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [{ "$ref": "#/components/schemas/BudgetPlanPeriodResponseDto" }]
+          }
+        },
+        "required": ["items", "allocation", "period"]
+      },
+      "CreateBudgetRuleDto": {
+        "type": "object",
+        "properties": {
+          "label": { "type": "string", "example": "Needs", "maxLength": 120 },
+          "percent": {
+            "type": "string",
+            "example": "50",
+            "description": "Exact percentage string between 0 and 100 inclusive."
+          },
+          "targetHint": {
+            "type": "string",
+            "nullable": true,
+            "example": "Descriptive target only",
+            "maxLength": 500
+          }
+        },
+        "required": ["label", "percent"]
+      },
+      "ReplaceBudgetRulesDto": {
+        "type": "object",
+        "properties": {
+          "rules": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/CreateBudgetRuleDto" }
+          }
+        },
+        "required": ["rules"]
+      },
+      "CategoryResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "label": { "type": "string" },
+          "kind": { "type": "string", "enum": ["income", "spending"] },
+          "color": { "type": "string", "example": "#FACC15" },
+          "budgetRuleId": { "type": "string", "format": "uuid", "nullable": true },
+          "budgetRuleLabel": { "type": "string", "nullable": true },
+          "systemKey": { "type": "string", "nullable": true },
+          "protected": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": [
+          "id",
+          "label",
+          "kind",
+          "color",
+          "budgetRuleId",
+          "budgetRuleLabel",
+          "systemKey",
+          "protected",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CategoriesResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/CategoryResponseDto" }
+          }
+        },
+        "required": ["items"]
+      },
+      "CreateCategoryDto": {
+        "type": "object",
+        "properties": {
+          "label": { "type": "string", "example": "Groceries", "maxLength": 120 },
+          "kind": { "type": "string", "enum": ["income", "spending"] },
+          "color": {
+            "type": "string",
+            "example": "#FACC15",
+            "pattern": "^#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$"
+          }
+        },
+        "required": ["label", "kind", "color"]
+      },
+      "AssignBudgetRuleDto": {
+        "type": "object",
+        "properties": { "budgetRuleId": { "type": "string", "format": "uuid", "nullable": true } },
+        "required": ["budgetRuleId"]
+      },
+      "BasicIncomeResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "label": { "type": "string" },
+          "amount": { "type": "string", "example": "1000" },
+          "currency": { "type": "string", "example": "HUF" },
+          "validFrom": { "type": "string", "format": "date" },
+          "validTo": { "type": "string", "format": "date", "nullable": true },
+          "categoryId": { "type": "string", "format": "uuid", "nullable": true },
+          "categoryLabel": { "type": "string", "nullable": true },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": [
+          "id",
+          "label",
+          "amount",
+          "currency",
+          "validFrom",
+          "validTo",
+          "categoryId",
+          "categoryLabel",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "BasicIncomesResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/BasicIncomeResponseDto" }
+          }
+        },
+        "required": ["items"]
+      },
+      "CreateBasicIncomeDto": {
+        "type": "object",
+        "properties": {
+          "label": { "type": "string", "example": "Salary", "maxLength": 120 },
+          "amount": { "type": "string", "example": "1000.00" },
+          "currency": { "type": "string", "example": "HUF", "pattern": "^[A-Z]{3}$" },
+          "validFrom": { "type": "string", "format": "date", "example": "2026-07-01" },
+          "validTo": { "type": "string", "format": "date", "nullable": true },
+          "categoryId": { "type": "string", "format": "uuid", "nullable": true }
+        },
+        "required": ["label", "amount", "currency", "validFrom"]
       },
       "ApiViolationResponse": {
         "type": "object",

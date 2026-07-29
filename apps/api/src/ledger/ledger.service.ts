@@ -1,4 +1,4 @@
-import { HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { forwardRef, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { NoResultError } from 'kysely';
 import { ExactDecimal } from '../platform/decimal/exact-decimal';
@@ -23,6 +23,7 @@ import type {
 } from './ledger.dto';
 import { InvalidJournalCursorError, LedgerRepository } from './ledger.repository';
 import type { JournalEntry, JournalListPage, PostJournalCommand } from './ledger.types';
+import { CategoryPolicyService } from '../budgeting/category-policy.service';
 
 export interface IdempotentValue<T> {
   value: T;
@@ -36,6 +37,8 @@ export class LedgerService {
     @Inject(IdempotencyService) private readonly idempotency: IdempotencyService,
     @Inject(CLOCK) private readonly clock: Clock,
     @Inject(FxConversionService) private readonly fx: FxConversionService,
+    @Inject(forwardRef(() => CategoryPolicyService))
+    private readonly categories: CategoryPolicyService,
   ) {}
 
   async createManualEntry(
@@ -43,7 +46,7 @@ export class LedgerService {
     rawKey: string | undefined,
     dto: CreateJournalEntryDto,
   ): Promise<IdempotentValue<JournalEntry>> {
-    this.validateManualCommand(dto);
+    await this.validateManualCommand(userId, dto);
     const key = this.key(rawKey);
     const now = this.clock.now();
     const command = this.toCommand(userId, dto, key.toHash(), now);
@@ -129,7 +132,7 @@ export class LedgerService {
     rawKey: string | undefined,
     dto: CorrectJournalEntryDto,
   ): Promise<IdempotentValue<{ reversal: JournalEntry; replacement: JournalEntry }>> {
-    this.validateManualCommand(dto);
+    await this.validateManualCommand(userId, dto);
     const key = this.key(rawKey);
     const now = this.clock.now();
     try {
@@ -220,7 +223,7 @@ export class LedgerService {
     }
   }
 
-  private validateManualCommand(dto: CreateJournalEntryDto): void {
+  private async validateManualCommand(userId: string, dto: CreateJournalEntryDto): Promise<void> {
     CalendarDate.create(dto.postedOn);
     const amount = ExactDecimal.create(dto.amount);
     if (!amount.isPositive()) {
@@ -231,11 +234,7 @@ export class LedgerService {
       );
     }
     if (dto.categoryId) {
-      throw new ApplicationError(
-        HttpStatus.UNPROCESSABLE_ENTITY,
-        'UNPROCESSABLE_ENTITY',
-        'Category linkage requires an owned category from the category module',
-      );
+      await this.categories.assertJournalCategory(userId, dto.categoryId, dto.economicType);
     }
     if (dto.economicType === 'internal_transfer') {
       if (

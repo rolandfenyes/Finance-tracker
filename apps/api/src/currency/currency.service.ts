@@ -7,6 +7,7 @@ import { EntitlementsService } from '../users/entitlements.service';
 import type { CurrencyCatalogueResponseDto, UserCurrenciesResponseDto } from './currency.dto';
 import { CurrencyRepository } from './currency.repository';
 import { FxRefreshQueueService } from './fx-refresh-queue.service';
+import type { Currency } from './currency.types';
 
 @Injectable()
 export class CurrencyService {
@@ -19,6 +20,12 @@ export class CurrencyService {
 
   async catalogue(): Promise<CurrencyCatalogueResponseDto> {
     return { items: await this.repository.catalogue() };
+  }
+
+  async mainCurrency(userId: string): Promise<Currency> {
+    const main = await this.repository.mainCurrency(userId);
+    if (!main) throw new ApplicationError(409, 'CONFLICT', 'Main currency is not configured');
+    return main;
   }
 
   async userCurrencies(userId: string): Promise<UserCurrenciesResponseDto> {

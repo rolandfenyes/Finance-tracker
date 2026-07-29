@@ -9,6 +9,7 @@ import { IdentityModule } from './identity/identity.module';
 import { UsersModule } from './users/users.module';
 import { LedgerModule } from './ledger/ledger.module';
 import { CurrencyModule } from './currency/currency.module';
+import { BudgetingModule } from './budgeting/budgeting.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { CurrencyModule } from './currency/currency.module';
     UsersModule,
     CurrencyModule,
     LedgerModule,
+    BudgetingModule,
     HealthModule,
   ],
 })

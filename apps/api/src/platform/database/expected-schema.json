@@ -3,6 +3,21 @@
   "relations": [
     {
       "schema": "mymoneymap",
+      "name": "basic_incomes",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "budget_rules",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "categories",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
       "name": "currencies",
       "kind": "r"
     },
@@ -73,6 +88,222 @@
     }
   ],
   "columns": [
+    {
+      "schema": "mymoneymap",
+      "relation": "basic_incomes",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "basic_incomes",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "basic_incomes",
+      "name": "label",
+      "type": "character varying(120)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "basic_incomes",
+      "name": "amount",
+      "type": "numeric(30,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "basic_incomes",
+      "name": "currency",
+      "type": "character(3)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "basic_incomes",
+      "name": "valid_from",
+      "type": "date",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "basic_incomes",
+      "name": "valid_to",
+      "type": "date",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "basic_incomes",
+      "name": "category_id",
+      "type": "uuid",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "basic_incomes",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "basic_incomes",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "budget_rules",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "budget_rules",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "budget_rules",
+      "name": "label",
+      "type": "character varying(120)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "budget_rules",
+      "name": "percent",
+      "type": "numeric(7,4)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "budget_rules",
+      "name": "target_hint",
+      "type": "character varying(500)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "budget_rules",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "budget_rules",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "categories",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "categories",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "categories",
+      "name": "label",
+      "type": "character varying(120)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "categories",
+      "name": "kind",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "categories",
+      "name": "color",
+      "type": "character varying(7)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "categories",
+      "name": "budget_rule_id",
+      "type": "uuid",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "categories",
+      "name": "system_key",
+      "type": "character varying(64)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "categories",
+      "name": "protected",
+      "type": "boolean",
+      "nullable": false,
+      "default": "false"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "categories",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "categories",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
     {
       "schema": "mymoneymap",
       "relation": "currencies",
@@ -1021,6 +1252,144 @@
   "constraints": [
     {
       "schema": "mymoneymap",
+      "relation": "basic_incomes",
+      "name": "basic_incomes_amount_check",
+      "definition": "CHECK (amount > 0::numeric)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "basic_incomes",
+      "name": "basic_incomes_category_owner_fk",
+      "definition": "FOREIGN KEY (category_id, user_id) REFERENCES mymoneymap.categories(id, user_id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "basic_incomes",
+      "name": "basic_incomes_currency_fk",
+      "definition": "FOREIGN KEY (currency) REFERENCES mymoneymap.currencies(code) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "basic_incomes",
+      "name": "basic_incomes_currency_membership_fk",
+      "definition": "FOREIGN KEY (user_id, currency) REFERENCES mymoneymap.user_currencies(user_id, code) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "basic_incomes",
+      "name": "basic_incomes_date_range_check",
+      "definition": "CHECK (valid_to IS NULL OR valid_to >= valid_from)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "basic_incomes",
+      "name": "basic_incomes_label_check",
+      "definition": "CHECK (char_length(btrim(label::text)) >= 1 AND char_length(btrim(label::text)) <= 120)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "basic_incomes",
+      "name": "basic_incomes_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "basic_incomes",
+      "name": "basic_incomes_user_id_fkey",
+      "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "budget_rules",
+      "name": "budget_rules_id_user_unique",
+      "definition": "UNIQUE (id, user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "budget_rules",
+      "name": "budget_rules_label_check",
+      "definition": "CHECK (char_length(btrim(label::text)) >= 1 AND char_length(btrim(label::text)) <= 120)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "budget_rules",
+      "name": "budget_rules_percent_check",
+      "definition": "CHECK (percent >= 0::numeric AND percent <= 100::numeric)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "budget_rules",
+      "name": "budget_rules_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "budget_rules",
+      "name": "budget_rules_target_hint_check",
+      "definition": "CHECK (target_hint IS NULL OR char_length(btrim(target_hint::text)) >= 1 AND char_length(btrim(target_hint::text)) <= 500)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "budget_rules",
+      "name": "budget_rules_user_id_fkey",
+      "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "categories",
+      "name": "categories_color_check",
+      "definition": "CHECK (color::text ~ '^#([0-9A-F]{3}|[0-9A-F]{6})$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "categories",
+      "name": "categories_id_user_unique",
+      "definition": "UNIQUE (id, user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "categories",
+      "name": "categories_income_rule_check",
+      "definition": "CHECK (kind::text = 'spending'::text OR budget_rule_id IS NULL)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "categories",
+      "name": "categories_kind_check",
+      "definition": "CHECK (kind::text = ANY (ARRAY['income'::character varying, 'spending'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "categories",
+      "name": "categories_label_check",
+      "definition": "CHECK (char_length(btrim(label::text)) >= 1 AND char_length(btrim(label::text)) <= 120)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "categories",
+      "name": "categories_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "categories",
+      "name": "categories_rule_owner_fk",
+      "definition": "FOREIGN KEY (budget_rule_id, user_id) REFERENCES mymoneymap.budget_rules(id, user_id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "categories",
+      "name": "categories_system_check",
+      "definition": "CHECK (system_key IS NULL AND NOT protected OR system_key IS NOT NULL AND protected)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "categories",
+      "name": "categories_user_id_fkey",
+      "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
       "relation": "currencies",
       "name": "currencies_code_check",
       "definition": "CHECK (code ~ '^[A-Z]{3}$'::text)"
@@ -1270,6 +1639,12 @@
       "relation": "journal_entries",
       "name": "journal_entries_category_check",
       "definition": "CHECK (category_id IS NULL OR (economic_type::text = ANY (ARRAY['external_income'::character varying, 'external_expense'::character varying, 'fee'::character varying]::text[])))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "journal_entries",
+      "name": "journal_entries_category_owner_fk",
+      "definition": "FOREIGN KEY (category_id, user_id) REFERENCES mymoneymap.categories(id, user_id) ON DELETE RESTRICT"
     },
     {
       "schema": "mymoneymap",
@@ -1585,6 +1960,72 @@
     }
   ],
   "indexes": [
+    {
+      "schema": "mymoneymap",
+      "relation": "basic_incomes",
+      "name": "basic_incomes_pkey",
+      "definition": "CREATE UNIQUE INDEX basic_incomes_pkey ON mymoneymap.basic_incomes USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "basic_incomes",
+      "name": "basic_incomes_user_category_index",
+      "definition": "CREATE INDEX basic_incomes_user_category_index ON mymoneymap.basic_incomes USING btree (user_id, category_id) WHERE (category_id IS NOT NULL)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "basic_incomes",
+      "name": "basic_incomes_user_dates_index",
+      "definition": "CREATE INDEX basic_incomes_user_dates_index ON mymoneymap.basic_incomes USING btree (user_id, valid_from, valid_to, lower((label)::text), id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "budget_rules",
+      "name": "budget_rules_id_user_unique",
+      "definition": "CREATE UNIQUE INDEX budget_rules_id_user_unique ON mymoneymap.budget_rules USING btree (id, user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "budget_rules",
+      "name": "budget_rules_pkey",
+      "definition": "CREATE UNIQUE INDEX budget_rules_pkey ON mymoneymap.budget_rules USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "budget_rules",
+      "name": "budget_rules_user_label_index",
+      "definition": "CREATE INDEX budget_rules_user_label_index ON mymoneymap.budget_rules USING btree (user_id, lower((label)::text), id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "categories",
+      "name": "categories_id_user_unique",
+      "definition": "CREATE UNIQUE INDEX categories_id_user_unique ON mymoneymap.categories USING btree (id, user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "categories",
+      "name": "categories_pkey",
+      "definition": "CREATE UNIQUE INDEX categories_pkey ON mymoneymap.categories USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "categories",
+      "name": "categories_user_kind_label_index",
+      "definition": "CREATE INDEX categories_user_kind_label_index ON mymoneymap.categories USING btree (user_id, kind, lower((label)::text), id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "categories",
+      "name": "categories_user_rule_index",
+      "definition": "CREATE INDEX categories_user_rule_index ON mymoneymap.categories USING btree (user_id, budget_rule_id) WHERE (budget_rule_id IS NOT NULL)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "categories",
+      "name": "categories_user_system_key_unique",
+      "definition": "CREATE UNIQUE INDEX categories_user_system_key_unique ON mymoneymap.categories USING btree (user_id, system_key) WHERE (system_key IS NOT NULL)"
+    },
     {
       "schema": "mymoneymap",
       "relation": "currencies",

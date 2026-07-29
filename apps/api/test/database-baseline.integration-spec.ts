@@ -56,9 +56,16 @@ describe('PostgreSQL baseline and migration system', () => {
           name: '20260729050100_fx_snapshot_invariant',
           executedAt: expect.any(Date),
         }),
+        expect.objectContaining({
+          name: '20260729060000_budgeting_categories_income',
+          executedAt: expect.any(Date),
+        }),
       ]);
 
       expect(fingerprint.relations.map(({ schema, name }) => `${schema}.${name}`)).toEqual([
+        'mymoneymap.basic_incomes',
+        'mymoneymap.budget_rules',
+        'mymoneymap.categories',
         'mymoneymap.currencies',
         'mymoneymap.email_verification_tokens',
         'mymoneymap.fx_conversion_snapshots',
@@ -92,7 +99,7 @@ describe('PostgreSQL baseline and migration system', () => {
       const rollback = await migrateOneDown(database);
       expect(rollback.results).toEqual([
         {
-          migrationName: '20260729050100_fx_snapshot_invariant',
+          migrationName: '20260729060000_budgeting_categories_income',
           direction: 'Down',
           status: 'Success',
         },
@@ -105,6 +112,9 @@ describe('PostgreSQL baseline and migration system', () => {
       ).toBe(true);
       expect(rolledBack.relations.map(({ name }) => name)).toContain('journal_entries');
       expect(rolledBack.relations.map(({ name }) => name)).toContain('fx_quotes');
+      expect(rolledBack.relations.map(({ name }) => name)).not.toContain('budget_rules');
+      expect(rolledBack.relations.map(({ name }) => name)).not.toContain('categories');
+      expect(rolledBack.relations.map(({ name }) => name)).not.toContain('basic_incomes');
       expect(
         (
           await pool.query<{ present: boolean }>(
@@ -116,7 +126,7 @@ describe('PostgreSQL baseline and migration system', () => {
              ) AS present`,
           )
         ).rows[0]?.present,
-      ).toBe(false);
+      ).toBe(true);
 
       await migrateToLatest(database);
       expect(await readSchemaFingerprint(pool)).toEqual(firstFingerprint);
@@ -135,7 +145,7 @@ describe('PostgreSQL baseline and migration system', () => {
       const ledger = await pool.query<{ count: string }>(
         'SELECT count(*)::text AS count FROM mymoneymap_meta.kysely_migration',
       );
-      expect(ledger.rows[0]?.count).toBe('8');
+      expect(ledger.rows[0]?.count).toBe('9');
       const concurrentFingerprint = await readSchemaFingerprint(pool);
       expect(() => assertSchemaMatchesExpected(concurrentFingerprint)).not.toThrow();
     });
@@ -193,6 +203,7 @@ describe('PostgreSQL baseline and migration system', () => {
       '20260729040000_ledger_journal',
       '20260729050000_currency_fx',
       '20260729050100_fx_snapshot_invariant',
+      '20260729060000_budgeting_categories_income',
     ]);
     expect(targetStatusNames).not.toContain('028_default_admin');
   });

@@ -203,6 +203,50 @@ export class LedgerRepository {
     };
   }
 
+  async spendingByCategories(
+    userId: string,
+    categoryIds: readonly string[],
+    first: string,
+    last: string,
+  ): Promise<
+    Array<{
+      categoryId: string;
+      amount: string;
+      status: 'available' | 'stale' | 'unavailable';
+    }>
+  > {
+    if (categoryIds.length === 0) return [];
+    const rows = await this.database
+      .selectFrom('mymoneymap.journal_entries as e')
+      .innerJoin('mymoneymap.fx_conversion_snapshots as s', (join) =>
+        join.onRef('s.entry_id', '=', 'e.id').onRef('s.user_id', '=', 'e.user_id'),
+      )
+      .select([
+        'e.category_id',
+        sql<string>`coalesce(sum(
+          case
+            when s.converted_amount is null then 0
+            when e.reverses_entry_id is null then s.converted_amount
+            else -s.converted_amount
+          end
+        ), 0)::text`.as('amount'),
+        sql<boolean>`bool_or(s.status = 'unavailable')`.as('unavailable'),
+        sql<boolean>`bool_or(s.status = 'stale')`.as('stale'),
+      ])
+      .where('e.user_id', '=', userId)
+      .where('e.economic_type', 'in', ['external_expense', 'fee'])
+      .where('e.posted_on', '>=', first)
+      .where('e.posted_on', '<=', last)
+      .where('e.category_id', 'in', [...categoryIds])
+      .groupBy('e.category_id')
+      .execute();
+    return rows.map((row) => ({
+      categoryId: row.category_id!,
+      amount: row.amount,
+      status: row.unavailable ? 'unavailable' : row.stale ? 'stale' : 'available',
+    }));
+  }
+
   async accountBalance(userId: string, accountId: string, currency: string): Promise<string> {
     const row = await this.database
       .selectFrom('mymoneymap.journal_legs')

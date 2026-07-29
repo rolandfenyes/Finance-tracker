@@ -180,6 +180,42 @@ export interface FxConversionSnapshotsTable {
   created_at: DatabaseTimestamp;
 }
 
+export interface BudgetRulesTable {
+  id: string;
+  user_id: string;
+  label: string;
+  percent: DatabaseDecimal;
+  target_hint: string | null;
+  created_at: DatabaseTimestamp;
+  updated_at: DatabaseTimestamp;
+}
+
+export interface CategoriesTable {
+  id: string;
+  user_id: string;
+  label: string;
+  kind: 'income' | 'spending';
+  color: string;
+  budget_rule_id: string | null;
+  system_key: string | null;
+  protected: boolean;
+  created_at: DatabaseTimestamp;
+  updated_at: DatabaseTimestamp;
+}
+
+export interface BasicIncomesTable {
+  id: string;
+  user_id: string;
+  label: string;
+  amount: DatabaseDecimal;
+  currency: string;
+  valid_from: DatabaseDate;
+  valid_to: DatabaseDate | null;
+  category_id: string | null;
+  created_at: DatabaseTimestamp;
+  updated_at: DatabaseTimestamp;
+}
+
 export interface DatabaseSchema {
   'mymoneymap.idempotency_keys': IdempotencyKeysTable;
   'mymoneymap.users': UsersTable;
@@ -193,4 +229,7 @@ export interface DatabaseSchema {
   'mymoneymap.user_currencies': UserCurrenciesTable;
   'mymoneymap.fx_quotes': FxQuotesTable;
   'mymoneymap.fx_conversion_snapshots': FxConversionSnapshotsTable;
+  'mymoneymap.budget_rules': BudgetRulesTable;
+  'mymoneymap.categories': CategoriesTable;
+  'mymoneymap.basic_incomes': BasicIncomesTable;
 }
