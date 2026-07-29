@@ -18,7 +18,12 @@ describe('global validation', () => {
     ).rejects.toMatchObject({
       response: {
         code: 'VALIDATION_FAILED',
-        violations: expect.arrayContaining([expect.objectContaining({ field: 'unexpected' })]),
+        violations: expect.arrayContaining([
+          expect.objectContaining({
+            field: 'unexpected',
+            code: 'whitelistValidation',
+          }),
+        ]),
       },
     });
   });

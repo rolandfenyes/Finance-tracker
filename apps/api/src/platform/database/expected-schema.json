@@ -2,6 +2,11 @@
   "schemas": ["mymoneymap", "mymoneymap_meta"],
   "relations": [
     {
+      "schema": "mymoneymap",
+      "name": "idempotency_keys",
+      "kind": "r"
+    },
+    {
       "schema": "mymoneymap_meta",
       "name": "kysely_migration",
       "kind": "r"
@@ -13,6 +18,70 @@
     }
   ],
   "columns": [
+    {
+      "schema": "mymoneymap",
+      "relation": "idempotency_keys",
+      "name": "scope_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "idempotency_keys",
+      "name": "operation",
+      "type": "character varying(128)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "idempotency_keys",
+      "name": "key_hash",
+      "type": "character(64)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "idempotency_keys",
+      "name": "request_hash",
+      "type": "character(64)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "idempotency_keys",
+      "name": "status",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "idempotency_keys",
+      "name": "response",
+      "type": "jsonb",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "idempotency_keys",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "idempotency_keys",
+      "name": "completed_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
     {
       "schema": "mymoneymap_meta",
       "relation": "kysely_migration",
@@ -48,6 +117,42 @@
   ],
   "constraints": [
     {
+      "schema": "mymoneymap",
+      "relation": "idempotency_keys",
+      "name": "idempotency_keys_completion_check",
+      "definition": "CHECK (status::text = 'in_progress'::text AND response IS NULL AND completed_at IS NULL OR status::text = 'completed'::text AND response IS NOT NULL AND jsonb_typeof(response) = 'object'::text AND completed_at IS NOT NULL)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "idempotency_keys",
+      "name": "idempotency_keys_key_hash_check",
+      "definition": "CHECK (key_hash ~ '^[0-9a-f]{64}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "idempotency_keys",
+      "name": "idempotency_keys_operation_check",
+      "definition": "CHECK (operation::text ~ '^[a-z][a-z0-9._:-]{0,127}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "idempotency_keys",
+      "name": "idempotency_keys_pkey",
+      "definition": "PRIMARY KEY (scope_id, operation, key_hash)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "idempotency_keys",
+      "name": "idempotency_keys_request_hash_check",
+      "definition": "CHECK (request_hash ~ '^[0-9a-f]{64}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "idempotency_keys",
+      "name": "idempotency_keys_status_check",
+      "definition": "CHECK (status::text = ANY (ARRAY['in_progress'::character varying, 'completed'::character varying]::text[]))"
+    },
+    {
       "schema": "mymoneymap_meta",
       "relation": "kysely_migration",
       "name": "kysely_migration_pkey",
@@ -61,6 +166,12 @@
     }
   ],
   "indexes": [
+    {
+      "schema": "mymoneymap",
+      "relation": "idempotency_keys",
+      "name": "idempotency_keys_pkey",
+      "definition": "CREATE UNIQUE INDEX idempotency_keys_pkey ON mymoneymap.idempotency_keys USING btree (scope_id, operation, key_hash)"
+    },
     {
       "schema": "mymoneymap_meta",
       "relation": "kysely_migration",

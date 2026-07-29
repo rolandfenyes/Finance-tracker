@@ -17,7 +17,7 @@ import { readSchemaFingerprint } from '../src/platform/database/schema-fingerpri
 import { withIsolatedPostgresDatabase } from './postgres-test-database';
 
 describe('PostgreSQL baseline and migration system', () => {
-  it('creates the exact domain-free baseline from an empty database', async () => {
+  it('creates the exact approved platform schema from an empty database', async () => {
     await withIsolatedPostgresDatabase(async ({ database, pool }) => {
       await migrateToLatest(database);
 
@@ -28,9 +28,14 @@ describe('PostgreSQL baseline and migration system', () => {
           name: '20260729000000_database_baseline',
           executedAt: expect.any(Date),
         }),
+        expect.objectContaining({
+          name: '20260729010000_idempotency_keys',
+          executedAt: expect.any(Date),
+        }),
       ]);
 
       expect(fingerprint.relations.map(({ schema, name }) => `${schema}.${name}`)).toEqual([
+        'mymoneymap.idempotency_keys',
         'mymoneymap_meta.kysely_migration',
         'mymoneymap_meta.kysely_migration_lock',
       ]);
@@ -39,7 +44,7 @@ describe('PostgreSQL baseline and migration system', () => {
     });
   });
 
-  it('rolls back one migration and deterministically restores the same baseline', async () => {
+  it('rolls back the shared-kernel migration and deterministically reapplies it', async () => {
     await withIsolatedPostgresDatabase(async ({ database, pool }) => {
       await migrateToLatest(database);
       const firstFingerprint = await readSchemaFingerprint(pool);
@@ -47,12 +52,14 @@ describe('PostgreSQL baseline and migration system', () => {
       const rollback = await migrateOneDown(database);
       expect(rollback.results).toEqual([
         {
-          migrationName: '20260729000000_database_baseline',
+          migrationName: '20260729010000_idempotency_keys',
           direction: 'Down',
           status: 'Success',
         },
       ]);
-      expect((await readSchemaFingerprint(pool)).schemas).toEqual(['mymoneymap_meta']);
+      const rolledBack = await readSchemaFingerprint(pool);
+      expect(rolledBack.schemas).toEqual(['mymoneymap', 'mymoneymap_meta']);
+      expect(rolledBack.relations.map(({ name }) => name)).not.toContain('idempotency_keys');
 
       await migrateToLatest(database);
       expect(await readSchemaFingerprint(pool)).toEqual(firstFingerprint);
@@ -71,7 +78,7 @@ describe('PostgreSQL baseline and migration system', () => {
       const ledger = await pool.query<{ count: string }>(
         'SELECT count(*)::text AS count FROM mymoneymap_meta.kysely_migration',
       );
-      expect(ledger.rows[0]?.count).toBe('1');
+      expect(ledger.rows[0]?.count).toBe('2');
       const concurrentFingerprint = await readSchemaFingerprint(pool);
       expect(() => assertSchemaMatchesExpected(concurrentFingerprint)).not.toThrow();
     });
@@ -120,7 +127,10 @@ describe('PostgreSQL baseline and migration system', () => {
 
     expect(legacyFiles).toHaveLength(42);
     expect(legacyFiles).toContain('028_default_admin.sql');
-    expect(targetStatusNames).toEqual(['20260729000000_database_baseline']);
+    expect(targetStatusNames).toEqual([
+      '20260729000000_database_baseline',
+      '20260729010000_idempotency_keys',
+    ]);
     expect(targetStatusNames).not.toContain('028_default_admin');
   });
 

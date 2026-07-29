@@ -1,15 +1,19 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { apiErrorCodes } from './api-error-code';
 
 export class ApiViolationResponse {
   @ApiProperty({ example: 'fieldName', type: String })
   field!: string;
+
+  @ApiProperty({ example: 'isString', type: String })
+  code!: string;
 
   @ApiProperty({ example: 'must be a valid value', type: String })
   message!: string;
 }
 
 export class ApiErrorBodyResponse {
-  @ApiProperty({ example: 'VALIDATION_FAILED', type: String })
+  @ApiProperty({ enum: apiErrorCodes, example: 'VALIDATION_FAILED', type: String })
   code!: string;
 
   @ApiProperty({ example: 'Request validation failed', type: String })
