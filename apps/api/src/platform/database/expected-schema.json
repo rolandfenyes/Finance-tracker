@@ -1,0 +1,77 @@
+{
+  "schemas": ["mymoneymap", "mymoneymap_meta"],
+  "relations": [
+    {
+      "schema": "mymoneymap_meta",
+      "name": "kysely_migration",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap_meta",
+      "name": "kysely_migration_lock",
+      "kind": "r"
+    }
+  ],
+  "columns": [
+    {
+      "schema": "mymoneymap_meta",
+      "relation": "kysely_migration",
+      "name": "name",
+      "type": "character varying(255)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap_meta",
+      "relation": "kysely_migration",
+      "name": "timestamp",
+      "type": "character varying(255)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap_meta",
+      "relation": "kysely_migration_lock",
+      "name": "id",
+      "type": "character varying(255)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap_meta",
+      "relation": "kysely_migration_lock",
+      "name": "is_locked",
+      "type": "integer",
+      "nullable": false,
+      "default": "0"
+    }
+  ],
+  "constraints": [
+    {
+      "schema": "mymoneymap_meta",
+      "relation": "kysely_migration",
+      "name": "kysely_migration_pkey",
+      "definition": "PRIMARY KEY (name)"
+    },
+    {
+      "schema": "mymoneymap_meta",
+      "relation": "kysely_migration_lock",
+      "name": "kysely_migration_lock_pkey",
+      "definition": "PRIMARY KEY (id)"
+    }
+  ],
+  "indexes": [
+    {
+      "schema": "mymoneymap_meta",
+      "relation": "kysely_migration",
+      "name": "kysely_migration_pkey",
+      "definition": "CREATE UNIQUE INDEX kysely_migration_pkey ON mymoneymap_meta.kysely_migration USING btree (name)"
+    },
+    {
+      "schema": "mymoneymap_meta",
+      "relation": "kysely_migration_lock",
+      "name": "kysely_migration_lock_pkey",
+      "definition": "CREATE UNIQUE INDEX kysely_migration_lock_pkey ON mymoneymap_meta.kysely_migration_lock USING btree (id)"
+    }
+  ]
+}

@@ -29,6 +29,7 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      - run: pnpm db:migrations:check
       - run: pnpm build
       - run: pnpm openapi:check
 
@@ -64,6 +65,12 @@ jobs:
       API_PORT: '3000'
       APP_BASE_URL: http://127.0.0.1:3000
       DATABASE_URL: postgresql://mymoneymap_test:synthetic-ci-only@127.0.0.1:5432/mymoneymap_test
+      DATABASE_MIGRATION_URL: postgresql://mymoneymap_test:synthetic-ci-only@127.0.0.1:5432/mymoneymap_test
+      DATABASE_TLS_MODE: disable
+      DATABASE_POOL_MAX: '4'
+      DATABASE_CONNECTION_TIMEOUT_MS: '2000'
+      DATABASE_IDLE_TIMEOUT_MS: '10000'
+      DATABASE_MAX_LIFETIME_SECONDS: '300'
       REDIS_URL: redis://127.0.0.1:6379
       LOG_LEVEL: fatal
       TRUST_PROXY: 'false'
@@ -79,6 +86,8 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm db:migrate
+      - run: pnpm db:drift
       - run: pnpm test:integration
 
   security:

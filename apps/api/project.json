@@ -51,6 +51,42 @@
         "command": "jest --config apps/api/jest.integration.config.cjs --runInBand"
       }
     },
+    "db-migrations-check": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsx --tsconfig apps/api/tsconfig.json apps/api/src/platform/database/check-migrations.ts"
+      }
+    },
+    "db-migrate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsx --tsconfig apps/api/tsconfig.json apps/api/src/platform/database/database-cli.ts migrate"
+      }
+    },
+    "db-rollback": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsx --tsconfig apps/api/tsconfig.json apps/api/src/platform/database/database-cli.ts rollback"
+      }
+    },
+    "db-status": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsx --tsconfig apps/api/tsconfig.json apps/api/src/platform/database/database-cli.ts status"
+      }
+    },
+    "db-drift": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsx --tsconfig apps/api/tsconfig.json apps/api/src/platform/database/database-cli.ts drift"
+      }
+    },
+    "db-fingerprint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsx --tsconfig apps/api/tsconfig.json apps/api/src/platform/database/database-cli.ts fingerprint"
+      }
+    },
     "openapi-generate": {
       "executor": "nx:run-commands",
       "outputs": ["{projectRoot}/openapi/openapi.json"],

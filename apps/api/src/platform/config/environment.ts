@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 const booleanText = z.enum(['true', 'false']).transform((value) => value === 'true');
+const positiveMilliseconds = z.coerce.number().int().min(100).max(300_000);
 
 const trustProxy = z
   .union([z.enum(['true', 'false']), z.string().regex(/^[1-9]\d*$/)])
@@ -27,7 +28,25 @@ const environmentSchema = z
       .min(1)
       .refine((value) => value.startsWith('postgresql://'), {
         message: 'must use the postgresql:// scheme',
-      }),
+      })
+      .refine(
+        (value) => {
+          try {
+            return !new URL(value).searchParams.has('sslmode');
+          } catch {
+            return true;
+          }
+        },
+        {
+          message: 'must configure TLS with DATABASE_TLS_MODE',
+        },
+      ),
+    DATABASE_TLS_MODE: z.enum(['disable', 'require', 'verify-full']),
+    DATABASE_TLS_CA: z.string().min(1).optional(),
+    DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(50),
+    DATABASE_CONNECTION_TIMEOUT_MS: positiveMilliseconds,
+    DATABASE_IDLE_TIMEOUT_MS: positiveMilliseconds,
+    DATABASE_MAX_LIFETIME_SECONDS: z.coerce.number().int().min(30).max(86_400),
     REDIS_URL: z
       .string()
       .min(1)
@@ -41,6 +60,14 @@ const environmentSchema = z
   .superRefine((environment, context) => {
     if (environment.NODE_ENV !== 'production') {
       return;
+    }
+
+    if (environment.DATABASE_TLS_MODE !== 'verify-full') {
+      context.addIssue({
+        code: 'custom',
+        path: ['DATABASE_TLS_MODE'],
+        message: 'must be verify-full in production',
+      });
     }
 
     const publicUrl = new URL(environment.APP_BASE_URL);

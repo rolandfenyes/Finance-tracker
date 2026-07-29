@@ -6,6 +6,11 @@ const validEnvironment = {
   API_PORT: '3000',
   APP_BASE_URL: 'http://127.0.0.1:3000',
   DATABASE_URL: 'postgresql://api:synthetic@127.0.0.1:5433/api_test',
+  DATABASE_TLS_MODE: 'disable',
+  DATABASE_POOL_MAX: '4',
+  DATABASE_CONNECTION_TIMEOUT_MS: '2000',
+  DATABASE_IDLE_TIMEOUT_MS: '10000',
+  DATABASE_MAX_LIFETIME_SECONDS: '300',
   REDIS_URL: 'redis://127.0.0.1:6380',
   LOG_LEVEL: 'info',
   TRUST_PROXY: 'false',
@@ -17,6 +22,10 @@ describe('environment validation', () => {
     expect(validateEnvironment(validEnvironment)).toEqual({
       ...validEnvironment,
       API_PORT: 3000,
+      DATABASE_POOL_MAX: 4,
+      DATABASE_CONNECTION_TIMEOUT_MS: 2000,
+      DATABASE_IDLE_TIMEOUT_MS: 10000,
+      DATABASE_MAX_LIFETIME_SECONDS: 300,
       TRUST_PROXY: false,
       OPENAPI_ENABLED: true,
     });
@@ -46,8 +55,29 @@ describe('environment validation', () => {
         ...validEnvironment,
         NODE_ENV: 'production',
         APP_BASE_URL: 'http://localhost:3000',
+        DATABASE_TLS_MODE: 'verify-full',
       }),
     ).toThrow('Invalid application configuration: APP_BASE_URL');
+  });
+
+  it('requires verified database TLS in production', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validEnvironment,
+        NODE_ENV: 'production',
+        APP_BASE_URL: 'https://api.example.test',
+        DATABASE_TLS_MODE: 'require',
+      }),
+    ).toThrow('Invalid application configuration: DATABASE_TLS_MODE');
+  });
+
+  it('rejects an ambiguous sslmode embedded in the connection URL', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validEnvironment,
+        DATABASE_URL: `${validEnvironment.DATABASE_URL}?sslmode=disable`,
+      }),
+    ).toThrow('Invalid application configuration: DATABASE_URL');
   });
 
   it('does not load an environment file in production', () => {

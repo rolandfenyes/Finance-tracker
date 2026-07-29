@@ -11,7 +11,7 @@ describe('required platform dependencies', () => {
     const module = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = module.createNestApplication({ bufferLogs: true });
     configureApiApplication(app, { installOpenApi: false });
-    await app.init();
+    await app.listen(0, '127.0.0.1');
   });
 
   afterAll(async () => {

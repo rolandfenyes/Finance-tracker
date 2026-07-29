@@ -2,21 +2,18 @@ import { Inject, Injectable, Logger, OnApplicationShutdown } from '@nestjs/commo
 import { ConfigService } from '@nestjs/config';
 import { Pool } from 'pg';
 import { createClient, RedisClientType } from 'redis';
+import { POSTGRES_POOL } from '../database/database.constants';
 import { DependencyName, DependencyProbe, DependencyProbeResult } from './dependency-probe';
 
 @Injectable()
 export class PostgresRedisProbeService implements DependencyProbe, OnApplicationShutdown {
   private readonly logger = new Logger(PostgresRedisProbeService.name);
-  private readonly postgres: Pool;
   private readonly redis: RedisClientType;
 
-  constructor(@Inject(ConfigService) config: ConfigService) {
-    this.postgres = new Pool({
-      connectionString: config.getOrThrow<string>('DATABASE_URL'),
-      max: 1,
-      connectionTimeoutMillis: 2_000,
-      idleTimeoutMillis: 10_000,
-    });
+  constructor(
+    @Inject(ConfigService) config: ConfigService,
+    @Inject(POSTGRES_POOL) private readonly postgres: Pool,
+  ) {
     this.redis = createClient({
       url: config.getOrThrow<string>('REDIS_URL'),
       socket: {
@@ -36,10 +33,7 @@ export class PostgresRedisProbeService implements DependencyProbe, OnApplication
   }
 
   async onApplicationShutdown(): Promise<void> {
-    await Promise.allSettled([
-      this.postgres.end(),
-      this.redis.isOpen ? this.redis.quit() : Promise.resolve(),
-    ]);
+    await Promise.allSettled([this.redis.isOpen ? this.redis.quit() : Promise.resolve()]);
   }
 
   private async checkPostgresql(): Promise<'up' | 'down'> {
