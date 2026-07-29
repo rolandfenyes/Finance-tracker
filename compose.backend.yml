@@ -1,0 +1,39 @@
+name: mymoneymap-backend
+
+services:
+  postgres:
+    image: postgres:17.10-alpine
+    environment:
+      POSTGRES_DB: ${BACKEND_POSTGRES_DB:?Set BACKEND_POSTGRES_DB in .env.backend}
+      POSTGRES_USER: ${BACKEND_POSTGRES_USER:?Set BACKEND_POSTGRES_USER in .env.backend}
+      POSTGRES_PASSWORD: ${BACKEND_POSTGRES_PASSWORD:?Set BACKEND_POSTGRES_PASSWORD in .env.backend}
+    ports:
+      - '127.0.0.1:${BACKEND_POSTGRES_PORT:-5433}:5432'
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${BACKEND_POSTGRES_USER:?Set BACKEND_POSTGRES_USER} -d ${BACKEND_POSTGRES_DB:?Set BACKEND_POSTGRES_DB}',
+        ]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - mymoneymap_backend_postgres:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7.4.10-alpine
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      - '127.0.0.1:${BACKEND_REDIS_PORT:-6380}:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - mymoneymap_backend_redis:/data
+
+volumes:
+  mymoneymap_backend_postgres:
+  mymoneymap_backend_redis:

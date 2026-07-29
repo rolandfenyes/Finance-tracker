@@ -1,0 +1,8 @@
+{
+  "name": "generated-api-client",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/generated/api-client/src",
+  "tags": ["scope:generated", "type:api-client"],
+  "targets": {}
+}

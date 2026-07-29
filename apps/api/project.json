@@ -1,0 +1,68 @@
+{
+  "name": "api",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/api/src",
+  "tags": ["scope:backend", "type:application"],
+  "targets": {
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsx --tsconfig apps/api/tsconfig.json watch apps/api/src/main.ts"
+      }
+    },
+    "start": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "options": {
+        "command": "node apps/api/dist/main.js"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "outputs": ["{projectRoot}/dist"],
+      "options": {
+        "command": "tsc -p apps/api/tsconfig.app.json"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p apps/api/tsconfig.spec.json --noEmit"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint \"apps/api/{src,test}/**/*.ts\""
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/coverage/api/unit"],
+      "options": {
+        "command": "jest --config apps/api/jest.unit.config.cjs --runInBand"
+      }
+    },
+    "test-integration": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/coverage/api/integration"],
+      "options": {
+        "command": "jest --config apps/api/jest.integration.config.cjs --runInBand"
+      }
+    },
+    "openapi-generate": {
+      "executor": "nx:run-commands",
+      "outputs": ["{projectRoot}/openapi/openapi.json"],
+      "options": {
+        "command": "tsx --tsconfig apps/api/tsconfig.json apps/api/src/openapi/generate-openapi.ts"
+      }
+    },
+    "openapi-check": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsx --tsconfig apps/api/tsconfig.json apps/api/src/openapi/check-openapi.ts"
+      }
+    }
+  }
+}

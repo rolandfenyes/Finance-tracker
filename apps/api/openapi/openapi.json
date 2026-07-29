@@ -1,0 +1,135 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/health/live": {
+      "get": {
+        "operationId": "HealthController_live",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LivenessResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiErrorResponse" }
+              }
+            }
+          }
+        },
+        "summary": "Report that the API process is alive",
+        "tags": ["health"]
+      }
+    },
+    "/api/v1/health/ready": {
+      "get": {
+        "operationId": "HealthController_ready",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReadinessResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiErrorResponse" }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiErrorResponse" }
+              }
+            }
+          }
+        },
+        "summary": "Verify required PostgreSQL and Redis dependencies",
+        "tags": ["health"]
+      }
+    }
+  },
+  "info": {
+    "title": "MyMoneyMap API",
+    "description": "Versioned backend contract for MyMoneyMap",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "schemas": {
+      "ApiViolationResponse": {
+        "type": "object",
+        "properties": {
+          "field": { "type": "string", "example": "fieldName" },
+          "message": { "type": "string", "example": "must be a valid value" }
+        },
+        "required": ["field", "message"]
+      },
+      "ApiErrorBodyResponse": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string", "example": "VALIDATION_FAILED" },
+          "message": {
+            "type": "string",
+            "example": "Request validation failed"
+          },
+          "requestId": {
+            "type": "string",
+            "example": "4d69ed37-7f7f-4318-8b9a-62b3a2469ed5",
+            "format": "uuid"
+          },
+          "violations": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ApiViolationResponse" }
+          }
+        },
+        "required": ["code", "message", "requestId"]
+      },
+      "ApiErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": { "$ref": "#/components/schemas/ApiErrorBodyResponse" }
+        },
+        "required": ["error"]
+      },
+      "LivenessResponse": {
+        "type": "object",
+        "properties": { "status": { "type": "string", "example": "ok" } },
+        "required": ["status"]
+      },
+      "DependencyStatusResponse": {
+        "type": "object",
+        "properties": {
+          "postgresql": { "type": "string", "example": "up", "enum": ["up"] },
+          "redis": { "type": "string", "example": "up", "enum": ["up"] }
+        },
+        "required": ["postgresql", "redis"]
+      },
+      "ReadinessResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "example": "ready" },
+          "dependencies": {
+            "$ref": "#/components/schemas/DependencyStatusResponse"
+          }
+        },
+        "required": ["status", "dependencies"]
+      }
+    }
+  }
+}

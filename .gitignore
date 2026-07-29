@@ -32,3 +32,17 @@
 
 # macOS metadata
 .DS_Store
+
+# Node.js / Nx backend workspace
+node_modules/
+/.nx/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Backend runtime configuration (examples remain tracked)
+/.env.backend
+/.env.backend.test
+
+# Generated OpenAPI scratch files
+/apps/api/openapi/*.tmp
