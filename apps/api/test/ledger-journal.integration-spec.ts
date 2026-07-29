@@ -29,6 +29,7 @@ describe('ledger journal PostgreSQL invariants', () => {
       await migrateOneDown(database);
       await migrateOneDown(database);
       await migrateOneDown(database);
+      await migrateOneDown(database);
       expect(
         (
           await pool.query<{ name: string | null }>(

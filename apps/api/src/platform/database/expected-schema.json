@@ -2651,6 +2651,12 @@
     {
       "schema": "mymoneymap",
       "relation": "journal_entries",
+      "name": "journal_entries_user_period_reporting",
+      "definition": "CREATE INDEX journal_entries_user_period_reporting ON mymoneymap.journal_entries USING btree (user_id, posted_on, economic_type, id) INCLUDE (category_id, note, effective_at, reverses_entry_id, source_module, source_reference_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "journal_entries",
       "name": "journal_entries_user_posted_cursor",
       "definition": "CREATE INDEX journal_entries_user_posted_cursor ON mymoneymap.journal_entries USING btree (user_id, posted_on DESC, effective_at DESC, id DESC)"
     },

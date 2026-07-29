@@ -64,6 +64,10 @@ describe('PostgreSQL baseline and migration system', () => {
           name: '20260729070000_recurrence_scheduling',
           executedAt: expect.any(Date),
         }),
+        expect.objectContaining({
+          name: '20260729080000_reporting_indexes',
+          executedAt: expect.any(Date),
+        }),
       ]);
 
       expect(fingerprint.relations.map(({ schema, name }) => `${schema}.${name}`)).toEqual([
@@ -107,7 +111,7 @@ describe('PostgreSQL baseline and migration system', () => {
       const rollback = await migrateOneDown(database);
       expect(rollback.results).toEqual([
         {
-          migrationName: '20260729070000_recurrence_scheduling',
+          migrationName: '20260729080000_reporting_indexes',
           direction: 'Down',
           status: 'Success',
         },
@@ -123,9 +127,10 @@ describe('PostgreSQL baseline and migration system', () => {
       expect(rolledBack.relations.map(({ name }) => name)).toContain('budget_rules');
       expect(rolledBack.relations.map(({ name }) => name)).toContain('categories');
       expect(rolledBack.relations.map(({ name }) => name)).toContain('basic_incomes');
-      expect(rolledBack.relations.map(({ name }) => name)).not.toContain('recurring_rules');
-      expect(rolledBack.relations.map(({ name }) => name)).not.toContain(
-        'recurrence_job_executions',
+      expect(rolledBack.relations.map(({ name }) => name)).toContain('recurring_rules');
+      expect(rolledBack.relations.map(({ name }) => name)).toContain('recurrence_job_executions');
+      expect(rolledBack.indexes.map(({ name }) => name)).not.toContain(
+        'journal_entries_user_period_reporting',
       );
       expect(
         (
@@ -157,7 +162,7 @@ describe('PostgreSQL baseline and migration system', () => {
       const ledger = await pool.query<{ count: string }>(
         'SELECT count(*)::text AS count FROM mymoneymap_meta.kysely_migration',
       );
-      expect(ledger.rows[0]?.count).toBe('10');
+      expect(ledger.rows[0]?.count).toBe('11');
       const concurrentFingerprint = await readSchemaFingerprint(pool);
       expect(() => assertSchemaMatchesExpected(concurrentFingerprint)).not.toThrow();
     });
@@ -217,6 +222,7 @@ describe('PostgreSQL baseline and migration system', () => {
       '20260729050100_fx_snapshot_invariant',
       '20260729060000_budgeting_categories_income',
       '20260729070000_recurrence_scheduling',
+      '20260729080000_reporting_indexes',
     ]);
     expect(targetStatusNames).not.toContain('028_default_admin');
   });

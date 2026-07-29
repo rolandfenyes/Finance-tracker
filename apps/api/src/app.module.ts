@@ -11,6 +11,7 @@ import { LedgerModule } from './ledger/ledger.module';
 import { CurrencyModule } from './currency/currency.module';
 import { BudgetingModule } from './budgeting/budgeting.module';
 import { RecurrenceModule } from './recurrence/recurrence.module';
+import { ReportingModule } from './reporting/reporting.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { RecurrenceModule } from './recurrence/recurrence.module';
     LedgerModule,
     BudgetingModule,
     RecurrenceModule,
+    ReportingModule,
     HealthModule,
   ],
 })
