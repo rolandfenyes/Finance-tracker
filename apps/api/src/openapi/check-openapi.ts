@@ -12,7 +12,7 @@ async function check(): Promise<void> {
     import('./openapi'),
   ]);
   const app = await NestFactory.create(AppModule, {
-    abortOnError: true,
+    abortOnError: false,
     bufferLogs: true,
     logger: false,
   });
@@ -35,4 +35,7 @@ async function check(): Promise<void> {
   }
 }
 
-void check();
+void check().catch((error: unknown) => {
+  console.error(error);
+  process.exitCode = 1;
+});

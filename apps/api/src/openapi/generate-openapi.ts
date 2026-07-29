@@ -13,7 +13,7 @@ async function generate(): Promise<void> {
     import('./openapi'),
   ]);
   const app = await NestFactory.create(AppModule, {
-    abortOnError: true,
+    abortOnError: false,
     bufferLogs: true,
     logger: false,
   });
@@ -30,4 +30,7 @@ async function generate(): Promise<void> {
   }
 }
 
-void generate();
+void generate().catch((error: unknown) => {
+  console.error(error);
+  process.exitCode = 1;
+});

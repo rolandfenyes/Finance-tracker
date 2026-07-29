@@ -1,6 +1,120 @@
 {
   "openapi": "3.0.0",
   "paths": {
+    "/api/v1/auth/registrations": {
+      "post": {
+        "operationId": "IdentityController_register",
+        "parameters": [],
+        "responses": { "202": { "description": "" } },
+        "summary": "Register an account and issue email verification",
+        "tags": ["Identity"]
+      }
+    },
+    "/api/v1/auth/email-verifications": {
+      "post": {
+        "operationId": "IdentityController_verify",
+        "parameters": [],
+        "responses": { "204": { "description": "" } },
+        "tags": ["Identity"]
+      }
+    },
+    "/api/v1/auth/email-verification-requests": {
+      "post": {
+        "operationId": "IdentityController_requestVerification",
+        "parameters": [],
+        "responses": { "202": { "description": "" } },
+        "tags": ["Identity"]
+      }
+    },
+    "/api/v1/auth/sessions": {
+      "post": {
+        "operationId": "IdentityController_login",
+        "parameters": [],
+        "responses": { "204": { "description": "" } },
+        "tags": ["Identity"]
+      }
+    },
+    "/api/v1/auth/session": {
+      "delete": {
+        "operationId": "IdentityController_logout",
+        "parameters": [],
+        "responses": { "204": { "description": "" } },
+        "security": [{ "cookie": [] }],
+        "tags": ["Identity"]
+      }
+    },
+    "/api/v1/users/me": {
+      "get": {
+        "operationId": "IdentityController_currentUser",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentUserResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "tags": ["Identity"]
+      }
+    },
+    "/api/v1/users/me/password": {
+      "put": {
+        "operationId": "IdentityController_changePassword",
+        "parameters": [],
+        "responses": { "204": { "description": "" } },
+        "security": [{ "cookie": [] }],
+        "tags": ["Identity"]
+      }
+    },
+    "/api/v1/auth/passkeys/registration-options": {
+      "post": {
+        "operationId": "IdentityController_registrationOptions",
+        "parameters": [],
+        "responses": { "201": { "description": "" } },
+        "security": [{ "cookie": [] }],
+        "tags": ["Identity"]
+      }
+    },
+    "/api/v1/auth/passkeys": {
+      "post": {
+        "operationId": "IdentityController_registerPasskey",
+        "parameters": [],
+        "responses": { "201": { "description": "" } },
+        "security": [{ "cookie": [] }],
+        "tags": ["Identity"]
+      }
+    },
+    "/api/v1/auth/passkey-sessions/options": {
+      "post": {
+        "operationId": "IdentityController_passkeyOptions",
+        "parameters": [],
+        "responses": { "201": { "description": "" } },
+        "tags": ["Identity"]
+      }
+    },
+    "/api/v1/auth/passkey-sessions": {
+      "post": {
+        "operationId": "IdentityController_passkeyLogin",
+        "parameters": [],
+        "responses": { "204": { "description": "" } },
+        "tags": ["Identity"]
+      }
+    },
+    "/api/v1/auth/passkeys/{id}": {
+      "delete": {
+        "operationId": "IdentityController_deletePasskey",
+        "parameters": [],
+        "responses": { "204": { "description": "" } },
+        "security": [{ "cookie": [] }],
+        "tags": ["Identity"]
+      }
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "HealthController_live",
@@ -71,7 +185,20 @@
   "tags": [],
   "servers": [],
   "components": {
+    "securitySchemes": {
+      "cookie": { "type": "apiKey", "in": "cookie", "name": "mymoneymap.sid" }
+    },
     "schemas": {
+      "CurrentUserResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "email": { "type": "string", "format": "email" },
+          "role": { "type": "string", "enum": ["free", "premium", "admin"] },
+          "emailVerified": { "type": "boolean" }
+        },
+        "required": ["id", "email", "role", "emailVerified"]
+      },
       "ApiViolationResponse": {
         "type": "object",
         "properties": {

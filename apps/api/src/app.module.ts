@@ -5,6 +5,7 @@ import { DatabaseModule } from './platform/database/database.module';
 import { HealthModule } from './platform/health/health.module';
 import { IdempotencyModule } from './platform/idempotency/idempotency.module';
 import { PlatformLoggingModule } from './platform/logging/logging.module';
+import { IdentityModule } from './identity/identity.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { PlatformLoggingModule } from './platform/logging/logging.module';
     PlatformLoggingModule,
     DatabaseModule,
     IdempotencyModule,
+    IdentityModule,
     HealthModule,
   ],
 })

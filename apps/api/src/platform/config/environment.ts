@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 const booleanText = z.enum(['true', 'false']).transform((value) => value === 'true');
 const positiveMilliseconds = z.coerce.number().int().min(100).max(300_000);
+const positiveSeconds = z.coerce.number().int().min(1).max(31_536_000);
 
 const trustProxy = z
   .union([z.enum(['true', 'false']), z.string().regex(/^[1-9]\d*$/)])
@@ -53,6 +54,27 @@ const environmentSchema = z
       .refine((value) => value.startsWith('redis://') || value.startsWith('rediss://'), {
         message: 'must use the redis:// or rediss:// scheme',
       }),
+    SESSION_SECRET: z.string().min(32),
+    SESSION_COOKIE_NAME: z.string().regex(/^[A-Za-z0-9._-]+$/),
+    SESSION_IDLE_TTL_SECONDS: positiveSeconds,
+    SESSION_ABSOLUTE_TTL_SECONDS: positiveSeconds,
+    REMEMBER_SESSION_ABSOLUTE_TTL_SECONDS: positiveSeconds,
+    EMAIL_VERIFICATION_TTL_SECONDS: positiveSeconds,
+    EMAIL_VERIFICATION_RESEND_SECONDS: positiveSeconds,
+    LOGIN_RATE_LIMIT_WINDOW_SECONDS: positiveSeconds,
+    LOGIN_RATE_LIMIT_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(100),
+    LOGIN_RATE_LIMIT_IP_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(1000),
+    WEBAUTHN_RP_NAME: z.string().min(1).max(100),
+    WEBAUTHN_RP_ID: z
+      .string()
+      .regex(
+        /^(?:localhost|(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)$/i,
+      ),
+    WEBAUTHN_EXPECTED_ORIGINS: z
+      .string()
+      .transform((value) => value.split(',').map((origin) => origin.trim()))
+      .pipe(z.array(z.url()).min(1)),
+    WEBAUTHN_CHALLENGE_TTL_SECONDS: z.coerce.number().int().min(30).max(600),
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']),
     TRUST_PROXY: trustProxy,
     OPENAPI_ENABLED: booleanText,
@@ -84,6 +106,14 @@ const environmentSchema = z
         code: 'custom',
         path: ['APP_BASE_URL'],
         message: 'must not use a loopback host in production',
+      });
+    }
+
+    if (environment.WEBAUTHN_EXPECTED_ORIGINS.some((origin) => !origin.startsWith('https://'))) {
+      context.addIssue({
+        code: 'custom',
+        path: ['WEBAUTHN_EXPECTED_ORIGINS'],
+        message: 'must use HTTPS origins in production',
       });
     }
   });

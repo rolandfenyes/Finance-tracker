@@ -28,7 +28,6 @@ describe('migration integrity', () => {
     const targetMigrationSource = sources.join('\n').toLowerCase();
 
     expect(targetMigrationSource).not.toMatch(/default[_ -]?admin/);
-    expect(targetMigrationSource).not.toMatch(/password_hash/);
     expect(targetMigrationSource).not.toMatch(/insert\s+into\s+users/);
   });
 });

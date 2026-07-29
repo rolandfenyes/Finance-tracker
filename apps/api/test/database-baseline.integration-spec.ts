@@ -32,19 +32,36 @@ describe('PostgreSQL baseline and migration system', () => {
           name: '20260729010000_idempotency_keys',
           executedAt: expect.any(Date),
         }),
+        expect.objectContaining({
+          name: '20260729020000_identity_access',
+          executedAt: expect.any(Date),
+        }),
+        expect.objectContaining({
+          name: '20260729020100_passkey_revision',
+          executedAt: expect.any(Date),
+        }),
       ]);
 
       expect(fingerprint.relations.map(({ schema, name }) => `${schema}.${name}`)).toEqual([
+        'mymoneymap.email_verification_tokens',
         'mymoneymap.idempotency_keys',
+        'mymoneymap.login_audit_events',
+        'mymoneymap.passkeys',
+        'mymoneymap.users',
         'mymoneymap_meta.kysely_migration',
         'mymoneymap_meta.kysely_migration_lock',
       ]);
-      expect(JSON.stringify(fingerprint).toLowerCase()).not.toContain('admin');
-      expect(JSON.stringify(fingerprint).toLowerCase()).not.toContain('users');
+      expect(
+        (
+          await pool.query<{ count: string }>(
+            'SELECT count(*)::text AS count FROM mymoneymap.users',
+          )
+        ).rows[0]?.count,
+      ).toBe('0');
     });
   });
 
-  it('rolls back the shared-kernel migration and deterministically reapplies it', async () => {
+  it('rolls back the identity migration and deterministically reapplies it', async () => {
     await withIsolatedPostgresDatabase(async ({ database, pool }) => {
       await migrateToLatest(database);
       const firstFingerprint = await readSchemaFingerprint(pool);
@@ -52,14 +69,19 @@ describe('PostgreSQL baseline and migration system', () => {
       const rollback = await migrateOneDown(database);
       expect(rollback.results).toEqual([
         {
-          migrationName: '20260729010000_idempotency_keys',
+          migrationName: '20260729020100_passkey_revision',
           direction: 'Down',
           status: 'Success',
         },
       ]);
       const rolledBack = await readSchemaFingerprint(pool);
       expect(rolledBack.schemas).toEqual(['mymoneymap', 'mymoneymap_meta']);
-      expect(rolledBack.relations.map(({ name }) => name)).not.toContain('idempotency_keys');
+      expect(rolledBack.relations.map(({ name }) => name)).toContain('users');
+      expect(
+        rolledBack.columns.some(
+          ({ relation, name }) => relation === 'passkeys' && name === 'revision',
+        ),
+      ).toBe(false);
 
       await migrateToLatest(database);
       expect(await readSchemaFingerprint(pool)).toEqual(firstFingerprint);
@@ -78,7 +100,7 @@ describe('PostgreSQL baseline and migration system', () => {
       const ledger = await pool.query<{ count: string }>(
         'SELECT count(*)::text AS count FROM mymoneymap_meta.kysely_migration',
       );
-      expect(ledger.rows[0]?.count).toBe('2');
+      expect(ledger.rows[0]?.count).toBe('4');
       const concurrentFingerprint = await readSchemaFingerprint(pool);
       expect(() => assertSchemaMatchesExpected(concurrentFingerprint)).not.toThrow();
     });
@@ -130,6 +152,8 @@ describe('PostgreSQL baseline and migration system', () => {
     expect(targetStatusNames).toEqual([
       '20260729000000_database_baseline',
       '20260729010000_idempotency_keys',
+      '20260729020000_identity_access',
+      '20260729020100_passkey_revision',
     ]);
     expect(targetStatusNames).not.toContain('028_default_admin');
   });

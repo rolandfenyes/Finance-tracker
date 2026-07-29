@@ -71,12 +71,24 @@ describe('platform HTTP contract', () => {
     });
   });
 
-  it('publishes only the health API operations in OpenAPI', async () => {
+  it('publishes the completed platform and identity API operations in OpenAPI', async () => {
     const response = await request(app.getHttpServer()).get('/api/docs/openapi.json').expect(200);
 
     expect(Object.keys(response.body.paths).sort()).toEqual([
+      '/api/v1/auth/email-verification-requests',
+      '/api/v1/auth/email-verifications',
+      '/api/v1/auth/passkey-sessions',
+      '/api/v1/auth/passkey-sessions/options',
+      '/api/v1/auth/passkeys',
+      '/api/v1/auth/passkeys/registration-options',
+      '/api/v1/auth/passkeys/{id}',
+      '/api/v1/auth/registrations',
+      '/api/v1/auth/session',
+      '/api/v1/auth/sessions',
       '/api/v1/health/live',
       '/api/v1/health/ready',
+      '/api/v1/users/me',
+      '/api/v1/users/me/password',
     ]);
   });
 });

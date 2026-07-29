@@ -2,6 +2,55 @@ import type { ColumnType } from 'kysely';
 import type { JsonValue } from '../events/outbox.port';
 
 type DatabaseTimestamp = ColumnType<Date, Date, Date>;
+type GeneratedTimestamp = ColumnType<Date, Date | undefined, Date>;
+
+export interface UsersTable {
+  id: string;
+  email: string;
+  password_hash: string;
+  full_name: string;
+  date_of_birth: string;
+  role: 'free' | 'premium' | 'admin';
+  status: 'active' | 'inactive';
+  email_verified_at: DatabaseTimestamp | null;
+  created_at: GeneratedTimestamp;
+  updated_at: DatabaseTimestamp;
+}
+
+export interface EmailVerificationTokensTable {
+  id: string;
+  user_id: string;
+  token_hash: string;
+  expires_at: DatabaseTimestamp;
+  consumed_at: DatabaseTimestamp | null;
+  created_at: GeneratedTimestamp;
+}
+
+export interface PasskeysTable {
+  id: string;
+  user_id: string;
+  credential_id: string;
+  public_key: Uint8Array;
+  counter: ColumnType<string, string, string>;
+  revision: ColumnType<string, string, string>;
+  transports: string[];
+  device_type: string;
+  backed_up: boolean;
+  label: string;
+  created_at: GeneratedTimestamp;
+  last_used_at: DatabaseTimestamp | null;
+}
+
+export interface LoginAuditEventsTable {
+  id: string;
+  user_id: string | null;
+  email_hash: string;
+  outcome: 'success' | 'failure' | 'throttled';
+  method: 'password' | 'passkey';
+  ip_hash: string;
+  user_agent_hash: string;
+  created_at: GeneratedTimestamp;
+}
 
 export interface IdempotencyKeysTable {
   scope_id: string;
@@ -16,4 +65,8 @@ export interface IdempotencyKeysTable {
 
 export interface DatabaseSchema {
   'mymoneymap.idempotency_keys': IdempotencyKeysTable;
+  'mymoneymap.users': UsersTable;
+  'mymoneymap.email_verification_tokens': EmailVerificationTokensTable;
+  'mymoneymap.passkeys': PasskeysTable;
+  'mymoneymap.login_audit_events': LoginAuditEventsTable;
 }

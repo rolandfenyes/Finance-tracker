@@ -3,7 +3,27 @@
   "relations": [
     {
       "schema": "mymoneymap",
+      "name": "email_verification_tokens",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
       "name": "idempotency_keys",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "login_audit_events",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "passkeys",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "users",
       "kind": "r"
     },
     {
@@ -18,6 +38,54 @@
     }
   ],
   "columns": [
+    {
+      "schema": "mymoneymap",
+      "relation": "email_verification_tokens",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_verification_tokens",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_verification_tokens",
+      "name": "token_hash",
+      "type": "character(64)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_verification_tokens",
+      "name": "expires_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_verification_tokens",
+      "name": "consumed_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_verification_tokens",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
     {
       "schema": "mymoneymap",
       "relation": "idempotency_keys",
@@ -83,6 +151,246 @@
       "default": null
     },
     {
+      "schema": "mymoneymap",
+      "relation": "login_audit_events",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "login_audit_events",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "login_audit_events",
+      "name": "email_hash",
+      "type": "character(64)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "login_audit_events",
+      "name": "outcome",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "login_audit_events",
+      "name": "method",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "login_audit_events",
+      "name": "ip_hash",
+      "type": "character(64)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "login_audit_events",
+      "name": "user_agent_hash",
+      "type": "character(64)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "login_audit_events",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "passkeys",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "passkeys",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "passkeys",
+      "name": "credential_id",
+      "type": "text",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "passkeys",
+      "name": "public_key",
+      "type": "bytea",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "passkeys",
+      "name": "counter",
+      "type": "bigint",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "passkeys",
+      "name": "transports",
+      "type": "text[]",
+      "nullable": false,
+      "default": "'{}'::text[]"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "passkeys",
+      "name": "device_type",
+      "type": "character varying(32)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "passkeys",
+      "name": "backed_up",
+      "type": "boolean",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "passkeys",
+      "name": "label",
+      "type": "character varying(100)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "passkeys",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "passkeys",
+      "name": "last_used_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "passkeys",
+      "name": "revision",
+      "type": "bigint",
+      "nullable": false,
+      "default": "0"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "users",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "users",
+      "name": "email",
+      "type": "character varying(320)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "users",
+      "name": "password_hash",
+      "type": "text",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "users",
+      "name": "full_name",
+      "type": "character varying(200)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "users",
+      "name": "date_of_birth",
+      "type": "date",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "users",
+      "name": "role",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": "'free'::character varying"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "users",
+      "name": "status",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": "'active'::character varying"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "users",
+      "name": "email_verified_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "users",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "users",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
       "schema": "mymoneymap_meta",
       "relation": "kysely_migration",
       "name": "name",
@@ -116,6 +424,36 @@
     }
   ],
   "constraints": [
+    {
+      "schema": "mymoneymap",
+      "relation": "email_verification_tokens",
+      "name": "email_verification_consumed_check",
+      "definition": "CHECK (consumed_at IS NULL OR consumed_at >= created_at)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_verification_tokens",
+      "name": "email_verification_expiry_check",
+      "definition": "CHECK (expires_at > created_at)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_verification_tokens",
+      "name": "email_verification_tokens_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_verification_tokens",
+      "name": "email_verification_tokens_token_hash_key",
+      "definition": "UNIQUE (token_hash)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_verification_tokens",
+      "name": "email_verification_tokens_user_id_fkey",
+      "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE CASCADE"
+    },
     {
       "schema": "mymoneymap",
       "relation": "idempotency_keys",
@@ -153,6 +491,96 @@
       "definition": "CHECK (status::text = ANY (ARRAY['in_progress'::character varying, 'completed'::character varying]::text[]))"
     },
     {
+      "schema": "mymoneymap",
+      "relation": "login_audit_events",
+      "name": "login_audit_events_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "login_audit_events",
+      "name": "login_audit_events_user_id_fkey",
+      "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE SET NULL"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "login_audit_events",
+      "name": "login_audit_method_check",
+      "definition": "CHECK (method::text = ANY (ARRAY['password'::character varying, 'passkey'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "login_audit_events",
+      "name": "login_audit_outcome_check",
+      "definition": "CHECK (outcome::text = ANY (ARRAY['success'::character varying, 'failure'::character varying, 'throttled'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "passkeys",
+      "name": "passkeys_counter_check",
+      "definition": "CHECK (counter >= 0)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "passkeys",
+      "name": "passkeys_credential_id_key",
+      "definition": "UNIQUE (credential_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "passkeys",
+      "name": "passkeys_label_check",
+      "definition": "CHECK (char_length(btrim(label::text)) >= 1 AND char_length(btrim(label::text)) <= 100)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "passkeys",
+      "name": "passkeys_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "passkeys",
+      "name": "passkeys_revision_check",
+      "definition": "CHECK (revision >= 0)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "passkeys",
+      "name": "passkeys_user_id_fkey",
+      "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "users",
+      "name": "users_email_normalized_check",
+      "definition": "CHECK (email::text = lower(btrim(email::text)))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "users",
+      "name": "users_name_check",
+      "definition": "CHECK (char_length(btrim(full_name::text)) >= 1 AND char_length(btrim(full_name::text)) <= 200)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "users",
+      "name": "users_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "users",
+      "name": "users_role_check",
+      "definition": "CHECK (role::text = ANY (ARRAY['free'::character varying, 'premium'::character varying, 'admin'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "users",
+      "name": "users_status_check",
+      "definition": "CHECK (status::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying]::text[]))"
+    },
+    {
       "schema": "mymoneymap_meta",
       "relation": "kysely_migration",
       "name": "kysely_migration_pkey",
@@ -168,9 +596,69 @@
   "indexes": [
     {
       "schema": "mymoneymap",
+      "relation": "email_verification_tokens",
+      "name": "email_verification_one_live_token",
+      "definition": "CREATE UNIQUE INDEX email_verification_one_live_token ON mymoneymap.email_verification_tokens USING btree (user_id) WHERE (consumed_at IS NULL)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_verification_tokens",
+      "name": "email_verification_tokens_pkey",
+      "definition": "CREATE UNIQUE INDEX email_verification_tokens_pkey ON mymoneymap.email_verification_tokens USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_verification_tokens",
+      "name": "email_verification_tokens_token_hash_key",
+      "definition": "CREATE UNIQUE INDEX email_verification_tokens_token_hash_key ON mymoneymap.email_verification_tokens USING btree (token_hash)"
+    },
+    {
+      "schema": "mymoneymap",
       "relation": "idempotency_keys",
       "name": "idempotency_keys_pkey",
       "definition": "CREATE UNIQUE INDEX idempotency_keys_pkey ON mymoneymap.idempotency_keys USING btree (scope_id, operation, key_hash)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "login_audit_events",
+      "name": "login_audit_created_at_index",
+      "definition": "CREATE INDEX login_audit_created_at_index ON mymoneymap.login_audit_events USING btree (created_at)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "login_audit_events",
+      "name": "login_audit_events_pkey",
+      "definition": "CREATE UNIQUE INDEX login_audit_events_pkey ON mymoneymap.login_audit_events USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "passkeys",
+      "name": "passkeys_credential_id_key",
+      "definition": "CREATE UNIQUE INDEX passkeys_credential_id_key ON mymoneymap.passkeys USING btree (credential_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "passkeys",
+      "name": "passkeys_pkey",
+      "definition": "CREATE UNIQUE INDEX passkeys_pkey ON mymoneymap.passkeys USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "passkeys",
+      "name": "passkeys_user_id_index",
+      "definition": "CREATE INDEX passkeys_user_id_index ON mymoneymap.passkeys USING btree (user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "users",
+      "name": "users_email_unique",
+      "definition": "CREATE UNIQUE INDEX users_email_unique ON mymoneymap.users USING btree (email)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "users",
+      "name": "users_pkey",
+      "definition": "CREATE UNIQUE INDEX users_pkey ON mymoneymap.users USING btree (id)"
     },
     {
       "schema": "mymoneymap_meta",

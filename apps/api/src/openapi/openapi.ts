@@ -9,6 +9,7 @@ export function createOpenApiDocument(app: INestApplication): OpenAPIObject {
     .setTitle('MyMoneyMap API')
     .setDescription('Versioned backend contract for MyMoneyMap')
     .setVersion('1.0.0')
+    .addCookieAuth('mymoneymap.sid')
     .build();
 
   return SwaggerModule.createDocument(app, config, {
