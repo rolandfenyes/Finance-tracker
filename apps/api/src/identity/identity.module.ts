@@ -24,6 +24,12 @@ import { DeferredVerificationNotifier, VERIFICATION_NOTIFIER } from './verificat
     VerifiedEmailGuard,
     { provide: VERIFICATION_NOTIFIER, useClass: DeferredVerificationNotifier },
   ],
-  exports: [AuthenticationGuard, VerifiedEmailGuard, RedisSecurityService, SessionService],
+  exports: [
+    AuthenticationGuard,
+    VerifiedEmailGuard,
+    IdentityRepository,
+    RedisSecurityService,
+    SessionService,
+  ],
 })
 export class IdentityModule {}

@@ -22,6 +22,7 @@ async function check(): Promise<void> {
     await app.init();
     const actual = await format(JSON.stringify(openApi.createOpenApiDocument(app)), {
       parser: 'json',
+      printWidth: 100,
     });
     const expected = await readFile(openApi.OPENAPI_DOCUMENT_PATH, 'utf8');
 

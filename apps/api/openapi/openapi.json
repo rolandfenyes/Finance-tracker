@@ -43,26 +43,6 @@
         "tags": ["Identity"]
       }
     },
-    "/api/v1/users/me": {
-      "get": {
-        "operationId": "IdentityController_currentUser",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CurrentUserResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [{ "cookie": [] }],
-        "tags": ["Identity"]
-      }
-    },
     "/api/v1/users/me/password": {
       "put": {
         "operationId": "IdentityController_changePassword",
@@ -115,6 +95,160 @@
         "tags": ["Identity"]
       }
     },
+    "/api/v1/users/me": {
+      "get": {
+        "operationId": "UsersController_currentUser",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CurrentUserResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Get the authenticated user profile, preferences, and entitlements",
+        "tags": ["Users and settings"]
+      },
+      "patch": {
+        "operationId": "UsersController_updateCurrentUser",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateCurrentUserDto" },
+              "examples": {
+                "profileAndLanguage": {
+                  "summary": "Update profile details and desired language",
+                  "value": {
+                    "fullName": "Ada Example",
+                    "dateOfBirth": "1990-01-15",
+                    "desiredLanguage": "hu"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CurrentUserResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Update the authenticated user profile and desired language",
+        "tags": ["Users and settings"]
+      }
+    },
+    "/api/v1/users/me/preferences/theme": {
+      "get": {
+        "operationId": "UsersController_theme",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ThemePreferencesResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Get the current and supported theme identifiers",
+        "tags": ["Users and settings"]
+      },
+      "patch": {
+        "operationId": "UsersController_updateTheme",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateThemeDto" },
+              "examples": {
+                "theme": {
+                  "summary": "Select a supported theme identifier",
+                  "value": { "theme": "verdant-horizon" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ThemePreferencesResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Set a validated theme identifier",
+        "tags": ["Users and settings"]
+      }
+    },
+    "/api/v1/users/me/onboarding": {
+      "get": {
+        "operationId": "UsersController_onboarding",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OnboardingResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Get persisted onboarding and tutorial progress",
+        "tags": ["Users and settings"]
+      },
+      "patch": {
+        "operationId": "UsersController_completeTutorial",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CompleteTutorialDto" },
+              "examples": {
+                "completion": {
+                  "summary": "Mark the tutorial completed",
+                  "value": { "tutorialCompleted": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OnboardingResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Complete the post-onboarding tutorial",
+        "tags": ["Users and settings"]
+      }
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "HealthController_live",
@@ -123,17 +257,13 @@
           "200": {
             "description": "",
             "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/LivenessResponse" }
-              }
+              "application/json": { "schema": { "$ref": "#/components/schemas/LivenessResponse" } }
             }
           },
           "500": {
             "description": "",
             "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/ApiErrorResponse" }
-              }
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
             }
           }
         },
@@ -149,25 +279,19 @@
           "200": {
             "description": "",
             "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/ReadinessResponse" }
-              }
+              "application/json": { "schema": { "$ref": "#/components/schemas/ReadinessResponse" } }
             }
           },
           "500": {
             "description": "",
             "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/ApiErrorResponse" }
-              }
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
             }
           },
           "503": {
             "description": "",
             "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/ApiErrorResponse" }
-              }
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
             }
           }
         },
@@ -185,19 +309,177 @@
   "tags": [],
   "servers": [],
   "components": {
-    "securitySchemes": {
-      "cookie": { "type": "apiKey", "in": "cookie", "name": "mymoneymap.sid" }
-    },
+    "securitySchemes": { "cookie": { "type": "apiKey", "in": "cookie", "name": "mymoneymap.sid" } },
     "schemas": {
+      "UpdateCurrentUserDto": {
+        "type": "object",
+        "properties": {
+          "fullName": { "type": "string", "example": "Ada Example" },
+          "dateOfBirth": { "type": "string", "format": "date", "example": "1990-01-15" },
+          "desiredLanguage": { "type": "string", "enum": ["en", "hu", "es"], "example": "en" }
+        }
+      },
+      "UpdateThemeDto": {
+        "type": "object",
+        "properties": {
+          "theme": {
+            "type": "string",
+            "enum": [
+              "polar-quartz",
+              "verdant-horizon",
+              "celestial-tide",
+              "blush-nocturne",
+              "ember-vanguard",
+              "lilac-eclipse",
+              "solaris-bloom",
+              "dune-mirage"
+            ],
+            "example": "verdant-horizon"
+          }
+        },
+        "required": ["theme"]
+      },
+      "CompleteTutorialDto": {
+        "type": "object",
+        "properties": {
+          "tutorialCompleted": {
+            "type": "boolean",
+            "enum": [true],
+            "description": "Completes the post-onboarding tutorial. False is not a valid transition."
+          }
+        },
+        "required": ["tutorialCompleted"]
+      },
+      "ResourceEntitlementDto": {
+        "type": "object",
+        "properties": {
+          "allowed": { "type": "boolean" },
+          "limit": {
+            "type": "number",
+            "nullable": true,
+            "description": "Null means unlimited only when allowed is true; otherwise the resource is unavailable."
+          }
+        },
+        "required": ["allowed", "limit"]
+      },
+      "ResourceEntitlementsDto": {
+        "type": "object",
+        "properties": {
+          "currencies": { "$ref": "#/components/schemas/ResourceEntitlementDto" },
+          "activeGoals": { "$ref": "#/components/schemas/ResourceEntitlementDto" },
+          "activeLoans": { "$ref": "#/components/schemas/ResourceEntitlementDto" },
+          "categories": { "$ref": "#/components/schemas/ResourceEntitlementDto" },
+          "activeScheduledItems": { "$ref": "#/components/schemas/ResourceEntitlementDto" }
+        },
+        "required": [
+          "currencies",
+          "activeGoals",
+          "activeLoans",
+          "categories",
+          "activeScheduledItems"
+        ]
+      },
+      "EntitlementsDto": {
+        "type": "object",
+        "properties": {
+          "personalFinanceAccess": { "type": "boolean" },
+          "administration": { "type": "boolean" },
+          "cashFlowRuleEditing": { "type": "boolean" },
+          "resources": { "$ref": "#/components/schemas/ResourceEntitlementsDto" }
+        },
+        "required": ["personalFinanceAccess", "administration", "cashFlowRuleEditing", "resources"]
+      },
       "CurrentUserResponseDto": {
         "type": "object",
         "properties": {
           "id": { "type": "string", "format": "uuid" },
           "email": { "type": "string", "format": "email" },
+          "fullName": { "type": "string", "example": "Ada Example" },
+          "dateOfBirth": { "type": "string", "format": "date", "example": "1990-01-15" },
           "role": { "type": "string", "enum": ["free", "premium", "admin"] },
-          "emailVerified": { "type": "boolean" }
+          "emailVerified": { "type": "boolean" },
+          "theme": {
+            "type": "string",
+            "enum": [
+              "polar-quartz",
+              "verdant-horizon",
+              "celestial-tide",
+              "blush-nocturne",
+              "ember-vanguard",
+              "lilac-eclipse",
+              "solaris-bloom",
+              "dune-mirage"
+            ]
+          },
+          "desiredLanguage": { "type": "string", "enum": ["en", "hu", "es"] },
+          "entitlements": { "$ref": "#/components/schemas/EntitlementsDto" }
         },
-        "required": ["id", "email", "role", "emailVerified"]
+        "required": [
+          "id",
+          "email",
+          "fullName",
+          "dateOfBirth",
+          "role",
+          "emailVerified",
+          "theme",
+          "desiredLanguage",
+          "entitlements"
+        ]
+      },
+      "ThemePreferencesResponseDto": {
+        "type": "object",
+        "properties": {
+          "theme": {
+            "type": "string",
+            "enum": [
+              "polar-quartz",
+              "verdant-horizon",
+              "celestial-tide",
+              "blush-nocturne",
+              "ember-vanguard",
+              "lilac-eclipse",
+              "solaris-bloom",
+              "dune-mirage"
+            ]
+          },
+          "supportedThemes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "polar-quartz",
+                "verdant-horizon",
+                "celestial-tide",
+                "blush-nocturne",
+                "ember-vanguard",
+                "lilac-eclipse",
+                "solaris-bloom",
+                "dune-mirage"
+              ]
+            }
+          }
+        },
+        "required": ["theme", "supportedThemes"]
+      },
+      "OnboardingResponseDto": {
+        "type": "object",
+        "properties": {
+          "currentStep": { "type": "number", "minimum": 0, "maximum": 6 },
+          "next": {
+            "type": "string",
+            "enum": ["theme", "rules", "currencies", "categories", "income", "tutorial", "complete"]
+          },
+          "onboardingComplete": { "type": "boolean" },
+          "tutorialRequired": { "type": "boolean" },
+          "tutorialCompleted": { "type": "boolean" }
+        },
+        "required": [
+          "currentStep",
+          "next",
+          "onboardingComplete",
+          "tutorialRequired",
+          "tutorialCompleted"
+        ]
       },
       "ApiViolationResponse": {
         "type": "object",
@@ -230,10 +512,7 @@
             ],
             "example": "VALIDATION_FAILED"
           },
-          "message": {
-            "type": "string",
-            "example": "Request validation failed"
-          },
+          "message": { "type": "string", "example": "Request validation failed" },
           "requestId": {
             "type": "string",
             "example": "4d69ed37-7f7f-4318-8b9a-62b3a2469ed5",
@@ -248,9 +527,7 @@
       },
       "ApiErrorResponse": {
         "type": "object",
-        "properties": {
-          "error": { "$ref": "#/components/schemas/ApiErrorBodyResponse" }
-        },
+        "properties": { "error": { "$ref": "#/components/schemas/ApiErrorBodyResponse" } },
         "required": ["error"]
       },
       "LivenessResponse": {
@@ -270,9 +547,7 @@
         "type": "object",
         "properties": {
           "status": { "type": "string", "example": "ready" },
-          "dependencies": {
-            "$ref": "#/components/schemas/DependencyStatusResponse"
-          }
+          "dependencies": { "$ref": "#/components/schemas/DependencyStatusResponse" }
         },
         "required": ["status", "dependencies"]
       }

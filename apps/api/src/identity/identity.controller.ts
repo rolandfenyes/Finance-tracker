@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Delete,
-  Get,
   HttpCode,
   HttpStatus,
   Inject,
@@ -16,13 +15,11 @@ import {
   ApiCookieAuth,
   ApiCreatedResponse,
   ApiNoContentResponse,
-  ApiOkResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
 import type { Request } from 'express';
 import {
-  CurrentUserResponseDto,
   EmailVerificationDto,
   EmailVerificationRequestDto,
   PasskeyAuthenticationDto,
@@ -33,7 +30,6 @@ import {
   RegistrationDto,
 } from './identity.dto';
 import { AuthenticationGuard, VerifiedEmailGuard } from './authentication.guard';
-import { IdentityRepository } from './identity.repository';
 import { IdentityService } from './identity.service';
 import { PasskeyService } from './passkey.service';
 import { SessionService } from './session.service';
@@ -45,7 +41,6 @@ export class IdentityController {
     @Inject(IdentityService) private readonly identity: IdentityService,
     @Inject(SessionService) private readonly sessions: SessionService,
     @Inject(PasskeyService) private readonly passkeys: PasskeyService,
-    @Inject(IdentityRepository) private readonly repository: IdentityRepository,
   ) {}
 
   @Post('auth/registrations')
@@ -89,21 +84,6 @@ export class IdentityController {
   @ApiNoContentResponse()
   async logout(@Req() request: Request): Promise<void> {
     await this.sessions.revoke(request);
-  }
-
-  @Get('users/me')
-  @UseGuards(AuthenticationGuard)
-  @ApiCookieAuth()
-  @ApiOkResponse({ type: CurrentUserResponseDto })
-  async currentUser(@Req() request: Request): Promise<CurrentUserResponseDto> {
-    const principal = request.session.principal!;
-    const user = await this.repository.findUserById(principal.userId);
-    return {
-      id: principal.userId,
-      email: user!.email,
-      role: principal.role,
-      emailVerified: principal.emailVerified,
-    };
   }
 
   @Put('users/me/password')

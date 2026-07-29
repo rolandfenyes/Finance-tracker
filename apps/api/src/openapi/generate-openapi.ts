@@ -22,7 +22,7 @@ async function generate(): Promise<void> {
     configureApiApplication(app, { installOpenApi: false });
     await app.init();
     const document = openApi.createOpenApiDocument(app);
-    const content = await format(JSON.stringify(document), { parser: 'json' });
+    const content = await format(JSON.stringify(document), { parser: 'json', printWidth: 100 });
     await mkdir(dirname(openApi.OPENAPI_DOCUMENT_PATH), { recursive: true });
     await writeFile(openApi.OPENAPI_DOCUMENT_PATH, content, 'utf8');
   } finally {

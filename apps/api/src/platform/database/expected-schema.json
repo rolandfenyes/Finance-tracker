@@ -391,6 +391,46 @@
       "default": null
     },
     {
+      "schema": "mymoneymap",
+      "relation": "users",
+      "name": "theme",
+      "type": "character varying(32)",
+      "nullable": false,
+      "default": "'verdant-horizon'::character varying"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "users",
+      "name": "desired_language",
+      "type": "character varying(2)",
+      "nullable": false,
+      "default": "'en'::character varying"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "users",
+      "name": "onboard_step",
+      "type": "smallint",
+      "nullable": false,
+      "default": "0"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "users",
+      "name": "needs_tutorial",
+      "type": "boolean",
+      "nullable": false,
+      "default": "true"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "users",
+      "name": "tutorial_seen",
+      "type": "boolean",
+      "nullable": false,
+      "default": "false"
+    },
+    {
       "schema": "mymoneymap_meta",
       "relation": "kysely_migration",
       "name": "name",
@@ -553,6 +593,12 @@
     {
       "schema": "mymoneymap",
       "relation": "users",
+      "name": "users_desired_language_check",
+      "definition": "CHECK (desired_language::text = ANY (ARRAY['en'::character varying, 'hu'::character varying, 'es'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "users",
       "name": "users_email_normalized_check",
       "definition": "CHECK (email::text = lower(btrim(email::text)))"
     },
@@ -561,6 +607,12 @@
       "relation": "users",
       "name": "users_name_check",
       "definition": "CHECK (char_length(btrim(full_name::text)) >= 1 AND char_length(btrim(full_name::text)) <= 200)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "users",
+      "name": "users_onboard_step_check",
+      "definition": "CHECK (onboard_step >= 0 AND onboard_step <= 6)"
     },
     {
       "schema": "mymoneymap",
@@ -579,6 +631,18 @@
       "relation": "users",
       "name": "users_status_check",
       "definition": "CHECK (status::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "users",
+      "name": "users_theme_check",
+      "definition": "CHECK (theme::text = ANY (ARRAY['polar-quartz'::character varying, 'verdant-horizon'::character varying, 'celestial-tide'::character varying, 'blush-nocturne'::character varying, 'ember-vanguard'::character varying, 'lilac-eclipse'::character varying, 'solaris-bloom'::character varying, 'dune-mirage'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "users",
+      "name": "users_tutorial_state_check",
+      "definition": "CHECK (NOT tutorial_seen OR NOT needs_tutorial)"
     },
     {
       "schema": "mymoneymap_meta",

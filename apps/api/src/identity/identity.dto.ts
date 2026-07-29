@@ -12,7 +12,6 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import type { UserRole } from './identity.types';
 
 export class RegistrationDto {
   @ApiProperty({ type: String, example: 'ada@example.test' })
@@ -113,18 +112,4 @@ export class PasskeyAuthenticationDto {
   @IsOptional()
   @IsBoolean()
   remember?: boolean;
-}
-
-export class CurrentUserResponseDto {
-  @ApiProperty({ type: String, format: 'uuid' })
-  id!: string;
-
-  @ApiProperty({ type: String, format: 'email' })
-  email!: string;
-
-  @ApiProperty({ type: String, enum: ['free', 'premium', 'admin'] })
-  role!: UserRole;
-
-  @ApiProperty({ type: Boolean })
-  emailVerified!: boolean;
 }

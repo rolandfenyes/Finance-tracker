@@ -88,7 +88,9 @@ describe('platform HTTP contract', () => {
       '/api/v1/health/live',
       '/api/v1/health/ready',
       '/api/v1/users/me',
+      '/api/v1/users/me/onboarding',
       '/api/v1/users/me/password',
+      '/api/v1/users/me/preferences/theme',
     ]);
   });
 });
