@@ -98,6 +98,8 @@ describe('platform HTTP contract', () => {
       '/api/v1/journal/entries',
       '/api/v1/journal/entries/{id}/corrections',
       '/api/v1/journal/entries/{id}/reversals',
+      '/api/v1/recurring-rules',
+      '/api/v1/recurring-rules/{id}',
       '/api/v1/users/me',
       '/api/v1/users/me/currencies',
       '/api/v1/users/me/currencies/{code}',

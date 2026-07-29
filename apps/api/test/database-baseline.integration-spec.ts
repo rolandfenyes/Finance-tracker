@@ -60,6 +60,10 @@ describe('PostgreSQL baseline and migration system', () => {
           name: '20260729060000_budgeting_categories_income',
           executedAt: expect.any(Date),
         }),
+        expect.objectContaining({
+          name: '20260729070000_recurrence_scheduling',
+          executedAt: expect.any(Date),
+        }),
       ]);
 
       expect(fingerprint.relations.map(({ schema, name }) => `${schema}.${name}`)).toEqual([
@@ -76,6 +80,10 @@ describe('PostgreSQL baseline and migration system', () => {
         'mymoneymap.ledger_accounts',
         'mymoneymap.login_audit_events',
         'mymoneymap.passkeys',
+        'mymoneymap.recurrence_job_events',
+        'mymoneymap.recurrence_job_executions',
+        'mymoneymap.recurring_occurrences',
+        'mymoneymap.recurring_rules',
         'mymoneymap.user_currencies',
         'mymoneymap.users',
         'mymoneymap_meta.kysely_migration',
@@ -99,7 +107,7 @@ describe('PostgreSQL baseline and migration system', () => {
       const rollback = await migrateOneDown(database);
       expect(rollback.results).toEqual([
         {
-          migrationName: '20260729060000_budgeting_categories_income',
+          migrationName: '20260729070000_recurrence_scheduling',
           direction: 'Down',
           status: 'Success',
         },
@@ -112,9 +120,13 @@ describe('PostgreSQL baseline and migration system', () => {
       ).toBe(true);
       expect(rolledBack.relations.map(({ name }) => name)).toContain('journal_entries');
       expect(rolledBack.relations.map(({ name }) => name)).toContain('fx_quotes');
-      expect(rolledBack.relations.map(({ name }) => name)).not.toContain('budget_rules');
-      expect(rolledBack.relations.map(({ name }) => name)).not.toContain('categories');
-      expect(rolledBack.relations.map(({ name }) => name)).not.toContain('basic_incomes');
+      expect(rolledBack.relations.map(({ name }) => name)).toContain('budget_rules');
+      expect(rolledBack.relations.map(({ name }) => name)).toContain('categories');
+      expect(rolledBack.relations.map(({ name }) => name)).toContain('basic_incomes');
+      expect(rolledBack.relations.map(({ name }) => name)).not.toContain('recurring_rules');
+      expect(rolledBack.relations.map(({ name }) => name)).not.toContain(
+        'recurrence_job_executions',
+      );
       expect(
         (
           await pool.query<{ present: boolean }>(
@@ -145,7 +157,7 @@ describe('PostgreSQL baseline and migration system', () => {
       const ledger = await pool.query<{ count: string }>(
         'SELECT count(*)::text AS count FROM mymoneymap_meta.kysely_migration',
       );
-      expect(ledger.rows[0]?.count).toBe('9');
+      expect(ledger.rows[0]?.count).toBe('10');
       const concurrentFingerprint = await readSchemaFingerprint(pool);
       expect(() => assertSchemaMatchesExpected(concurrentFingerprint)).not.toThrow();
     });
@@ -204,6 +216,7 @@ describe('PostgreSQL baseline and migration system', () => {
       '20260729050000_currency_fx',
       '20260729050100_fx_snapshot_invariant',
       '20260729060000_budgeting_categories_income',
+      '20260729070000_recurrence_scheduling',
     ]);
     expect(targetStatusNames).not.toContain('028_default_admin');
   });

@@ -55,6 +55,7 @@ const environmentSchema = z
         message: 'must use the redis:// or rediss:// scheme',
       }),
     FX_REFRESH_ENABLED: booleanText,
+    RECURRENCE_ENABLED: booleanText.default(false),
     FX_PROVIDER_TIMEOUT_MS: positiveMilliseconds,
     SESSION_SECRET: z.string().min(32),
     SESSION_COOKIE_NAME: z.string().regex(/^[A-Za-z0-9._-]+$/),
@@ -84,6 +85,14 @@ const environmentSchema = z
   .superRefine((environment, context) => {
     if (environment.NODE_ENV !== 'production') {
       return;
+    }
+
+    if (!environment.RECURRENCE_ENABLED) {
+      context.addIssue({
+        code: 'custom',
+        path: ['RECURRENCE_ENABLED'],
+        message: 'must be enabled in production',
+      });
     }
 
     if (environment.DATABASE_TLS_MODE !== 'verify-full') {

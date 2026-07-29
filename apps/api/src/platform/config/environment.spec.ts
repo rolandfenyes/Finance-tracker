@@ -43,6 +43,7 @@ describe('environment validation', () => {
       DATABASE_IDLE_TIMEOUT_MS: 10000,
       DATABASE_MAX_LIFETIME_SECONDS: 300,
       FX_REFRESH_ENABLED: false,
+      RECURRENCE_ENABLED: false,
       FX_PROVIDER_TIMEOUT_MS: 5000,
       SESSION_IDLE_TTL_SECONDS: 1800,
       SESSION_ABSOLUTE_TTL_SECONDS: 43200,
@@ -97,6 +98,18 @@ describe('environment validation', () => {
         DATABASE_TLS_MODE: 'require',
       }),
     ).toThrow('Invalid application configuration: DATABASE_TLS_MODE');
+  });
+
+  it('requires the recurrence worker in production', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validEnvironment,
+        NODE_ENV: 'production',
+        APP_BASE_URL: 'https://api.example.test',
+        DATABASE_TLS_MODE: 'verify-full',
+        WEBAUTHN_EXPECTED_ORIGINS: 'https://app.example.test',
+      }),
+    ).toThrow('Invalid application configuration: RECURRENCE_ENABLED');
   });
 
   it('rejects an ambiguous sslmode embedded in the connection URL', () => {

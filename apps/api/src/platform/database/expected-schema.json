@@ -68,6 +68,26 @@
     },
     {
       "schema": "mymoneymap",
+      "name": "recurrence_job_events",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "recurrence_job_executions",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "recurring_occurrences",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "recurring_rules",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
       "name": "user_currencies",
       "kind": "r"
     },
@@ -1066,6 +1086,326 @@
     },
     {
       "schema": "mymoneymap",
+      "relation": "recurrence_job_events",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_events",
+      "name": "execution_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_events",
+      "name": "status",
+      "type": "character varying(24)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_events",
+      "name": "attempt",
+      "type": "integer",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_events",
+      "name": "error_code",
+      "type": "character varying(64)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_events",
+      "name": "occurred_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_executions",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_executions",
+      "name": "job_key",
+      "type": "character varying(100)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_executions",
+      "name": "queue_job_id",
+      "type": "character varying(100)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_executions",
+      "name": "due_through",
+      "type": "date",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_executions",
+      "name": "status",
+      "type": "character varying(24)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_executions",
+      "name": "attempt_count",
+      "type": "integer",
+      "nullable": false,
+      "default": "0"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_executions",
+      "name": "max_attempts",
+      "type": "integer",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_executions",
+      "name": "error_code",
+      "type": "character varying(64)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_executions",
+      "name": "started_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_executions",
+      "name": "finished_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_executions",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_executions",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_occurrences",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_occurrences",
+      "name": "rule_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_occurrences",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_occurrences",
+      "name": "due_on",
+      "type": "date",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_occurrences",
+      "name": "economic_type",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_occurrences",
+      "name": "amount",
+      "type": "numeric(30,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_occurrences",
+      "name": "currency",
+      "type": "character(3)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_occurrences",
+      "name": "category_id",
+      "type": "uuid",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_occurrences",
+      "name": "state",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": "'forecast'::character varying"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_occurrences",
+      "name": "job_execution_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_occurrences",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "title",
+      "type": "character varying(120)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "amount",
+      "type": "numeric(30,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "currency",
+      "type": "character(3)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "economic_type",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "starts_on",
+      "type": "date",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "rrule",
+      "type": "character varying(512)",
+      "nullable": false,
+      "default": "''::character varying"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "category_id",
+      "type": "uuid",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
       "relation": "user_currencies",
       "name": "user_id",
       "type": "uuid",
@@ -1870,6 +2210,192 @@
     },
     {
       "schema": "mymoneymap",
+      "relation": "recurrence_job_events",
+      "name": "recurrence_job_event_attempt_check",
+      "definition": "CHECK (attempt >= 0)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_events",
+      "name": "recurrence_job_event_status_check",
+      "definition": "CHECK (status::text = ANY (ARRAY['queued'::character varying, 'running'::character varying, 'completed'::character varying, 'retryable_failed'::character varying, 'dead_letter'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_events",
+      "name": "recurrence_job_events_execution_id_fkey",
+      "definition": "FOREIGN KEY (execution_id) REFERENCES mymoneymap.recurrence_job_executions(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_events",
+      "name": "recurrence_job_events_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_executions",
+      "name": "recurrence_job_attempt_check",
+      "definition": "CHECK (attempt_count >= 0 AND max_attempts >= 1 AND max_attempts <= 20 AND attempt_count <= max_attempts)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_executions",
+      "name": "recurrence_job_executions_job_key_key",
+      "definition": "UNIQUE (job_key)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_executions",
+      "name": "recurrence_job_executions_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_executions",
+      "name": "recurrence_job_status_check",
+      "definition": "CHECK (status::text = ANY (ARRAY['queued'::character varying, 'running'::character varying, 'completed'::character varying, 'retryable_failed'::character varying, 'dead_letter'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_executions",
+      "name": "recurrence_job_terminal_time_check",
+      "definition": "CHECK ((status::text = ANY (ARRAY['completed'::character varying, 'dead_letter'::character varying]::text[])) AND finished_at IS NOT NULL OR (status::text <> ALL (ARRAY['completed'::character varying, 'dead_letter'::character varying]::text[])))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_occurrences",
+      "name": "recurring_occurrences_amount_check",
+      "definition": "CHECK (amount > 0::numeric)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_occurrences",
+      "name": "recurring_occurrences_category_owner_fk",
+      "definition": "FOREIGN KEY (category_id, user_id) REFERENCES mymoneymap.categories(id, user_id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_occurrences",
+      "name": "recurring_occurrences_currency_fk",
+      "definition": "FOREIGN KEY (currency) REFERENCES mymoneymap.currencies(code) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_occurrences",
+      "name": "recurring_occurrences_currency_membership_fk",
+      "definition": "FOREIGN KEY (user_id, currency) REFERENCES mymoneymap.user_currencies(user_id, code) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_occurrences",
+      "name": "recurring_occurrences_economic_type_check",
+      "definition": "CHECK (economic_type::text = ANY (ARRAY['income'::character varying, 'expense'::character varying, 'transfer'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_occurrences",
+      "name": "recurring_occurrences_job_execution_id_fkey",
+      "definition": "FOREIGN KEY (job_execution_id) REFERENCES mymoneymap.recurrence_job_executions(id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_occurrences",
+      "name": "recurring_occurrences_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_occurrences",
+      "name": "recurring_occurrences_rule_due_unique",
+      "definition": "UNIQUE (rule_id, due_on)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_occurrences",
+      "name": "recurring_occurrences_rule_owner_fk",
+      "definition": "FOREIGN KEY (rule_id, user_id) REFERENCES mymoneymap.recurring_rules(id, user_id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_occurrences",
+      "name": "recurring_occurrences_state_check",
+      "definition": "CHECK (state::text = 'forecast'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_occurrences",
+      "name": "recurring_occurrences_transfer_category_check",
+      "definition": "CHECK (economic_type::text <> 'transfer'::text OR category_id IS NULL)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "recurring_rules_amount_check",
+      "definition": "CHECK (amount > 0::numeric)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "recurring_rules_category_owner_fk",
+      "definition": "FOREIGN KEY (category_id, user_id) REFERENCES mymoneymap.categories(id, user_id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "recurring_rules_currency_fk",
+      "definition": "FOREIGN KEY (currency) REFERENCES mymoneymap.currencies(code) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "recurring_rules_currency_membership_fk",
+      "definition": "FOREIGN KEY (user_id, currency) REFERENCES mymoneymap.user_currencies(user_id, code) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "recurring_rules_economic_type_check",
+      "definition": "CHECK (economic_type::text = ANY (ARRAY['income'::character varying, 'expense'::character varying, 'transfer'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "recurring_rules_id_user_unique",
+      "definition": "UNIQUE (id, user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "recurring_rules_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "recurring_rules_rrule_check",
+      "definition": "CHECK (char_length(rrule::text) <= 512 AND rrule::text = btrim(rrule::text))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "recurring_rules_title_check",
+      "definition": "CHECK (char_length(btrim(title::text)) >= 1 AND char_length(btrim(title::text)) <= 120)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "recurring_rules_transfer_category_check",
+      "definition": "CHECK (economic_type::text <> 'transfer'::text OR category_id IS NULL)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "recurring_rules_user_id_fkey",
+      "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
       "relation": "user_currencies",
       "name": "user_currencies_code_fkey",
       "definition": "FOREIGN KEY (code) REFERENCES mymoneymap.currencies(code) ON DELETE RESTRICT"
@@ -2199,6 +2725,72 @@
       "relation": "passkeys",
       "name": "passkeys_user_id_index",
       "definition": "CREATE INDEX passkeys_user_id_index ON mymoneymap.passkeys USING btree (user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_events",
+      "name": "recurrence_job_events_execution_index",
+      "definition": "CREATE INDEX recurrence_job_events_execution_index ON mymoneymap.recurrence_job_events USING btree (execution_id, occurred_at, id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_events",
+      "name": "recurrence_job_events_pkey",
+      "definition": "CREATE UNIQUE INDEX recurrence_job_events_pkey ON mymoneymap.recurrence_job_events USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_executions",
+      "name": "recurrence_job_executions_job_key_key",
+      "definition": "CREATE UNIQUE INDEX recurrence_job_executions_job_key_key ON mymoneymap.recurrence_job_executions USING btree (job_key)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_executions",
+      "name": "recurrence_job_executions_pkey",
+      "definition": "CREATE UNIQUE INDEX recurrence_job_executions_pkey ON mymoneymap.recurrence_job_executions USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurrence_job_executions",
+      "name": "recurrence_job_status_updated_index",
+      "definition": "CREATE INDEX recurrence_job_status_updated_index ON mymoneymap.recurrence_job_executions USING btree (status, updated_at, id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_occurrences",
+      "name": "recurring_occurrences_pkey",
+      "definition": "CREATE UNIQUE INDEX recurring_occurrences_pkey ON mymoneymap.recurring_occurrences USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_occurrences",
+      "name": "recurring_occurrences_rule_due_unique",
+      "definition": "CREATE UNIQUE INDEX recurring_occurrences_rule_due_unique ON mymoneymap.recurring_occurrences USING btree (rule_id, due_on)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_occurrences",
+      "name": "recurring_occurrences_user_due_index",
+      "definition": "CREATE INDEX recurring_occurrences_user_due_index ON mymoneymap.recurring_occurrences USING btree (user_id, due_on, rule_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "recurring_rules_id_user_unique",
+      "definition": "CREATE UNIQUE INDEX recurring_rules_id_user_unique ON mymoneymap.recurring_rules USING btree (id, user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "recurring_rules_pkey",
+      "definition": "CREATE UNIQUE INDEX recurring_rules_pkey ON mymoneymap.recurring_rules USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "recurring_rules_user_start_index",
+      "definition": "CREATE INDEX recurring_rules_user_start_index ON mymoneymap.recurring_rules USING btree (user_id, starts_on, lower((title)::text), id)"
     },
     {
       "schema": "mymoneymap",

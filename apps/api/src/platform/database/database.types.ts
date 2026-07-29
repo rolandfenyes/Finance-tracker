@@ -216,6 +216,58 @@ export interface BasicIncomesTable {
   updated_at: DatabaseTimestamp;
 }
 
+export interface RecurringRulesTable {
+  id: string;
+  user_id: string;
+  title: string;
+  amount: DatabaseDecimal;
+  currency: string;
+  economic_type: 'income' | 'expense' | 'transfer';
+  starts_on: DatabaseDate;
+  rrule: string;
+  category_id: string | null;
+  created_at: DatabaseTimestamp;
+  updated_at: DatabaseTimestamp;
+}
+
+export interface RecurrenceJobExecutionsTable {
+  id: string;
+  job_key: string;
+  queue_job_id: string;
+  due_through: DatabaseDate;
+  status: 'queued' | 'running' | 'completed' | 'retryable_failed' | 'dead_letter';
+  attempt_count: number;
+  max_attempts: number;
+  error_code: string | null;
+  started_at: DatabaseTimestamp | null;
+  finished_at: DatabaseTimestamp | null;
+  created_at: DatabaseTimestamp;
+  updated_at: DatabaseTimestamp;
+}
+
+export interface RecurrenceJobEventsTable {
+  id: string;
+  execution_id: string;
+  status: 'queued' | 'running' | 'completed' | 'retryable_failed' | 'dead_letter';
+  attempt: number;
+  error_code: string | null;
+  occurred_at: DatabaseTimestamp;
+}
+
+export interface RecurringOccurrencesTable {
+  id: string;
+  rule_id: string;
+  user_id: string;
+  due_on: DatabaseDate;
+  economic_type: 'income' | 'expense' | 'transfer';
+  amount: DatabaseDecimal;
+  currency: string;
+  category_id: string | null;
+  state: 'forecast';
+  job_execution_id: string;
+  created_at: DatabaseTimestamp;
+}
+
 export interface DatabaseSchema {
   'mymoneymap.idempotency_keys': IdempotencyKeysTable;
   'mymoneymap.users': UsersTable;
@@ -232,4 +284,8 @@ export interface DatabaseSchema {
   'mymoneymap.budget_rules': BudgetRulesTable;
   'mymoneymap.categories': CategoriesTable;
   'mymoneymap.basic_incomes': BasicIncomesTable;
+  'mymoneymap.recurring_rules': RecurringRulesTable;
+  'mymoneymap.recurrence_job_executions': RecurrenceJobExecutionsTable;
+  'mymoneymap.recurrence_job_events': RecurrenceJobEventsTable;
+  'mymoneymap.recurring_occurrences': RecurringOccurrencesTable;
 }

@@ -8,6 +8,7 @@ import * as ledgerJournal from './20260729040000_ledger_journal';
 import * as currencyFx from './20260729050000_currency_fx';
 import * as fxSnapshotInvariant from './20260729050100_fx_snapshot_invariant';
 import * as budgetingCategoriesIncome from './20260729060000_budgeting_categories_income';
+import * as recurrenceScheduling from './20260729070000_recurrence_scheduling';
 
 export const registeredMigrations = {
   '20260729000000_database_baseline': databaseBaseline,
@@ -19,6 +20,7 @@ export const registeredMigrations = {
   '20260729050000_currency_fx': currencyFx,
   '20260729050100_fx_snapshot_invariant': fxSnapshotInvariant,
   '20260729060000_budgeting_categories_income': budgetingCategoriesIncome,
+  '20260729070000_recurrence_scheduling': recurrenceScheduling,
 } satisfies Record<string, Migration>;
 
 export class RegisteredMigrationProvider implements MigrationProvider {

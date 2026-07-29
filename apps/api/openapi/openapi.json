@@ -785,6 +785,93 @@
         "tags": ["Budgeting", "Basic income"]
       }
     },
+    "/api/v1/recurring-rules": {
+      "get": {
+        "operationId": "RecurrenceController_rules",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RecurringRulesResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "List owned recurring rules with an optional side-effect-free forecast range",
+        "tags": ["Recurrence"]
+      },
+      "post": {
+        "operationId": "RecurrenceController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateRecurringRuleDto" },
+              "examples": {
+                "monthlyExpense": {
+                  "value": {
+                    "title": "Rent",
+                    "amount": "125.50",
+                    "currency": "HUF",
+                    "economicType": "expense",
+                    "startsOn": "2026-07-31",
+                    "rrule": "FREQ=MONTHLY;BYMONTHDAY=31"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RecurringRulesResponseDto" }
+              }
+            }
+          },
+          "422": {
+            "description": "RRULE, amount, currency, category, or economic-type invariant failed"
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Create a forecast recurrence with an explicit economic type",
+        "tags": ["Recurrence"]
+      }
+    },
+    "/api/v1/recurring-rules/{id}": {
+      "patch": {
+        "operationId": "RecurrenceController_update",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RecurringRulesResponseDto" }
+              }
+            }
+          },
+          "404": { "description": "The owned recurring rule was not found" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Update an owned recurring rule and invalidate stored forecasts",
+        "tags": ["Recurrence"]
+      },
+      "delete": {
+        "operationId": "RecurrenceController_delete",
+        "parameters": [],
+        "responses": { "204": { "description": "" } },
+        "security": [{ "cookie": [] }],
+        "summary": "Delete an owned recurring rule and its forecast occurrences",
+        "tags": ["Recurrence"]
+      }
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "HealthController_live",
@@ -1499,6 +1586,93 @@
           "categoryId": { "type": "string", "format": "uuid", "nullable": true }
         },
         "required": ["label", "amount", "currency", "validFrom"]
+      },
+      "RecurrenceForecastResponseDto": {
+        "type": "object",
+        "properties": {
+          "from": { "type": "string", "format": "date" },
+          "to": { "type": "string", "format": "date" },
+          "occurrences": { "type": "array", "items": { "type": "string", "format": "date" } },
+          "truncated": { "type": "boolean" },
+          "iterationLimit": { "type": "number", "example": 2000 }
+        },
+        "required": ["from", "to", "occurrences", "truncated", "iterationLimit"]
+      },
+      "RecurringRuleResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "amount": { "type": "string", "example": "125.5" },
+          "currency": { "type": "string", "example": "HUF" },
+          "economicType": { "type": "string", "enum": ["income", "expense", "transfer"] },
+          "startsOn": { "type": "string", "format": "date" },
+          "rrule": { "type": "string" },
+          "categoryId": { "type": "string", "format": "uuid", "nullable": true },
+          "categoryLabel": { "type": "string", "nullable": true },
+          "forecast": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [{ "$ref": "#/components/schemas/RecurrenceForecastResponseDto" }]
+          },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": [
+          "id",
+          "title",
+          "amount",
+          "currency",
+          "economicType",
+          "startsOn",
+          "rrule",
+          "categoryId",
+          "categoryLabel",
+          "forecast",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "RecurringRulesResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RecurringRuleResponseDto" }
+          }
+        },
+        "required": ["items"]
+      },
+      "CreateRecurringRuleDto": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "example": "Rent", "maxLength": 120 },
+          "amount": {
+            "type": "string",
+            "example": "125.50",
+            "description": "Positive exact base-10 decimal string."
+          },
+          "currency": { "type": "string", "example": "HUF", "pattern": "^[A-Z]{3}$" },
+          "economicType": {
+            "type": "string",
+            "enum": ["income", "expense", "transfer"],
+            "example": "expense"
+          },
+          "startsOn": { "type": "string", "format": "date", "example": "2026-07-31" },
+          "rrule": {
+            "type": "string",
+            "example": "FREQ=MONTHLY;BYMONTHDAY=31",
+            "maxLength": 512,
+            "description": "Canonical supported subset: DAILY/WEEKLY/MONTHLY/YEARLY, INTERVAL, BYDAY, BYMONTHDAY, BYMONTH, COUNT, UNTIL. Empty means one-time."
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Optional owned income/spending category matching economicType."
+          }
+        },
+        "required": ["title", "amount", "currency", "economicType", "startsOn", "rrule"]
       },
       "ApiViolationResponse": {
         "type": "object",
