@@ -2,6 +2,7 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { NoResultError } from 'kysely';
 import { ExactDecimal } from '../platform/decimal/exact-decimal';
+import { FxConversionService } from '../currency/fx-conversion.service';
 import type { JsonValue } from '../platform/events/outbox.port';
 import { ApplicationError } from '../platform/http/application-error';
 import {
@@ -34,6 +35,7 @@ export class LedgerService {
     @Inject(LedgerRepository) private readonly repository: LedgerRepository,
     @Inject(IdempotencyService) private readonly idempotency: IdempotencyService,
     @Inject(CLOCK) private readonly clock: Clock,
+    @Inject(FxConversionService) private readonly fx: FxConversionService,
   ) {}
 
   async createManualEntry(
@@ -53,8 +55,19 @@ export class LedgerService {
           key,
           requestFingerprint: fingerprint(dto),
         },
-        async (transaction) =>
-          asJsonObject({ entry: await this.repository.post(transaction, command) }),
+        async (transaction) => {
+          const entry = await this.repository.post(transaction, command);
+          await this.fx.snapshotPostedEntry(
+            transaction,
+            entry,
+            userId,
+            command.postedOn,
+            command.createdAt,
+          );
+          return asJsonObject({
+            entry: await this.repository.findOwnedEntry(transaction, userId, entry.id),
+          });
+        },
       );
       return { value: result.value.entry as unknown as JournalEntry, replayed: result.replayed };
     } catch (error) {
@@ -83,16 +96,24 @@ export class LedgerService {
         async (transaction) => {
           const original = await this.repository.findOwnedEntry(transaction, userId, entryId);
           this.assertReversible(original);
+          const reversal = await this.repository.reverse(transaction, original, {
+            userId,
+            actorUserId: userId,
+            postedOn: dto.postedOn,
+            effectiveAt,
+            createdAt: now.toDate(),
+            note: dto.note,
+            idempotencyKeyHash: key.toHash(),
+          });
+          await this.fx.copyReversalSnapshot(
+            transaction,
+            original.id,
+            reversal.id,
+            userId,
+            now.toDate(),
+          );
           return asJsonObject({
-            entry: await this.repository.reverse(transaction, original, {
-              userId,
-              actorUserId: userId,
-              postedOn: dto.postedOn,
-              effectiveAt,
-              createdAt: now.toDate(),
-              note: dto.note,
-              idempotencyKeyHash: key.toHash(),
-            }),
+            entry: await this.repository.findOwnedEntry(transaction, userId, reversal.id),
           });
         },
       );
@@ -130,11 +151,38 @@ export class LedgerService {
             createdAt: now.toDate(),
             idempotencyKeyHash: derivedHash(key.toHash(), 'reversal'),
           });
+          await this.fx.copyReversalSnapshot(
+            transaction,
+            original.id,
+            reversal.id,
+            userId,
+            now.toDate(),
+          );
           const replacement = await this.repository.post(transaction, {
             ...this.toCommand(userId, dto, derivedHash(key.toHash(), 'replacement'), now),
             replacesEntryId: original.id,
           });
-          return asJsonObject({ reversal, replacement });
+          await this.fx.snapshotPostedEntry(
+            transaction,
+            replacement,
+            userId,
+            dto.postedOn,
+            now.toDate(),
+          );
+          const persistedReversal = await this.repository.findOwnedEntry(
+            transaction,
+            userId,
+            reversal.id,
+          );
+          const persistedReplacement = await this.repository.findOwnedEntry(
+            transaction,
+            userId,
+            replacement.id,
+          );
+          return asJsonObject({
+            reversal: persistedReversal,
+            replacement: persistedReplacement,
+          });
         },
       );
       return {

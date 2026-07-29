@@ -54,6 +54,8 @@ const environmentSchema = z
       .refine((value) => value.startsWith('redis://') || value.startsWith('rediss://'), {
         message: 'must use the redis:// or rediss:// scheme',
       }),
+    FX_REFRESH_ENABLED: booleanText,
+    FX_PROVIDER_TIMEOUT_MS: positiveMilliseconds,
     SESSION_SECRET: z.string().min(32),
     SESSION_COOKIE_NAME: z.string().regex(/^[A-Za-z0-9._-]+$/),
     SESSION_IDLE_TTL_SECONDS: positiveSeconds,

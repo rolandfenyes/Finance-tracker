@@ -249,6 +249,108 @@
         "tags": ["Users and settings"]
       }
     },
+    "/api/v1/currencies": {
+      "get": {
+        "operationId": "CurrencyController_catalogue",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CurrencyCatalogueResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "List supported currencies and exact rounding metadata",
+        "tags": ["Currencies"]
+      }
+    },
+    "/api/v1/users/me/currencies": {
+      "get": {
+        "operationId": "CurrencyController_userCurrencies",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserCurrenciesResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "List the current user currency memberships and main currency",
+        "tags": ["Currencies"]
+      },
+      "post": {
+        "operationId": "CurrencyController_add",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AddUserCurrencyDto" },
+              "examples": { "currency": { "value": { "code": "EUR" } } }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserCurrenciesResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Add a supported currency within the current entitlement",
+        "tags": ["Currencies"]
+      }
+    },
+    "/api/v1/users/me/currencies/{code}": {
+      "delete": {
+        "operationId": "CurrencyController_remove",
+        "parameters": [],
+        "responses": { "204": { "description": "" } },
+        "security": [{ "cookie": [] }],
+        "summary": "Remove a non-main currency membership",
+        "tags": ["Currencies"]
+      }
+    },
+    "/api/v1/users/me/main-currency": {
+      "put": {
+        "operationId": "CurrencyController_setMain",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SetMainCurrencyDto" },
+              "examples": { "mainCurrency": { "value": { "code": "EUR" } } }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserCurrenciesResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Atomically select exactly one owned main currency",
+        "tags": ["Currencies"]
+      }
+    },
     "/api/v1/journal/entries": {
       "post": {
         "operationId": "LedgerController_create",
@@ -612,6 +714,62 @@
           "tutorialCompleted"
         ]
       },
+      "CurrencyResponseDto": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string", "example": "EUR" },
+          "name": { "type": "string", "example": "Euro" },
+          "minorUnit": { "type": "number", "example": 2, "minimum": 0, "maximum": 4 },
+          "roundingMode": { "type": "string", "enum": ["DOWN", "UP", "HALF_UP", "HALF_EVEN"] }
+        },
+        "required": ["code", "name", "minorUnit", "roundingMode"]
+      },
+      "CurrencyCatalogueResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/CurrencyResponseDto" }
+          }
+        },
+        "required": ["items"]
+      },
+      "UserCurrencyResponseDto": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string", "example": "EUR" },
+          "name": { "type": "string", "example": "Euro" },
+          "minorUnit": { "type": "number", "example": 2, "minimum": 0, "maximum": 4 },
+          "roundingMode": { "type": "string", "enum": ["DOWN", "UP", "HALF_UP", "HALF_EVEN"] },
+          "isMain": { "type": "boolean" }
+        },
+        "required": ["code", "name", "minorUnit", "roundingMode", "isMain"]
+      },
+      "UserCurrenciesResponseDto": {
+        "type": "object",
+        "properties": {
+          "mainCurrency": { "type": "string", "example": "HUF" },
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/UserCurrencyResponseDto" }
+          },
+          "available": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/CurrencyResponseDto" }
+          }
+        },
+        "required": ["mainCurrency", "items", "available"]
+      },
+      "AddUserCurrencyDto": {
+        "type": "object",
+        "properties": { "code": { "type": "string", "example": "EUR", "pattern": "^[A-Z]{3}$" } },
+        "required": ["code"]
+      },
+      "SetMainCurrencyDto": {
+        "type": "object",
+        "properties": { "code": { "type": "string", "example": "EUR", "pattern": "^[A-Z]{3}$" } },
+        "required": ["code"]
+      },
       "CreateJournalEntryDto": {
         "type": "object",
         "properties": {
@@ -761,6 +919,25 @@
           "actorUserId": { "type": "string", "format": "uuid" },
           "reversesEntryId": { "type": "string", "format": "uuid", "nullable": true },
           "replacesEntryId": { "type": "string", "format": "uuid", "nullable": true },
+          "conversion": {
+            "type": "object",
+            "description": "Immutable main-currency conversion snapshot. convertedAmount is absent when status is unavailable.",
+            "example": {
+              "status": "stale",
+              "sourceAmount": "125.50",
+              "sourceCurrency": "USD",
+              "targetCurrency": "HUF",
+              "convertedAmount": "45180.00",
+              "sourceRate": "1.1",
+              "targetRate": "396",
+              "conversionRate": "360",
+              "provider": "frankfurter",
+              "rateAt": "2026-07-24T00:00:00.000Z",
+              "fetchedAt": "2026-07-27T08:00:00.000Z",
+              "precision": 2,
+              "roundingMode": "HALF_EVEN"
+            }
+          },
           "legs": {
             "type": "array",
             "items": { "$ref": "#/components/schemas/JournalLegResponseDto" }
@@ -778,6 +955,7 @@
           "actorUserId",
           "reversesEntryId",
           "replacesEntryId",
+          "conversion",
           "legs"
         ]
       },

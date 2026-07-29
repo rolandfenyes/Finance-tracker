@@ -93,6 +93,13 @@
         "command": "tsx --tsconfig apps/api/tsconfig.json apps/api/src/platform/database/database-cli.ts fingerprint"
       }
     },
+    "db-fingerprint-update": {
+      "executor": "nx:run-commands",
+      "outputs": ["{projectRoot}/src/platform/database/expected-schema.json"],
+      "options": {
+        "command": "tsx --tsconfig apps/api/tsconfig.json apps/api/src/platform/database/update-expected-schema.ts"
+      }
+    },
     "openapi-generate": {
       "executor": "nx:run-commands",
       "outputs": ["{projectRoot}/openapi/openapi.json"],

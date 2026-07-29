@@ -48,16 +48,28 @@ describe('PostgreSQL baseline and migration system', () => {
           name: '20260729040000_ledger_journal',
           executedAt: expect.any(Date),
         }),
+        expect.objectContaining({
+          name: '20260729050000_currency_fx',
+          executedAt: expect.any(Date),
+        }),
+        expect.objectContaining({
+          name: '20260729050100_fx_snapshot_invariant',
+          executedAt: expect.any(Date),
+        }),
       ]);
 
       expect(fingerprint.relations.map(({ schema, name }) => `${schema}.${name}`)).toEqual([
+        'mymoneymap.currencies',
         'mymoneymap.email_verification_tokens',
+        'mymoneymap.fx_conversion_snapshots',
+        'mymoneymap.fx_quotes',
         'mymoneymap.idempotency_keys',
         'mymoneymap.journal_entries',
         'mymoneymap.journal_legs',
         'mymoneymap.ledger_accounts',
         'mymoneymap.login_audit_events',
         'mymoneymap.passkeys',
+        'mymoneymap.user_currencies',
         'mymoneymap.users',
         'mymoneymap_meta.kysely_migration',
         'mymoneymap_meta.kysely_migration_lock',
@@ -80,7 +92,7 @@ describe('PostgreSQL baseline and migration system', () => {
       const rollback = await migrateOneDown(database);
       expect(rollback.results).toEqual([
         {
-          migrationName: '20260729040000_ledger_journal',
+          migrationName: '20260729050100_fx_snapshot_invariant',
           direction: 'Down',
           status: 'Success',
         },
@@ -91,7 +103,20 @@ describe('PostgreSQL baseline and migration system', () => {
       expect(
         rolledBack.columns.some(({ relation, name }) => relation === 'users' && name === 'theme'),
       ).toBe(true);
-      expect(rolledBack.relations.map(({ name }) => name)).not.toContain('journal_entries');
+      expect(rolledBack.relations.map(({ name }) => name)).toContain('journal_entries');
+      expect(rolledBack.relations.map(({ name }) => name)).toContain('fx_quotes');
+      expect(
+        (
+          await pool.query<{ present: boolean }>(
+            `SELECT EXISTS (
+               SELECT 1
+                 FROM pg_trigger
+                WHERE tgname = 'journal_entries_fx_snapshot_required'
+                  AND NOT tgisinternal
+             ) AS present`,
+          )
+        ).rows[0]?.present,
+      ).toBe(false);
 
       await migrateToLatest(database);
       expect(await readSchemaFingerprint(pool)).toEqual(firstFingerprint);
@@ -110,7 +135,7 @@ describe('PostgreSQL baseline and migration system', () => {
       const ledger = await pool.query<{ count: string }>(
         'SELECT count(*)::text AS count FROM mymoneymap_meta.kysely_migration',
       );
-      expect(ledger.rows[0]?.count).toBe('6');
+      expect(ledger.rows[0]?.count).toBe('8');
       const concurrentFingerprint = await readSchemaFingerprint(pool);
       expect(() => assertSchemaMatchesExpected(concurrentFingerprint)).not.toThrow();
     });
@@ -166,6 +191,8 @@ describe('PostgreSQL baseline and migration system', () => {
       '20260729020100_passkey_revision',
       '20260729030000_users_settings',
       '20260729040000_ledger_journal',
+      '20260729050000_currency_fx',
+      '20260729050100_fx_snapshot_invariant',
     ]);
     expect(targetStatusNames).not.toContain('028_default_admin');
   });

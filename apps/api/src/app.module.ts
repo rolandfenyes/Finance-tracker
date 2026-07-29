@@ -8,6 +8,7 @@ import { PlatformLoggingModule } from './platform/logging/logging.module';
 import { IdentityModule } from './identity/identity.module';
 import { UsersModule } from './users/users.module';
 import { LedgerModule } from './ledger/ledger.module';
+import { CurrencyModule } from './currency/currency.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { LedgerModule } from './ledger/ledger.module';
     IdempotencyModule,
     IdentityModule,
     UsersModule,
+    CurrencyModule,
     LedgerModule,
     HealthModule,
   ],

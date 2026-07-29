@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { CurrencyModule } from '../currency/currency.module';
 import { IdentityModule } from '../identity/identity.module';
 import { IdempotencyModule } from '../platform/idempotency/idempotency.module';
 import { TimeModule } from '../platform/time/time.module';
@@ -8,7 +9,7 @@ import { LedgerRepository } from './ledger.repository';
 import { LedgerService } from './ledger.service';
 
 @Module({
-  imports: [IdentityModule, IdempotencyModule, TimeModule, UsersModule],
+  imports: [IdentityModule, IdempotencyModule, TimeModule, UsersModule, CurrencyModule],
   controllers: [LedgerController],
   providers: [LedgerRepository, LedgerService],
   exports: [LedgerRepository, LedgerService],

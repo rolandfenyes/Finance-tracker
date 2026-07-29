@@ -5,6 +5,8 @@ import * as identityAccess from './20260729020000_identity_access';
 import * as passkeyRevision from './20260729020100_passkey_revision';
 import * as usersSettings from './20260729030000_users_settings';
 import * as ledgerJournal from './20260729040000_ledger_journal';
+import * as currencyFx from './20260729050000_currency_fx';
+import * as fxSnapshotInvariant from './20260729050100_fx_snapshot_invariant';
 
 export const registeredMigrations = {
   '20260729000000_database_baseline': databaseBaseline,
@@ -13,6 +15,8 @@ export const registeredMigrations = {
   '20260729020100_passkey_revision': passkeyRevision,
   '20260729030000_users_settings': usersSettings,
   '20260729040000_ledger_journal': ledgerJournal,
+  '20260729050000_currency_fx': currencyFx,
+  '20260729050100_fx_snapshot_invariant': fxSnapshotInvariant,
 } satisfies Record<string, Migration>;
 
 export class RegisteredMigrationProvider implements MigrationProvider {

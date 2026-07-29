@@ -1,7 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import type { Pool } from 'pg';
+import { CurrencyRepository } from '../src/currency/currency.repository';
+import { FxConversionService } from '../src/currency/fx-conversion.service';
 import { migrateOneDown, migrateToLatest } from '../src/platform/database/migration-runner';
 import { LedgerRepository } from '../src/ledger/ledger.repository';
+import { FixedClock } from '../src/platform/time/clock';
+import { UtcInstant } from '../src/platform/time/utc-instant';
 import { withIsolatedPostgresDatabase } from './postgres-test-database';
 
 describe('ledger journal PostgreSQL invariants', () => {
@@ -20,6 +24,8 @@ describe('ledger journal PostgreSQL invariants', () => {
         ).rows[0]?.count,
       ).toBe('1');
 
+      await migrateOneDown(database);
+      await migrateOneDown(database);
       await migrateOneDown(database);
       expect(
         (
@@ -103,8 +109,9 @@ describe('ledger journal PostgreSQL invariants', () => {
         [goal, userId, randomUUID()],
       );
       const repository = new LedgerRepository(database);
+      const fx = testFx(database);
       await database.transaction().execute(async (transaction) => {
-        await repository.post(transaction, {
+        const entry = await repository.post(transaction, {
           userId,
           actorUserId: userId,
           economicType: 'internal_transfer',
@@ -118,6 +125,13 @@ describe('ledger journal PostgreSQL invariants', () => {
           sourceModule: 'manual',
           idempotencyKeyHash: 'a'.repeat(64),
         });
+        await fx.snapshotPostedEntry(
+          transaction,
+          entry,
+          userId,
+          '2026-07-29',
+          new Date('2026-07-29T10:00:01.000Z'),
+        );
       });
       expect(await repository.accountBalance(userId, cash, 'HUF')).toBe('-300.000000000000');
       expect(await repository.accountBalance(userId, goal, 'HUF')).toBe('300.000000000000');
@@ -142,8 +156,9 @@ describe('ledger journal PostgreSQL invariants', () => {
       await migrateToLatest(database);
       const userId = await insertUser(pool);
       const repository = new LedgerRepository(database);
-      const original = await database.transaction().execute((transaction) =>
-        repository.post(transaction, {
+      const fx = testFx(database);
+      const original = await database.transaction().execute(async (transaction) => {
+        const entry = await repository.post(transaction, {
           userId,
           actorUserId: userId,
           economicType: 'external_expense',
@@ -154,18 +169,34 @@ describe('ledger journal PostgreSQL invariants', () => {
           createdAt: new Date('2026-07-29T10:00:01.000Z'),
           sourceModule: 'manual',
           idempotencyKeyHash: 'b'.repeat(64),
-        }),
-      );
-      const reversal = await database.transaction().execute((transaction) =>
-        repository.reverse(transaction, original, {
+        });
+        await fx.snapshotPostedEntry(
+          transaction,
+          entry,
+          userId,
+          '2026-07-29',
+          new Date('2026-07-29T10:00:01.000Z'),
+        );
+        return entry;
+      });
+      const reversal = await database.transaction().execute(async (transaction) => {
+        const entry = await repository.reverse(transaction, original, {
           userId,
           actorUserId: userId,
           postedOn: '2026-07-30',
           effectiveAt: new Date('2026-07-30T10:00:00.000Z'),
           createdAt: new Date('2026-07-30T10:00:01.000Z'),
           idempotencyKeyHash: 'c'.repeat(64),
-        }),
-      );
+        });
+        await fx.copyReversalSnapshot(
+          transaction,
+          original.id,
+          entry.id,
+          userId,
+          new Date('2026-07-30T10:00:01.000Z'),
+        );
+        return entry;
+      });
       expect(reversal.reversesEntryId).toBe(original.id);
       expect(
         (
@@ -191,6 +222,15 @@ async function insertUser(pool: Pool): Promise<string> {
     [id, `${id}@example.test`],
   );
   return id;
+}
+
+function testFx(
+  database: ConstructorParameters<typeof CurrencyRepository>[0],
+): FxConversionService {
+  return new FxConversionService(
+    new CurrencyRepository(database),
+    new FixedClock(UtcInstant.create('2026-07-29T12:00:00.000Z')),
+  );
 }
 
 async function cashAccount(pool: Pool, userId: string): Promise<string> {
@@ -231,6 +271,7 @@ async function postRawIncome(
          ($7,$2,$3,NULL,'credit',$5,$6,now())`,
       [randomUUID(), entryId, userId, accountId, amount, currency, randomUUID()],
     );
+    await insertSnapshot(pool, entryId, userId, amount, currency);
     await pool.query('COMMIT');
     return entryId;
   } catch (error) {
@@ -270,9 +311,38 @@ async function postRawPair(
         externalCurrency,
       ],
     );
+    await insertSnapshot(pool, entryId, userId, '10.00', ownedCurrency);
     await pool.query('COMMIT');
   } catch (error) {
     await pool.query('ROLLBACK');
     throw error;
   }
+}
+
+async function insertSnapshot(
+  pool: Pool,
+  entryId: string,
+  userId: string,
+  amount: string,
+  sourceCurrency: string,
+): Promise<void> {
+  const identity = sourceCurrency === 'HUF';
+  await pool.query(
+    `INSERT INTO mymoneymap.fx_conversion_snapshots
+      (id,entry_id,user_id,source_currency,target_currency,source_amount,converted_amount,
+       source_rate,target_rate,conversion_rate,provider,rate_at,fetched_at,status,
+       precision,rounding_mode,created_at)
+     VALUES
+      ($1,$2,$3,$4,'HUF',$5,
+       CASE WHEN $6 THEN $5::numeric ELSE NULL END,
+       CASE WHEN $6 THEN 1 ELSE NULL END,
+       CASE WHEN $6 THEN 1 ELSE NULL END,
+       CASE WHEN $6 THEN 1 ELSE NULL END,
+       CASE WHEN $6 THEN 'identity' ELSE NULL END,
+       CASE WHEN $6 THEN '2026-07-29T00:00:00Z'::timestamptz ELSE NULL END,
+       CASE WHEN $6 THEN now() ELSE NULL END,
+       CASE WHEN $6 THEN 'available' ELSE 'unavailable' END,
+       2,'HALF_EVEN',now())`,
+    [randomUUID(), entryId, userId, sourceCurrency, amount, identity],
+  );
 }

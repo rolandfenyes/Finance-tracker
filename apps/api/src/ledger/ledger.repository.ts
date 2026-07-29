@@ -280,6 +280,12 @@ export class LedgerRepository {
       .orderBy('side')
       .orderBy('id')
       .execute();
+    const conversion = await executor
+      .selectFrom('mymoneymap.fx_conversion_snapshots')
+      .selectAll()
+      .where('user_id', '=', userId)
+      .where('entry_id', '=', entryId)
+      .executeTakeFirst();
     return {
       id: entry.id,
       economicType: entry.economic_type,
@@ -292,6 +298,31 @@ export class LedgerRepository {
       actorUserId: entry.actor_user_id,
       reversesEntryId: entry.reverses_entry_id,
       replacesEntryId: entry.replaces_entry_id,
+      ...(conversion
+        ? {
+            conversion: {
+              status: conversion.status,
+              sourceAmount: conversion.source_amount,
+              sourceCurrency: conversion.source_currency,
+              targetCurrency: conversion.target_currency,
+              ...(conversion.converted_amount === null
+                ? {}
+                : { convertedAmount: conversion.converted_amount }),
+              ...(conversion.source_rate === null ? {} : { sourceRate: conversion.source_rate }),
+              ...(conversion.target_rate === null ? {} : { targetRate: conversion.target_rate }),
+              ...(conversion.conversion_rate === null
+                ? {}
+                : { conversionRate: conversion.conversion_rate }),
+              ...(conversion.provider === null ? {} : { provider: conversion.provider }),
+              ...(conversion.rate_at === null ? {} : { rateAt: conversion.rate_at.toISOString() }),
+              ...(conversion.fetched_at === null
+                ? {}
+                : { fetchedAt: conversion.fetched_at.toISOString() }),
+              precision: conversion.precision,
+              roundingMode: conversion.rounding_mode,
+            },
+          }
+        : {}),
       legs: legs.map((leg): JournalLeg => ({
         id: leg.id,
         accountId: leg.account_id,

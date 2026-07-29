@@ -17,6 +17,11 @@ export interface UsersTable {
   email_verified_at: DatabaseTimestamp | null;
   created_at: GeneratedTimestamp;
   updated_at: DatabaseTimestamp;
+  theme: string;
+  desired_language: string;
+  onboard_step: number;
+  needs_tutorial: boolean;
+  tutorial_seen: boolean;
 }
 
 export interface EmailVerificationTokensTable {
@@ -125,6 +130,56 @@ export interface JournalLegsTable {
   created_at: DatabaseTimestamp;
 }
 
+export interface CurrenciesTable {
+  code: string;
+  name: string;
+  minor_unit: number;
+  rounding_mode: 'DOWN' | 'UP' | 'HALF_UP' | 'HALF_EVEN';
+  active: boolean;
+}
+
+export interface UserCurrenciesTable {
+  user_id: string;
+  code: string;
+  is_main: boolean;
+  created_at: DatabaseTimestamp;
+}
+
+export interface FxQuotesTable {
+  id: string;
+  provider: string;
+  base_code: string;
+  quote_code: string;
+  rate: DatabaseDecimal;
+  observed_on: DatabaseDate;
+  observed_at: DatabaseTimestamp;
+  fetched_at: DatabaseTimestamp;
+  quality: 'provider_observed' | 'legacy_imported';
+  status: 'available' | 'rejected';
+}
+
+export interface FxConversionSnapshotsTable {
+  id: string;
+  entry_id: string;
+  user_id: string;
+  source_currency: string;
+  target_currency: string;
+  source_amount: DatabaseDecimal;
+  converted_amount: DatabaseDecimal | null;
+  source_rate: DatabaseDecimal | null;
+  target_rate: DatabaseDecimal | null;
+  conversion_rate: DatabaseDecimal | null;
+  source_quote_id: string | null;
+  target_quote_id: string | null;
+  provider: string | null;
+  rate_at: DatabaseTimestamp | null;
+  fetched_at: DatabaseTimestamp | null;
+  status: 'available' | 'stale' | 'unavailable';
+  precision: number;
+  rounding_mode: 'DOWN' | 'UP' | 'HALF_UP' | 'HALF_EVEN';
+  created_at: DatabaseTimestamp;
+}
+
 export interface DatabaseSchema {
   'mymoneymap.idempotency_keys': IdempotencyKeysTable;
   'mymoneymap.users': UsersTable;
@@ -134,4 +189,8 @@ export interface DatabaseSchema {
   'mymoneymap.ledger_accounts': LedgerAccountsTable;
   'mymoneymap.journal_entries': JournalEntriesTable;
   'mymoneymap.journal_legs': JournalLegsTable;
+  'mymoneymap.currencies': CurrenciesTable;
+  'mymoneymap.user_currencies': UserCurrenciesTable;
+  'mymoneymap.fx_quotes': FxQuotesTable;
+  'mymoneymap.fx_conversion_snapshots': FxConversionSnapshotsTable;
 }

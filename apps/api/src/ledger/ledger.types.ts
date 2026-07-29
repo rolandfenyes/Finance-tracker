@@ -65,6 +65,21 @@ export interface JournalEntry {
   actorUserId: string;
   reversesEntryId: string | null;
   replacesEntryId: string | null;
+  conversion?: {
+    status: 'available' | 'stale' | 'unavailable';
+    sourceAmount: string;
+    sourceCurrency: string;
+    targetCurrency: string;
+    convertedAmount?: string;
+    sourceRate?: string;
+    targetRate?: string;
+    conversionRate?: string;
+    provider?: string;
+    rateAt?: string;
+    fetchedAt?: string;
+    precision: number;
+    roundingMode: 'DOWN' | 'UP' | 'HALF_UP' | 'HALF_EVEN';
+  };
   legs: JournalLeg[];
 }
 

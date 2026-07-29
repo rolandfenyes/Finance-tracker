@@ -10,6 +10,8 @@ Object.assign(process.env, {
   DATABASE_IDLE_TIMEOUT_MS: '10000',
   DATABASE_MAX_LIFETIME_SECONDS: '300',
   REDIS_URL: 'redis://127.0.0.1:6380',
+  FX_REFRESH_ENABLED: 'false',
+  FX_PROVIDER_TIMEOUT_MS: '5000',
   SESSION_SECRET: 'synthetic-session-secret-at-least-32-characters',
   SESSION_COOKIE_NAME: 'mymoneymap.sid',
   SESSION_IDLE_TTL_SECONDS: '1800',

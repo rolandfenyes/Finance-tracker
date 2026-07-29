@@ -19,6 +19,7 @@ import {
   type AdjustmentDirection,
   type LedgerEconomicType,
   type LedgerSourceModule,
+  type JournalEntry,
   type ManualEconomicType,
 } from './ledger.types';
 
@@ -217,6 +218,28 @@ export class JournalEntryResponseDto {
 
   @ApiProperty({ type: String, format: 'uuid', nullable: true })
   replacesEntryId!: string | null;
+
+  @ApiProperty({
+    type: Object,
+    description:
+      'Immutable main-currency conversion snapshot. convertedAmount is absent when status is unavailable.',
+    example: {
+      status: 'stale',
+      sourceAmount: '125.50',
+      sourceCurrency: 'USD',
+      targetCurrency: 'HUF',
+      convertedAmount: '45180.00',
+      sourceRate: '1.1',
+      targetRate: '396',
+      conversionRate: '360',
+      provider: 'frankfurter',
+      rateAt: '2026-07-24T00:00:00.000Z',
+      fetchedAt: '2026-07-27T08:00:00.000Z',
+      precision: 2,
+      roundingMode: 'HALF_EVEN',
+    },
+  })
+  conversion?: NonNullable<JournalEntry['conversion']>;
 
   @ApiProperty({ type: JournalLegResponseDto, isArray: true })
   legs!: JournalLegResponseDto[];
