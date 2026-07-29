@@ -34,6 +34,7 @@ export interface RecurringRule {
   rrule: string;
   categoryId: string | null;
   categoryLabel: string | null;
+  goalId: string | null;
   createdAt: string;
   updatedAt: string;
 }

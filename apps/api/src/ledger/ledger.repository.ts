@@ -111,6 +111,8 @@ export class LedgerRepository {
       createdAt: Date;
       note?: string;
       idempotencyKeyHash: string;
+      sourceModule?: 'manual' | 'goals';
+      sourceReferenceId?: string;
     },
   ): Promise<JournalEntry> {
     const entryId = randomUUID();
@@ -122,8 +124,8 @@ export class LedgerRepository {
         economic_type: original.economicType,
         category_id: original.categoryId,
         note: command.note?.trim() ?? `Reversal of ${original.id}`,
-        source_module: 'manual',
-        source_reference_id: null,
+        source_module: command.sourceModule ?? 'manual',
+        source_reference_id: command.sourceReferenceId ?? null,
         idempotency_key_hash: command.idempotencyKeyHash,
         posted_on: command.postedOn,
         effective_at: command.effectiveAt,

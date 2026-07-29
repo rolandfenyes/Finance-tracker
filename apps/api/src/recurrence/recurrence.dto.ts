@@ -169,6 +169,14 @@ export class RecurringRuleResponseDto {
   @ApiProperty({ type: String, nullable: true })
   categoryLabel!: string | null;
 
+  @ApiProperty({
+    type: String,
+    format: 'uuid',
+    nullable: true,
+    description: 'Goal link when this transfer forecast is managed by the goals API.',
+  })
+  goalId!: string | null;
+
   @ApiProperty({ type: RecurrenceForecastResponseDto, nullable: true })
   forecast!: RecurrenceForecastResponseDto | null;
 

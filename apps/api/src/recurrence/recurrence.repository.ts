@@ -21,6 +21,7 @@ export interface RecurringRuleWrite {
   startsOn: string;
   rrule: string;
   categoryId: string | null;
+  goalId?: string | null;
 }
 
 export interface MaterializedRule {
@@ -70,6 +71,7 @@ export class RecurrenceRepository {
         'r.starts_on',
         'r.rrule',
         'r.category_id',
+        'r.goal_id',
         'r.created_at',
         'r.updated_at',
         'c.label as category_label',
@@ -89,6 +91,7 @@ export class RecurrenceRepository {
       rrule: row.rrule,
       categoryId: row.category_id,
       categoryLabel: row.category_label,
+      goalId: row.goal_id,
       createdAt: row.created_at.toISOString(),
       updatedAt: row.updated_at.toISOString(),
     }));
@@ -130,6 +133,7 @@ export class RecurrenceRepository {
         starts_on: values.startsOn,
         rrule: values.rrule,
         category_id: values.categoryId,
+        goal_id: values.goalId ?? null,
         created_at: now,
         updated_at: now,
       })
@@ -294,20 +298,32 @@ export class RecurrenceRepository {
     dueThrough: string,
   ): Promise<MaterializedRule[]> {
     return transaction
-      .selectFrom('mymoneymap.recurring_rules')
+      .selectFrom('mymoneymap.recurring_rules as r')
+      .leftJoin('mymoneymap.goals as g', (join) =>
+        join.onRef('g.id', '=', 'r.goal_id').onRef('g.user_id', '=', 'r.user_id'),
+      )
       .select([
-        'id',
-        'user_id as userId',
-        'amount',
-        'currency',
-        'economic_type as economicType',
-        'starts_on as startsOn',
-        'rrule',
-        'category_id as categoryId',
+        'r.id',
+        'r.user_id as userId',
+        'r.amount',
+        'r.currency',
+        'r.economic_type as economicType',
+        'r.starts_on as startsOn',
+        'r.rrule',
+        'r.category_id as categoryId',
       ])
-      .where('starts_on', '<=', dueThrough)
-      .orderBy('user_id')
-      .orderBy('id')
+      .where('r.starts_on', '<=', dueThrough)
+      .where((expression) =>
+        expression.or([
+          expression('r.goal_id', 'is', null),
+          expression.and([
+            expression('g.archived_at', 'is', null),
+            expression('g.status', '!=', 'completed'),
+          ]),
+        ]),
+      )
+      .orderBy('r.user_id')
+      .orderBy('r.id')
       .execute()
       .then((rows) =>
         rows.map((row) => ({

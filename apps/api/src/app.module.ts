@@ -12,6 +12,7 @@ import { CurrencyModule } from './currency/currency.module';
 import { BudgetingModule } from './budgeting/budgeting.module';
 import { RecurrenceModule } from './recurrence/recurrence.module';
 import { ReportingModule } from './reporting/reporting.module';
+import { GoalsModule } from './goals/goals.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ReportingModule } from './reporting/reporting.module';
     BudgetingModule,
     RecurrenceModule,
     ReportingModule,
+    GoalsModule,
     HealthModule,
   ],
 })

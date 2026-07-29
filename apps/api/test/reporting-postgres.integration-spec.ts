@@ -14,6 +14,10 @@ describe('reporting PostgreSQL migration and query plans', () => {
       expect(await indexExists(pool, 'recurring_rules_user_start_index')).toBe(true);
 
       await migrateOneDown(database);
+      expect(await tableExists(pool, 'goals')).toBe(false);
+      expect(await indexExists(pool, 'journal_entries_user_period_reporting')).toBe(true);
+
+      await migrateOneDown(database);
       expect(await indexExists(pool, 'journal_entries_user_period_reporting')).toBe(false);
       expect(await tableExists(pool, 'recurring_rules')).toBe(true);
 

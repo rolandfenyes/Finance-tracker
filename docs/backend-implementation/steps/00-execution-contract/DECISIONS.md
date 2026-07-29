@@ -111,6 +111,8 @@ Preserve percentage rules and category assignments. Remove the equal per-categor
 
 A goal locks further contributions when it reaches its target. Archive controls lifecycle/visibility only. Contributions and release of funds are transfers; archive/unarchive never manufactures or deletes income.
 
+The approved overfunding policy is reject-not-cap: reject a contribution whose converted goal-currency amount exceeds the exact remaining target, and reject a target reduction below the ledger-derived balance. A contribution reversal that reduces a completed goal below its target reopens the goal.
+
 Preserve a manually configured emergency target, current allocation, history, and optional generic-investment linkage. Remove the automatic claim that every scheduled payment is a “need” and remove prescriptive adequacy/investment guidance. Backend v1 may return raw scheduled totals but does not invent an essential-expense classification.
 
 ## ADR-015 — Loans

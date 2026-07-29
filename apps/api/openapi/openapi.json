@@ -1062,6 +1062,261 @@
         "tags": ["Reporting"]
       }
     },
+    "/api/v1/goals": {
+      "get": {
+        "operationId": "GoalsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/GoalsResponseDto" } }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "List owned goals with ledger-derived progress, contribution history, and schedule",
+        "tags": ["Goals"]
+      },
+      "post": {
+        "operationId": "GoalsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateGoalDto" },
+              "examples": {
+                "savingsGoal": {
+                  "value": {
+                    "title": "Emergency laptop",
+                    "targetAmount": "1000.00",
+                    "currency": "HUF",
+                    "deadline": "2026-12-31",
+                    "priority": 3,
+                    "status": "active"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/GoalsResponseDto" } }
+            }
+          },
+          "422": { "description": "Goal financial or ownership invariant failed" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Create an owned zero-balance goal and its ledger bucket",
+        "tags": ["Goals"]
+      }
+    },
+    "/api/v1/goals/{id}": {
+      "patch": {
+        "operationId": "GoalsController_update",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/GoalsResponseDto" } }
+            }
+          },
+          "404": { "description": "" },
+          "409": { "description": "Archived goal or immutable currency history" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Update an open goal without reducing its target below derived progress",
+        "tags": ["Goals"]
+      },
+      "delete": {
+        "operationId": "GoalsController_delete",
+        "parameters": [],
+        "responses": {
+          "204": { "description": "" },
+          "409": { "description": "The goal has immutable contribution history" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Delete an empty goal; goals with financial history must be archived",
+        "tags": ["Goals"]
+      }
+    },
+    "/api/v1/goals/{id}/archive": {
+      "post": {
+        "operationId": "GoalsController_archive",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/GoalsResponseDto" } }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Archive a goal without posting income or changing its balance",
+        "tags": ["Goals"]
+      }
+    },
+    "/api/v1/goals/{id}/unarchive": {
+      "post": {
+        "operationId": "GoalsController_unarchive",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/GoalsResponseDto" } }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Restore goal visibility without posting or deleting financial history",
+        "tags": ["Goals"]
+      }
+    },
+    "/api/v1/goals/{id}/contributions": {
+      "post": {
+        "operationId": "GoalsController_contribute",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateGoalContributionDto" },
+              "examples": {
+                "exactContribution": {
+                  "value": {
+                    "amount": "400.00",
+                    "currency": "HUF",
+                    "occurredOn": "2026-07-29",
+                    "note": "Synthetic contribution"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/GoalResponseDto" } }
+            }
+          },
+          "409": { "description": "The goal is completed or archived" },
+          "422": { "description": "FX or overfunding policy failed" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Post an idempotent internal transfer into a goal without overfunding",
+        "tags": ["Goals"]
+      }
+    },
+    "/api/v1/goals/{goalId}/contributions/{id}/corrections": {
+      "post": {
+        "operationId": "GoalsController_correct",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/GoalResponseDto" } }
+            }
+          },
+          "404": { "description": "" },
+          "409": { "description": "The contribution was already corrected or reversed" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Reverse and replace an owned goal contribution atomically",
+        "tags": ["Goals"]
+      }
+    },
+    "/api/v1/goals/{goalId}/contributions/{id}/reversals": {
+      "post": {
+        "operationId": "GoalsController_reverse",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/GoalResponseDto" } }
+            }
+          },
+          "404": { "description": "" },
+          "409": { "description": "The contribution was already corrected or reversed" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Reverse an owned goal contribution and reconcile derived progress",
+        "tags": ["Goals"]
+      }
+    },
+    "/api/v1/goals/{id}/recurring-rule": {
+      "post": {
+        "operationId": "GoalsController_createRule",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/GoalsResponseDto" } }
+            }
+          },
+          "409": { "description": "The goal is locked or already has a schedule" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Attach one transfer forecast to an open goal",
+        "tags": ["Goals"]
+      },
+      "put": {
+        "operationId": "GoalsController_updateRule",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/GoalsResponseDto" } }
+            }
+          },
+          "404": { "description": "" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Replace the attached goal transfer forecast",
+        "tags": ["Goals"]
+      },
+      "delete": {
+        "operationId": "GoalsController_deleteRule",
+        "parameters": [],
+        "responses": { "204": { "description": "" } },
+        "security": [{ "cookie": [] }],
+        "summary": "Remove the attached goal forecast without changing goal progress",
+        "tags": ["Goals"]
+      }
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "HealthController_live",
@@ -1800,6 +2055,12 @@
           "rrule": { "type": "string" },
           "categoryId": { "type": "string", "format": "uuid", "nullable": true },
           "categoryLabel": { "type": "string", "nullable": true },
+          "goalId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Goal link when this transfer forecast is managed by the goals API."
+          },
           "forecast": {
             "nullable": true,
             "type": "object",
@@ -1818,6 +2079,7 @@
           "rrule",
           "categoryId",
           "categoryLabel",
+          "goalId",
           "forecast",
           "createdAt",
           "updatedAt"
@@ -2089,6 +2351,147 @@
           "combinedProjection": { "$ref": "#/components/schemas/ReportSummaryDto" }
         },
         "required": ["period", "months", "posted", "forecast", "combinedProjection"]
+      },
+      "GoalRecurringRuleResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "amount": { "type": "string" },
+          "currency": { "type": "string" },
+          "economicType": { "type": "string", "enum": ["transfer"] },
+          "startsOn": { "type": "string", "format": "date" },
+          "rrule": { "type": "string" },
+          "categoryId": { "type": "string", "format": "uuid", "nullable": true },
+          "categoryLabel": { "type": "string", "nullable": true },
+          "goalId": { "type": "string", "format": "uuid", "nullable": true },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": [
+          "id",
+          "title",
+          "amount",
+          "currency",
+          "economicType",
+          "startsOn",
+          "rrule",
+          "categoryId",
+          "categoryLabel",
+          "goalId",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "GoalContributionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "journalEntryId": { "type": "string", "format": "uuid" },
+          "amount": { "type": "string" },
+          "currency": { "type": "string" },
+          "goalAmount": { "type": "string" },
+          "goalCurrency": { "type": "string" },
+          "occurredOn": { "type": "string", "format": "date" },
+          "note": { "type": "string", "nullable": true },
+          "reversedByJournalEntryId": { "type": "string", "format": "uuid", "nullable": true },
+          "correctsContributionId": { "type": "string", "format": "uuid", "nullable": true },
+          "createdAt": { "type": "string", "format": "date-time" }
+        },
+        "required": [
+          "id",
+          "journalEntryId",
+          "amount",
+          "currency",
+          "goalAmount",
+          "goalCurrency",
+          "occurredOn",
+          "note",
+          "reversedByJournalEntryId",
+          "correctsContributionId",
+          "createdAt"
+        ]
+      },
+      "GoalResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "targetAmount": { "type": "string" },
+          "currentAmount": { "type": "string" },
+          "remainingAmount": { "type": "string" },
+          "progressPercent": {
+            "type": "string",
+            "description": "Derived percentage rounded to four decimal places."
+          },
+          "currency": { "type": "string" },
+          "deadline": { "type": "string", "format": "date", "nullable": true },
+          "priority": { "type": "number" },
+          "status": { "type": "string", "enum": ["active", "paused", "completed"] },
+          "categoryId": { "type": "string", "format": "uuid", "nullable": true },
+          "categoryLabel": { "type": "string", "nullable": true },
+          "archivedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "recurringRule": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [{ "$ref": "#/components/schemas/GoalRecurringRuleResponseDto" }]
+          },
+          "contributions": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/GoalContributionResponseDto" }
+          },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": [
+          "id",
+          "title",
+          "targetAmount",
+          "currentAmount",
+          "remainingAmount",
+          "progressPercent",
+          "currency",
+          "deadline",
+          "priority",
+          "status",
+          "categoryId",
+          "categoryLabel",
+          "archivedAt",
+          "recurringRule",
+          "contributions",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "GoalsResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/GoalResponseDto" } }
+        },
+        "required": ["items"]
+      },
+      "CreateGoalDto": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "example": "Emergency laptop", "maxLength": 120 },
+          "targetAmount": { "type": "string", "example": "1000.00" },
+          "currency": { "type": "string", "example": "HUF", "pattern": "^[A-Z]{3}$" },
+          "deadline": { "type": "string", "format": "date", "nullable": true },
+          "priority": { "type": "number", "example": 3, "default": 3 },
+          "status": { "type": "string", "enum": ["active", "paused"], "default": "active" },
+          "categoryId": { "type": "string", "format": "uuid", "nullable": true }
+        },
+        "required": ["title", "targetAmount", "currency"]
+      },
+      "CreateGoalContributionDto": {
+        "type": "object",
+        "properties": {
+          "amount": { "type": "string", "example": "400.00" },
+          "currency": { "type": "string", "example": "HUF", "pattern": "^[A-Z]{3}$" },
+          "occurredOn": { "type": "string", "format": "date", "example": "2026-07-29" },
+          "note": { "type": "string", "maxLength": 1000 }
+        },
+        "required": ["amount", "currency", "occurredOn"]
       },
       "ApiViolationResponse": {
         "type": "object",

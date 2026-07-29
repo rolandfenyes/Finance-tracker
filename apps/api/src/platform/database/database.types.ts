@@ -226,8 +226,40 @@ export interface RecurringRulesTable {
   starts_on: DatabaseDate;
   rrule: string;
   category_id: string | null;
+  goal_id: string | null;
   created_at: DatabaseTimestamp;
   updated_at: DatabaseTimestamp;
+}
+
+export interface GoalsTable {
+  id: string;
+  user_id: string;
+  title: string;
+  target_amount: DatabaseDecimal;
+  currency: string;
+  deadline: DatabaseDate | null;
+  priority: number;
+  status: 'active' | 'paused' | 'completed';
+  category_id: string | null;
+  archived_at: DatabaseTimestamp | null;
+  created_at: DatabaseTimestamp;
+  updated_at: DatabaseTimestamp;
+}
+
+export interface GoalContributionsTable {
+  id: string;
+  user_id: string;
+  goal_id: string;
+  journal_entry_id: string;
+  amount: DatabaseDecimal;
+  currency: string;
+  goal_amount: DatabaseDecimal;
+  goal_currency: string;
+  occurred_on: DatabaseDate;
+  note: string | null;
+  reversed_by_journal_entry_id: string | null;
+  corrects_contribution_id: string | null;
+  created_at: DatabaseTimestamp;
 }
 
 export interface RecurrenceJobExecutionsTable {
@@ -285,6 +317,8 @@ export interface DatabaseSchema {
   'mymoneymap.categories': CategoriesTable;
   'mymoneymap.basic_incomes': BasicIncomesTable;
   'mymoneymap.recurring_rules': RecurringRulesTable;
+  'mymoneymap.goals': GoalsTable;
+  'mymoneymap.goal_contributions': GoalContributionsTable;
   'mymoneymap.recurrence_job_executions': RecurrenceJobExecutionsTable;
   'mymoneymap.recurrence_job_events': RecurrenceJobEventsTable;
   'mymoneymap.recurring_occurrences': RecurringOccurrencesTable;

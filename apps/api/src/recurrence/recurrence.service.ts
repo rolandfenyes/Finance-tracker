@@ -67,7 +67,7 @@ export class RecurrenceService {
   ): Promise<RecurringRulesResponseDto> {
     assertNonEmptyPatch(dto);
     const existing = await this.repository.rule(userId, ruleId);
-    if (!existing) throw notFound();
+    if (!existing || existing.goalId !== null) throw notFound();
     const values = normalize({
       title: dto.title ?? existing.title,
       amount: dto.amount ?? existing.amount,
@@ -100,6 +100,8 @@ export class RecurrenceService {
   }
 
   async delete(userId: string, ruleId: string): Promise<void> {
+    const existing = await this.repository.rule(userId, ruleId);
+    if (!existing || existing.goalId !== null) throw notFound();
     if (!(await this.repository.deleteRule(userId, ruleId))) throw notFound();
   }
 
@@ -183,6 +185,7 @@ function normalize(dto: {
     startsOn: dto.startsOn,
     rrule: parsed.canonical,
     categoryId: dto.categoryId ?? null,
+    goalId: null,
   };
 }
 
