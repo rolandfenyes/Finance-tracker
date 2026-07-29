@@ -25,3 +25,10 @@
 /app/Config/core.php
 /app/Config/database.php
 /vendors/*
+
+# Graphify generated audit artifacts
+/graphify-out/
+/.graphify_*
+
+# macOS metadata
+.DS_Store
