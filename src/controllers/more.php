@@ -39,6 +39,12 @@ function more_show(PDO $pdo): void
                     'href' => '/investments',
                     'icon' => 'trending-up',
                 ],
+                [
+                    'label' => __('AI insights'),
+                    'description' => __('Generate personalised suggestions with MyMoneyMap Coach.'),
+                    'href' => '/ai',
+                    'icon' => 'sparkles',
+                ],
             ],
         ],
         [

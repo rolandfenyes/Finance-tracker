@@ -1148,6 +1148,7 @@ $ogUrl = $scheme . '://' . $host . $currentRequestPath;
         ['href'=>'/emergency',     'label'=>'Emergency Fund',   'match'=>'#^/emergency(?:/.*)?$#',   'icon' => 'life-buoy'],
         ['href'=>'/scheduled',     'label'=>'Scheduled',        'match'=>'#^/scheduled(?:/.*)?$#',   'icon' => 'calendar-clock'],
         ['href'=>'/investments',   'label'=>'Investments',      'match'=>'#^/investments(?:/.*)?$#', 'icon' => 'trending-up'],
+        ['href'=>'/ai',            'label'=>'AI insights',      'match'=>'#^/ai$#',                  'icon' => 'sparkles'],
         ['href'=>'/feedback',      'label'=>'Feedback',         'match'=>'#^/feedback$#',            'icon' => 'message-circle'],
         ['href'=>'/settings',      'label'=>'Settings',         'match'=>'#^/settings$#',            'icon' => 'settings'],
       ];
@@ -1155,6 +1156,7 @@ $ogUrl = $scheme . '://' . $host . $currentRequestPath;
         ['href'=>'/',              'label'=>'Dashboard',      'match'=>'#^/$#', 'icon' => 'layout-dashboard'],
         ['href'=>'/current-month', 'label'=>'Months',         'match'=>'#^/(current-month(?:/.*)?|months(?:/.*)?|years(?:/.*)?)$#', 'icon' => 'calendar-range'],
         ['href'=>'/goals',         'label'=>'Goals',          'match'=>'#^/goals(?:/.*)?$#', 'icon' => 'goal'],
+        ['href'=>'/ai',            'label'=>'AI',             'match'=>'#^/ai$#',              'icon' => 'sparkles'],
         // ['href'=>'/emergency',     'label'=>'Emergency', 'match'=>'#^/emergency(?:/.*)?$#', 'icon' => 'life-buoy'],
         ['href'=>'/more',          'label'=>'More',           'match'=>'#^/more(?:/.*)?$#', 'icon' => 'ellipsis'],
       ];

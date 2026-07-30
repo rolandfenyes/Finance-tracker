@@ -894,6 +894,27 @@ switch ($path) {
         month_tx_list($pdo); // returns HTML fragment & exits
         break;
 
+    case '/ai':
+        require_login();
+        require __DIR__ . '/src/controllers/ai_insights.php';
+        ai_insights_show($pdo);
+        break;
+
+    case '/api/ai-insights':
+        require_login();
+        require __DIR__ . '/src/controllers/ai_insights.php';
+        if ($method === 'POST') {
+            ai_insights_generate($pdo);
+        }
+        if ($method === 'OPTIONS') {
+            header('Allow: POST, OPTIONS');
+            http_response_code(204);
+            exit;
+        }
+        header('Allow: POST, OPTIONS');
+        json_error('Method not allowed', 405);
+        break;
+
     case '/feedback':
         require_login();
         require __DIR__ . '/src/controllers/feedback.php';
