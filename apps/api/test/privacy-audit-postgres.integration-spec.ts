@@ -16,8 +16,8 @@ import {
   PRIVACY_MANIFEST_VERSION,
 } from '../src/privacy/privacy-manifest';
 import { PrivacyRepository } from '../src/privacy/privacy.repository';
-import { migrateOneDown, migrateToLatest } from '../src/platform/database/migration-runner';
-import { withIsolatedPostgresDatabase } from './postgres-test-database';
+import { migrateToLatest } from '../src/platform/database/migration-runner';
+import { rollbackMigrationsAfter, withIsolatedPostgresDatabase } from './postgres-test-database';
 
 jest.setTimeout(30_000);
 const NOW = new Date('2026-07-30T10:00:00.000Z');
@@ -320,7 +320,7 @@ describe('privacy, export, deletion, and audit PostgreSQL contract', () => {
   it('rolls back and deterministically reapplies Step 19', async () => {
     await withIsolatedPostgresDatabase(async ({ database, pool }) => {
       await migrateToLatest(database);
-      await migrateOneDown(database);
+      await rollbackMigrationsAfter(database, '20260729160000_notifications_email');
       expect(
         (
           await pool.query<{ relation: string | null }>(

@@ -118,6 +118,12 @@
       "options": {
         "command": "tsx --tsconfig apps/api/tsconfig.json apps/api/src/notifications/run-notification-automation.ts"
       }
+    },
+    "legacy-migration-rehearsal": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsx --tsconfig apps/api/tsconfig.json apps/api/src/legacy-migration/run-legacy-migration.ts"
+      }
     }
   }
 }

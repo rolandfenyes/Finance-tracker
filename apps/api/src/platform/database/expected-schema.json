@@ -138,6 +138,26 @@
     },
     {
       "schema": "mymoneymap",
+      "name": "legacy_migration_batches",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "legacy_migration_quarantine",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "legacy_migration_reconciliation",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "legacy_migration_row_ledger",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
       "name": "loan_payments",
       "kind": "r"
     },
@@ -2601,6 +2621,390 @@
     {
       "schema": "mymoneymap",
       "relation": "ledger_accounts",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_batches",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_batches",
+      "name": "transformer_version",
+      "type": "character varying(80)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_batches",
+      "name": "source_schema_version",
+      "type": "character varying(80)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_batches",
+      "name": "source_schema_fingerprint",
+      "type": "character(64)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_batches",
+      "name": "source_data_fingerprint",
+      "type": "character(64)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_batches",
+      "name": "mode",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_batches",
+      "name": "status",
+      "type": "character varying(24)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_batches",
+      "name": "checkpoint",
+      "type": "jsonb",
+      "nullable": false,
+      "default": "'{}'::jsonb"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_batches",
+      "name": "source_row_count",
+      "type": "bigint",
+      "nullable": false,
+      "default": "0"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_batches",
+      "name": "planned_row_count",
+      "type": "bigint",
+      "nullable": false,
+      "default": "0"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_batches",
+      "name": "quarantine_row_count",
+      "type": "bigint",
+      "nullable": false,
+      "default": "0"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_batches",
+      "name": "error_code",
+      "type": "character varying(80)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_batches",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_batches",
+      "name": "started_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_batches",
+      "name": "completed_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_quarantine",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_quarantine",
+      "name": "batch_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_quarantine",
+      "name": "source_table",
+      "type": "character varying(80)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_quarantine",
+      "name": "source_key_hash",
+      "type": "character(64)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_quarantine",
+      "name": "user_key_hash",
+      "type": "character(64)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_quarantine",
+      "name": "domain",
+      "type": "character varying(80)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_quarantine",
+      "name": "reason_code",
+      "type": "character varying(80)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_quarantine",
+      "name": "detail_codes",
+      "type": "character varying(80)[]",
+      "nullable": false,
+      "default": "(ARRAY[]::character varying[])::character varying(80)[]"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_quarantine",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_reconciliation",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_reconciliation",
+      "name": "batch_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_reconciliation",
+      "name": "user_key_hash",
+      "type": "character(64)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_reconciliation",
+      "name": "domain",
+      "type": "character varying(80)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_reconciliation",
+      "name": "currency",
+      "type": "character(3)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_reconciliation",
+      "name": "source_count",
+      "type": "bigint",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_reconciliation",
+      "name": "planned_count",
+      "type": "bigint",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_reconciliation",
+      "name": "quarantine_count",
+      "type": "bigint",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_reconciliation",
+      "name": "source_amount",
+      "type": "numeric(30,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_reconciliation",
+      "name": "planned_amount",
+      "type": "numeric(30,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_reconciliation",
+      "name": "difference",
+      "type": "numeric(30,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_reconciliation",
+      "name": "status",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_reconciliation",
+      "name": "explanation_codes",
+      "type": "character varying(80)[]",
+      "nullable": false,
+      "default": "(ARRAY[]::character varying[])::character varying(80)[]"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_reconciliation",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_row_ledger",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_row_ledger",
+      "name": "batch_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_row_ledger",
+      "name": "source_table",
+      "type": "character varying(80)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_row_ledger",
+      "name": "source_key_hash",
+      "type": "character(64)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_row_ledger",
+      "name": "target_domain",
+      "type": "character varying(80)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_row_ledger",
+      "name": "target_table",
+      "type": "character varying(80)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_row_ledger",
+      "name": "target_id",
+      "type": "uuid",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_row_ledger",
+      "name": "outcome",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_row_ledger",
+      "name": "reason_code",
+      "type": "character varying(80)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_row_ledger",
       "name": "created_at",
       "type": "timestamp with time zone",
       "nullable": false,
@@ -7334,6 +7738,228 @@
     },
     {
       "schema": "mymoneymap",
+      "relation": "legacy_migration_batches",
+      "name": "legacy_migration_batches_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_batches",
+      "name": "legacy_migration_completion_check",
+      "definition": "CHECK (status::text = 'completed'::text AND completed_at IS NOT NULL OR status::text <> 'completed'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_batches",
+      "name": "legacy_migration_counts_check",
+      "definition": "CHECK (source_row_count >= 0 AND planned_row_count >= 0 AND quarantine_row_count >= 0)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_batches",
+      "name": "legacy_migration_mode_check",
+      "definition": "CHECK (mode::text = ANY (ARRAY['rehearsal'::character varying, 'cutover'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_batches",
+      "name": "legacy_migration_source_data_fingerprint_check",
+      "definition": "CHECK (source_data_fingerprint ~ '^[0-9a-f]{64}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_batches",
+      "name": "legacy_migration_source_run_unique",
+      "definition": "UNIQUE (transformer_version, source_data_fingerprint, mode)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_batches",
+      "name": "legacy_migration_source_schema_fingerprint_check",
+      "definition": "CHECK (source_schema_fingerprint ~ '^[0-9a-f]{64}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_batches",
+      "name": "legacy_migration_status_check",
+      "definition": "CHECK (status::text = ANY (ARRAY['running'::character varying, 'completed'::character varying, 'blocked'::character varying, 'rolled_back'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_batches",
+      "name": "legacy_migration_transformer_version_check",
+      "definition": "CHECK (transformer_version::text ~ '^[a-z0-9][a-z0-9._-]{0,79}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_quarantine",
+      "name": "legacy_migration_quarantine_batch_id_fkey",
+      "definition": "FOREIGN KEY (batch_id) REFERENCES mymoneymap.legacy_migration_batches(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_quarantine",
+      "name": "legacy_migration_quarantine_domain_check",
+      "definition": "CHECK (domain::text ~ '^[a-z][a-z0-9_]{0,79}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_quarantine",
+      "name": "legacy_migration_quarantine_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_quarantine",
+      "name": "legacy_migration_quarantine_reason_check",
+      "definition": "CHECK (reason_code::text ~ '^[A-Z][A-Z0-9_]{1,79}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_quarantine",
+      "name": "legacy_migration_quarantine_source_key_hash_check",
+      "definition": "CHECK (source_key_hash ~ '^[0-9a-f]{64}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_quarantine",
+      "name": "legacy_migration_quarantine_source_table_check",
+      "definition": "CHECK (source_table::text ~ '^[a-z][a-z0-9_]{0,79}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_quarantine",
+      "name": "legacy_migration_quarantine_unique",
+      "definition": "UNIQUE (batch_id, source_table, source_key_hash, reason_code)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_quarantine",
+      "name": "legacy_migration_quarantine_user_key_hash_check",
+      "definition": "CHECK (user_key_hash IS NULL OR user_key_hash ~ '^[0-9a-f]{64}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_reconciliation",
+      "name": "legacy_migration_reconciliation_batch_id_fkey",
+      "definition": "FOREIGN KEY (batch_id) REFERENCES mymoneymap.legacy_migration_batches(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_reconciliation",
+      "name": "legacy_migration_reconciliation_counts_check",
+      "definition": "CHECK (source_count >= 0 AND planned_count >= 0 AND quarantine_count >= 0)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_reconciliation",
+      "name": "legacy_migration_reconciliation_currency_check",
+      "definition": "CHECK (currency ~ '^[A-Z]{3}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_reconciliation",
+      "name": "legacy_migration_reconciliation_difference_check",
+      "definition": "CHECK (difference = (source_amount - planned_amount))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_reconciliation",
+      "name": "legacy_migration_reconciliation_domain_check",
+      "definition": "CHECK (domain::text ~ '^[a-z][a-z0-9_]{0,79}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_reconciliation",
+      "name": "legacy_migration_reconciliation_explanation_check",
+      "definition": "CHECK (status::text = 'exact'::text AND difference = 0::numeric AND cardinality(explanation_codes) = 0 OR status::text <> 'exact'::text AND cardinality(explanation_codes) > 0)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_reconciliation",
+      "name": "legacy_migration_reconciliation_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_reconciliation",
+      "name": "legacy_migration_reconciliation_status_check",
+      "definition": "CHECK (status::text = ANY (ARRAY['exact'::character varying, 'explained'::character varying, 'blocked'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_reconciliation",
+      "name": "legacy_migration_reconciliation_unique",
+      "definition": "UNIQUE (batch_id, user_key_hash, domain, currency)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_reconciliation",
+      "name": "legacy_migration_reconciliation_user_hash_check",
+      "definition": "CHECK (user_key_hash ~ '^[0-9a-f]{64}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_row_ledger",
+      "name": "legacy_migration_row_ledger_batch_id_fkey",
+      "definition": "FOREIGN KEY (batch_id) REFERENCES mymoneymap.legacy_migration_batches(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_row_ledger",
+      "name": "legacy_migration_row_ledger_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_row_ledger",
+      "name": "legacy_migration_row_outcome_check",
+      "definition": "CHECK (outcome::text = ANY (ARRAY['planned'::character varying, 'quarantined'::character varying, 'skipped'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_row_ledger",
+      "name": "legacy_migration_row_outcome_detail_check",
+      "definition": "CHECK (outcome::text = 'planned'::text AND target_table IS NOT NULL AND target_id IS NOT NULL AND reason_code IS NULL OR outcome::text <> 'planned'::text AND target_id IS NULL AND reason_code IS NOT NULL)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_row_ledger",
+      "name": "legacy_migration_row_reason_check",
+      "definition": "CHECK (reason_code IS NULL OR reason_code::text ~ '^[A-Z][A-Z0-9_]{1,79}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_row_ledger",
+      "name": "legacy_migration_row_source_key_hash_check",
+      "definition": "CHECK (source_key_hash ~ '^[0-9a-f]{64}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_row_ledger",
+      "name": "legacy_migration_row_source_table_check",
+      "definition": "CHECK (source_table::text ~ '^[a-z][a-z0-9_]{0,79}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_row_ledger",
+      "name": "legacy_migration_row_target_domain_check",
+      "definition": "CHECK (target_domain::text ~ '^[a-z][a-z0-9_]{0,79}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_row_ledger",
+      "name": "legacy_migration_row_target_table_check",
+      "definition": "CHECK (target_table IS NULL OR target_table::text ~ '^[a-z][a-z0-9_]{0,79}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_row_ledger",
+      "name": "legacy_migration_row_unique",
+      "definition": "UNIQUE (batch_id, source_table, source_key_hash, target_domain, target_table)"
+    },
+    {
+      "schema": "mymoneymap",
       "relation": "loan_payments",
       "name": "loan_payments_amount_check",
       "definition": "CHECK (amount > 0::numeric AND principal_component >= 0::numeric AND interest_component >= 0::numeric AND fee_component >= 0::numeric AND (principal_component + interest_component + fee_component) = amount AND loan_principal_component >= 0::numeric AND loan_interest_component >= 0::numeric AND loan_fee_component >= 0::numeric AND (loan_principal_component + loan_interest_component + loan_fee_component) > 0::numeric)"
@@ -9535,6 +10161,78 @@
       "relation": "ledger_accounts",
       "name": "ledger_accounts_pkey",
       "definition": "CREATE UNIQUE INDEX ledger_accounts_pkey ON mymoneymap.ledger_accounts USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_batches",
+      "name": "legacy_migration_batches_pkey",
+      "definition": "CREATE UNIQUE INDEX legacy_migration_batches_pkey ON mymoneymap.legacy_migration_batches USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_batches",
+      "name": "legacy_migration_batches_status_index",
+      "definition": "CREATE INDEX legacy_migration_batches_status_index ON mymoneymap.legacy_migration_batches USING btree (status, created_at DESC, id DESC)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_batches",
+      "name": "legacy_migration_source_run_unique",
+      "definition": "CREATE UNIQUE INDEX legacy_migration_source_run_unique ON mymoneymap.legacy_migration_batches USING btree (transformer_version, source_data_fingerprint, mode)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_quarantine",
+      "name": "legacy_migration_quarantine_batch_reason_index",
+      "definition": "CREATE INDEX legacy_migration_quarantine_batch_reason_index ON mymoneymap.legacy_migration_quarantine USING btree (batch_id, reason_code, source_table, id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_quarantine",
+      "name": "legacy_migration_quarantine_pkey",
+      "definition": "CREATE UNIQUE INDEX legacy_migration_quarantine_pkey ON mymoneymap.legacy_migration_quarantine USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_quarantine",
+      "name": "legacy_migration_quarantine_unique",
+      "definition": "CREATE UNIQUE INDEX legacy_migration_quarantine_unique ON mymoneymap.legacy_migration_quarantine USING btree (batch_id, source_table, source_key_hash, reason_code)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_reconciliation",
+      "name": "legacy_migration_reconciliation_batch_status_index",
+      "definition": "CREATE INDEX legacy_migration_reconciliation_batch_status_index ON mymoneymap.legacy_migration_reconciliation USING btree (batch_id, status, domain, currency, id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_reconciliation",
+      "name": "legacy_migration_reconciliation_pkey",
+      "definition": "CREATE UNIQUE INDEX legacy_migration_reconciliation_pkey ON mymoneymap.legacy_migration_reconciliation USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_reconciliation",
+      "name": "legacy_migration_reconciliation_unique",
+      "definition": "CREATE UNIQUE INDEX legacy_migration_reconciliation_unique ON mymoneymap.legacy_migration_reconciliation USING btree (batch_id, user_key_hash, domain, currency)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_row_ledger",
+      "name": "legacy_migration_row_batch_outcome_index",
+      "definition": "CREATE INDEX legacy_migration_row_batch_outcome_index ON mymoneymap.legacy_migration_row_ledger USING btree (batch_id, outcome, source_table, id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_row_ledger",
+      "name": "legacy_migration_row_ledger_pkey",
+      "definition": "CREATE UNIQUE INDEX legacy_migration_row_ledger_pkey ON mymoneymap.legacy_migration_row_ledger USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "legacy_migration_row_ledger",
+      "name": "legacy_migration_row_unique",
+      "definition": "CREATE UNIQUE INDEX legacy_migration_row_unique ON mymoneymap.legacy_migration_row_ledger USING btree (batch_id, source_table, source_key_hash, target_domain, target_table)"
     },
     {
       "schema": "mymoneymap",

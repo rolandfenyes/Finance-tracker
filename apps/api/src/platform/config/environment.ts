@@ -76,6 +76,16 @@ const environmentSchema = z
     PRIVACY_EXPORT_S3_REGION: z.string().min(2).max(64).optional(),
     PRIVACY_EXPORT_EXPIRY_SECONDS: positiveSeconds.optional(),
     PRIVACY_EXPORT_SIGNED_URL_SECONDS: positiveSeconds.optional(),
+    LEGACY_MIGRATION_ENABLED: booleanText.default(false),
+    LEGACY_MIGRATION_MODE: z.enum(['rehearsal', 'cutover']).default('rehearsal'),
+    LEGACY_MIGRATION_CUTOVER_APPROVED: booleanText.default(false),
+    LEGACY_DATABASE_URL: z
+      .string()
+      .min(1)
+      .refine((value) => value.startsWith('postgresql://'), {
+        message: 'must use the postgresql:// scheme',
+      })
+      .optional(),
     SETTINGS_ENCRYPTION_KEY: z.string().optional(),
     ACCOUNT_RECOVERY_TTL_SECONDS: positiveSeconds.default(3600),
     SESSION_SECRET: z.string().min(32),
@@ -104,6 +114,25 @@ const environmentSchema = z
     OPENAPI_ENABLED: booleanText,
   })
   .superRefine((environment, context) => {
+    if (environment.LEGACY_MIGRATION_ENABLED && !environment.LEGACY_DATABASE_URL) {
+      context.addIssue({
+        code: 'custom',
+        path: ['LEGACY_DATABASE_URL'],
+        message: 'enabled legacy migration requires an explicit read-only source URL',
+      });
+    }
+
+    if (
+      environment.LEGACY_MIGRATION_MODE === 'cutover' &&
+      !environment.LEGACY_MIGRATION_CUTOVER_APPROVED
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['LEGACY_MIGRATION_CUTOVER_APPROVED'],
+        message: 'cutover mode requires explicit owner approval',
+      });
+    }
+
     if (environment.PRIVACY_EXPORTS_ENABLED) {
       if (
         environment.PRIVACY_EXPORT_STORAGE_PROVIDER !== 's3' ||

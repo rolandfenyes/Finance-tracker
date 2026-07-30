@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Pool } from 'pg';
-import { migrateOneDown, migrateToLatest } from '../src/platform/database/migration-runner';
-import { withIsolatedPostgresDatabase } from './postgres-test-database';
+import { migrateToLatest } from '../src/platform/database/migration-runner';
+import { rollbackMigrationsAfter, withIsolatedPostgresDatabase } from './postgres-test-database';
 
 jest.setTimeout(30_000);
 
@@ -73,9 +73,7 @@ describe('billing PostgreSQL contract', () => {
         pool.query('DELETE FROM mymoneymap.privileged_audit_events WHERE id=$1', [auditId]),
       ).rejects.toThrow('privileged audit events are immutable');
 
-      await migrateOneDown(database);
-      await migrateOneDown(database);
-      await migrateOneDown(database);
+      await rollbackMigrationsAfter(database, '20260729140000_admin_feedback_system');
       expect(await relation(pool, 'billing_plans')).toBeNull();
       expect(await relation(pool, 'privileged_audit_events')).toBe(
         'mymoneymap.privileged_audit_events',

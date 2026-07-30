@@ -689,6 +689,66 @@ export interface SecuritiesClearRequestsTable {
   completed_at: DatabaseTimestamp;
 }
 
+export interface LegacyMigrationBatchesTable {
+  id: string;
+  transformer_version: string;
+  source_schema_version: string;
+  source_schema_fingerprint: string;
+  source_data_fingerprint: string;
+  mode: 'rehearsal' | 'cutover';
+  status: 'running' | 'completed' | 'blocked' | 'rolled_back';
+  checkpoint: JsonValue;
+  source_row_count: ColumnType<string, string | number, string | number>;
+  planned_row_count: ColumnType<string, string | number, string | number>;
+  quarantine_row_count: ColumnType<string, string | number, string | number>;
+  error_code: string | null;
+  created_at: DatabaseTimestamp;
+  started_at: DatabaseTimestamp | null;
+  completed_at: DatabaseTimestamp | null;
+}
+
+export interface LegacyMigrationRowLedgerTable {
+  id: string;
+  batch_id: string;
+  source_table: string;
+  source_key_hash: string;
+  target_domain: string;
+  target_table: string | null;
+  target_id: string | null;
+  outcome: 'planned' | 'quarantined' | 'skipped';
+  reason_code: string | null;
+  created_at: DatabaseTimestamp;
+}
+
+export interface LegacyMigrationQuarantineTable {
+  id: string;
+  batch_id: string;
+  source_table: string;
+  source_key_hash: string;
+  user_key_hash: string | null;
+  domain: string;
+  reason_code: string;
+  detail_codes: string[];
+  created_at: DatabaseTimestamp;
+}
+
+export interface LegacyMigrationReconciliationTable {
+  id: string;
+  batch_id: string;
+  user_key_hash: string;
+  domain: string;
+  currency: string;
+  source_count: ColumnType<string, string | number, string | number>;
+  planned_count: ColumnType<string, string | number, string | number>;
+  quarantine_count: ColumnType<string, string | number, string | number>;
+  source_amount: DatabaseDecimal;
+  planned_amount: DatabaseDecimal;
+  difference: DatabaseDecimal;
+  status: 'exact' | 'explained' | 'blocked';
+  explanation_codes: string[];
+  created_at: DatabaseTimestamp;
+}
+
 export interface DatabaseSchema {
   'mymoneymap.idempotency_keys': IdempotencyKeysTable;
   'mymoneymap.users': UsersTable;
@@ -737,4 +797,8 @@ export interface DatabaseSchema {
   'mymoneymap.securities_imports': SecuritiesImportsTable;
   'mymoneymap.securities_refresh_jobs': SecuritiesRefreshJobsTable;
   'mymoneymap.securities_clear_requests': SecuritiesClearRequestsTable;
+  'mymoneymap.legacy_migration_batches': LegacyMigrationBatchesTable;
+  'mymoneymap.legacy_migration_row_ledger': LegacyMigrationRowLedgerTable;
+  'mymoneymap.legacy_migration_quarantine': LegacyMigrationQuarantineTable;
+  'mymoneymap.legacy_migration_reconciliation': LegacyMigrationReconciliationTable;
 }

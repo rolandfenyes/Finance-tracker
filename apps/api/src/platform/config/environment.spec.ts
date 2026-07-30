@@ -58,6 +58,9 @@ describe('environment validation', () => {
       POSTMARK_BASE_URL: 'https://api.postmarkapp.com',
       PRIVACY_EXPORTS_ENABLED: false,
       PRIVACY_EXPORT_STORAGE_PROVIDER: 'disabled',
+      LEGACY_MIGRATION_ENABLED: false,
+      LEGACY_MIGRATION_MODE: 'rehearsal',
+      LEGACY_MIGRATION_CUTOVER_APPROVED: false,
       ACCOUNT_RECOVERY_TTL_SECONDS: 3600,
       SESSION_IDLE_TTL_SECONDS: 1800,
       SESSION_ABSOLUTE_TTL_SECONDS: 43200,
@@ -172,6 +175,24 @@ describe('environment validation', () => {
         DATABASE_URL: `${validEnvironment.DATABASE_URL}?sslmode=disable`,
       }),
     ).toThrow('Invalid application configuration: DATABASE_URL');
+  });
+
+  it('requires a source URL when migration is enabled and explicit approval for cutover mode', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validEnvironment,
+        LEGACY_MIGRATION_ENABLED: 'true',
+      }),
+    ).toThrow('Invalid application configuration: LEGACY_DATABASE_URL');
+
+    expect(() =>
+      validateEnvironment({
+        ...validEnvironment,
+        LEGACY_MIGRATION_ENABLED: 'true',
+        LEGACY_DATABASE_URL: 'postgresql://legacy_readonly:synthetic@127.0.0.1:5433/legacy',
+        LEGACY_MIGRATION_MODE: 'cutover',
+      }),
+    ).toThrow('Invalid application configuration: LEGACY_MIGRATION_CUTOVER_APPROVED');
   });
 
   it('does not load an environment file in production', () => {

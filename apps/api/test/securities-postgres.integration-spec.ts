@@ -1,5 +1,5 @@
-import { migrateOneDown, migrateToLatest } from '../src/platform/database/migration-runner';
-import { withIsolatedPostgresDatabase } from './postgres-test-database';
+import { migrateToLatest } from '../src/platform/database/migration-runner';
+import { rollbackMigrationsAfter, withIsolatedPostgresDatabase } from './postgres-test-database';
 import type { Pool } from 'pg';
 
 jest.setTimeout(30_000);
@@ -14,13 +14,7 @@ describe('securities PostgreSQL migration contract', () => {
         'mymoneymap.securities_refresh_jobs',
       );
 
-      await migrateOneDown(database);
-      await migrateOneDown(database);
-      await migrateOneDown(database);
-      await migrateOneDown(database);
-      await migrateOneDown(database);
-      await migrateOneDown(database);
-      await migrateOneDown(database);
+      await rollbackMigrationsAfter(database, '20260729120000_generic_investments');
       expect(await relation(pool, 'securities_trades')).toBeNull();
       expect(await relation(pool, 'securities_lots')).toBeNull();
       expect(await relation(pool, 'securities_refresh_jobs')).toBeNull();

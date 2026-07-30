@@ -395,6 +395,10 @@ export const DATABASE_LIFECYCLE_MANIFEST: readonly DatabaseLifecycleDefinition[]
     ['email_channel_settings', 'notifications', 'system_configuration'],
     ['recurrence_job_executions', 'recurrence', 'global_job_state'],
     ['recurrence_job_events', 'recurrence', 'global_job_state'],
+    ['legacy_migration_batches', 'legacy_migration', 'global_job_state'],
+    ['legacy_migration_row_ledger', 'legacy_migration', 'global_job_state'],
+    ['legacy_migration_quarantine', 'legacy_migration', 'global_job_state'],
+    ['legacy_migration_reconciliation', 'legacy_migration', 'global_job_state'],
   ].map(([table, domain, classification]) =>
     shared(
       table!,

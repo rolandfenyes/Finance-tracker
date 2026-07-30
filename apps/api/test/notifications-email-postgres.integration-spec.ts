@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { migrateOneDown, migrateToLatest } from '../src/platform/database/migration-runner';
-import { withIsolatedPostgresDatabase } from './postgres-test-database';
+import { migrateToLatest } from '../src/platform/database/migration-runner';
+import { rollbackMigrationsAfter, withIsolatedPostgresDatabase } from './postgres-test-database';
 
 jest.setTimeout(30_000);
 
@@ -64,8 +64,7 @@ describe('notifications/email PostgreSQL contract', () => {
           )
         ).rows[0]?.user_id,
       ).toBeNull();
-      await migrateOneDown(database);
-      await migrateOneDown(database);
+      await rollbackMigrationsAfter(database, '20260729150000_billing');
       expect(
         (
           await pool.query<{ relation: string | null }>(
