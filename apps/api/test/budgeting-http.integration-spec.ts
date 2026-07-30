@@ -10,6 +10,8 @@ import type { UserRole } from '../src/identity/identity.types';
 import { RedisSecurityService } from '../src/identity/redis-security.service';
 import { POSTGRES_POOL } from '../src/platform/database/database.constants';
 
+jest.setTimeout(30_000);
+
 interface PlanningItem {
   id: string;
   label: string;

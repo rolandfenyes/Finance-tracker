@@ -23,6 +23,7 @@ describe('users/settings PostgreSQL invariants', () => {
       ).toBe('5');
 
       await migrateOneDown(database);
+      await migrateOneDown(database);
       expect(
         (
           await pool.query<{ count: string }>(

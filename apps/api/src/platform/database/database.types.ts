@@ -231,6 +231,32 @@ export interface RecurringRulesTable {
   updated_at: DatabaseTimestamp;
 }
 
+export interface EmergencyReservesTable {
+  user_id: string;
+  target_amount: DatabaseDecimal;
+  currency: string;
+  reserve_account_id: string;
+  linked_investment_account_id: string | null;
+  created_at: DatabaseTimestamp;
+  updated_at: DatabaseTimestamp;
+}
+
+export interface EmergencyReserveMovementsTable {
+  id: string;
+  user_id: string;
+  journal_entry_id: string;
+  holding_account_id: string;
+  direction: 'contribution' | 'withdrawal';
+  amount: DatabaseDecimal;
+  currency: string;
+  reserve_amount: DatabaseDecimal;
+  reserve_currency: string;
+  occurred_on: DatabaseDate;
+  note: string | null;
+  reversed_by_journal_entry_id: string | null;
+  created_at: DatabaseTimestamp;
+}
+
 export interface GoalsTable {
   id: string;
   user_id: string;
@@ -317,6 +343,8 @@ export interface DatabaseSchema {
   'mymoneymap.categories': CategoriesTable;
   'mymoneymap.basic_incomes': BasicIncomesTable;
   'mymoneymap.recurring_rules': RecurringRulesTable;
+  'mymoneymap.emergency_reserves': EmergencyReservesTable;
+  'mymoneymap.emergency_reserve_movements': EmergencyReserveMovementsTable;
   'mymoneymap.goals': GoalsTable;
   'mymoneymap.goal_contributions': GoalContributionsTable;
   'mymoneymap.recurrence_job_executions': RecurrenceJobExecutionsTable;

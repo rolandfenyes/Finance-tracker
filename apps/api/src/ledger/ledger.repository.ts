@@ -13,6 +13,7 @@ import type {
   JournalListPage,
   JournalListQuery,
   LedgerAccountKind,
+  LedgerSourceModule,
   PostJournalCommand,
 } from './ledger.types';
 
@@ -111,7 +112,7 @@ export class LedgerRepository {
       createdAt: Date;
       note?: string;
       idempotencyKeyHash: string;
-      sourceModule?: 'manual' | 'goals';
+      sourceModule?: LedgerSourceModule;
       sourceReferenceId?: string;
     },
   ): Promise<JournalEntry> {

@@ -72,6 +72,10 @@ describe('PostgreSQL baseline and migration system', () => {
           name: '20260729090000_goals',
           executedAt: expect.any(Date),
         }),
+        expect.objectContaining({
+          name: '20260729100000_emergency_reserve',
+          executedAt: expect.any(Date),
+        }),
       ]);
 
       expect(fingerprint.relations.map(({ schema, name }) => `${schema}.${name}`)).toEqual([
@@ -80,6 +84,8 @@ describe('PostgreSQL baseline and migration system', () => {
         'mymoneymap.categories',
         'mymoneymap.currencies',
         'mymoneymap.email_verification_tokens',
+        'mymoneymap.emergency_reserve_movements',
+        'mymoneymap.emergency_reserves',
         'mymoneymap.fx_conversion_snapshots',
         'mymoneymap.fx_quotes',
         'mymoneymap.goal_contributions',
@@ -117,7 +123,7 @@ describe('PostgreSQL baseline and migration system', () => {
       const rollback = await migrateOneDown(database);
       expect(rollback.results).toEqual([
         {
-          migrationName: '20260729090000_goals',
+          migrationName: '20260729100000_emergency_reserve',
           direction: 'Down',
           status: 'Success',
         },
@@ -135,9 +141,13 @@ describe('PostgreSQL baseline and migration system', () => {
       expect(rolledBack.relations.map(({ name }) => name)).toContain('basic_incomes');
       expect(rolledBack.relations.map(({ name }) => name)).toContain('recurring_rules');
       expect(rolledBack.relations.map(({ name }) => name)).toContain('recurrence_job_executions');
-      expect(rolledBack.relations.map(({ name }) => name)).not.toContain('goals');
-      expect(rolledBack.relations.map(({ name }) => name)).not.toContain('goal_contributions');
-      expect(rolledBack.columns).not.toContainEqual(
+      expect(rolledBack.relations.map(({ name }) => name)).toContain('goals');
+      expect(rolledBack.relations.map(({ name }) => name)).toContain('goal_contributions');
+      expect(rolledBack.relations.map(({ name }) => name)).not.toContain('emergency_reserves');
+      expect(rolledBack.relations.map(({ name }) => name)).not.toContain(
+        'emergency_reserve_movements',
+      );
+      expect(rolledBack.columns).toContainEqual(
         expect.objectContaining({ relation: 'recurring_rules', name: 'goal_id' }),
       );
       expect(rolledBack.indexes.map(({ name }) => name)).toContain(
@@ -173,7 +183,7 @@ describe('PostgreSQL baseline and migration system', () => {
       const ledger = await pool.query<{ count: string }>(
         'SELECT count(*)::text AS count FROM mymoneymap_meta.kysely_migration',
       );
-      expect(ledger.rows[0]?.count).toBe('12');
+      expect(ledger.rows[0]?.count).toBe('13');
       const concurrentFingerprint = await readSchemaFingerprint(pool);
       expect(() => assertSchemaMatchesExpected(concurrentFingerprint)).not.toThrow();
     });
@@ -235,6 +245,7 @@ describe('PostgreSQL baseline and migration system', () => {
       '20260729070000_recurrence_scheduling',
       '20260729080000_reporting_indexes',
       '20260729090000_goals',
+      '20260729100000_emergency_reserve',
     ]);
     expect(targetStatusNames).not.toContain('028_default_admin');
   });

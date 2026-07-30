@@ -1317,6 +1317,146 @@
         "tags": ["Goals"]
       }
     },
+    "/api/v1/emergency-reserve": {
+      "get": {
+        "operationId": "EmergencyReserveController_read",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EmergencyReserveResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Read the owned reserve, ledger-derived allocation, history, and raw schedule context",
+        "tags": ["Emergency reserve"]
+      }
+    },
+    "/api/v1/emergency-reserve/target": {
+      "put": {
+        "operationId": "EmergencyReserveController_updateTarget",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateEmergencyReserveTargetDto" },
+              "examples": {
+                "manualTarget": {
+                  "value": {
+                    "targetAmount": "250000.00",
+                    "currency": "HUF",
+                    "linkedInvestmentAccountId": null
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EmergencyReserveResponseDto" }
+              }
+            }
+          },
+          "404": { "description": "Linked investment account was not found" },
+          "409": { "description": "Currency or holding link is immutable after history" },
+          "422": { "description": "Target or ownership invariant failed" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Set the manual reserve target and optional owned investment-account linkage",
+        "tags": ["Emergency reserve"]
+      }
+    },
+    "/api/v1/emergency-reserve/contributions": {
+      "post": {
+        "operationId": "EmergencyReserveController_contribution",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EmergencyReserveResponseDto" }
+              }
+            }
+          },
+          "422": { "description": "FX, currency, or amount invariant failed" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Post one idempotent internal transfer into the emergency reserve allocation",
+        "tags": ["Emergency reserve"]
+      }
+    },
+    "/api/v1/emergency-reserve/withdrawals": {
+      "post": {
+        "operationId": "EmergencyReserveController_withdrawal",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EmergencyReserveResponseDto" }
+              }
+            }
+          },
+          "422": { "description": "Withdrawal exceeds the derived allocation" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Post one idempotent internal transfer out of the emergency reserve allocation",
+        "tags": ["Emergency reserve"]
+      }
+    },
+    "/api/v1/emergency-reserve/movements/{id}/reversals": {
+      "post": {
+        "operationId": "EmergencyReserveController_reverse",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EmergencyReserveResponseDto" }
+              }
+            }
+          },
+          "404": { "description": "" },
+          "409": { "description": "Already reversed or reversal would make allocation negative" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Reverse an owned reserve movement without deleting immutable financial history",
+        "tags": ["Emergency reserve"]
+      }
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "HealthController_live",
@@ -2492,6 +2632,115 @@
           "note": { "type": "string", "maxLength": 1000 }
         },
         "required": ["amount", "currency", "occurredOn"]
+      },
+      "EmergencyReserveTargetMethodologyResponseDto": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string", "enum": ["manual_user_defined"] },
+          "label": { "type": "string", "enum": ["User-defined reserve target"] },
+          "educationalOnly": { "type": "boolean", "enum": [true] }
+        },
+        "required": ["code", "label", "educationalOnly"]
+      },
+      "ScheduledActivityTotalResponseDto": {
+        "type": "object",
+        "properties": {
+          "currency": { "type": "string" },
+          "income": { "type": "string" },
+          "expense": { "type": "string" },
+          "transfer": { "type": "string" }
+        },
+        "required": ["currency", "income", "expense", "transfer"]
+      },
+      "EmergencyReserveScheduledActivityResponseDto": {
+        "type": "object",
+        "properties": {
+          "classification": { "type": "string", "enum": ["raw_unclassified_scheduled_activity"] },
+          "label": { "type": "string", "enum": ["Raw scheduled activity totals"] },
+          "periodFrom": { "type": "string", "format": "date" },
+          "periodTo": { "type": "string", "format": "date" },
+          "totals": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ScheduledActivityTotalResponseDto" }
+          }
+        },
+        "required": ["classification", "label", "periodFrom", "periodTo", "totals"]
+      },
+      "EmergencyReserveMovementResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "journalEntryId": { "type": "string", "format": "uuid" },
+          "holdingAccountId": { "type": "string", "format": "uuid" },
+          "direction": { "type": "string", "enum": ["contribution", "withdrawal"] },
+          "amount": { "type": "string" },
+          "currency": { "type": "string" },
+          "reserveAmount": { "type": "string" },
+          "reserveCurrency": { "type": "string" },
+          "occurredOn": { "type": "string", "format": "date" },
+          "note": { "type": "string", "nullable": true },
+          "reversedByJournalEntryId": { "type": "string", "format": "uuid", "nullable": true },
+          "createdAt": { "type": "string", "format": "date-time" }
+        },
+        "required": [
+          "id",
+          "journalEntryId",
+          "holdingAccountId",
+          "direction",
+          "amount",
+          "currency",
+          "reserveAmount",
+          "reserveCurrency",
+          "occurredOn",
+          "note",
+          "reversedByJournalEntryId",
+          "createdAt"
+        ]
+      },
+      "EmergencyReserveResponseDto": {
+        "type": "object",
+        "properties": {
+          "configured": { "type": "boolean" },
+          "targetAmount": { "type": "string" },
+          "currentAmount": { "type": "string" },
+          "currency": { "type": "string" },
+          "reserveAccountId": { "type": "string", "format": "uuid", "nullable": true },
+          "linkedInvestmentAccountId": { "type": "string", "format": "uuid", "nullable": true },
+          "targetMethodology": {
+            "$ref": "#/components/schemas/EmergencyReserveTargetMethodologyResponseDto"
+          },
+          "scheduledActivity": {
+            "$ref": "#/components/schemas/EmergencyReserveScheduledActivityResponseDto"
+          },
+          "movements": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/EmergencyReserveMovementResponseDto" }
+          },
+          "createdAt": { "type": "string", "format": "date-time", "nullable": true },
+          "updatedAt": { "type": "string", "format": "date-time", "nullable": true }
+        },
+        "required": [
+          "configured",
+          "targetAmount",
+          "currentAmount",
+          "currency",
+          "reserveAccountId",
+          "linkedInvestmentAccountId",
+          "targetMethodology",
+          "scheduledActivity",
+          "movements",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpdateEmergencyReserveTargetDto": {
+        "type": "object",
+        "properties": {
+          "targetAmount": { "type": "string", "example": "250000.00" },
+          "currency": { "type": "string", "example": "HUF", "pattern": "^[A-Z]{3}$" },
+          "linkedInvestmentAccountId": { "type": "string", "format": "uuid", "nullable": true }
+        },
+        "required": ["targetAmount", "currency"]
       },
       "ApiViolationResponse": {
         "type": "object",
