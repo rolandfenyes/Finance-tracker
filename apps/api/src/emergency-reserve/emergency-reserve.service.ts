@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { Transaction } from 'kysely';
 import { FxConversionService } from '../currency/fx-conversion.service';
@@ -33,6 +33,10 @@ import type {
   EmergencyReserveMovementDirection,
   LockedEmergencyReserve,
 } from './emergency-reserve.types';
+import {
+  NOTIFICATION_TRIGGER,
+  type NotificationTrigger,
+} from '../notifications/notification-trigger.port';
 
 const PRODUCT_TIME_ZONE = UserTimeZone.create('Europe/Budapest');
 
@@ -44,6 +48,9 @@ export class EmergencyReserveService {
     @Inject(FxConversionService) private readonly fx: FxConversionService,
     @Inject(IdempotencyService) private readonly idempotency: IdempotencyService,
     @Inject(CLOCK) private readonly clock: Clock,
+    @Optional()
+    @Inject(NOTIFICATION_TRIGGER)
+    private readonly notificationTrigger?: NotificationTrigger,
   ) {}
 
   async reserve(userId: string): Promise<EmergencyReserve> {
@@ -220,6 +227,7 @@ export class EmergencyReserveService {
     const amount = exact(dto.amount, 'Movement amount');
     if (!amount.isPositive()) throw semantic('Movement amount must be greater than zero');
     const key = requiredKey(rawKey);
+    let createdMovementId: string | null = null;
     const result = await this.idempotency.execute(
       execution(userId, `emergency-reserve.${direction}`, key, dto),
       async (transaction) => {
@@ -246,6 +254,7 @@ export class EmergencyReserveService {
           throw semantic('Withdrawal exceeds the available emergency reserve allocation');
         }
         const movementId = randomUUID();
+        createdMovementId = movementId;
         const now = this.clock.now().toDate();
         const cashAccountId = await this.repository.defaultCashAccount(transaction, userId);
         const entry = await this.ledger.post(transaction, {
@@ -283,10 +292,19 @@ export class EmergencyReserveService {
         return reserveJson(await this.responseInTransaction(transaction, userId));
       },
     );
-    return {
+    const response = {
       value: result.value.reserve as unknown as EmergencyReserve,
       replayed: result.replayed,
     };
+    if (direction === 'withdrawal' && !response.replayed) {
+      const movement = response.value.movements.find(
+        (candidate) => candidate.id === createdMovementId,
+      );
+      if (movement) {
+        await this.notificationTrigger?.emergencyWithdrawal(userId, response.value, movement);
+      }
+    }
+    return response;
   }
 
   private async ensureReserve(

@@ -41,6 +41,37 @@ export class NotificationsRepository {
     return result.rows[0] ?? null;
   }
 
+  async userForId(userId: string) {
+    const result = await this.pool.query<{
+      id: string;
+      email: string;
+      full_name: string;
+      desired_language: string;
+    }>(
+      `SELECT id,email,full_name,desired_language FROM mymoneymap.users
+       WHERE id=$1 AND status='active' AND email_verified_at IS NOT NULL`,
+      [userId],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  async verifiedRecipients() {
+    const result = await this.pool.query<{ id: string }>(
+      `SELECT id FROM mymoneymap.users
+       WHERE status='active' AND role<>'admin' AND email_verified_at IS NOT NULL
+       ORDER BY id`,
+    );
+    return result.rows;
+  }
+
+  async feedbackRecipient(): Promise<string | null> {
+    const result = await this.pool.query<{ recipient: string | null }>(
+      `SELECT COALESCE(NULLIF(btrim(support_email),''),NULLIF(btrim(contact_email),'')) AS recipient
+       FROM mymoneymap.system_settings WHERE id=1`,
+    );
+    return result.rows[0]?.recipient ?? null;
+  }
+
   async createDelivery(input: {
     eventKey: string;
     correlationId: string;
@@ -50,6 +81,7 @@ export class NotificationsRepository {
     locale: EmailLocale;
     classification: EmailClassification;
     data: Record<string, string>;
+    provenance: Record<string, string>;
     status: string;
     now: Date;
   }) {
@@ -61,8 +93,8 @@ export class NotificationsRepository {
     }>(
       `INSERT INTO mymoneymap.email_deliveries
        (id,event_key,correlation_id,user_id,recipient_email,template_code,template_version,locale,
-        classification,template_data,status,attempt_count,max_attempts,created_at)
-       VALUES($1,$2,$3,$4,$5,$6,1,$7,$8,$9,$10,0,3,$11)
+        classification,template_data,provenance,status,attempt_count,max_attempts,created_at)
+       VALUES($1,$2,$3,$4,$5,$6,1,$7,$8,$9,$10,$11,0,3,$12)
        ON CONFLICT(event_key) DO UPDATE SET event_key=EXCLUDED.event_key
        RETURNING id,status,queue_job_id`,
       [
@@ -75,6 +107,7 @@ export class NotificationsRepository {
         input.locale,
         input.classification,
         JSON.stringify(input.data),
+        JSON.stringify(input.provenance),
         input.status,
         input.now,
       ],

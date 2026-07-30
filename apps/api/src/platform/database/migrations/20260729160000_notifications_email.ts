@@ -60,6 +60,7 @@ export async function up(database: Kysely<unknown>): Promise<void> {
       locale varchar(5) NOT NULL,
       classification varchar(16) NOT NULL,
       template_data jsonb NOT NULL,
+      provenance jsonb NOT NULL DEFAULT '{}'::jsonb,
       status varchar(24) NOT NULL,
       queue_job_id varchar(255),
       attempt_count integer NOT NULL DEFAULT 0,
@@ -77,6 +78,7 @@ export async function up(database: Kysely<unknown>): Promise<void> {
         status IN ('queued','running','delivered','suppressed','preference_blocked','retryable_failed','dead_letter','disabled')
       ),
       CONSTRAINT email_deliveries_data_check CHECK (jsonb_typeof(template_data) = 'object'),
+      CONSTRAINT email_deliveries_provenance_check CHECK (jsonb_typeof(provenance) = 'object'),
       CONSTRAINT email_deliveries_attempt_check CHECK (
         attempt_count >= 0 AND max_attempts BETWEEN 1 AND 10 AND attempt_count <= max_attempts
       )

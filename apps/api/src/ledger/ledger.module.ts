@@ -9,6 +9,7 @@ import { LedgerController } from './ledger.controller';
 import { LedgerPlanningReadService } from './ledger-planning-read.service';
 import { LedgerRepository } from './ledger.repository';
 import { LedgerService } from './ledger.service';
+import { NotificationsCoreModule } from '../notifications/notifications-core.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { LedgerService } from './ledger.service';
     UsersModule,
     CurrencyModule,
     forwardRef(() => BudgetingModule),
+    NotificationsCoreModule,
   ],
   controllers: [LedgerController],
   providers: [LedgerRepository, LedgerService, LedgerPlanningReadService],

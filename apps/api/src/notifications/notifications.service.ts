@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHash, randomUUID } from 'node:crypto';
 import { CLOCK, type Clock } from '../platform/time/clock';
@@ -9,6 +9,7 @@ import { NotificationsRepository } from './notifications.repository';
 
 @Injectable()
 export class NotificationsService {
+  private readonly logger = new Logger(NotificationsService.name);
   constructor(
     @Inject(NotificationsRepository) private readonly repository: NotificationsRepository,
     @Inject(ConfigService) private readonly config: ConfigService,
@@ -29,6 +30,7 @@ export class NotificationsService {
     templateCode: string;
     data: Record<string, string>;
     locale?: string;
+    provenance?: Record<string, string>;
   }) {
     const template = catalogTemplate(input.templateCode);
     if (!template) throw new ApplicationError(400, 'BAD_REQUEST', 'Unknown email template');
@@ -59,9 +61,19 @@ export class NotificationsService {
       locale,
       classification: template.classification,
       data: input.data,
+      provenance: input.provenance ?? {},
       status,
       now: this.clock.now().toDate(),
     });
+    this.logger.log(
+      {
+        deliveryId: delivery.id,
+        correlationId,
+        templateCode: input.templateCode,
+        status: delivery.status,
+      },
+      'Email delivery state recorded',
+    );
     return {
       ...delivery,
       correlationId,

@@ -5,6 +5,7 @@ import { LedgerModule } from '../ledger/ledger.module';
 import { IdempotencyModule } from '../platform/idempotency/idempotency.module';
 import { TimeModule } from '../platform/time/time.module';
 import { UsersModule } from '../users/users.module';
+import { NotificationsCoreModule } from '../notifications/notifications-core.module';
 import { GoalsController } from './goals.controller';
 import { GoalsRepository } from './goals.repository';
 import { GoalsService } from './goals.service';
@@ -17,6 +18,7 @@ import { GoalsService } from './goals.service';
     IdempotencyModule,
     CurrencyModule,
     LedgerModule,
+    NotificationsCoreModule,
   ],
   controllers: [GoalsController],
   providers: [GoalsRepository, GoalsService],

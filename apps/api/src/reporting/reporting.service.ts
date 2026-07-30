@@ -7,6 +7,7 @@ import { expandRecurrence } from '../recurrence/recurrence-rule';
 import { ExactDecimal } from '../platform/decimal/exact-decimal';
 import { RoundingPolicy } from '../platform/decimal/rounding-policy';
 import { ApplicationError } from '../platform/http/application-error';
+import { CalendarDate } from '../platform/time/calendar-date';
 import { CLOCK, type Clock } from '../platform/time/clock';
 import { UserTimeZone } from '../platform/time/user-time-zone';
 import type {
@@ -106,6 +107,40 @@ export class ReportingService {
       posted,
       forecast,
       combinedProjection: this.calculator.combine(posted, forecast),
+    };
+  }
+
+  async notificationPeriod(
+    userId: string,
+    first: string,
+    last: string,
+  ): Promise<{
+    period: ReportPeriod;
+    currency: string;
+    expense: string;
+    income: string;
+    netCashFlow: string;
+    calculatedAt: string;
+  }> {
+    CalendarDate.create(first);
+    CalendarDate.create(last);
+    const result = await this.period(
+      userId,
+      {
+        first,
+        last,
+        year: Number(first.slice(0, 4)),
+        timeZone: REPORT_TIME_ZONE.toString(),
+      },
+      {},
+    );
+    return {
+      period: result.period,
+      currency: result.posted.currency,
+      expense: result.posted.expense,
+      income: result.posted.income,
+      netCashFlow: result.posted.netCashFlow,
+      calculatedAt: this.clock.now().toDate().toISOString(),
     };
   }
 

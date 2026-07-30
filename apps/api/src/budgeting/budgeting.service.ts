@@ -23,6 +23,7 @@ import type {
 } from './budgeting.dto';
 import { BudgetCalculator } from './budget-calculator';
 import { BudgetingRepository } from './budgeting.repository';
+import type { BudgetOverspendingNotification } from '../notifications/notification-trigger.port';
 
 @Injectable()
 export class BudgetingService {
@@ -102,6 +103,37 @@ export class BudgetingService {
         ...(incomeStatus === 'unavailable' ? {} : { forecastIncome: forecastIncome.toString() }),
       },
     };
+  }
+
+  async overspending(userId: string, month: string): Promise<BudgetOverspendingNotification[]> {
+    const response = await this.rules(userId, month);
+    const calculatedAt = this.clock.now().toDate().toISOString();
+    return response.items.flatMap((rule) => {
+      const plan = rule.plan;
+      if (
+        !plan ||
+        plan.status === 'unavailable' ||
+        plan.plannedAmount === undefined ||
+        plan.assignedCategorySpending === undefined ||
+        plan.signedVariance === undefined
+      ) {
+        return [];
+      }
+      const variance = ExactDecimal.create(plan.signedVariance);
+      if (!variance.isNegative()) return [];
+      return [
+        {
+          ruleId: rule.id,
+          ruleLabel: rule.label,
+          plannedAmount: plan.plannedAmount,
+          spendingAmount: plan.assignedCategorySpending,
+          overspendAmount: ExactDecimal.create('0').subtract(variance).toString(),
+          currency: plan.currency,
+          month,
+          calculatedAt,
+        },
+      ];
+    });
   }
 
   async initializeRules(

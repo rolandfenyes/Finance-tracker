@@ -1,4 +1,4 @@
-import { forwardRef, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { forwardRef, HttpStatus, Inject, Injectable, Optional } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { NoResultError } from 'kysely';
 import { ExactDecimal } from '../platform/decimal/exact-decimal';
@@ -24,6 +24,12 @@ import type {
 import { InvalidJournalCursorError, LedgerRepository } from './ledger.repository';
 import type { JournalEntry, JournalListPage, PostJournalCommand } from './ledger.types';
 import { CategoryPolicyService } from '../budgeting/category-policy.service';
+import { BudgetingService } from '../budgeting/budgeting.service';
+import {
+  NOTIFICATION_TRIGGER,
+  type BudgetOverspendingNotification,
+  type NotificationTrigger,
+} from '../notifications/notification-trigger.port';
 
 export interface IdempotentValue<T> {
   value: T;
@@ -39,6 +45,12 @@ export class LedgerService {
     @Inject(FxConversionService) private readonly fx: FxConversionService,
     @Inject(forwardRef(() => CategoryPolicyService))
     private readonly categories: CategoryPolicyService,
+    @Optional()
+    @Inject(forwardRef(() => BudgetingService))
+    private readonly budgeting?: BudgetingService,
+    @Optional()
+    @Inject(NOTIFICATION_TRIGGER)
+    private readonly notificationTrigger?: NotificationTrigger,
   ) {}
 
   async createManualEntry(
@@ -47,6 +59,11 @@ export class LedgerService {
     dto: CreateJournalEntryDto,
   ): Promise<IdempotentValue<JournalEntry>> {
     await this.validateManualCommand(userId, dto);
+    const month = dto.postedOn.slice(0, 7);
+    const before =
+      dto.economicType === 'external_expense' && dto.categoryId
+        ? await this.budgeting?.overspending(userId, month)
+        : undefined;
     const key = this.key(rawKey);
     const now = this.clock.now();
     const command = this.toCommand(userId, dto, key.toHash(), now);
@@ -72,7 +89,19 @@ export class LedgerService {
           });
         },
       );
-      return { value: result.value.entry as unknown as JournalEntry, replayed: result.replayed };
+      const response = {
+        value: result.value.entry as unknown as JournalEntry,
+        replayed: result.replayed,
+      };
+      if (!response.replayed && before) {
+        await this.notifyNewOverspending(
+          userId,
+          response.value.id,
+          before,
+          (await this.budgeting?.overspending(userId, month)) ?? [],
+        );
+      }
+      return response;
     } catch (error) {
       throw this.translatePersistenceError(error);
     }
@@ -133,6 +162,11 @@ export class LedgerService {
     dto: CorrectJournalEntryDto,
   ): Promise<IdempotentValue<{ reversal: JournalEntry; replacement: JournalEntry }>> {
     await this.validateManualCommand(userId, dto);
+    const month = dto.postedOn.slice(0, 7);
+    const before =
+      dto.economicType === 'external_expense' && dto.categoryId
+        ? await this.budgeting?.overspending(userId, month)
+        : undefined;
     const key = this.key(rawKey);
     const now = this.clock.now();
     try {
@@ -188,15 +222,38 @@ export class LedgerService {
           });
         },
       );
-      return {
+      const response = {
         value: {
           reversal: result.value.reversal as unknown as JournalEntry,
           replacement: result.value.replacement as unknown as JournalEntry,
         },
         replayed: result.replayed,
       };
+      if (!response.replayed && before) {
+        await this.notifyNewOverspending(
+          userId,
+          response.value.replacement.id,
+          before,
+          (await this.budgeting?.overspending(userId, month)) ?? [],
+        );
+      }
+      return response;
     } catch (error) {
       throw this.translatePersistenceError(error);
+    }
+  }
+
+  private async notifyNewOverspending(
+    userId: string,
+    sourceEntryId: string,
+    before: BudgetOverspendingNotification[],
+    after: BudgetOverspendingNotification[],
+  ): Promise<void> {
+    const previouslyOverspent = new Set(before.map((snapshot) => snapshot.ruleId));
+    for (const snapshot of after) {
+      if (!previouslyOverspent.has(snapshot.ruleId)) {
+        await this.notificationTrigger?.budgetOverspent(userId, sourceEntryId, snapshot);
+      }
     }
   }
 

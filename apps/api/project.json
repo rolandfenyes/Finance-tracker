@@ -112,6 +112,12 @@
       "options": {
         "command": "tsx --tsconfig apps/api/tsconfig.json apps/api/src/openapi/check-openapi.ts"
       }
+    },
+    "notification-automation": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsx --tsconfig apps/api/tsconfig.json apps/api/src/notifications/run-notification-automation.ts"
+      }
     }
   }
 }

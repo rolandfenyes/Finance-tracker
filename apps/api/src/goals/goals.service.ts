@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
 import type { Transaction } from 'kysely';
 import type { UserRole } from '../identity/identity.types';
@@ -30,6 +30,10 @@ import type {
 } from './goals.dto';
 import { GoalsRepository, type GoalWrite } from './goals.repository';
 import type { Goal, LockedGoal } from './goals.types';
+import {
+  NOTIFICATION_TRIGGER,
+  type NotificationTrigger,
+} from '../notifications/notification-trigger.port';
 
 export interface IdempotentGoal {
   value: Goal;
@@ -45,6 +49,9 @@ export class GoalsService {
     @Inject(IdempotencyService) private readonly idempotency: IdempotencyService,
     @Inject(EntitlementsService) private readonly entitlements: EntitlementsService,
     @Inject(CLOCK) private readonly clock: Clock,
+    @Optional()
+    @Inject(NOTIFICATION_TRIGGER)
+    private readonly notificationTrigger?: NotificationTrigger,
   ) {}
 
   async goals(userId: string): Promise<{ items: Goal[] }> {
@@ -76,6 +83,7 @@ export class GoalsService {
 
   async update(userId: string, goalId: string, dto: UpdateGoalDto): Promise<{ items: Goal[] }> {
     assertNonEmpty(dto);
+    let transitionedToCompleted = false;
     try {
       await this.repository.transaction(async (transaction) => {
         const goal = await this.lockOpenGoal(transaction, userId, goalId, false);
@@ -109,6 +117,7 @@ export class GoalsService {
           target.compare(current) === 0
             ? 'completed'
             : (dto.status ?? (goal.status === 'completed' ? 'active' : goal.status));
+        transitionedToCompleted = goal.status !== 'completed' && values.status === 'completed';
         await this.repository.update(
           transaction,
           userId,
@@ -117,7 +126,12 @@ export class GoalsService {
           this.clock.now().toDate(),
         );
       });
-      return this.goals(userId);
+      const response = await this.goals(userId);
+      const completed = response.items.find((goal) => goal.id === goalId);
+      if (transitionedToCompleted && completed) {
+        await this.notificationTrigger?.goalCompleted(userId, completed);
+      }
+      return response;
     } catch (error) {
       throw translate(error);
     }
@@ -267,7 +281,11 @@ export class GoalsService {
         return goalJson(await this.requiredResponseGoal(transaction, userId, goalId));
       },
     );
-    return { value: result.value.goal as unknown as Goal, replayed: result.replayed };
+    const response = { value: result.value.goal as unknown as Goal, replayed: result.replayed };
+    if (!response.replayed && response.value.status === 'completed') {
+      await this.notificationTrigger?.goalCompleted(userId, response.value);
+    }
+    return response;
   }
 
   async reverseContribution(
@@ -317,7 +335,11 @@ export class GoalsService {
         return goalJson(await this.requiredResponseGoal(transaction, userId, goalId));
       },
     );
-    return { value: result.value.goal as unknown as Goal, replayed: result.replayed };
+    const response = { value: result.value.goal as unknown as Goal, replayed: result.replayed };
+    if (!response.replayed && response.value.status === 'completed') {
+      await this.notificationTrigger?.goalCompleted(userId, response.value);
+    }
+    return response;
   }
 
   async createRule(
@@ -430,7 +452,11 @@ export class GoalsService {
         return goalJson(await this.requiredResponseGoal(transaction, userId, goalId));
       },
     );
-    return { value: result.value.goal as unknown as Goal, replayed: result.replayed };
+    const response = { value: result.value.goal as unknown as Goal, replayed: result.replayed };
+    if (!response.replayed && response.value.status === 'completed') {
+      await this.notificationTrigger?.goalCompleted(userId, response.value);
+    }
+    return response;
   }
 
   private async postJournal(

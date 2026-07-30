@@ -4,6 +4,8 @@ import { EMAIL_PROVIDER_PORT, SafeEmailProvider } from './email-provider';
 import { NotificationsProcessor, NotificationsQueueService } from './notifications-queue.service';
 import { NotificationsRepository } from './notifications.repository';
 import { NotificationsService } from './notifications.service';
+import { DurableNotificationTriggerService } from './durable-notification-trigger.service';
+import { NOTIFICATION_TRIGGER } from './notification-trigger.port';
 
 @Module({
   imports: [TimeModule],
@@ -12,9 +14,16 @@ import { NotificationsService } from './notifications.service';
     NotificationsService,
     NotificationsProcessor,
     NotificationsQueueService,
+    DurableNotificationTriggerService,
     SafeEmailProvider,
     { provide: EMAIL_PROVIDER_PORT, useExisting: SafeEmailProvider },
+    { provide: NOTIFICATION_TRIGGER, useExisting: DurableNotificationTriggerService },
   ],
-  exports: [NotificationsService, NotificationsQueueService],
+  exports: [
+    NotificationsRepository,
+    NotificationsService,
+    NotificationsQueueService,
+    NOTIFICATION_TRIGGER,
+  ],
 })
 export class NotificationsCoreModule {}

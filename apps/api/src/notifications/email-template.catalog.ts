@@ -26,6 +26,23 @@ const localized = (
 
 export const EMAIL_TEMPLATE_CATALOG: readonly CatalogTemplate[] = [
   localized(
+    'feedback_new',
+    'transactional',
+    ['feedback_title', 'feedback_kind', 'feedback_severity', 'feedback_url'],
+    [
+      'New MyMoneyMap feedback',
+      'New {{feedback_kind}} feedback: “{{feedback_title}}” (severity: {{feedback_severity}}). {{feedback_url}}',
+    ],
+    [
+      'Nuevos comentarios de MyMoneyMap',
+      'Nuevo comentario {{feedback_kind}}: «{{feedback_title}}» (gravedad: {{feedback_severity}}). {{feedback_url}}',
+    ],
+    [
+      'Új MyMoneyMap-visszajelzés',
+      'Új {{feedback_kind}} visszajelzés: „{{feedback_title}}” (súlyosság: {{feedback_severity}}). {{feedback_url}}',
+    ],
+  ),
+  localized(
     'registration_validation',
     'transactional',
     ['user_first_name', 'verification_link'],

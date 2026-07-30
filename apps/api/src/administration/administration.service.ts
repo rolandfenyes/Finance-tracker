@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
@@ -21,6 +21,10 @@ import type {
   UpdateSystemSettingsDto,
 } from './administration.dto';
 import { RECOVERY_NOTIFIER, type RecoveryNotifier } from './recovery-notifier';
+import {
+  NOTIFICATION_TRIGGER,
+  type NotificationTrigger,
+} from '../notifications/notification-trigger.port';
 
 interface UserRow {
   id: string;
@@ -54,6 +58,9 @@ export class AdministrationService {
     @Inject(SessionService) private readonly sessions: SessionService,
     @Inject(ENCRYPTED_SETTING_PORT) private readonly encryptedSettings: EncryptedSettingPort,
     @Inject(RECOVERY_NOTIFIER) private readonly notifier: RecoveryNotifier,
+    @Optional()
+    @Inject(NOTIFICATION_TRIGGER)
+    private readonly notificationTrigger?: NotificationTrigger,
   ) {}
 
   async dashboard() {
@@ -332,7 +339,8 @@ export class AdministrationService {
     if (Object.keys(dto).length === 0) {
       throw new ApplicationError(400, 'BAD_REQUEST', 'At least one feedback field is required');
     }
-    return this.transaction(async (client) => {
+    let wasResolved = false;
+    const feedback = await this.transaction(async (client) => {
       const existing = await client.query<FeedbackAdminRow>(
         `SELECT f.id,f.user_id,u.email,f.kind,f.title,f.message,f.severity,f.status,
                 f.created_at,f.updated_at,'[]'::jsonb AS responses
@@ -341,6 +349,7 @@ export class AdministrationService {
         [id],
       );
       if (!existing.rows[0]) throw feedbackNotFound();
+      wasResolved = existing.rows[0].status === 'resolved';
       const result = await client.query<FeedbackAdminRow>(
         `UPDATE mymoneymap.feedback f SET
            kind=CASE WHEN $2 THEN $3 ELSE f.kind END,
@@ -372,6 +381,15 @@ export class AdministrationService {
       });
       return mapAdminFeedback(result.rows[0]!);
     });
+    if (!wasResolved && feedback.status === 'resolved') {
+      await this.notificationTrigger?.feedbackResolved({
+        feedbackId: feedback.id,
+        userId: feedback.user.id,
+        title: feedback.title,
+        resolvedAt: feedback.updatedAt,
+      });
+    }
+    return feedback;
   }
 
   async respondToFeedback(actorUserId: string, id: string, message: string) {

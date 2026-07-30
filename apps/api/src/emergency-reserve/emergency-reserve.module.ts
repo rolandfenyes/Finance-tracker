@@ -5,6 +5,7 @@ import { LedgerModule } from '../ledger/ledger.module';
 import { IdempotencyModule } from '../platform/idempotency/idempotency.module';
 import { TimeModule } from '../platform/time/time.module';
 import { UsersModule } from '../users/users.module';
+import { NotificationsCoreModule } from '../notifications/notifications-core.module';
 import { EmergencyReserveController } from './emergency-reserve.controller';
 import { EmergencyReserveRepository } from './emergency-reserve.repository';
 import { EmergencyReserveService } from './emergency-reserve.service';
@@ -17,6 +18,7 @@ import { EmergencyReserveService } from './emergency-reserve.service';
     IdempotencyModule,
     CurrencyModule,
     LedgerModule,
+    NotificationsCoreModule,
   ],
   controllers: [EmergencyReserveController],
   providers: [EmergencyReserveRepository, EmergencyReserveService],

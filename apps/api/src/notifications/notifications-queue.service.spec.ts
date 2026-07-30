@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 import { NotificationsProcessor } from './notifications-queue.service';
+import { Logger } from '@nestjs/common';
 
 const delivery = {
   id: 'delivery-1',
@@ -15,6 +16,7 @@ const clock = { now: () => ({ toDate: () => new Date('2026-07-30T08:00:00.000Z')
 
 describe('NotificationsProcessor', () => {
   it('records delivered provider status without logging message content', async () => {
+    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
     const repository = {
       delivery: jest.fn().mockResolvedValue(delivery),
       isSuppressed: jest.fn().mockResolvedValue(false),
@@ -35,6 +37,11 @@ describe('NotificationsProcessor', () => {
       delivery.id,
       expect.objectContaining({ status: 'delivered', providerMessageId: 'provider-1' }),
     );
+    const logged = JSON.stringify(log.mock.calls);
+    expect(logged).not.toContain(delivery.recipient_email);
+    expect(logged).not.toContain('Hello Ada');
+    expect(logged).not.toContain('Welcome');
+    log.mockRestore();
   });
 
   it('records retryable failure then dead-letter at the bounded attempt', async () => {

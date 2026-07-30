@@ -1101,6 +1101,14 @@
     {
       "schema": "mymoneymap",
       "relation": "email_deliveries",
+      "name": "provenance",
+      "type": "jsonb",
+      "nullable": false,
+      "default": "'{}'::jsonb"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
       "name": "status",
       "type": "character varying(24)",
       "nullable": false,
@@ -5893,6 +5901,12 @@
       "relation": "email_deliveries",
       "name": "email_deliveries_pkey",
       "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "email_deliveries_provenance_check",
+      "definition": "CHECK (jsonb_typeof(provenance) = 'object'::text)"
     },
     {
       "schema": "mymoneymap",

@@ -1,5 +1,12 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import { Inject, Injectable, OnApplicationShutdown, OnModuleInit, Optional } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  OnApplicationShutdown,
+  OnModuleInit,
+  Optional,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Job, Queue, Worker, type ConnectionOptions } from 'bullmq';
 import { CLOCK, type Clock } from '../platform/time/clock';
@@ -15,6 +22,7 @@ interface EmailJobData {
 
 @Injectable()
 export class NotificationsProcessor {
+  private readonly logger = new Logger(NotificationsProcessor.name);
   constructor(
     @Inject(NotificationsRepository) private readonly repository: NotificationsRepository,
     @Inject(NotificationsService) private readonly notifications: NotificationsService,
@@ -32,6 +40,7 @@ export class NotificationsProcessor {
         errorCode: 'recipient_suppressed',
         now: this.clock.now().toDate(),
       });
+      this.logState(delivery, 'suppressed', attempt, 'recipient_suppressed');
       return;
     }
     await this.repository.updateAttempt(delivery.id, {
@@ -57,6 +66,7 @@ export class NotificationsProcessor {
         providerMessageId: result.messageId,
         now: this.clock.now().toDate(),
       });
+      this.logState(delivery, 'delivered', attempt);
     } catch (error) {
       const terminal = attempt >= delivery.max_attempts;
       await this.repository.updateAttempt(delivery.id, {
@@ -65,8 +75,37 @@ export class NotificationsProcessor {
         errorCode: providerErrorCode(error),
         now: this.clock.now().toDate(),
       });
+      this.logState(
+        delivery,
+        terminal ? 'dead_letter' : 'retryable_failed',
+        attempt,
+        providerErrorCode(error),
+      );
       throw error;
     }
+  }
+
+  private logState(
+    delivery: {
+      id: string;
+      correlation_id: string;
+      template_code: string;
+    },
+    status: string,
+    attempt: number,
+    errorCode?: string,
+  ): void {
+    this.logger.log(
+      {
+        deliveryId: delivery.id,
+        correlationId: delivery.correlation_id,
+        templateCode: delivery.template_code,
+        status,
+        attempt,
+        ...(errorCode ? { errorCode } : {}),
+      },
+      'Email delivery state changed',
+    );
   }
 }
 

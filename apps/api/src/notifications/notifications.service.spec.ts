@@ -97,4 +97,43 @@ describe('NotificationsService', () => {
     expect(JSON.stringify(service.templates())).not.toMatch(/token|secret/i);
     expect(JSON.stringify(await service.channel())).not.toMatch(/token|secret/i);
   });
+
+  it('records disabled delivery state without making a job eligible for provider delivery', async () => {
+    const repository = {
+      userForEmail: jest.fn().mockResolvedValue({ id: 'user-1', desired_language: 'en' }),
+      preference: jest.fn().mockResolvedValue({ educationalEnabled: true }),
+      isSuppressed: jest.fn().mockResolvedValue(false),
+      createDelivery: jest.fn().mockImplementation((input: { status: string }) =>
+        Promise.resolve({
+          id: 'delivery-disabled',
+          status: input.status,
+          queue_job_id: null,
+        }),
+      ),
+    };
+    const service = new NotificationsService(
+      repository as never,
+      {
+        getOrThrow: (key: string) =>
+          key === 'EMAIL_DELIVERY_ENABLED' ? false : config.getOrThrow(key),
+      } as never,
+      clock as never,
+    );
+
+    await expect(
+      service.prepare({
+        eventKey: 'goal.completed:disabled',
+        recipientEmail: 'ada@example.test',
+        templateCode: 'goal_congratulations',
+        data: {
+          user_first_name: 'Ada',
+          achievement_summary: 'Exact source snapshot',
+          cta_url: 'https://example.test/goals',
+        },
+      }),
+    ).resolves.toMatchObject({ status: 'disabled', shouldQueue: false });
+    expect(repository.createDelivery).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'disabled' }),
+    );
+  });
 });
