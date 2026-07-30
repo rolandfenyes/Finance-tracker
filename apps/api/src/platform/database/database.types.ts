@@ -228,8 +228,42 @@ export interface RecurringRulesTable {
   category_id: string | null;
   goal_id: string | null;
   loan_id: string | null;
+  investment_id: string | null;
   created_at: DatabaseTimestamp;
   updated_at: DatabaseTimestamp;
+}
+
+export interface InvestmentsTable {
+  id: string;
+  user_id: string;
+  type: 'savings' | 'etf' | 'stock';
+  name: string;
+  provider: string | null;
+  identifier: string | null;
+  notes: string | null;
+  currency: string;
+  scenario_annual_rate: DatabaseDecimal | null;
+  scenario_frequency: 'daily' | 'weekly' | 'monthly' | 'annual';
+  scenario_version: 'nominal_compound_scenario_v1';
+  account_id: string;
+  created_at: DatabaseTimestamp;
+  updated_at: DatabaseTimestamp;
+}
+
+export interface InvestmentMovementsTable {
+  id: string;
+  user_id: string;
+  investment_id: string;
+  journal_entry_id: string;
+  direction: 'deposit' | 'withdrawal';
+  amount: DatabaseDecimal;
+  currency: string;
+  investment_amount: DatabaseDecimal;
+  investment_currency: string;
+  occurred_on: DatabaseDate;
+  note: string | null;
+  reversed_by_journal_entry_id: string | null;
+  created_at: DatabaseTimestamp;
 }
 
 export interface LoansTable {
@@ -399,6 +433,8 @@ export interface DatabaseSchema {
   'mymoneymap.goal_contributions': GoalContributionsTable;
   'mymoneymap.loans': LoansTable;
   'mymoneymap.loan_payments': LoanPaymentsTable;
+  'mymoneymap.investments': InvestmentsTable;
+  'mymoneymap.investment_movements': InvestmentMovementsTable;
   'mymoneymap.recurrence_job_executions': RecurrenceJobExecutionsTable;
   'mymoneymap.recurrence_job_events': RecurrenceJobEventsTable;
   'mymoneymap.recurring_occurrences': RecurringOccurrencesTable;

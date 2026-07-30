@@ -23,6 +23,7 @@ export interface RecurringRuleWrite {
   categoryId: string | null;
   goalId?: string | null;
   loanId?: string | null;
+  investmentId?: string | null;
 }
 
 export interface MaterializedRule {
@@ -35,6 +36,7 @@ export interface MaterializedRule {
   rrule: string;
   categoryId: string | null;
   loanId: string | null;
+  investmentId: string | null;
 }
 
 @Injectable()
@@ -75,6 +77,7 @@ export class RecurrenceRepository {
         'r.category_id',
         'r.goal_id',
         'r.loan_id',
+        'r.investment_id',
         'r.created_at',
         'r.updated_at',
         'c.label as category_label',
@@ -96,6 +99,7 @@ export class RecurrenceRepository {
       categoryLabel: row.category_label,
       goalId: row.goal_id,
       loanId: row.loan_id,
+      investmentId: row.investment_id,
       createdAt: row.created_at.toISOString(),
       updatedAt: row.updated_at.toISOString(),
     }));
@@ -139,6 +143,7 @@ export class RecurrenceRepository {
         category_id: values.categoryId,
         goal_id: values.goalId ?? null,
         loan_id: values.loanId ?? null,
+        investment_id: values.investmentId ?? null,
         created_at: now,
         updated_at: now,
       })
@@ -320,6 +325,7 @@ export class RecurrenceRepository {
         'r.rrule',
         'r.category_id as categoryId',
         'r.loan_id as loanId',
+        'r.investment_id as investmentId',
       ])
       .where('r.starts_on', '<=', dueThrough)
       .where((expression) =>

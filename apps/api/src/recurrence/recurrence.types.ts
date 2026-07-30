@@ -36,6 +36,7 @@ export interface RecurringRule {
   categoryLabel: string | null;
   goalId: string | null;
   loanId: string | null;
+  investmentId: string | null;
   createdAt: string;
   updatedAt: string;
 }

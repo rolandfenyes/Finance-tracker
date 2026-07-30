@@ -123,6 +123,8 @@ Preserve the standard fixed nominal-rate monthly annuity estimate and zero-rate 
 
 Generic fixed-rate investment output is a user-authored scenario, not expected return or automatically accrued balance.
 
+The approved generic-investment scenario-rate policy permits zero as an explicit no-growth scenario and rejects negative rates. A missing rate disables the scenario.
+
 Securities preserve FIFO realized P/L, lots, positions, quotes, history, allocation, cash movements, import, and watchlist. Reject oversells atomically. Trade reversal reverses linked cash. Missing market value remains stale/unavailable; cost is not a substitute. Keep descriptive SMA/RSI/concentration values without buy/trim advice. Do not add TWR, MWR, tax lots, corporate actions, or dividend calendars.
 
 ## ADR-017 — Administrative billing

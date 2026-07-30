@@ -80,6 +80,10 @@ describe('PostgreSQL baseline and migration system', () => {
           name: '20260729110000_loans',
           executedAt: expect.any(Date),
         }),
+        expect.objectContaining({
+          name: '20260729120000_generic_investments',
+          executedAt: expect.any(Date),
+        }),
       ]);
 
       expect(fingerprint.relations.map(({ schema, name }) => `${schema}.${name}`)).toEqual([
@@ -95,6 +99,8 @@ describe('PostgreSQL baseline and migration system', () => {
         'mymoneymap.goal_contributions',
         'mymoneymap.goals',
         'mymoneymap.idempotency_keys',
+        'mymoneymap.investment_movements',
+        'mymoneymap.investments',
         'mymoneymap.journal_entries',
         'mymoneymap.journal_legs',
         'mymoneymap.ledger_accounts',
@@ -129,7 +135,7 @@ describe('PostgreSQL baseline and migration system', () => {
       const rollback = await migrateOneDown(database);
       expect(rollback.results).toEqual([
         {
-          migrationName: '20260729110000_loans',
+          migrationName: '20260729120000_generic_investments',
           direction: 'Down',
           status: 'Success',
         },
@@ -151,8 +157,10 @@ describe('PostgreSQL baseline and migration system', () => {
       expect(rolledBack.relations.map(({ name }) => name)).toContain('goal_contributions');
       expect(rolledBack.relations.map(({ name }) => name)).toContain('emergency_reserves');
       expect(rolledBack.relations.map(({ name }) => name)).toContain('emergency_reserve_movements');
-      expect(rolledBack.relations.map(({ name }) => name)).not.toContain('loans');
-      expect(rolledBack.relations.map(({ name }) => name)).not.toContain('loan_payments');
+      expect(rolledBack.relations.map(({ name }) => name)).toContain('loans');
+      expect(rolledBack.relations.map(({ name }) => name)).toContain('loan_payments');
+      expect(rolledBack.relations.map(({ name }) => name)).not.toContain('investments');
+      expect(rolledBack.relations.map(({ name }) => name)).not.toContain('investment_movements');
       expect(rolledBack.columns).toContainEqual(
         expect.objectContaining({ relation: 'recurring_rules', name: 'goal_id' }),
       );
@@ -189,7 +197,7 @@ describe('PostgreSQL baseline and migration system', () => {
       const ledger = await pool.query<{ count: string }>(
         'SELECT count(*)::text AS count FROM mymoneymap_meta.kysely_migration',
       );
-      expect(ledger.rows[0]?.count).toBe('14');
+      expect(ledger.rows[0]?.count).toBe('15');
       const concurrentFingerprint = await readSchemaFingerprint(pool);
       expect(() => assertSchemaMatchesExpected(concurrentFingerprint)).not.toThrow();
     });
@@ -253,6 +261,7 @@ describe('PostgreSQL baseline and migration system', () => {
       '20260729090000_goals',
       '20260729100000_emergency_reserve',
       '20260729110000_loans',
+      '20260729120000_generic_investments',
     ]);
     expect(targetStatusNames).not.toContain('028_default_admin');
   });

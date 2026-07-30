@@ -178,6 +178,13 @@ export class RecurringRuleResponseDto {
   goalId!: string | null;
   @ApiProperty({ type: String, format: 'uuid', nullable: true })
   loanId!: string | null;
+  @ApiProperty({
+    type: String,
+    format: 'uuid',
+    nullable: true,
+    description: 'Investment link when this transfer forecast is managed by the investments API.',
+  })
+  investmentId!: string | null;
 
   @ApiProperty({ type: RecurrenceForecastResponseDto, nullable: true })
   forecast!: RecurrenceForecastResponseDto | null;

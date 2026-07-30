@@ -11,6 +11,10 @@ describe('loans PostgreSQL migration contract', () => {
       expect(await column(pool, 'recurring_rules', 'loan_id')).toBe(true);
 
       await migrateOneDown(database);
+      expect(await relation(pool, 'loans')).toBe('mymoneymap.loans');
+      expect(await column(pool, 'recurring_rules', 'investment_id')).toBe(false);
+
+      await migrateOneDown(database);
       expect(await relation(pool, 'loans')).toBeNull();
       expect(await relation(pool, 'loan_payments')).toBeNull();
       expect(await column(pool, 'recurring_rules', 'loan_id')).toBe(false);

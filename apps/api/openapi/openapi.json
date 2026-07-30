@@ -1674,6 +1674,167 @@
         "tags": ["Emergency reserve"]
       }
     },
+    "/api/v1/investments": {
+      "get": {
+        "operationId": "InvestmentsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/InvestmentsResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "List owned generic investments with ledger-derived balances and labeled scenarios",
+        "tags": ["Investments"]
+      },
+      "post": {
+        "operationId": "InvestmentsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateInvestmentDto" },
+              "examples": {
+                "savings": {
+                  "value": {
+                    "type": "savings",
+                    "name": "Synthetic reserve account",
+                    "provider": "Synthetic provider",
+                    "currency": "HUF",
+                    "scenarioAnnualRate": "5",
+                    "scenarioFrequency": "monthly"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/InvestmentsResponseDto" }
+              }
+            }
+          },
+          "422": { "description": "Currency, rate, or ownership invariant failed" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Create a generic investment and its owned ledger account",
+        "tags": ["Investments"]
+      }
+    },
+    "/api/v1/investments/{id}": {
+      "patch": {
+        "operationId": "InvestmentsController_update",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/InvestmentsResponseDto" }
+              }
+            }
+          },
+          "404": { "description": "" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Update investment metadata or its user-authored scenario without changing balance",
+        "tags": ["Investments"]
+      },
+      "delete": {
+        "operationId": "InvestmentsController_delete",
+        "parameters": [],
+        "responses": {
+          "204": { "description": "" },
+          "409": { "description": "Immutable history or emergency-reserve linkage exists" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Delete a history-free investment and its recurring forecast",
+        "tags": ["Investments"]
+      }
+    },
+    "/api/v1/investments/{id}/movements": {
+      "post": {
+        "operationId": "InvestmentsController_movement",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/InvestmentResponseDto" }
+              }
+            }
+          },
+          "422": { "description": "FX or available-balance policy failed" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Post an idempotent deposit or withdrawal as an internal transfer",
+        "tags": ["Investments"]
+      }
+    },
+    "/api/v1/investments/{investmentId}/movements/{id}/reversals": {
+      "post": {
+        "operationId": "InvestmentsController_reverseMovement",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/InvestmentResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Reverse an owned investment transfer without deleting history",
+        "tags": ["Investments"]
+      }
+    },
+    "/api/v1/investments/{id}/recurring-rule": {
+      "post": {
+        "operationId": "InvestmentsController_createRule",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/InvestmentsResponseDto" }
+              }
+            }
+          },
+          "409": { "description": "The investment already has a recurring rule" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Create a transfer forecast for recurring investment contributions",
+        "tags": ["Investments"]
+      }
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "HealthController_live",
@@ -2419,6 +2580,12 @@
             "description": "Goal link when this transfer forecast is managed by the goals API."
           },
           "loanId": { "type": "string", "format": "uuid", "nullable": true },
+          "investmentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Investment link when this transfer forecast is managed by the investments API."
+          },
           "forecast": {
             "nullable": true,
             "type": "object",
@@ -2439,6 +2606,7 @@
           "categoryLabel",
           "goalId",
           "loanId",
+          "investmentId",
           "forecast",
           "createdAt",
           "updatedAt"
@@ -3089,6 +3257,75 @@
           "linkedInvestmentAccountId": { "type": "string", "format": "uuid", "nullable": true }
         },
         "required": ["targetAmount", "currency"]
+      },
+      "InvestmentResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "type": { "type": "string", "enum": ["savings", "etf", "stock"] },
+          "name": { "type": "string" },
+          "provider": { "type": "string", "nullable": true },
+          "identifier": { "type": "string", "nullable": true },
+          "notes": { "type": "string", "nullable": true },
+          "currency": { "type": "string" },
+          "balance": { "type": "string" },
+          "scenario": { "type": "object" },
+          "recurringContributionForecast": { "type": "object", "nullable": true },
+          "movements": { "type": "array", "items": { "type": "object" } },
+          "recurringRule": { "type": "object", "nullable": true },
+          "accountId": { "type": "string", "format": "uuid" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": [
+          "id",
+          "type",
+          "name",
+          "provider",
+          "identifier",
+          "notes",
+          "currency",
+          "balance",
+          "scenario",
+          "recurringContributionForecast",
+          "movements",
+          "recurringRule",
+          "accountId",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "InvestmentsResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/InvestmentResponseDto" }
+          }
+        },
+        "required": ["items"]
+      },
+      "CreateInvestmentDto": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string", "enum": ["savings", "etf", "stock"], "example": "savings" },
+          "name": { "type": "string", "maxLength": 180, "example": "Synthetic reserve account" },
+          "provider": { "type": "string", "maxLength": 180, "nullable": true },
+          "identifier": { "type": "string", "maxLength": 120, "nullable": true },
+          "notes": { "type": "string", "maxLength": 2000, "nullable": true },
+          "currency": { "type": "string", "example": "HUF", "pattern": "^[A-Z]{3}$" },
+          "scenarioAnnualRate": {
+            "type": "string",
+            "nullable": true,
+            "description": "User-authored nominal annual return scenario. Zero is allowed; negative is rejected."
+          },
+          "scenarioFrequency": {
+            "type": "string",
+            "enum": ["daily", "weekly", "monthly", "annual"],
+            "default": "monthly"
+          }
+        },
+        "required": ["type", "name", "currency"]
       },
       "ApiViolationResponse": {
         "type": "object",

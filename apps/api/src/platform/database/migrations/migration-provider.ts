@@ -13,6 +13,7 @@ import * as reportingIndexes from './20260729080000_reporting_indexes';
 import * as goals from './20260729090000_goals';
 import * as emergencyReserve from './20260729100000_emergency_reserve';
 import * as loans from './20260729110000_loans';
+import * as genericInvestments from './20260729120000_generic_investments';
 
 export const registeredMigrations = {
   '20260729000000_database_baseline': databaseBaseline,
@@ -29,6 +30,7 @@ export const registeredMigrations = {
   '20260729090000_goals': goals,
   '20260729100000_emergency_reserve': emergencyReserve,
   '20260729110000_loans': loans,
+  '20260729120000_generic_investments': genericInvestments,
 } satisfies Record<string, Migration>;
 
 export class RegisteredMigrationProvider implements MigrationProvider {

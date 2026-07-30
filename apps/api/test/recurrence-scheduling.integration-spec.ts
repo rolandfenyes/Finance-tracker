@@ -29,6 +29,7 @@ describe('recurrence scheduling PostgreSQL and BullMQ invariants', () => {
 
       await migrateOneDown(database);
       await migrateOneDown(database);
+      await migrateOneDown(database);
       expect(await relation(pool, 'recurring_rules')).toBe('mymoneymap.recurring_rules');
       expect(await relation(pool, 'recurring_occurrences')).toBe(
         'mymoneymap.recurring_occurrences',

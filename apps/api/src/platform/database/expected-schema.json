@@ -63,6 +63,16 @@
     },
     {
       "schema": "mymoneymap",
+      "name": "investment_movements",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "investments",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
       "name": "journal_entries",
       "kind": "r"
     },
@@ -1096,6 +1106,222 @@
       "name": "completed_at",
       "type": "timestamp with time zone",
       "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "investment_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "journal_entry_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "direction",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "amount",
+      "type": "numeric(30,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "currency",
+      "type": "character(3)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "investment_amount",
+      "type": "numeric(30,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "investment_currency",
+      "type": "character(3)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "occurred_on",
+      "type": "date",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "note",
+      "type": "character varying(1000)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "reversed_by_journal_entry_id",
+      "type": "uuid",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "type",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "name",
+      "type": "character varying(180)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "provider",
+      "type": "character varying(180)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "identifier",
+      "type": "character varying(120)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "notes",
+      "type": "character varying(2000)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "currency",
+      "type": "character(3)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "scenario_annual_rate",
+      "type": "numeric(30,12)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "scenario_frequency",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "scenario_version",
+      "type": "character varying(64)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "account_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
       "default": null
     },
     {
@@ -2156,6 +2382,14 @@
     },
     {
       "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "investment_id",
+      "type": "uuid",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
       "relation": "user_currencies",
       "name": "user_id",
       "type": "uuid",
@@ -2996,6 +3230,180 @@
     },
     {
       "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "investment_movements_amount_check",
+      "definition": "CHECK (amount > 0::numeric AND investment_amount > 0::numeric)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "investment_movements_currency_fk",
+      "definition": "FOREIGN KEY (currency) REFERENCES mymoneymap.currencies(code) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "investment_movements_direction_check",
+      "definition": "CHECK (direction::text = ANY (ARRAY['deposit'::character varying, 'withdrawal'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "investment_movements_id_owner_investment_unique",
+      "definition": "UNIQUE (id, user_id, investment_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "investment_movements_investment_currency_fk",
+      "definition": "FOREIGN KEY (investment_currency) REFERENCES mymoneymap.currencies(code) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "investment_movements_investment_owner_fk",
+      "definition": "FOREIGN KEY (investment_id, user_id) REFERENCES mymoneymap.investments(id, user_id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "investment_movements_journal_owner_fk",
+      "definition": "FOREIGN KEY (journal_entry_id, user_id) REFERENCES mymoneymap.journal_entries(id, user_id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "investment_movements_journal_unique",
+      "definition": "UNIQUE (journal_entry_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "investment_movements_note_check",
+      "definition": "CHECK (note IS NULL OR char_length(btrim(note::text)) >= 1 AND char_length(btrim(note::text)) <= 1000)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "investment_movements_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "investment_movements_reversal_owner_fk",
+      "definition": "FOREIGN KEY (reversed_by_journal_entry_id, user_id) REFERENCES mymoneymap.journal_entries(id, user_id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "investment_movements_reversal_unique",
+      "definition": "UNIQUE (reversed_by_journal_entry_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "investment_nonnegative_guard",
+      "definition": "TRIGGER DEFERRABLE INITIALLY DEFERRED"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "investments_account_guard",
+      "definition": "TRIGGER DEFERRABLE INITIALLY DEFERRED"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "investments_account_owner_fk",
+      "definition": "FOREIGN KEY (account_id, user_id) REFERENCES mymoneymap.ledger_accounts(id, user_id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "investments_account_unique",
+      "definition": "UNIQUE (account_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "investments_currency_fk",
+      "definition": "FOREIGN KEY (currency) REFERENCES mymoneymap.currencies(code) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "investments_currency_membership_fk",
+      "definition": "FOREIGN KEY (user_id, currency) REFERENCES mymoneymap.user_currencies(user_id, code) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "investments_frequency_check",
+      "definition": "CHECK (scenario_frequency::text = ANY (ARRAY['daily'::character varying, 'weekly'::character varying, 'monthly'::character varying, 'annual'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "investments_id_user_unique",
+      "definition": "UNIQUE (id, user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "investments_identifier_check",
+      "definition": "CHECK (identifier IS NULL OR char_length(btrim(identifier::text)) >= 1 AND char_length(btrim(identifier::text)) <= 120)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "investments_name_check",
+      "definition": "CHECK (char_length(btrim(name::text)) >= 1 AND char_length(btrim(name::text)) <= 180)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "investments_notes_check",
+      "definition": "CHECK (notes IS NULL OR char_length(btrim(notes::text)) >= 1 AND char_length(btrim(notes::text)) <= 2000)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "investments_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "investments_provider_check",
+      "definition": "CHECK (provider IS NULL OR char_length(btrim(provider::text)) >= 1 AND char_length(btrim(provider::text)) <= 180)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "investments_rate_check",
+      "definition": "CHECK (scenario_annual_rate IS NULL OR scenario_annual_rate >= 0::numeric)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "investments_type_check",
+      "definition": "CHECK (type::text = ANY (ARRAY['savings'::character varying, 'etf'::character varying, 'stock'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "investments_user_id_fkey",
+      "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "investments_version_check",
+      "definition": "CHECK (scenario_version::text = 'nominal_compound_scenario_v1'::text)"
+    },
+    {
+      "schema": "mymoneymap",
       "relation": "journal_entries",
       "name": "journal_entries_actor_check",
       "definition": "CHECK (actor_user_id = user_id)"
@@ -3633,6 +4041,18 @@
     {
       "schema": "mymoneymap",
       "relation": "recurring_rules",
+      "name": "recurring_rules_investment_owner_fk",
+      "definition": "FOREIGN KEY (investment_id, user_id) REFERENCES mymoneymap.investments(id, user_id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "recurring_rules_investment_transfer_check",
+      "definition": "CHECK (investment_id IS NULL OR economic_type::text = 'transfer'::text AND category_id IS NULL AND goal_id IS NULL AND loan_id IS NULL)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
       "name": "recurring_rules_loan_expense_check",
       "definition": "CHECK (loan_id IS NULL OR economic_type::text = 'expense'::text AND category_id IS NULL AND goal_id IS NULL)"
     },
@@ -4000,6 +4420,60 @@
     },
     {
       "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "investment_movements_history_index",
+      "definition": "CREATE INDEX investment_movements_history_index ON mymoneymap.investment_movements USING btree (user_id, investment_id, occurred_on DESC, created_at DESC, id DESC)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "investment_movements_id_owner_investment_unique",
+      "definition": "CREATE UNIQUE INDEX investment_movements_id_owner_investment_unique ON mymoneymap.investment_movements USING btree (id, user_id, investment_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "investment_movements_journal_unique",
+      "definition": "CREATE UNIQUE INDEX investment_movements_journal_unique ON mymoneymap.investment_movements USING btree (journal_entry_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "investment_movements_pkey",
+      "definition": "CREATE UNIQUE INDEX investment_movements_pkey ON mymoneymap.investment_movements USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investment_movements",
+      "name": "investment_movements_reversal_unique",
+      "definition": "CREATE UNIQUE INDEX investment_movements_reversal_unique ON mymoneymap.investment_movements USING btree (reversed_by_journal_entry_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "investments_account_unique",
+      "definition": "CREATE UNIQUE INDEX investments_account_unique ON mymoneymap.investments USING btree (account_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "investments_id_user_unique",
+      "definition": "CREATE UNIQUE INDEX investments_id_user_unique ON mymoneymap.investments USING btree (id, user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "investments_pkey",
+      "definition": "CREATE UNIQUE INDEX investments_pkey ON mymoneymap.investments USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "investments",
+      "name": "investments_user_index",
+      "definition": "CREATE INDEX investments_user_index ON mymoneymap.investments USING btree (user_id, created_at DESC, id DESC)"
+    },
+    {
+      "schema": "mymoneymap",
       "relation": "journal_entries",
       "name": "journal_entries_id_user_unique",
       "definition": "CREATE UNIQUE INDEX journal_entries_id_user_unique ON mymoneymap.journal_entries USING btree (id, user_id)"
@@ -4231,6 +4705,12 @@
       "relation": "recurring_rules",
       "name": "recurring_rules_one_goal_link",
       "definition": "CREATE UNIQUE INDEX recurring_rules_one_goal_link ON mymoneymap.recurring_rules USING btree (user_id, goal_id) WHERE (goal_id IS NOT NULL)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "recurring_rules",
+      "name": "recurring_rules_one_investment_link",
+      "definition": "CREATE UNIQUE INDEX recurring_rules_one_investment_link ON mymoneymap.recurring_rules USING btree (user_id, investment_id) WHERE (investment_id IS NOT NULL)"
     },
     {
       "schema": "mymoneymap",
