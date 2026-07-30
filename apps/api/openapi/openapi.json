@@ -2468,6 +2468,265 @@
         "tags": ["Administration"]
       }
     },
+    "/api/v1/admin/billing/summary": {
+      "get": {
+        "operationId": "BillingController_summary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BillingResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Read administrative billing records; no provider operations are available",
+        "tags": ["Administrative billing"]
+      }
+    },
+    "/api/v1/admin/billing/plans": {
+      "get": {
+        "operationId": "BillingController_plans",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BillingResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "tags": ["Administrative billing"]
+      },
+      "post": {
+        "operationId": "BillingController_createPlan",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BillingResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "tags": ["Administrative billing"]
+      }
+    },
+    "/api/v1/admin/billing/plans/{id}": {
+      "get": {
+        "operationId": "BillingController_plan",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BillingResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "tags": ["Administrative billing"]
+      },
+      "patch": {
+        "operationId": "BillingController_updatePlan",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BillingResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "tags": ["Administrative billing"]
+      },
+      "delete": {
+        "operationId": "BillingController_deletePlan",
+        "parameters": [],
+        "responses": { "204": { "description": "" } },
+        "security": [{ "cookie": [] }],
+        "tags": ["Administrative billing"]
+      }
+    },
+    "/api/v1/admin/billing/promotions": {
+      "get": {
+        "operationId": "BillingController_promotions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BillingResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "tags": ["Administrative billing"]
+      },
+      "post": {
+        "operationId": "BillingController_createPromotion",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BillingResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "tags": ["Administrative billing"]
+      }
+    },
+    "/api/v1/admin/billing/promotions/{id}": {
+      "get": {
+        "operationId": "BillingController_promotion",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BillingResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "tags": ["Administrative billing"]
+      },
+      "patch": {
+        "operationId": "BillingController_updatePromotion",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BillingResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "tags": ["Administrative billing"]
+      },
+      "delete": {
+        "operationId": "BillingController_deletePromotion",
+        "parameters": [],
+        "responses": { "204": { "description": "" } },
+        "security": [{ "cookie": [] }],
+        "tags": ["Administrative billing"]
+      }
+    },
+    "/api/v1/admin/billing/promotions/trial": {
+      "post": {
+        "operationId": "BillingController_trial",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BillingResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "tags": ["Administrative billing"]
+      }
+    },
+    "/api/v1/admin/users/{id}/subscription": {
+      "put": {
+        "operationId": "BillingController_assign",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BillingResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "tags": ["Administrative billing"]
+      }
+    },
+    "/api/v1/admin/invoices/{id}": {
+      "patch": {
+        "operationId": "BillingController_invoice",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BillingResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "tags": ["Administrative billing"]
+      }
+    },
+    "/api/v1/admin/payments": {
+      "post": {
+        "operationId": "BillingController_createPayment",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BillingResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "tags": ["Administrative billing"]
+      }
+    },
+    "/api/v1/admin/payments/{id}": {
+      "patch": {
+        "operationId": "BillingController_updatePayment",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BillingResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "tags": ["Administrative billing"]
+      }
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "HealthController_live",
@@ -3971,6 +4230,11 @@
         "required": ["data"]
       },
       "AdministrationResponseDto": {
+        "type": "object",
+        "properties": { "data": { "type": "object" } },
+        "required": ["data"]
+      },
+      "BillingResponseDto": {
         "type": "object",
         "properties": { "data": { "type": "object" } },
         "required": ["data"]

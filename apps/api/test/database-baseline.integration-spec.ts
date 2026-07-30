@@ -100,12 +100,18 @@ describe('PostgreSQL baseline and migration system', () => {
           name: '20260729140000_admin_feedback_system',
           executedAt: expect.any(Date),
         }),
+        expect.objectContaining({
+          name: '20260729150000_billing',
+          executedAt: expect.any(Date),
+        }),
       ]);
 
       expect(fingerprint.relations.map(({ schema, name }) => `${schema}.${name}`)).toEqual([
         'mymoneymap.account_recovery_requests',
         'mymoneymap.api_integrations',
         'mymoneymap.basic_incomes',
+        'mymoneymap.billing_plans',
+        'mymoneymap.billing_promotions',
         'mymoneymap.budget_rules',
         'mymoneymap.categories',
         'mymoneymap.currencies',
@@ -149,6 +155,9 @@ describe('PostgreSQL baseline and migration system', () => {
         'mymoneymap.securities_watchlist',
         'mymoneymap.system_settings',
         'mymoneymap.user_currencies',
+        'mymoneymap.user_invoices',
+        'mymoneymap.user_payments',
+        'mymoneymap.user_subscriptions',
         'mymoneymap.users',
         'mymoneymap_meta.kysely_migration',
         'mymoneymap_meta.kysely_migration_lock',
@@ -171,7 +180,7 @@ describe('PostgreSQL baseline and migration system', () => {
       const rollback = await migrateOneDown(database);
       expect(rollback.results).toEqual([
         {
-          migrationName: '20260729140000_admin_feedback_system',
+          migrationName: '20260729150000_billing',
           direction: 'Down',
           status: 'Success',
         },
@@ -198,8 +207,10 @@ describe('PostgreSQL baseline and migration system', () => {
       expect(rolledBack.relations.map(({ name }) => name)).toContain('investments');
       expect(rolledBack.relations.map(({ name }) => name)).toContain('investment_movements');
       expect(rolledBack.relations.map(({ name }) => name)).toContain('securities_trades');
-      expect(rolledBack.relations.map(({ name }) => name)).not.toContain('feedback');
-      expect(rolledBack.relations.map(({ name }) => name)).not.toContain('privileged_audit_events');
+      expect(rolledBack.relations.map(({ name }) => name)).toContain('feedback');
+      expect(rolledBack.relations.map(({ name }) => name)).toContain('privileged_audit_events');
+      expect(rolledBack.relations.map(({ name }) => name)).not.toContain('billing_plans');
+      expect(rolledBack.relations.map(({ name }) => name)).not.toContain('user_payments');
       expect(rolledBack.columns).toContainEqual(
         expect.objectContaining({ relation: 'recurring_rules', name: 'goal_id' }),
       );
@@ -236,7 +247,7 @@ describe('PostgreSQL baseline and migration system', () => {
       const ledger = await pool.query<{ count: string }>(
         'SELECT count(*)::text AS count FROM mymoneymap_meta.kysely_migration',
       );
-      expect(ledger.rows[0]?.count).toBe('19');
+      expect(ledger.rows[0]?.count).toBe('20');
       const concurrentFingerprint = await readSchemaFingerprint(pool);
       expect(() => assertSchemaMatchesExpected(concurrentFingerprint)).not.toThrow();
     });
@@ -305,6 +316,7 @@ describe('PostgreSQL baseline and migration system', () => {
       '20260729130100_securities_account_guard_revision',
       '20260729130200_securities_ledger_guard_revision',
       '20260729140000_admin_feedback_system',
+      '20260729150000_billing',
     ]);
     expect(targetStatusNames).not.toContain('028_default_admin');
   });

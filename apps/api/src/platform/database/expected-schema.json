@@ -18,6 +18,16 @@
     },
     {
       "schema": "mymoneymap",
+      "name": "billing_plans",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "billing_promotions",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
       "name": "budget_rules",
       "kind": "r"
     },
@@ -229,6 +239,21 @@
     {
       "schema": "mymoneymap",
       "name": "user_currencies",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "user_invoices",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "user_payments",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "user_subscriptions",
       "kind": "r"
     },
     {
@@ -467,6 +492,262 @@
     {
       "schema": "mymoneymap",
       "relation": "basic_incomes",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "code",
+      "type": "character varying(80)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "name",
+      "type": "character varying(160)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "description",
+      "type": "character varying(2000)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "price",
+      "type": "numeric(36,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "currency",
+      "type": "character(3)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "billing_interval",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "interval_count",
+      "type": "integer",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "role_slug",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "trial_days",
+      "type": "integer",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "is_active",
+      "type": "boolean",
+      "nullable": false,
+      "default": "true"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "stripe_product_id",
+      "type": "character varying(255)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "stripe_price_id",
+      "type": "character varying(255)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "metadata",
+      "type": "jsonb",
+      "nullable": false,
+      "default": "'{}'::jsonb"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "code",
+      "type": "character varying(80)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "name",
+      "type": "character varying(160)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "description",
+      "type": "character varying(2000)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "discount_percent",
+      "type": "numeric(5,2)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "discount_amount",
+      "type": "numeric(36,12)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "currency",
+      "type": "character(3)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "max_redemptions",
+      "type": "integer",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "redeem_by",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "trial_days",
+      "type": "integer",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "plan_code",
+      "type": "character varying(80)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "stripe_coupon_id",
+      "type": "character varying(255)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "stripe_promo_code_id",
+      "type": "character varying(255)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "metadata",
+      "type": "jsonb",
+      "nullable": false,
+      "default": "'{}'::jsonb"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
       "name": "updated_at",
       "type": "timestamp with time zone",
       "nullable": false,
@@ -4194,6 +4475,382 @@
     },
     {
       "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "subscription_id",
+      "type": "uuid",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "invoice_number",
+      "type": "character varying(120)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "status",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "total_amount",
+      "type": "numeric(36,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "currency",
+      "type": "character(3)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "issued_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "due_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "paid_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "failure_reason",
+      "type": "character varying(2000)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "refund_reason",
+      "type": "character varying(2000)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "notes",
+      "type": "character varying(4000)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_payments",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_payments",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_payments",
+      "name": "invoice_id",
+      "type": "uuid",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_payments",
+      "name": "type",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_payments",
+      "name": "status",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_payments",
+      "name": "amount",
+      "type": "numeric(36,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_payments",
+      "name": "currency",
+      "type": "character(3)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_payments",
+      "name": "gateway",
+      "type": "character varying(120)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_payments",
+      "name": "transaction_reference",
+      "type": "character varying(255)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_payments",
+      "name": "failure_reason",
+      "type": "character varying(2000)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_payments",
+      "name": "notes",
+      "type": "character varying(4000)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_payments",
+      "name": "processed_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_payments",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_payments",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "plan_code",
+      "type": "character varying(80)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "plan_name",
+      "type": "character varying(160)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "status",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "billing_interval",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "interval_count",
+      "type": "integer",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "amount",
+      "type": "numeric(36,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "currency",
+      "type": "character(3)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "started_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "current_period_start",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "current_period_end",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "cancel_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "canceled_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "trial_ends_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "notes",
+      "type": "character varying(4000)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
       "relation": "users",
       "name": "id",
       "type": "uuid",
@@ -4489,6 +5146,150 @@
       "relation": "basic_incomes",
       "name": "basic_incomes_user_id_fkey",
       "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "billing_plans_code_check",
+      "definition": "CHECK (code::text ~ '^[a-z0-9][a-z0-9_-]{0,79}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "billing_plans_code_key",
+      "definition": "UNIQUE (code)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "billing_plans_currency_fkey",
+      "definition": "FOREIGN KEY (currency) REFERENCES mymoneymap.currencies(code)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "billing_plans_interval_check",
+      "definition": "CHECK (billing_interval::text = ANY (ARRAY['weekly'::character varying, 'monthly'::character varying, 'yearly'::character varying, 'lifetime'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "billing_plans_interval_count_check",
+      "definition": "CHECK (interval_count > 0)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "billing_plans_metadata_check",
+      "definition": "CHECK (jsonb_typeof(metadata) = 'object'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "billing_plans_name_check",
+      "definition": "CHECK (char_length(btrim(name::text)) >= 1 AND char_length(btrim(name::text)) <= 160)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "billing_plans_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "billing_plans_price_check",
+      "definition": "CHECK (price >= 0::numeric)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "billing_plans_role_check",
+      "definition": "CHECK (role_slug::text = ANY (ARRAY['free'::character varying, 'premium'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "billing_plans_trial_check",
+      "definition": "CHECK (trial_days IS NULL OR trial_days >= 0)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "billing_promotions_amount_check",
+      "definition": "CHECK (discount_amount IS NULL OR discount_amount >= 0::numeric)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "billing_promotions_code_check",
+      "definition": "CHECK (code::text ~ '^[A-Z0-9][A-Z0-9_-]{0,79}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "billing_promotions_code_key",
+      "definition": "UNIQUE (code)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "billing_promotions_currency_check",
+      "definition": "CHECK (discount_amount IS NULL OR currency IS NOT NULL)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "billing_promotions_currency_fkey",
+      "definition": "FOREIGN KEY (currency) REFERENCES mymoneymap.currencies(code)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "billing_promotions_metadata_check",
+      "definition": "CHECK (jsonb_typeof(metadata) = 'object'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "billing_promotions_name_check",
+      "definition": "CHECK (char_length(btrim(name::text)) >= 1 AND char_length(btrim(name::text)) <= 160)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "billing_promotions_percent_check",
+      "definition": "CHECK (discount_percent IS NULL OR discount_percent >= 0::numeric AND discount_percent <= 100::numeric)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "billing_promotions_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "billing_promotions_plan_code_fkey",
+      "definition": "FOREIGN KEY (plan_code) REFERENCES mymoneymap.billing_plans(code) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "billing_promotions_redemptions_check",
+      "definition": "CHECK (max_redemptions IS NULL OR max_redemptions >= 0)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "billing_promotions_trial_check",
+      "definition": "CHECK (trial_days IS NULL OR trial_days >= 0)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "billing_promotions_value_check",
+      "definition": "CHECK (discount_percent IS NOT NULL OR discount_amount IS NOT NULL OR trial_days IS NOT NULL)"
     },
     {
       "schema": "mymoneymap",
@@ -5808,7 +6609,7 @@
       "schema": "mymoneymap",
       "relation": "privileged_audit_events",
       "name": "privileged_audit_action_check",
-      "definition": "CHECK (action::text = ANY (ARRAY['feedback.updated'::character varying, 'feedback.responded'::character varying, 'system.settings_updated'::character varying, 'integration.upserted'::character varying, 'integration.deleted'::character varying, 'user.role_updated'::character varying, 'user.status_updated'::character varying, 'user.password_reset_requested'::character varying, 'user.email_verification_requested'::character varying, 'user.email_change_requested'::character varying]::text[]))"
+      "definition": "CHECK (action::text = ANY (ARRAY['feedback.updated'::character varying, 'feedback.responded'::character varying, 'system.settings_updated'::character varying, 'integration.upserted'::character varying, 'integration.deleted'::character varying, 'user.role_updated'::character varying, 'user.status_updated'::character varying, 'user.password_reset_requested'::character varying, 'user.email_verification_requested'::character varying, 'user.email_change_requested'::character varying, 'billing.plan_created'::character varying, 'billing.plan_updated'::character varying, 'billing.plan_deleted'::character varying, 'billing.promotion_created'::character varying, 'billing.promotion_updated'::character varying, 'billing.promotion_deleted'::character varying, 'billing.subscription_assigned'::character varying, 'billing.invoice_updated'::character varying, 'billing.payment_created'::character varying, 'billing.payment_updated'::character varying]::text[]))"
     },
     {
       "schema": "mymoneymap",
@@ -5832,7 +6633,7 @@
       "schema": "mymoneymap",
       "relation": "privileged_audit_events",
       "name": "privileged_audit_target_type_check",
-      "definition": "CHECK (target_type::text = ANY (ARRAY['feedback'::character varying, 'system_settings'::character varying, 'integration'::character varying, 'user'::character varying]::text[]))"
+      "definition": "CHECK (target_type::text = ANY (ARRAY['feedback'::character varying, 'system_settings'::character varying, 'integration'::character varying, 'user'::character varying, 'billing_plan'::character varying, 'billing_promotion'::character varying, 'subscription'::character varying, 'invoice'::character varying, 'payment'::character varying]::text[]))"
     },
     {
       "schema": "mymoneymap",
@@ -6760,6 +7561,168 @@
     },
     {
       "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "user_invoices_amount_check",
+      "definition": "CHECK (total_amount >= 0::numeric)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "user_invoices_currency_fkey",
+      "definition": "FOREIGN KEY (currency) REFERENCES mymoneymap.currencies(code)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "user_invoices_due_check",
+      "definition": "CHECK (due_at IS NULL OR due_at >= issued_at)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "user_invoices_id_user_unique",
+      "definition": "UNIQUE (id, user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "user_invoices_invoice_number_key",
+      "definition": "UNIQUE (invoice_number)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "user_invoices_paid_check",
+      "definition": "CHECK (paid_at IS NULL OR paid_at >= issued_at)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "user_invoices_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "user_invoices_status_check",
+      "definition": "CHECK (status::text = ANY (ARRAY['draft'::character varying, 'open'::character varying, 'paid'::character varying, 'failed'::character varying, 'past_due'::character varying, 'refunded'::character varying, 'void'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "user_invoices_subscription_owner_fk",
+      "definition": "FOREIGN KEY (subscription_id, user_id) REFERENCES mymoneymap.user_subscriptions(id, user_id) ON DELETE SET NULL (subscription_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "user_invoices_user_id_fkey",
+      "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_payments",
+      "name": "user_payments_amount_check",
+      "definition": "CHECK (amount >= 0::numeric)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_payments",
+      "name": "user_payments_currency_fkey",
+      "definition": "FOREIGN KEY (currency) REFERENCES mymoneymap.currencies(code)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_payments",
+      "name": "user_payments_invoice_owner_fk",
+      "definition": "FOREIGN KEY (invoice_id, user_id) REFERENCES mymoneymap.user_invoices(id, user_id) ON DELETE SET NULL (invoice_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_payments",
+      "name": "user_payments_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_payments",
+      "name": "user_payments_status_check",
+      "definition": "CHECK (status::text = ANY (ARRAY['pending'::character varying, 'succeeded'::character varying, 'failed'::character varying, 'canceled'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_payments",
+      "name": "user_payments_type_check",
+      "definition": "CHECK (type::text = ANY (ARRAY['charge'::character varying, 'refund'::character varying, 'adjustment'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_payments",
+      "name": "user_payments_user_id_fkey",
+      "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "user_subscriptions_amount_check",
+      "definition": "CHECK (amount >= 0::numeric)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "user_subscriptions_currency_fkey",
+      "definition": "FOREIGN KEY (currency) REFERENCES mymoneymap.currencies(code)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "user_subscriptions_id_user_unique",
+      "definition": "UNIQUE (id, user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "user_subscriptions_interval_check",
+      "definition": "CHECK (billing_interval::text = ANY (ARRAY['weekly'::character varying, 'monthly'::character varying, 'yearly'::character varying, 'lifetime'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "user_subscriptions_interval_count_check",
+      "definition": "CHECK (interval_count > 0)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "user_subscriptions_period_check",
+      "definition": "CHECK (current_period_end IS NULL OR current_period_start IS NULL OR current_period_end >= current_period_start)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "user_subscriptions_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "user_subscriptions_status_check",
+      "definition": "CHECK (status::text = ANY (ARRAY['active'::character varying, 'trialing'::character varying, 'past_due'::character varying, 'canceled'::character varying, 'expired'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "user_subscriptions_trial_check",
+      "definition": "CHECK (trial_ends_at IS NULL OR trial_ends_at >= started_at)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "user_subscriptions_user_id_fkey",
+      "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
       "relation": "users",
       "name": "users_desired_language_check",
       "definition": "CHECK (desired_language::text = ANY (ARRAY['en'::character varying, 'hu'::character varying, 'es'::character varying]::text[]))"
@@ -6873,6 +7836,30 @@
       "relation": "basic_incomes",
       "name": "basic_incomes_user_dates_index",
       "definition": "CREATE INDEX basic_incomes_user_dates_index ON mymoneymap.basic_incomes USING btree (user_id, valid_from, valid_to, lower((label)::text), id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "billing_plans_code_key",
+      "definition": "CREATE UNIQUE INDEX billing_plans_code_key ON mymoneymap.billing_plans USING btree (code)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_plans",
+      "name": "billing_plans_pkey",
+      "definition": "CREATE UNIQUE INDEX billing_plans_pkey ON mymoneymap.billing_plans USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "billing_promotions_code_key",
+      "definition": "CREATE UNIQUE INDEX billing_promotions_code_key ON mymoneymap.billing_promotions USING btree (code)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "billing_promotions",
+      "name": "billing_promotions_pkey",
+      "definition": "CREATE UNIQUE INDEX billing_promotions_pkey ON mymoneymap.billing_promotions USING btree (id)"
     },
     {
       "schema": "mymoneymap",
@@ -7731,6 +8718,66 @@
       "relation": "user_currencies",
       "name": "user_currencies_pkey",
       "definition": "CREATE UNIQUE INDEX user_currencies_pkey ON mymoneymap.user_currencies USING btree (user_id, code)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "user_invoices_id_user_unique",
+      "definition": "CREATE UNIQUE INDEX user_invoices_id_user_unique ON mymoneymap.user_invoices USING btree (id, user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "user_invoices_invoice_number_key",
+      "definition": "CREATE UNIQUE INDEX user_invoices_invoice_number_key ON mymoneymap.user_invoices USING btree (invoice_number)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "user_invoices_pkey",
+      "definition": "CREATE UNIQUE INDEX user_invoices_pkey ON mymoneymap.user_invoices USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_invoices",
+      "name": "user_invoices_user_index",
+      "definition": "CREATE INDEX user_invoices_user_index ON mymoneymap.user_invoices USING btree (user_id, issued_at DESC, id DESC)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_payments",
+      "name": "user_payments_invoice_index",
+      "definition": "CREATE INDEX user_payments_invoice_index ON mymoneymap.user_payments USING btree (invoice_id, processed_at DESC, id DESC)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_payments",
+      "name": "user_payments_pkey",
+      "definition": "CREATE UNIQUE INDEX user_payments_pkey ON mymoneymap.user_payments USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_payments",
+      "name": "user_payments_user_index",
+      "definition": "CREATE INDEX user_payments_user_index ON mymoneymap.user_payments USING btree (user_id, processed_at DESC, id DESC)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "user_subscriptions_id_user_unique",
+      "definition": "CREATE UNIQUE INDEX user_subscriptions_id_user_unique ON mymoneymap.user_subscriptions USING btree (id, user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "user_subscriptions_pkey",
+      "definition": "CREATE UNIQUE INDEX user_subscriptions_pkey ON mymoneymap.user_subscriptions USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_subscriptions",
+      "name": "user_subscriptions_user_index",
+      "definition": "CREATE INDEX user_subscriptions_user_index ON mymoneymap.user_subscriptions USING btree (user_id, created_at DESC, id DESC)"
     },
     {
       "schema": "mymoneymap",

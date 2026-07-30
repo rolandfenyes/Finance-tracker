@@ -18,6 +18,7 @@ describe('securities PostgreSQL migration contract', () => {
       await migrateOneDown(database);
       await migrateOneDown(database);
       await migrateOneDown(database);
+      await migrateOneDown(database);
       expect(await relation(pool, 'securities_trades')).toBeNull();
       expect(await relation(pool, 'securities_lots')).toBeNull();
       expect(await relation(pool, 'securities_refresh_jobs')).toBeNull();

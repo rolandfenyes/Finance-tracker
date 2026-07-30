@@ -19,6 +19,7 @@ import { InvestmentsModule } from './investments/investments.module';
 import { SecuritiesModule } from './securities/securities.module';
 import { FeedbackModule } from './feedback/feedback.module';
 import { AdministrationModule } from './administration/administration.module';
+import { BillingModule } from './billing/billing.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { AdministrationModule } from './administration/administration.module';
     SecuritiesModule,
     FeedbackModule,
     AdministrationModule,
+    BillingModule,
     HealthModule,
   ],
 })
