@@ -17,6 +17,7 @@ import * as genericInvestments from './20260729120000_generic_investments';
 import * as securities from './20260729130000_securities';
 import * as securitiesAccountGuardRevision from './20260729130100_securities_account_guard_revision';
 import * as securitiesLedgerGuardRevision from './20260729130200_securities_ledger_guard_revision';
+import * as adminFeedbackSystem from './20260729140000_admin_feedback_system';
 
 export const registeredMigrations = {
   '20260729000000_database_baseline': databaseBaseline,
@@ -37,6 +38,7 @@ export const registeredMigrations = {
   '20260729130000_securities': securities,
   '20260729130100_securities_account_guard_revision': securitiesAccountGuardRevision,
   '20260729130200_securities_ledger_guard_revision': securitiesLedgerGuardRevision,
+  '20260729140000_admin_feedback_system': adminFeedbackSystem,
 } satisfies Record<string, Migration>;
 
 export class RegisteredMigrationProvider implements MigrationProvider {

@@ -63,6 +63,8 @@ const environmentSchema = z
     SECURITIES_PROVIDER_TIMEOUT_MS: positiveMilliseconds.default(5000),
     FINNHUB_API_KEY: z.string().min(1).optional(),
     FINNHUB_BASE_URL: z.url().default('https://finnhub.io/api/v1'),
+    SETTINGS_ENCRYPTION_KEY: z.string().optional(),
+    ACCOUNT_RECOVERY_TTL_SECONDS: positiveSeconds.default(3600),
     SESSION_SECRET: z.string().min(32),
     SESSION_COOKIE_NAME: z.string().regex(/^[A-Za-z0-9._-]+$/),
     SESSION_IDLE_TTL_SECONDS: positiveSeconds,
@@ -98,6 +100,20 @@ const environmentSchema = z
         code: 'custom',
         path: ['RECURRENCE_ENABLED'],
         message: 'must be enabled in production',
+      });
+    }
+
+    if (!environment.SETTINGS_ENCRYPTION_KEY) {
+      context.addIssue({
+        code: 'custom',
+        path: ['SETTINGS_ENCRYPTION_KEY'],
+        message: 'must be configured in production',
+      });
+    } else if (Buffer.from(environment.SETTINGS_ENCRYPTION_KEY, 'base64').length !== 32) {
+      context.addIssue({
+        code: 'custom',
+        path: ['SETTINGS_ENCRYPTION_KEY'],
+        message: 'must encode exactly 32 bytes',
       });
     }
 

@@ -1,6 +1,8 @@
 import { inspect } from 'node:util';
 import { REDACTED_SECRET, type SecretValue } from './secret-value';
 
+export const ENCRYPTED_SETTING_PORT = Symbol('ENCRYPTED_SETTING_PORT');
+
 export class EncryptedSetting {
   private constructor(private readonly ciphertext: string) {}
 

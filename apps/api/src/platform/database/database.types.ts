@@ -59,6 +59,85 @@ export interface LoginAuditEventsTable {
   created_at: GeneratedTimestamp;
 }
 
+export interface FeedbackTable {
+  id: string;
+  user_id: string;
+  kind: 'bug' | 'idea';
+  title: string;
+  message: string;
+  severity: 'low' | 'medium' | 'high' | null;
+  status: 'open' | 'in_progress' | 'resolved' | 'closed';
+  created_at: DatabaseTimestamp;
+  updated_at: DatabaseTimestamp;
+}
+
+export interface FeedbackResponsesTable {
+  id: string;
+  feedback_id: string;
+  admin_id: string;
+  message: string;
+  created_at: DatabaseTimestamp;
+  updated_at: DatabaseTimestamp;
+}
+
+export interface SystemSettingsTable {
+  id: number;
+  site_name: string;
+  primary_url: string | null;
+  support_email: string | null;
+  contact_email: string | null;
+  logo_url: string | null;
+  favicon_url: string | null;
+  maintenance_mode: boolean;
+  maintenance_message: string | null;
+  created_at: DatabaseTimestamp;
+  updated_at: DatabaseTimestamp;
+}
+
+export interface ApiIntegrationsTable {
+  id: string;
+  name: string;
+  service: string;
+  api_key_encrypted: string;
+  status: 'active' | 'inactive';
+  metadata: JsonValue;
+  last_used_at: DatabaseTimestamp | null;
+  created_at: DatabaseTimestamp;
+  updated_at: DatabaseTimestamp;
+}
+
+export interface AccountRecoveryRequestsTable {
+  id: string;
+  user_id: string;
+  requested_by_admin_id: string;
+  kind: 'password_reset' | 'email_change';
+  token_hash: string;
+  pending_email: string | null;
+  expires_at: DatabaseTimestamp;
+  consumed_at: DatabaseTimestamp | null;
+  created_at: DatabaseTimestamp;
+}
+
+export interface PrivilegedAuditEventsTable {
+  id: string;
+  actor_user_id: string;
+  action:
+    | 'feedback.updated'
+    | 'feedback.responded'
+    | 'system.settings_updated'
+    | 'integration.upserted'
+    | 'integration.deleted'
+    | 'user.role_updated'
+    | 'user.status_updated'
+    | 'user.password_reset_requested'
+    | 'user.email_verification_requested'
+    | 'user.email_change_requested';
+  target_type: 'feedback' | 'system_settings' | 'integration' | 'user';
+  target_id: string | null;
+  details: JsonValue;
+  created_at: DatabaseTimestamp;
+}
+
 export interface IdempotencyKeysTable {
   scope_id: string;
   operation: string;
@@ -616,6 +695,12 @@ export interface DatabaseSchema {
   'mymoneymap.email_verification_tokens': EmailVerificationTokensTable;
   'mymoneymap.passkeys': PasskeysTable;
   'mymoneymap.login_audit_events': LoginAuditEventsTable;
+  'mymoneymap.feedback': FeedbackTable;
+  'mymoneymap.feedback_responses': FeedbackResponsesTable;
+  'mymoneymap.system_settings': SystemSettingsTable;
+  'mymoneymap.api_integrations': ApiIntegrationsTable;
+  'mymoneymap.account_recovery_requests': AccountRecoveryRequestsTable;
+  'mymoneymap.privileged_audit_events': PrivilegedAuditEventsTable;
   'mymoneymap.ledger_accounts': LedgerAccountsTable;
   'mymoneymap.journal_entries': JournalEntriesTable;
   'mymoneymap.journal_legs': JournalLegsTable;

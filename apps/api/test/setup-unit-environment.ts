@@ -14,6 +14,8 @@ Object.assign(process.env, {
   RECURRENCE_ENABLED: 'false',
   FX_PROVIDER_TIMEOUT_MS: '5000',
   SESSION_SECRET: 'synthetic-session-secret-at-least-32-characters',
+  SETTINGS_ENCRYPTION_KEY: 'c3ludGhldGljLXRlc3Qta2V5LWlzLTMyLWJ5dGVzISE=',
+  ACCOUNT_RECOVERY_TTL_SECONDS: '3600',
   SESSION_COOKIE_NAME: 'mymoneymap.sid',
   SESSION_IDLE_TTL_SECONDS: '1800',
   SESSION_ABSOLUTE_TTL_SECONDS: '43200',

@@ -17,6 +17,8 @@ import { EmergencyReserveModule } from './emergency-reserve/emergency-reserve.mo
 import { LoansModule } from './loans/loans.module';
 import { InvestmentsModule } from './investments/investments.module';
 import { SecuritiesModule } from './securities/securities.module';
+import { FeedbackModule } from './feedback/feedback.module';
+import { AdministrationModule } from './administration/administration.module';
 
 @Module({
   imports: [
@@ -42,6 +44,8 @@ import { SecuritiesModule } from './securities/securities.module';
     LoansModule,
     InvestmentsModule,
     SecuritiesModule,
+    FeedbackModule,
+    AdministrationModule,
     HealthModule,
   ],
 })

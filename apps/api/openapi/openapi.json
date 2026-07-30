@@ -2110,6 +2110,364 @@
         "tags": ["Securities"]
       }
     },
+    "/api/v1/feedback": {
+      "get": {
+        "operationId": "FeedbackController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/FeedbackResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "List only the authenticated user’s feedback and staff responses",
+        "tags": ["Feedback"]
+      },
+      "post": {
+        "operationId": "FeedbackController_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/FeedbackResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Create owned bug or idea feedback",
+        "tags": ["Feedback"]
+      }
+    },
+    "/api/v1/feedback/{id}/status": {
+      "patch": {
+        "operationId": "FeedbackController_status",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/FeedbackResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Close or reopen owned feedback without changing staff workflow states",
+        "tags": ["Feedback"]
+      }
+    },
+    "/api/v1/feedback/{id}": {
+      "delete": {
+        "operationId": "FeedbackController_delete",
+        "parameters": [],
+        "responses": { "204": { "description": "" } },
+        "security": [{ "cookie": [] }],
+        "summary": "Delete owned feedback",
+        "tags": ["Feedback"]
+      }
+    },
+    "/api/v1/admin/dashboard": {
+      "get": {
+        "operationId": "AdministrationController_dashboard",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AdministrationResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Read evidenced operational counts with explicit definitions",
+        "tags": ["Administration"]
+      }
+    },
+    "/api/v1/admin/analytics": {
+      "get": {
+        "operationId": "AdministrationController_analytics",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AdministrationResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Read defined account metrics and trailing registration counts",
+        "tags": ["Administration"]
+      }
+    },
+    "/api/v1/admin/users": {
+      "get": {
+        "operationId": "AdministrationController_users",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AdministrationResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "List users with cursor pagination and masked identity fields",
+        "tags": ["Administration"]
+      }
+    },
+    "/api/v1/admin/users/{id}": {
+      "get": {
+        "operationId": "AdministrationController_user",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AdministrationResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Read a masked user administration summary and redacted login activity",
+        "tags": ["Administration"]
+      }
+    },
+    "/api/v1/admin/users/{id}/role": {
+      "put": {
+        "operationId": "AdministrationController_role",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AdministrationResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Assign one of the approved fixed roles and audit the action",
+        "tags": ["Administration"]
+      }
+    },
+    "/api/v1/admin/users/{id}/status": {
+      "put": {
+        "operationId": "AdministrationController_status",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AdministrationResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Activate or deactivate an account and revoke inactive sessions",
+        "tags": ["Administration"]
+      }
+    },
+    "/api/v1/admin/users/{id}/password-reset-request": {
+      "post": {
+        "operationId": "AdministrationController_passwordReset",
+        "parameters": [],
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AdministrationResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Issue an expiring password-reset action without returning a password or token",
+        "tags": ["Administration"]
+      }
+    },
+    "/api/v1/admin/users/{id}/email-verification-request": {
+      "post": {
+        "operationId": "AdministrationController_verification",
+        "parameters": [],
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AdministrationResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Issue an expiring email-verification action without returning its token",
+        "tags": ["Administration"]
+      }
+    },
+    "/api/v1/admin/users/{id}/email-change-request": {
+      "post": {
+        "operationId": "AdministrationController_emailChange",
+        "parameters": [],
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AdministrationResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Request a verified email change without changing the current address",
+        "tags": ["Administration"]
+      }
+    },
+    "/api/v1/admin/feedback": {
+      "get": {
+        "operationId": "AdministrationController_feedback",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AdministrationResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "List feedback across users with masked author identity and pagination",
+        "tags": ["Administration"]
+      }
+    },
+    "/api/v1/admin/feedback/{id}": {
+      "patch": {
+        "operationId": "AdministrationController_updateFeedback",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AdministrationResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Update staff-managed feedback fields and audit changed field names",
+        "tags": ["Administration"]
+      }
+    },
+    "/api/v1/admin/feedback/{id}/responses": {
+      "post": {
+        "operationId": "AdministrationController_respond",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AdministrationResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Add an attributed admin response and immutable audit event",
+        "tags": ["Administration"]
+      }
+    },
+    "/api/v1/admin/system": {
+      "get": {
+        "operationId": "AdministrationController_system",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AdministrationResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Read non-secret system settings and masked integration state",
+        "tags": ["Administration"]
+      }
+    },
+    "/api/v1/admin/system/settings": {
+      "patch": {
+        "operationId": "AdministrationController_settings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AdministrationResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Update validated non-secret system settings and audit field names",
+        "tags": ["Administration"]
+      }
+    },
+    "/api/v1/admin/integrations/{service}": {
+      "put": {
+        "operationId": "AdministrationController_integration",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AdministrationResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Encrypt and replace a write-only integration secret",
+        "tags": ["Administration"]
+      },
+      "delete": {
+        "operationId": "AdministrationController_deleteIntegration",
+        "parameters": [],
+        "responses": { "204": { "description": "" } },
+        "security": [{ "cookie": [] }],
+        "summary": "Delete an integration configuration and its encrypted secret",
+        "tags": ["Administration"]
+      }
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "HealthController_live",
@@ -3603,6 +3961,16 @@
         "required": ["type", "name", "currency"]
       },
       "SecuritiesResponseDto": {
+        "type": "object",
+        "properties": { "data": { "type": "object" } },
+        "required": ["data"]
+      },
+      "FeedbackResponseDto": {
+        "type": "object",
+        "properties": { "data": { "type": "object" } },
+        "required": ["data"]
+      },
+      "AdministrationResponseDto": {
         "type": "object",
         "properties": { "data": { "type": "object" } },
         "required": ["data"]

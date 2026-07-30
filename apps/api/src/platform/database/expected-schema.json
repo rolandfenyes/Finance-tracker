@@ -3,6 +3,16 @@
   "relations": [
     {
       "schema": "mymoneymap",
+      "name": "account_recovery_requests",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "api_integrations",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
       "name": "basic_incomes",
       "kind": "r"
     },
@@ -34,6 +44,16 @@
     {
       "schema": "mymoneymap",
       "name": "emergency_reserves",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "feedback",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "feedback_responses",
       "kind": "r"
     },
     {
@@ -104,6 +124,11 @@
     {
       "schema": "mymoneymap",
       "name": "passkeys",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "privileged_audit_events",
       "kind": "r"
     },
     {
@@ -198,6 +223,11 @@
     },
     {
       "schema": "mymoneymap",
+      "name": "system_settings",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
       "name": "user_currencies",
       "kind": "r"
     },
@@ -218,6 +248,150 @@
     }
   ],
   "columns": [
+    {
+      "schema": "mymoneymap",
+      "relation": "account_recovery_requests",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "account_recovery_requests",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "account_recovery_requests",
+      "name": "requested_by_admin_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "account_recovery_requests",
+      "name": "kind",
+      "type": "character varying(32)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "account_recovery_requests",
+      "name": "token_hash",
+      "type": "character(64)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "account_recovery_requests",
+      "name": "pending_email",
+      "type": "character varying(320)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "account_recovery_requests",
+      "name": "expires_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "account_recovery_requests",
+      "name": "consumed_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "account_recovery_requests",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "api_integrations",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "api_integrations",
+      "name": "name",
+      "type": "character varying(160)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "api_integrations",
+      "name": "service",
+      "type": "character varying(64)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "api_integrations",
+      "name": "api_key_encrypted",
+      "type": "text",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "api_integrations",
+      "name": "status",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "api_integrations",
+      "name": "metadata",
+      "type": "jsonb",
+      "nullable": false,
+      "default": "'{}'::jsonb"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "api_integrations",
+      "name": "last_used_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "api_integrations",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "api_integrations",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
     {
       "schema": "mymoneymap",
       "relation": "basic_incomes",
@@ -677,6 +851,126 @@
     {
       "schema": "mymoneymap",
       "relation": "emergency_reserves",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback",
+      "name": "kind",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback",
+      "name": "title",
+      "type": "character varying(200)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback",
+      "name": "message",
+      "type": "character varying(10000)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback",
+      "name": "severity",
+      "type": "character varying(16)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback",
+      "name": "status",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": "'open'::character varying"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback_responses",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback_responses",
+      "name": "feedback_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback_responses",
+      "name": "admin_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback_responses",
+      "name": "message",
+      "type": "character varying(10000)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback_responses",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback_responses",
       "name": "updated_at",
       "type": "timestamp with time zone",
       "nullable": false,
@@ -2113,6 +2407,62 @@
       "type": "bigint",
       "nullable": false,
       "default": "0"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privileged_audit_events",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privileged_audit_events",
+      "name": "actor_user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privileged_audit_events",
+      "name": "action",
+      "type": "character varying(80)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privileged_audit_events",
+      "name": "target_type",
+      "type": "character varying(40)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privileged_audit_events",
+      "name": "target_id",
+      "type": "character varying(160)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privileged_audit_events",
+      "name": "details",
+      "type": "jsonb",
+      "nullable": false,
+      "default": "'{}'::jsonb"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privileged_audit_events",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
     },
     {
       "schema": "mymoneymap",
@@ -3724,6 +4074,94 @@
     },
     {
       "schema": "mymoneymap",
+      "relation": "system_settings",
+      "name": "id",
+      "type": "smallint",
+      "nullable": false,
+      "default": "1"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "system_settings",
+      "name": "site_name",
+      "type": "character varying(160)",
+      "nullable": false,
+      "default": "'MyMoneyMap'::character varying"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "system_settings",
+      "name": "primary_url",
+      "type": "character varying(2048)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "system_settings",
+      "name": "support_email",
+      "type": "character varying(320)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "system_settings",
+      "name": "contact_email",
+      "type": "character varying(320)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "system_settings",
+      "name": "logo_url",
+      "type": "character varying(2048)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "system_settings",
+      "name": "favicon_url",
+      "type": "character varying(2048)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "system_settings",
+      "name": "maintenance_mode",
+      "type": "boolean",
+      "nullable": false,
+      "default": "false"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "system_settings",
+      "name": "maintenance_message",
+      "type": "character varying(1000)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "system_settings",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "system_settings",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
       "relation": "user_currencies",
       "name": "user_id",
       "type": "uuid",
@@ -3908,6 +4346,102 @@
     }
   ],
   "constraints": [
+    {
+      "schema": "mymoneymap",
+      "relation": "account_recovery_requests",
+      "name": "account_recovery_consumed_check",
+      "definition": "CHECK (consumed_at IS NULL OR consumed_at >= created_at)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "account_recovery_requests",
+      "name": "account_recovery_expiry_check",
+      "definition": "CHECK (expires_at > created_at)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "account_recovery_requests",
+      "name": "account_recovery_kind_check",
+      "definition": "CHECK (kind::text = ANY (ARRAY['password_reset'::character varying, 'email_change'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "account_recovery_requests",
+      "name": "account_recovery_pending_email_check",
+      "definition": "CHECK (kind::text = 'password_reset'::text AND pending_email IS NULL OR kind::text = 'email_change'::text AND pending_email IS NOT NULL)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "account_recovery_requests",
+      "name": "account_recovery_requests_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "account_recovery_requests",
+      "name": "account_recovery_requests_requested_by_admin_id_fkey",
+      "definition": "FOREIGN KEY (requested_by_admin_id) REFERENCES mymoneymap.users(id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "account_recovery_requests",
+      "name": "account_recovery_requests_token_hash_key",
+      "definition": "UNIQUE (token_hash)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "account_recovery_requests",
+      "name": "account_recovery_requests_user_id_fkey",
+      "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "account_recovery_requests",
+      "name": "account_recovery_token_hash_check",
+      "definition": "CHECK (token_hash ~ '^[0-9a-f]{64}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "api_integrations",
+      "name": "api_integrations_ciphertext_check",
+      "definition": "CHECK (char_length(api_key_encrypted) >= 32)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "api_integrations",
+      "name": "api_integrations_metadata_object_check",
+      "definition": "CHECK (jsonb_typeof(metadata) = 'object'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "api_integrations",
+      "name": "api_integrations_name_check",
+      "definition": "CHECK (char_length(btrim(name::text)) >= 1 AND char_length(btrim(name::text)) <= 160)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "api_integrations",
+      "name": "api_integrations_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "api_integrations",
+      "name": "api_integrations_service_check",
+      "definition": "CHECK (service::text ~ '^[a-z][a-z0-9_-]{1,63}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "api_integrations",
+      "name": "api_integrations_service_key",
+      "definition": "UNIQUE (service)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "api_integrations",
+      "name": "api_integrations_status_check",
+      "definition": "CHECK (status::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying]::text[]))"
+    },
     {
       "schema": "mymoneymap",
       "relation": "basic_incomes",
@@ -4237,6 +4771,78 @@
       "relation": "emergency_reserves",
       "name": "emergency_reserves_user_id_fkey",
       "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback",
+      "name": "feedback_id_user_unique",
+      "definition": "UNIQUE (id, user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback",
+      "name": "feedback_kind_check",
+      "definition": "CHECK (kind::text = ANY (ARRAY['bug'::character varying, 'idea'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback",
+      "name": "feedback_message_check",
+      "definition": "CHECK (char_length(btrim(message::text)) >= 1 AND char_length(btrim(message::text)) <= 10000)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback",
+      "name": "feedback_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback",
+      "name": "feedback_severity_check",
+      "definition": "CHECK (severity IS NULL OR (severity::text = ANY (ARRAY['low'::character varying, 'medium'::character varying, 'high'::character varying]::text[])))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback",
+      "name": "feedback_status_check",
+      "definition": "CHECK (status::text = ANY (ARRAY['open'::character varying, 'in_progress'::character varying, 'resolved'::character varying, 'closed'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback",
+      "name": "feedback_title_check",
+      "definition": "CHECK (char_length(btrim(title::text)) >= 1 AND char_length(btrim(title::text)) <= 200)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback",
+      "name": "feedback_user_id_fkey",
+      "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback_responses",
+      "name": "feedback_responses_admin_id_fkey",
+      "definition": "FOREIGN KEY (admin_id) REFERENCES mymoneymap.users(id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback_responses",
+      "name": "feedback_responses_feedback_id_fkey",
+      "definition": "FOREIGN KEY (feedback_id) REFERENCES mymoneymap.feedback(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback_responses",
+      "name": "feedback_responses_message_check",
+      "definition": "CHECK (char_length(btrim(message::text)) >= 1 AND char_length(btrim(message::text)) <= 10000)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback_responses",
+      "name": "feedback_responses_pkey",
+      "definition": "PRIMARY KEY (id)"
     },
     {
       "schema": "mymoneymap",
@@ -5200,6 +5806,36 @@
     },
     {
       "schema": "mymoneymap",
+      "relation": "privileged_audit_events",
+      "name": "privileged_audit_action_check",
+      "definition": "CHECK (action::text = ANY (ARRAY['feedback.updated'::character varying, 'feedback.responded'::character varying, 'system.settings_updated'::character varying, 'integration.upserted'::character varying, 'integration.deleted'::character varying, 'user.role_updated'::character varying, 'user.status_updated'::character varying, 'user.password_reset_requested'::character varying, 'user.email_verification_requested'::character varying, 'user.email_change_requested'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privileged_audit_events",
+      "name": "privileged_audit_details_object_check",
+      "definition": "CHECK (jsonb_typeof(details) = 'object'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privileged_audit_events",
+      "name": "privileged_audit_events_actor_user_id_fkey",
+      "definition": "FOREIGN KEY (actor_user_id) REFERENCES mymoneymap.users(id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privileged_audit_events",
+      "name": "privileged_audit_events_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privileged_audit_events",
+      "name": "privileged_audit_target_type_check",
+      "definition": "CHECK (target_type::text = ANY (ARRAY['feedback'::character varying, 'system_settings'::character varying, 'integration'::character varying, 'user'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
       "relation": "recurrence_job_events",
       "name": "recurrence_job_event_attempt_check",
       "definition": "CHECK (attempt >= 0)"
@@ -6076,6 +6712,30 @@
     },
     {
       "schema": "mymoneymap",
+      "relation": "system_settings",
+      "name": "system_settings_maintenance_message_check",
+      "definition": "CHECK (maintenance_message IS NULL OR char_length(btrim(maintenance_message::text)) >= 1 AND char_length(btrim(maintenance_message::text)) <= 1000)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "system_settings",
+      "name": "system_settings_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "system_settings",
+      "name": "system_settings_singleton_check",
+      "definition": "CHECK (id = 1)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "system_settings",
+      "name": "system_settings_site_name_check",
+      "definition": "CHECK (char_length(btrim(site_name::text)) >= 1 AND char_length(btrim(site_name::text)) <= 160)"
+    },
+    {
+      "schema": "mymoneymap",
       "relation": "user_currencies",
       "name": "user_currencies_code_fkey",
       "definition": "FOREIGN KEY (code) REFERENCES mymoneymap.currencies(code) ON DELETE RESTRICT"
@@ -6166,6 +6826,36 @@
     }
   ],
   "indexes": [
+    {
+      "schema": "mymoneymap",
+      "relation": "account_recovery_requests",
+      "name": "account_recovery_one_pending_kind_index",
+      "definition": "CREATE UNIQUE INDEX account_recovery_one_pending_kind_index ON mymoneymap.account_recovery_requests USING btree (user_id, kind) WHERE (consumed_at IS NULL)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "account_recovery_requests",
+      "name": "account_recovery_requests_pkey",
+      "definition": "CREATE UNIQUE INDEX account_recovery_requests_pkey ON mymoneymap.account_recovery_requests USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "account_recovery_requests",
+      "name": "account_recovery_requests_token_hash_key",
+      "definition": "CREATE UNIQUE INDEX account_recovery_requests_token_hash_key ON mymoneymap.account_recovery_requests USING btree (token_hash)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "api_integrations",
+      "name": "api_integrations_pkey",
+      "definition": "CREATE UNIQUE INDEX api_integrations_pkey ON mymoneymap.api_integrations USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "api_integrations",
+      "name": "api_integrations_service_key",
+      "definition": "CREATE UNIQUE INDEX api_integrations_service_key ON mymoneymap.api_integrations USING btree (service)"
+    },
     {
       "schema": "mymoneymap",
       "relation": "basic_incomes",
@@ -6291,6 +6981,48 @@
       "relation": "emergency_reserves",
       "name": "emergency_reserves_pkey",
       "definition": "CREATE UNIQUE INDEX emergency_reserves_pkey ON mymoneymap.emergency_reserves USING btree (user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback",
+      "name": "feedback_admin_filter_index",
+      "definition": "CREATE INDEX feedback_admin_filter_index ON mymoneymap.feedback USING btree (status, kind, severity)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback",
+      "name": "feedback_admin_page_index",
+      "definition": "CREATE INDEX feedback_admin_page_index ON mymoneymap.feedback USING btree (created_at DESC, id DESC)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback",
+      "name": "feedback_id_user_unique",
+      "definition": "CREATE UNIQUE INDEX feedback_id_user_unique ON mymoneymap.feedback USING btree (id, user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback",
+      "name": "feedback_owner_page_index",
+      "definition": "CREATE INDEX feedback_owner_page_index ON mymoneymap.feedback USING btree (user_id, created_at DESC, id DESC)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback",
+      "name": "feedback_pkey",
+      "definition": "CREATE UNIQUE INDEX feedback_pkey ON mymoneymap.feedback USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback_responses",
+      "name": "feedback_responses_feedback_index",
+      "definition": "CREATE INDEX feedback_responses_feedback_index ON mymoneymap.feedback_responses USING btree (feedback_id, created_at, id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "feedback_responses",
+      "name": "feedback_responses_pkey",
+      "definition": "CREATE UNIQUE INDEX feedback_responses_pkey ON mymoneymap.feedback_responses USING btree (id)"
     },
     {
       "schema": "mymoneymap",
@@ -6621,6 +7353,18 @@
       "relation": "passkeys",
       "name": "passkeys_user_id_index",
       "definition": "CREATE INDEX passkeys_user_id_index ON mymoneymap.passkeys USING btree (user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privileged_audit_events",
+      "name": "privileged_audit_actor_page_index",
+      "definition": "CREATE INDEX privileged_audit_actor_page_index ON mymoneymap.privileged_audit_events USING btree (actor_user_id, created_at DESC, id DESC)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privileged_audit_events",
+      "name": "privileged_audit_events_pkey",
+      "definition": "CREATE UNIQUE INDEX privileged_audit_events_pkey ON mymoneymap.privileged_audit_events USING btree (id)"
     },
     {
       "schema": "mymoneymap",
@@ -6969,6 +7713,12 @@
       "relation": "securities_watchlist",
       "name": "securities_watchlist_pkey",
       "definition": "CREATE UNIQUE INDEX securities_watchlist_pkey ON mymoneymap.securities_watchlist USING btree (user_id, instrument_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "system_settings",
+      "name": "system_settings_pkey",
+      "definition": "CREATE UNIQUE INDEX system_settings_pkey ON mymoneymap.system_settings USING btree (id)"
     },
     {
       "schema": "mymoneymap",
