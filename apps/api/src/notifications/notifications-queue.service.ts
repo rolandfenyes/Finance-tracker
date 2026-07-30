@@ -14,7 +14,7 @@ import { EMAIL_PROVIDER_PORT, type EmailProvider } from './email-provider';
 import { NotificationsRepository } from './notifications.repository';
 import { NotificationsService } from './notifications.service';
 
-const QUEUE = 'mymoneymap-email-delivery';
+export const NOTIFICATIONS_QUEUE = 'mymoneymap-email-delivery';
 const ATTEMPTS = 3;
 interface EmailJobData {
   deliveryId: string;
@@ -125,10 +125,10 @@ export class NotificationsQueueService implements OnModuleInit, OnApplicationShu
   }
   onModuleInit(): void {
     if (!this.config.getOrThrow<boolean>('EMAIL_DELIVERY_ENABLED')) return;
-    this.queue = new Queue(QUEUE, { connection: this.connection });
+    this.queue = new Queue(NOTIFICATIONS_QUEUE, { connection: this.connection });
     if (!this.workerDisabled) {
       this.worker = new Worker(
-        QUEUE,
+        NOTIFICATIONS_QUEUE,
         (job: Job<EmailJobData>) => this.processor.process(job.data, job.attemptsMade + 1),
         {
           connection: this.connection,
@@ -139,7 +139,8 @@ export class NotificationsQueueService implements OnModuleInit, OnApplicationShu
   }
   async enqueuePrepared(delivery: { id: string; status: string; shouldQueue: boolean }) {
     if (!delivery.shouldQueue) return delivery;
-    const queue = this.queue ?? new Queue<EmailJobData>(QUEUE, { connection: this.connection });
+    const queue =
+      this.queue ?? new Queue<EmailJobData>(NOTIFICATIONS_QUEUE, { connection: this.connection });
     this.queue = queue;
     const queueJobId = `email-${delivery.id}`;
     await queue.add(

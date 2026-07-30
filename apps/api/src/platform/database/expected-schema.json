@@ -158,6 +158,21 @@
     },
     {
       "schema": "mymoneymap",
+      "name": "privacy_deletion_requests",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "privacy_export_artifacts",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "privacy_export_requests",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
       "name": "privileged_audit_events",
       "kind": "r"
     },
@@ -249,6 +264,11 @@
     {
       "schema": "mymoneymap",
       "name": "securities_watchlist",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "security_audit_events",
       "kind": "r"
     },
     {
@@ -2996,6 +3016,22 @@
     },
     {
       "schema": "mymoneymap",
+      "relation": "login_audit_events",
+      "name": "retention_policy_version",
+      "type": "character varying(80)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "login_audit_events",
+      "name": "retain_until",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
       "relation": "passkeys",
       "name": "id",
       "type": "uuid",
@@ -3092,6 +3128,294 @@
     },
     {
       "schema": "mymoneymap",
+      "relation": "privacy_deletion_requests",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_deletion_requests",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_deletion_requests",
+      "name": "subject_hash",
+      "type": "character(64)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_deletion_requests",
+      "name": "idempotency_key_hash",
+      "type": "character(64)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_deletion_requests",
+      "name": "status",
+      "type": "character varying(24)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_deletion_requests",
+      "name": "queue_job_id",
+      "type": "character varying(255)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_deletion_requests",
+      "name": "attempt_count",
+      "type": "integer",
+      "nullable": false,
+      "default": "0"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_deletion_requests",
+      "name": "max_attempts",
+      "type": "integer",
+      "nullable": false,
+      "default": "3"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_deletion_requests",
+      "name": "error_code",
+      "type": "character varying(80)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_deletion_requests",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_deletion_requests",
+      "name": "started_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_deletion_requests",
+      "name": "completed_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_artifacts",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_artifacts",
+      "name": "export_request_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_artifacts",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_artifacts",
+      "name": "format",
+      "type": "character varying(8)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_artifacts",
+      "name": "dataset",
+      "type": "character varying(80)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_artifacts",
+      "name": "object_key",
+      "type": "character varying(512)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_artifacts",
+      "name": "media_type",
+      "type": "character varying(100)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_artifacts",
+      "name": "byte_size",
+      "type": "bigint",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_artifacts",
+      "name": "sha256",
+      "type": "character(64)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_artifacts",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_artifacts",
+      "name": "expires_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_requests",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_requests",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_requests",
+      "name": "manifest_version",
+      "type": "integer",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_requests",
+      "name": "idempotency_key_hash",
+      "type": "character(64)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_requests",
+      "name": "status",
+      "type": "character varying(24)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_requests",
+      "name": "queue_job_id",
+      "type": "character varying(255)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_requests",
+      "name": "attempt_count",
+      "type": "integer",
+      "nullable": false,
+      "default": "0"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_requests",
+      "name": "max_attempts",
+      "type": "integer",
+      "nullable": false,
+      "default": "3"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_requests",
+      "name": "error_code",
+      "type": "character varying(80)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_requests",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_requests",
+      "name": "started_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_requests",
+      "name": "completed_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_requests",
+      "name": "expires_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
       "relation": "privileged_audit_events",
       "name": "id",
       "type": "uuid",
@@ -3144,6 +3468,22 @@
       "name": "created_at",
       "type": "timestamp with time zone",
       "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privileged_audit_events",
+      "name": "retention_policy_version",
+      "type": "character varying(80)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privileged_audit_events",
+      "name": "retain_until",
+      "type": "timestamp with time zone",
+      "nullable": true,
       "default": null
     },
     {
@@ -4749,6 +5089,94 @@
     {
       "schema": "mymoneymap",
       "relation": "securities_watchlist",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "security_audit_events",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "security_audit_events",
+      "name": "actor_user_id",
+      "type": "uuid",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "security_audit_events",
+      "name": "subject_user_id",
+      "type": "uuid",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "security_audit_events",
+      "name": "subject_hash",
+      "type": "character(64)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "security_audit_events",
+      "name": "action",
+      "type": "character varying(80)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "security_audit_events",
+      "name": "target_type",
+      "type": "character varying(40)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "security_audit_events",
+      "name": "target_id",
+      "type": "character varying(160)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "security_audit_events",
+      "name": "details",
+      "type": "jsonb",
+      "nullable": false,
+      "default": "'{}'::jsonb"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "security_audit_events",
+      "name": "retention_policy_version",
+      "type": "character varying(80)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "security_audit_events",
+      "name": "retain_until",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "security_audit_events",
       "name": "created_at",
       "type": "timestamp with time zone",
       "nullable": false,
@@ -7140,6 +7568,12 @@
     },
     {
       "schema": "mymoneymap",
+      "relation": "login_audit_events",
+      "name": "login_audit_retention_check",
+      "definition": "CHECK (retention_policy_version IS NULL AND retain_until IS NULL OR retention_policy_version IS NOT NULL AND retain_until IS NOT NULL)"
+    },
+    {
+      "schema": "mymoneymap",
       "relation": "passkeys",
       "name": "passkeys_counter_check",
       "definition": "CHECK (counter >= 0)"
@@ -7176,6 +7610,162 @@
     },
     {
       "schema": "mymoneymap",
+      "relation": "privacy_deletion_requests",
+      "name": "privacy_deletion_attempt_check",
+      "definition": "CHECK (attempt_count >= 0 AND max_attempts = 3 AND attempt_count <= max_attempts)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_deletion_requests",
+      "name": "privacy_deletion_completion_check",
+      "definition": "CHECK (status::text = 'completed'::text AND completed_at IS NOT NULL OR status::text <> 'completed'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_deletion_requests",
+      "name": "privacy_deletion_key_hash_check",
+      "definition": "CHECK (idempotency_key_hash ~ '^[0-9a-f]{64}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_deletion_requests",
+      "name": "privacy_deletion_requests_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_deletion_requests",
+      "name": "privacy_deletion_requests_user_id_fkey",
+      "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE SET NULL"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_deletion_requests",
+      "name": "privacy_deletion_status_check",
+      "definition": "CHECK (status::text = ANY (ARRAY['queued'::character varying, 'running'::character varying, 'completed'::character varying, 'retryable_failed'::character varying, 'dead_letter'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_deletion_requests",
+      "name": "privacy_deletion_subject_hash_check",
+      "definition": "CHECK (subject_hash ~ '^[0-9a-f]{64}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_deletion_requests",
+      "name": "privacy_deletion_subject_key_unique",
+      "definition": "UNIQUE (subject_hash, idempotency_key_hash)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_artifacts",
+      "name": "privacy_export_artifact_dataset_check",
+      "definition": "CHECK (dataset::text ~ '^[a-z][a-z0-9_]{0,79}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_artifacts",
+      "name": "privacy_export_artifact_expiry_check",
+      "definition": "CHECK (expires_at > created_at)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_artifacts",
+      "name": "privacy_export_artifact_format_check",
+      "definition": "CHECK (format::text = ANY (ARRAY['json'::character varying, 'csv'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_artifacts",
+      "name": "privacy_export_artifact_request_owner_fk",
+      "definition": "FOREIGN KEY (export_request_id, user_id) REFERENCES mymoneymap.privacy_export_requests(id, user_id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_artifacts",
+      "name": "privacy_export_artifact_sha_check",
+      "definition": "CHECK (sha256 ~ '^[0-9a-f]{64}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_artifacts",
+      "name": "privacy_export_artifact_size_check",
+      "definition": "CHECK (byte_size >= 0)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_artifacts",
+      "name": "privacy_export_artifact_user_fk",
+      "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_artifacts",
+      "name": "privacy_export_artifacts_object_key_key",
+      "definition": "UNIQUE (object_key)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_artifacts",
+      "name": "privacy_export_artifacts_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_requests",
+      "name": "privacy_export_attempt_check",
+      "definition": "CHECK (attempt_count >= 0 AND max_attempts = 3 AND attempt_count <= max_attempts)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_requests",
+      "name": "privacy_export_expiry_check",
+      "definition": "CHECK (status::text = 'completed'::text AND completed_at IS NOT NULL AND expires_at > completed_at OR status::text <> 'completed'::text AND expires_at IS NULL)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_requests",
+      "name": "privacy_export_id_user_unique",
+      "definition": "UNIQUE (id, user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_requests",
+      "name": "privacy_export_key_hash_check",
+      "definition": "CHECK (idempotency_key_hash ~ '^[0-9a-f]{64}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_requests",
+      "name": "privacy_export_manifest_version_check",
+      "definition": "CHECK (manifest_version > 0)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_requests",
+      "name": "privacy_export_requests_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_requests",
+      "name": "privacy_export_requests_user_id_fkey",
+      "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_requests",
+      "name": "privacy_export_status_check",
+      "definition": "CHECK (status::text = ANY (ARRAY['queued'::character varying, 'running'::character varying, 'completed'::character varying, 'retryable_failed'::character varying, 'dead_letter'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_requests",
+      "name": "privacy_export_user_key_unique",
+      "definition": "UNIQUE (user_id, idempotency_key_hash)"
+    },
+    {
+      "schema": "mymoneymap",
       "relation": "privileged_audit_events",
       "name": "privileged_audit_action_check",
       "definition": "CHECK (action::text = ANY (ARRAY['feedback.updated'::character varying, 'feedback.responded'::character varying, 'system.settings_updated'::character varying, 'integration.upserted'::character varying, 'integration.deleted'::character varying, 'user.role_updated'::character varying, 'user.status_updated'::character varying, 'user.password_reset_requested'::character varying, 'user.email_verification_requested'::character varying, 'user.email_change_requested'::character varying, 'billing.plan_created'::character varying, 'billing.plan_updated'::character varying, 'billing.plan_deleted'::character varying, 'billing.promotion_created'::character varying, 'billing.promotion_updated'::character varying, 'billing.promotion_deleted'::character varying, 'billing.subscription_assigned'::character varying, 'billing.invoice_updated'::character varying, 'billing.payment_created'::character varying, 'billing.payment_updated'::character varying]::text[]))"
@@ -7197,6 +7787,12 @@
       "relation": "privileged_audit_events",
       "name": "privileged_audit_events_pkey",
       "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privileged_audit_events",
+      "name": "privileged_audit_retention_check",
+      "definition": "CHECK (retention_policy_version IS NULL AND retain_until IS NULL OR retention_policy_version IS NOT NULL AND retain_until IS NOT NULL)"
     },
     {
       "schema": "mymoneymap",
@@ -8079,6 +8675,54 @@
       "relation": "securities_watchlist",
       "name": "securities_watchlist_user_id_fkey",
       "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "security_audit_events",
+      "name": "security_audit_action_check",
+      "definition": "CHECK (action::text = ANY (ARRAY['privacy.export_requested'::character varying, 'privacy.export_completed'::character varying, 'privacy.export_failed'::character varying, 'privacy.export_accessed'::character varying, 'privacy.deletion_requested'::character varying, 'privacy.deletion_completed'::character varying, 'privacy.deletion_failed'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "security_audit_events",
+      "name": "security_audit_details_object_check",
+      "definition": "CHECK (jsonb_typeof(details) = 'object'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "security_audit_events",
+      "name": "security_audit_events_actor_user_id_fkey",
+      "definition": "FOREIGN KEY (actor_user_id) REFERENCES mymoneymap.users(id) ON DELETE SET NULL"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "security_audit_events",
+      "name": "security_audit_events_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "security_audit_events",
+      "name": "security_audit_events_subject_user_id_fkey",
+      "definition": "FOREIGN KEY (subject_user_id) REFERENCES mymoneymap.users(id) ON DELETE SET NULL"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "security_audit_events",
+      "name": "security_audit_retention_check",
+      "definition": "CHECK (retention_policy_version IS NULL AND retain_until IS NULL OR retention_policy_version IS NOT NULL AND retain_until IS NOT NULL)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "security_audit_events",
+      "name": "security_audit_subject_hash_check",
+      "definition": "CHECK (subject_hash ~ '^[0-9a-f]{64}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "security_audit_events",
+      "name": "security_audit_target_type_check",
+      "definition": "CHECK (target_type::text = ANY (ARRAY['privacy_export'::character varying, 'privacy_deletion'::character varying, 'user'::character varying]::text[]))"
     },
     {
       "schema": "mymoneymap",
@@ -8978,6 +9622,78 @@
     },
     {
       "schema": "mymoneymap",
+      "relation": "privacy_deletion_requests",
+      "name": "privacy_deletion_requests_pkey",
+      "definition": "CREATE UNIQUE INDEX privacy_deletion_requests_pkey ON mymoneymap.privacy_deletion_requests USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_deletion_requests",
+      "name": "privacy_deletion_requests_status_index",
+      "definition": "CREATE INDEX privacy_deletion_requests_status_index ON mymoneymap.privacy_deletion_requests USING btree (status, created_at, id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_deletion_requests",
+      "name": "privacy_deletion_requests_user_index",
+      "definition": "CREATE INDEX privacy_deletion_requests_user_index ON mymoneymap.privacy_deletion_requests USING btree (user_id, created_at DESC, id DESC) WHERE (user_id IS NOT NULL)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_deletion_requests",
+      "name": "privacy_deletion_subject_key_unique",
+      "definition": "CREATE UNIQUE INDEX privacy_deletion_subject_key_unique ON mymoneymap.privacy_deletion_requests USING btree (subject_hash, idempotency_key_hash)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_artifacts",
+      "name": "privacy_export_artifacts_object_key_key",
+      "definition": "CREATE UNIQUE INDEX privacy_export_artifacts_object_key_key ON mymoneymap.privacy_export_artifacts USING btree (object_key)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_artifacts",
+      "name": "privacy_export_artifacts_owner_index",
+      "definition": "CREATE INDEX privacy_export_artifacts_owner_index ON mymoneymap.privacy_export_artifacts USING btree (user_id, export_request_id, dataset, format)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_artifacts",
+      "name": "privacy_export_artifacts_pkey",
+      "definition": "CREATE UNIQUE INDEX privacy_export_artifacts_pkey ON mymoneymap.privacy_export_artifacts USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_requests",
+      "name": "privacy_export_id_user_unique",
+      "definition": "CREATE UNIQUE INDEX privacy_export_id_user_unique ON mymoneymap.privacy_export_requests USING btree (id, user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_requests",
+      "name": "privacy_export_requests_owner_index",
+      "definition": "CREATE INDEX privacy_export_requests_owner_index ON mymoneymap.privacy_export_requests USING btree (user_id, created_at DESC, id DESC)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_requests",
+      "name": "privacy_export_requests_pkey",
+      "definition": "CREATE UNIQUE INDEX privacy_export_requests_pkey ON mymoneymap.privacy_export_requests USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_requests",
+      "name": "privacy_export_requests_status_index",
+      "definition": "CREATE INDEX privacy_export_requests_status_index ON mymoneymap.privacy_export_requests USING btree (status, created_at, id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "privacy_export_requests",
+      "name": "privacy_export_user_key_unique",
+      "definition": "CREATE UNIQUE INDEX privacy_export_user_key_unique ON mymoneymap.privacy_export_requests USING btree (user_id, idempotency_key_hash)"
+    },
+    {
+      "schema": "mymoneymap",
       "relation": "privileged_audit_events",
       "name": "privileged_audit_actor_page_index",
       "definition": "CREATE INDEX privileged_audit_actor_page_index ON mymoneymap.privileged_audit_events USING btree (actor_user_id, created_at DESC, id DESC)"
@@ -9335,6 +10051,30 @@
       "relation": "securities_watchlist",
       "name": "securities_watchlist_pkey",
       "definition": "CREATE UNIQUE INDEX securities_watchlist_pkey ON mymoneymap.securities_watchlist USING btree (user_id, instrument_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "security_audit_events",
+      "name": "security_audit_actor_index",
+      "definition": "CREATE INDEX security_audit_actor_index ON mymoneymap.security_audit_events USING btree (actor_user_id, created_at DESC, id DESC) WHERE (actor_user_id IS NOT NULL)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "security_audit_events",
+      "name": "security_audit_business_event_unique",
+      "definition": "CREATE UNIQUE INDEX security_audit_business_event_unique ON mymoneymap.security_audit_events USING btree (action, target_id) WHERE (((action)::text <> 'privacy.export_accessed'::text) AND (target_id IS NOT NULL))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "security_audit_events",
+      "name": "security_audit_events_pkey",
+      "definition": "CREATE UNIQUE INDEX security_audit_events_pkey ON mymoneymap.security_audit_events USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "security_audit_events",
+      "name": "security_audit_subject_index",
+      "definition": "CREATE INDEX security_audit_subject_index ON mymoneymap.security_audit_events USING btree (subject_hash, created_at DESC, id DESC)"
     },
     {
       "schema": "mymoneymap",

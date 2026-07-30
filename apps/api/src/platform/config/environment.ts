@@ -70,6 +70,12 @@ const environmentSchema = z
     EMAIL_REPLY_TO_ADDRESS: z.email().optional(),
     POSTMARK_SERVER_TOKEN: z.string().min(1).optional(),
     POSTMARK_BASE_URL: z.url().default('https://api.postmarkapp.com'),
+    PRIVACY_EXPORTS_ENABLED: booleanText.default(false),
+    PRIVACY_EXPORT_STORAGE_PROVIDER: z.enum(['disabled', 's3']).default('disabled'),
+    PRIVACY_EXPORT_S3_BUCKET: z.string().min(3).max(63).optional(),
+    PRIVACY_EXPORT_S3_REGION: z.string().min(2).max(64).optional(),
+    PRIVACY_EXPORT_EXPIRY_SECONDS: positiveSeconds.optional(),
+    PRIVACY_EXPORT_SIGNED_URL_SECONDS: positiveSeconds.optional(),
     SETTINGS_ENCRYPTION_KEY: z.string().optional(),
     ACCOUNT_RECOVERY_TTL_SECONDS: positiveSeconds.default(3600),
     SESSION_SECRET: z.string().min(32),
@@ -98,6 +104,38 @@ const environmentSchema = z
     OPENAPI_ENABLED: booleanText,
   })
   .superRefine((environment, context) => {
+    if (environment.PRIVACY_EXPORTS_ENABLED) {
+      if (
+        environment.PRIVACY_EXPORT_STORAGE_PROVIDER !== 's3' ||
+        !environment.PRIVACY_EXPORT_S3_BUCKET ||
+        !environment.PRIVACY_EXPORT_S3_REGION
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['PRIVACY_EXPORT_STORAGE_PROVIDER'],
+          message: 'enabled privacy exports require approved private S3 storage',
+        });
+      }
+      if (
+        environment.PRIVACY_EXPORT_EXPIRY_SECONDS === undefined ||
+        environment.PRIVACY_EXPORT_SIGNED_URL_SECONDS === undefined
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['PRIVACY_EXPORT_EXPIRY_SECONDS'],
+          message: 'enabled privacy exports require owner-approved explicit TTLs',
+        });
+      } else if (
+        environment.PRIVACY_EXPORT_SIGNED_URL_SECONDS > environment.PRIVACY_EXPORT_EXPIRY_SECONDS
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['PRIVACY_EXPORT_SIGNED_URL_SECONDS'],
+          message: 'signed access cannot outlive the export artifact',
+        });
+      }
+    }
+
     if (environment.NODE_ENV !== 'production') {
       return;
     }

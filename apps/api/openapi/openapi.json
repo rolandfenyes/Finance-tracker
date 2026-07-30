@@ -2855,6 +2855,86 @@
         "tags": ["Administration"]
       }
     },
+    "/api/v1/privacy/exports": {
+      "post": {
+        "operationId": "PrivacyController_createExport",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Stable key for this account-export request",
+            "required": true,
+            "schema": { "type": "string", "example": "export-2026-07-30-synthetic" }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PrivacyExportRequestResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Queue a complete manifest-versioned JSON and CSV account export",
+        "tags": ["Privacy"]
+      }
+    },
+    "/api/v1/privacy/exports/{id}": {
+      "get": {
+        "operationId": "PrivacyController_exportStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PrivacyExportStatusResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Read owned export status and short-lived private download links",
+        "tags": ["Privacy"]
+      }
+    },
+    "/api/v1/privacy/deletion-requests": {
+      "post": {
+        "operationId": "PrivacyController_createDeletion",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Stable key for this destructive account-deletion request",
+            "required": true,
+            "schema": { "type": "string", "example": "delete-account-synthetic-confirmation" }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PrivacyRequestResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Reauthenticate and queue complete account deletion and external-state cleanup",
+        "tags": ["Privacy"]
+      }
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "HealthController_live",
@@ -4366,6 +4446,100 @@
         "type": "object",
         "properties": { "data": { "type": "object" } },
         "required": ["data"]
+      },
+      "PrivacyExportRequestResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "example": "d8b50ca2-9aaf-4ce4-bf0c-af786b787c7d" },
+          "status": { "type": "string", "enum": ["queued"], "example": "queued" },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-07-30T10:00:00.000Z"
+          },
+          "manifestVersion": { "type": "number", "example": 1 }
+        },
+        "required": ["id", "status", "createdAt", "manifestVersion"]
+      },
+      "PrivacyExportArtifactResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "format": { "type": "string", "enum": ["json", "csv"] },
+          "dataset": { "type": "string", "example": "complete_export" },
+          "mediaType": { "type": "string", "example": "application/json" },
+          "byteSize": {
+            "type": "string",
+            "description": "Exact byte count serialized as a decimal string"
+          },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "expiresAt": { "type": "string", "format": "date-time" },
+          "downloadUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Short-lived private download URL"
+          },
+          "downloadUrlExpiresInSeconds": { "type": "number", "example": 300 }
+        },
+        "required": [
+          "id",
+          "format",
+          "dataset",
+          "mediaType",
+          "byteSize",
+          "sha256",
+          "expiresAt",
+          "downloadUrl",
+          "downloadUrlExpiresInSeconds"
+        ]
+      },
+      "PrivacyExportStatusResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "manifestVersion": { "type": "number", "example": 1 },
+          "status": {
+            "type": "string",
+            "enum": ["queued", "running", "completed", "retryable_failed", "dead_letter", "expired"]
+          },
+          "attemptCount": { "type": "number", "minimum": 0, "maximum": 3 },
+          "maxAttempts": { "type": "number", "enum": [3] },
+          "errorCode": { "type": "string", "nullable": true },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "startedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "completedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "expiresAt": { "type": "string", "format": "date-time", "nullable": true },
+          "artifacts": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PrivacyExportArtifactResponseDto" }
+          }
+        },
+        "required": [
+          "id",
+          "manifestVersion",
+          "status",
+          "attemptCount",
+          "maxAttempts",
+          "errorCode",
+          "createdAt",
+          "startedAt",
+          "completedAt",
+          "expiresAt",
+          "artifacts"
+        ]
+      },
+      "PrivacyRequestResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "example": "d8b50ca2-9aaf-4ce4-bf0c-af786b787c7d" },
+          "status": { "type": "string", "enum": ["queued"], "example": "queued" },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-07-30T10:00:00.000Z"
+          }
+        },
+        "required": ["id", "status", "createdAt"]
       },
       "ApiViolationResponse": {
         "type": "object",

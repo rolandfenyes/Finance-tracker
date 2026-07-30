@@ -20,6 +20,7 @@ import * as securitiesLedgerGuardRevision from './20260729130200_securities_ledg
 import * as adminFeedbackSystem from './20260729140000_admin_feedback_system';
 import * as billing from './20260729150000_billing';
 import * as notificationsEmail from './20260729160000_notifications_email';
+import * as privacyAudit from './20260729170000_privacy_audit';
 
 export const registeredMigrations = {
   '20260729000000_database_baseline': databaseBaseline,
@@ -43,6 +44,7 @@ export const registeredMigrations = {
   '20260729140000_admin_feedback_system': adminFeedbackSystem,
   '20260729150000_billing': billing,
   '20260729160000_notifications_email': notificationsEmail,
+  '20260729170000_privacy_audit': privacyAudit,
 } satisfies Record<string, Migration>;
 
 export class RegisteredMigrationProvider implements MigrationProvider {

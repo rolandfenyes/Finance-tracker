@@ -13,6 +13,8 @@ Object.assign(process.env, {
   FX_REFRESH_ENABLED: 'false',
   RECURRENCE_ENABLED: 'false',
   FX_PROVIDER_TIMEOUT_MS: '5000',
+  PRIVACY_EXPORTS_ENABLED: 'false',
+  PRIVACY_EXPORT_STORAGE_PROVIDER: 'disabled',
   SESSION_SECRET: 'synthetic-session-secret-at-least-32-characters',
   SETTINGS_ENCRYPTION_KEY: 'c3ludGhldGljLXRlc3Qta2V5LWlzLTMyLWJ5dGVzISE=',
   ACCOUNT_RECOVERY_TTL_SECONDS: '3600',

@@ -75,6 +75,7 @@ describe('billing PostgreSQL contract', () => {
 
       await migrateOneDown(database);
       await migrateOneDown(database);
+      await migrateOneDown(database);
       expect(await relation(pool, 'billing_plans')).toBeNull();
       expect(await relation(pool, 'privileged_audit_events')).toBe(
         'mymoneymap.privileged_audit_events',

@@ -34,6 +34,7 @@ import { QueuedVerificationNotifier } from '../notifications/notification-notifi
     IdentityRepository,
     RedisSecurityService,
     SessionService,
+    PasswordService,
   ],
 })
 export class IdentityModule {}

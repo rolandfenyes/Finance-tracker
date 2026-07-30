@@ -56,6 +56,8 @@ describe('environment validation', () => {
       EMAIL_DELIVERY_PRODUCTION_APPROVED: false,
       EMAIL_PROVIDER: 'disabled',
       POSTMARK_BASE_URL: 'https://api.postmarkapp.com',
+      PRIVACY_EXPORTS_ENABLED: false,
+      PRIVACY_EXPORT_STORAGE_PROVIDER: 'disabled',
       ACCOUNT_RECOVERY_TTL_SECONDS: 3600,
       SESSION_IDLE_TTL_SECONDS: 1800,
       SESSION_ABSOLUTE_TTL_SECONDS: 43200,
@@ -88,6 +90,29 @@ describe('environment validation', () => {
     } catch (error) {
       expect(String(error)).not.toContain(secretValue);
     }
+  });
+
+  it('requires explicit approved private storage and TTLs when privacy exports are enabled', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validEnvironment,
+        PRIVACY_EXPORTS_ENABLED: 'true',
+      }),
+    ).toThrow(
+      'Invalid application configuration: PRIVACY_EXPORT_EXPIRY_SECONDS, PRIVACY_EXPORT_STORAGE_PROVIDER',
+    );
+
+    expect(() =>
+      validateEnvironment({
+        ...validEnvironment,
+        PRIVACY_EXPORTS_ENABLED: 'true',
+        PRIVACY_EXPORT_STORAGE_PROVIDER: 's3',
+        PRIVACY_EXPORT_S3_BUCKET: 'synthetic-private-exports',
+        PRIVACY_EXPORT_S3_REGION: 'eu-central-1',
+        PRIVACY_EXPORT_EXPIRY_SECONDS: '60',
+        PRIVACY_EXPORT_SIGNED_URL_SECONDS: '120',
+      }),
+    ).toThrow('Invalid application configuration: PRIVACY_EXPORT_SIGNED_URL_SECONDS');
   });
 
   it('fails closed for an insecure production public URL', () => {

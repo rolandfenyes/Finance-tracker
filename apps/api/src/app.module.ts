@@ -21,6 +21,7 @@ import { FeedbackModule } from './feedback/feedback.module';
 import { AdministrationModule } from './administration/administration.module';
 import { BillingModule } from './billing/billing.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { PrivacyModule } from './privacy/privacy.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     AdministrationModule,
     BillingModule,
     NotificationsModule,
+    PrivacyModule,
     HealthModule,
   ],
 })

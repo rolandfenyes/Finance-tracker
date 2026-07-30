@@ -32,7 +32,8 @@ export function configureApiApplication(
     if (
       !request.path.startsWith('/api/v1/auth') &&
       !request.path.startsWith('/api/v1/users/me') &&
-      !request.path.startsWith('/api/v1/journal')
+      !request.path.startsWith('/api/v1/journal') &&
+      !request.path.startsWith('/api/v1/privacy')
     ) {
       next();
       return;

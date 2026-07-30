@@ -65,6 +65,7 @@ describe('notifications/email PostgreSQL contract', () => {
         ).rows[0]?.user_id,
       ).toBeNull();
       await migrateOneDown(database);
+      await migrateOneDown(database);
       expect(
         (
           await pool.query<{ relation: string | null }>(

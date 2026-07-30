@@ -10,7 +10,7 @@ import {
   type SecuritiesMarketDataProvider,
 } from './securities.types';
 
-const QUEUE = 'mymoneymap-securities-refresh';
+export const SECURITIES_REFRESH_QUEUE = 'mymoneymap-securities-refresh';
 const ATTEMPTS = 3;
 
 interface RefreshJobData {
@@ -100,10 +100,10 @@ export class SecuritiesRefreshQueueService implements OnModuleInit, OnApplicatio
 
   onModuleInit(): void {
     if (!this.enabled) return;
-    this.queue = new Queue(QUEUE, { connection: this.connection });
+    this.queue = new Queue(SECURITIES_REFRESH_QUEUE, { connection: this.connection });
     if (!this.workerDisabled) {
       this.worker = new Worker(
-        QUEUE,
+        SECURITIES_REFRESH_QUEUE,
         (job: Job<RefreshJobData>) => this.processor.process(job.data, job.attemptsMade + 1),
         {
           connection: this.connection,
@@ -121,7 +121,9 @@ export class SecuritiesRefreshQueueService implements OnModuleInit, OnApplicatio
     const instruments = await this.repository.instrumentsForRefresh(userId, requested);
     const requestId = randomUUID();
     const queueJobId = `securities-refresh-${requestId}`;
-    const queue = this.queue ?? new Queue<RefreshJobData>(QUEUE, { connection: this.connection });
+    const queue =
+      this.queue ??
+      new Queue<RefreshJobData>(SECURITIES_REFRESH_QUEUE, { connection: this.connection });
     this.queue = queue;
     await this.repository.createRefreshJob(
       userId,
