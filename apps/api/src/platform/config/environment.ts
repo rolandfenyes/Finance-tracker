@@ -57,6 +57,12 @@ const environmentSchema = z
     FX_REFRESH_ENABLED: booleanText,
     RECURRENCE_ENABLED: booleanText.default(false),
     FX_PROVIDER_TIMEOUT_MS: positiveMilliseconds,
+    SECURITIES_MARKET_DATA_ENABLED: booleanText.default(false),
+    SECURITIES_MARKET_DATA_PRODUCTION_APPROVED: booleanText.default(false),
+    SECURITIES_PROVIDER: z.enum(['disabled', 'finnhub']).default('disabled'),
+    SECURITIES_PROVIDER_TIMEOUT_MS: positiveMilliseconds.default(5000),
+    FINNHUB_API_KEY: z.string().min(1).optional(),
+    FINNHUB_BASE_URL: z.url().default('https://finnhub.io/api/v1'),
     SESSION_SECRET: z.string().min(32),
     SESSION_COOKIE_NAME: z.string().regex(/^[A-Za-z0-9._-]+$/),
     SESSION_IDLE_TTL_SECONDS: positiveSeconds,
@@ -92,6 +98,17 @@ const environmentSchema = z
         code: 'custom',
         path: ['RECURRENCE_ENABLED'],
         message: 'must be enabled in production',
+      });
+    }
+
+    if (
+      environment.SECURITIES_MARKET_DATA_ENABLED &&
+      !environment.SECURITIES_MARKET_DATA_PRODUCTION_APPROVED
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['SECURITIES_MARKET_DATA_PRODUCTION_APPROVED'],
+        message: 'must remain false until delay, coverage, quota, and redistribution are approved',
       });
     }
 

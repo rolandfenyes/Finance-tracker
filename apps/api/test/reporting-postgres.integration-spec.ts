@@ -1,5 +1,5 @@
 import { migrateOneDown, migrateToLatest } from '../src/platform/database/migration-runner';
-import { withIsolatedPostgresDatabase } from './postgres-test-database';
+import { rollbackMigrationsAfter, withIsolatedPostgresDatabase } from './postgres-test-database';
 import type { Pool, PoolClient, QueryResult } from 'pg';
 
 jest.setTimeout(120_000);
@@ -13,9 +13,7 @@ describe('reporting PostgreSQL migration and query plans', () => {
       expect(await indexExists(pool, 'basic_incomes_user_dates_index')).toBe(true);
       expect(await indexExists(pool, 'recurring_rules_user_start_index')).toBe(true);
 
-      await migrateOneDown(database);
-      await migrateOneDown(database);
-      await migrateOneDown(database);
+      await rollbackMigrationsAfter(database, '20260729090000_goals');
       expect(await tableExists(pool, 'goals')).toBe(true);
 
       await migrateOneDown(database);

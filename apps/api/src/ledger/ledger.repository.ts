@@ -269,7 +269,11 @@ export class LedgerRepository {
     transaction: Transaction<DatabaseSchema>,
     command: PostJournalCommand,
   ): Promise<{ owned?: string; source?: string; destination?: string }> {
-    if (command.economicType === 'internal_transfer' || command.economicType === 'loan_repayment') {
+    if (
+      command.economicType === 'internal_transfer' ||
+      command.economicType === 'loan_repayment' ||
+      command.economicType === 'trade_cash'
+    ) {
       const source = command.sourceAccountId;
       const destination = command.destinationAccountId;
       if (!source || !destination || source === destination) {
@@ -389,7 +393,11 @@ export function buildLegs(
 ): Insertable<JournalLegsTable>[] {
   let debitAccount: string | null;
   let creditAccount: string | null;
-  if (command.economicType === 'internal_transfer' || command.economicType === 'loan_repayment') {
+  if (
+    command.economicType === 'internal_transfer' ||
+    command.economicType === 'loan_repayment' ||
+    command.economicType === 'trade_cash'
+  ) {
     debitAccount = accounts.destination!;
     creditAccount = accounts.source!;
   } else {
@@ -397,8 +405,7 @@ export function buildLegs(
       command.economicType === 'external_income' ||
       command.economicType === 'interest' ||
       command.economicType === 'dividend' ||
-      ((command.economicType === 'adjustment' || command.economicType === 'trade_cash') &&
-        command.adjustmentDirection === 'increase');
+      (command.economicType === 'adjustment' && command.adjustmentDirection === 'increase');
     debitAccount = increase ? accounts.owned! : null;
     creditAccount = increase ? null : accounts.owned!;
   }
@@ -472,10 +479,15 @@ function assertPostCommand(command: PostJournalCommand): void {
   if (command.actorUserId !== command.userId) {
     throw new Error('Journal actor must match the owning user');
   }
-  const requiresDirection =
-    command.economicType === 'adjustment' || command.economicType === 'trade_cash';
+  const requiresDirection = command.economicType === 'adjustment';
   if (requiresDirection !== (command.adjustmentDirection !== undefined)) {
-    throw new Error('Adjustment and trade cash entries require an explicit direction');
+    throw new Error('Adjustment entries require an explicit direction');
+  }
+  if (
+    command.economicType === 'trade_cash' &&
+    (!command.sourceAccountId || !command.destinationAccountId)
+  ) {
+    throw new Error('Trade cash entries require source and destination accounts');
   }
   if (
     command.categoryId &&

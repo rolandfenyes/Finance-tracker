@@ -6,7 +6,7 @@ import { migrateOneDown, migrateToLatest } from '../src/platform/database/migrat
 import { LedgerRepository } from '../src/ledger/ledger.repository';
 import { FixedClock } from '../src/platform/time/clock';
 import { UtcInstant } from '../src/platform/time/utc-instant';
-import { withIsolatedPostgresDatabase } from './postgres-test-database';
+import { rollbackMigrationsAfter, withIsolatedPostgresDatabase } from './postgres-test-database';
 
 describe('ledger journal PostgreSQL invariants', () => {
   it('migrates up, creates default cash accounts, and rolls Step 06 back cleanly', async () => {
@@ -24,15 +24,7 @@ describe('ledger journal PostgreSQL invariants', () => {
         ).rows[0]?.count,
       ).toBe('1');
 
-      await migrateOneDown(database);
-      await migrateOneDown(database);
-      await migrateOneDown(database);
-      await migrateOneDown(database);
-      await migrateOneDown(database);
-      await migrateOneDown(database);
-      await migrateOneDown(database);
-      await migrateOneDown(database);
-      await migrateOneDown(database);
+      await rollbackMigrationsAfter(database, '20260729040000_ledger_journal');
       await migrateOneDown(database);
       expect(
         (

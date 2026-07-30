@@ -128,6 +128,76 @@
     },
     {
       "schema": "mymoneymap",
+      "name": "securities_cash_movements",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "securities_clear_requests",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "securities_daily_prices",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "securities_imports",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "securities_instruments",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "securities_lot_consumptions",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "securities_lots",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "securities_portfolios",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "securities_positions",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "securities_quotes",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "securities_realized_results",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "securities_refresh_jobs",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "securities_trades",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "securities_watchlist",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
       "name": "user_currencies",
       "kind": "r"
     },
@@ -2390,6 +2460,1270 @@
     },
     {
       "schema": "mymoneymap",
+      "relation": "securities_cash_movements",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_cash_movements",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_cash_movements",
+      "name": "direction",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_cash_movements",
+      "name": "amount",
+      "type": "numeric(36,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_cash_movements",
+      "name": "currency",
+      "type": "character(3)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_cash_movements",
+      "name": "occurred_on",
+      "type": "date",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_cash_movements",
+      "name": "note",
+      "type": "character varying(1000)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_cash_movements",
+      "name": "journal_entry_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_cash_movements",
+      "name": "reversed_by_journal_entry_id",
+      "type": "uuid",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_cash_movements",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_clear_requests",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_clear_requests",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_clear_requests",
+      "name": "status",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_clear_requests",
+      "name": "trade_count",
+      "type": "integer",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_clear_requests",
+      "name": "cash_count",
+      "type": "integer",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_clear_requests",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_clear_requests",
+      "name": "completed_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_daily_prices",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_daily_prices",
+      "name": "instrument_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_daily_prices",
+      "name": "trading_on",
+      "type": "date",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_daily_prices",
+      "name": "open",
+      "type": "numeric(36,12)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_daily_prices",
+      "name": "high",
+      "type": "numeric(36,12)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_daily_prices",
+      "name": "low",
+      "type": "numeric(36,12)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_daily_prices",
+      "name": "close",
+      "type": "numeric(36,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_daily_prices",
+      "name": "volume",
+      "type": "numeric(36,6)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_daily_prices",
+      "name": "currency",
+      "type": "character(3)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_daily_prices",
+      "name": "provider",
+      "type": "character varying(48)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_daily_prices",
+      "name": "observed_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_daily_prices",
+      "name": "retrieved_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_imports",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_imports",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_imports",
+      "name": "fingerprint",
+      "type": "character(64)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_imports",
+      "name": "status",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_imports",
+      "name": "row_count",
+      "type": "integer",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_imports",
+      "name": "valid_count",
+      "type": "integer",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_imports",
+      "name": "error_count",
+      "type": "integer",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_imports",
+      "name": "ignored_count",
+      "type": "integer",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_imports",
+      "name": "rows",
+      "type": "jsonb",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_imports",
+      "name": "committed_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_imports",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_instruments",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_instruments",
+      "name": "symbol",
+      "type": "character varying(32)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_instruments",
+      "name": "market",
+      "type": "character varying(48)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_instruments",
+      "name": "exchange",
+      "type": "character varying(120)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_instruments",
+      "name": "name",
+      "type": "character varying(240)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_instruments",
+      "name": "currency",
+      "type": "character(3)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_instruments",
+      "name": "sector",
+      "type": "character varying(180)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_instruments",
+      "name": "industry",
+      "type": "character varying(180)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_instruments",
+      "name": "beta",
+      "type": "numeric(30,12)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_instruments",
+      "name": "metadata_provider",
+      "type": "character varying(48)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_instruments",
+      "name": "metadata_observed_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_instruments",
+      "name": "active",
+      "type": "boolean",
+      "nullable": false,
+      "default": "true"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_instruments",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_instruments",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lot_consumptions",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lot_consumptions",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lot_consumptions",
+      "name": "sell_trade_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lot_consumptions",
+      "name": "lot_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lot_consumptions",
+      "name": "quantity",
+      "type": "numeric(36,18)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lot_consumptions",
+      "name": "cost_local",
+      "type": "numeric(36,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lot_consumptions",
+      "name": "cost_base",
+      "type": "numeric(36,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lot_consumptions",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lots",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lots",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lots",
+      "name": "position_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lots",
+      "name": "instrument_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lots",
+      "name": "buy_trade_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lots",
+      "name": "original_quantity",
+      "type": "numeric(36,18)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lots",
+      "name": "remaining_quantity",
+      "type": "numeric(36,18)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lots",
+      "name": "total_cost_local",
+      "type": "numeric(36,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lots",
+      "name": "total_cost_base",
+      "type": "numeric(36,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lots",
+      "name": "currency",
+      "type": "character(3)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lots",
+      "name": "base_currency",
+      "type": "character(3)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lots",
+      "name": "opened_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lots",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_portfolios",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_portfolios",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_portfolios",
+      "name": "cash_account_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_portfolios",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_positions",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_positions",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_positions",
+      "name": "instrument_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_positions",
+      "name": "holding_account_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_positions",
+      "name": "quantity",
+      "type": "numeric(36,18)",
+      "nullable": false,
+      "default": "0"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_positions",
+      "name": "remaining_cost_local",
+      "type": "numeric(36,12)",
+      "nullable": false,
+      "default": "0"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_positions",
+      "name": "remaining_cost_base",
+      "type": "numeric(36,12)",
+      "nullable": false,
+      "default": "0"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_positions",
+      "name": "local_currency",
+      "type": "character(3)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_positions",
+      "name": "base_currency",
+      "type": "character(3)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_positions",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_positions",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_quotes",
+      "name": "instrument_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_quotes",
+      "name": "last",
+      "type": "numeric(36,12)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_quotes",
+      "name": "previous_close",
+      "type": "numeric(36,12)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_quotes",
+      "name": "day_high",
+      "type": "numeric(36,12)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_quotes",
+      "name": "day_low",
+      "type": "numeric(36,12)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_quotes",
+      "name": "volume",
+      "type": "numeric(36,6)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_quotes",
+      "name": "currency",
+      "type": "character(3)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_quotes",
+      "name": "provider",
+      "type": "character varying(48)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_quotes",
+      "name": "quote_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_quotes",
+      "name": "retrieved_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_quotes",
+      "name": "status",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "instrument_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "sell_trade_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "quantity",
+      "type": "numeric(36,18)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "proceeds_local",
+      "type": "numeric(36,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "cost_local",
+      "type": "numeric(36,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "fees_local",
+      "type": "numeric(36,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "realized_local",
+      "type": "numeric(36,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "proceeds_base",
+      "type": "numeric(36,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "cost_base",
+      "type": "numeric(36,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "fees_base",
+      "type": "numeric(36,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "realized_base",
+      "type": "numeric(36,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "currency",
+      "type": "character(3)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "base_currency",
+      "type": "character(3)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "method",
+      "type": "character varying(8)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "closed_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_refresh_jobs",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_refresh_jobs",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_refresh_jobs",
+      "name": "queue_job_id",
+      "type": "character varying(160)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_refresh_jobs",
+      "name": "status",
+      "type": "character varying(24)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_refresh_jobs",
+      "name": "attempt_count",
+      "type": "integer",
+      "nullable": false,
+      "default": "0"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_refresh_jobs",
+      "name": "max_attempts",
+      "type": "integer",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_refresh_jobs",
+      "name": "error_code",
+      "type": "character varying(80)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_refresh_jobs",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_refresh_jobs",
+      "name": "started_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_refresh_jobs",
+      "name": "finished_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "position_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "instrument_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "side",
+      "type": "character varying(4)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "quantity",
+      "type": "numeric(36,18)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "unit_price",
+      "type": "numeric(36,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "fee",
+      "type": "numeric(36,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "currency",
+      "type": "character(3)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "notional",
+      "type": "numeric(36,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "notional_base",
+      "type": "numeric(36,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "fee_base",
+      "type": "numeric(36,12)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "base_currency",
+      "type": "character(3)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "conversion_status",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "conversion_rate",
+      "type": "numeric(36,18)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "conversion_provider",
+      "type": "character varying(64)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "rate_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "fetched_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "executed_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "traded_on",
+      "type": "date",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "note",
+      "type": "character varying(1000)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "cash_journal_entry_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "fee_journal_entry_id",
+      "type": "uuid",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "reversed_by_cash_journal_entry_id",
+      "type": "uuid",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "reversed_by_fee_journal_entry_id",
+      "type": "uuid",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_watchlist",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_watchlist",
+      "name": "instrument_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_watchlist",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
       "relation": "user_currencies",
       "name": "user_id",
       "type": "uuid",
@@ -4094,6 +5428,654 @@
     },
     {
       "schema": "mymoneymap",
+      "relation": "securities_cash_movements",
+      "name": "securities_cash_amount_check",
+      "definition": "CHECK (amount > 0::numeric)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_cash_movements",
+      "name": "securities_cash_direction_check",
+      "definition": "CHECK (direction::text = ANY (ARRAY['deposit'::character varying, 'withdrawal'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_cash_movements",
+      "name": "securities_cash_id_user_unique",
+      "definition": "UNIQUE (id, user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_cash_movements",
+      "name": "securities_cash_journal_guard",
+      "definition": "TRIGGER DEFERRABLE INITIALLY DEFERRED"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_cash_movements",
+      "name": "securities_cash_journal_owner_fk",
+      "definition": "FOREIGN KEY (journal_entry_id, user_id) REFERENCES mymoneymap.journal_entries(id, user_id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_cash_movements",
+      "name": "securities_cash_journal_unique",
+      "definition": "UNIQUE (journal_entry_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_cash_movements",
+      "name": "securities_cash_movements_currency_fkey",
+      "definition": "FOREIGN KEY (currency) REFERENCES mymoneymap.currencies(code) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_cash_movements",
+      "name": "securities_cash_movements_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_cash_movements",
+      "name": "securities_cash_note_check",
+      "definition": "CHECK (note IS NULL OR char_length(btrim(note::text)) >= 1 AND char_length(btrim(note::text)) <= 1000)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_cash_movements",
+      "name": "securities_cash_reversal_owner_fk",
+      "definition": "FOREIGN KEY (reversed_by_journal_entry_id, user_id) REFERENCES mymoneymap.journal_entries(id, user_id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_cash_movements",
+      "name": "securities_cash_reversal_unique",
+      "definition": "UNIQUE (reversed_by_journal_entry_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_clear_requests",
+      "name": "securities_clear_counts_check",
+      "definition": "CHECK (trade_count >= 0 AND cash_count >= 0)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_clear_requests",
+      "name": "securities_clear_requests_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_clear_requests",
+      "name": "securities_clear_requests_user_id_fkey",
+      "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_clear_requests",
+      "name": "securities_clear_status_check",
+      "definition": "CHECK (status::text = 'completed'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_daily_prices",
+      "name": "securities_daily_prices_currency_fkey",
+      "definition": "FOREIGN KEY (currency) REFERENCES mymoneymap.currencies(code) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_daily_prices",
+      "name": "securities_daily_prices_instrument_id_fkey",
+      "definition": "FOREIGN KEY (instrument_id) REFERENCES mymoneymap.securities_instruments(id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_daily_prices",
+      "name": "securities_daily_prices_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_daily_prices",
+      "name": "securities_daily_prices_unique",
+      "definition": "UNIQUE (instrument_id, trading_on, provider)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_daily_prices",
+      "name": "securities_daily_prices_values_check",
+      "definition": "CHECK (close > 0::numeric AND (open IS NULL OR open > 0::numeric) AND (high IS NULL OR high > 0::numeric) AND (low IS NULL OR low > 0::numeric) AND (volume IS NULL OR volume >= 0::numeric))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_imports",
+      "name": "securities_imports_commit_check",
+      "definition": "CHECK (status::text = 'preview'::text AND committed_at IS NULL OR status::text = 'committed'::text AND committed_at IS NOT NULL AND error_count = 0)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_imports",
+      "name": "securities_imports_counts_check",
+      "definition": "CHECK (row_count >= 0 AND valid_count >= 0 AND error_count >= 0 AND ignored_count >= 0 AND row_count = (valid_count + error_count + ignored_count))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_imports",
+      "name": "securities_imports_id_user_unique",
+      "definition": "UNIQUE (id, user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_imports",
+      "name": "securities_imports_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_imports",
+      "name": "securities_imports_status_check",
+      "definition": "CHECK (status::text = ANY (ARRAY['preview'::character varying, 'committed'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_imports",
+      "name": "securities_imports_user_fingerprint_unique",
+      "definition": "UNIQUE (user_id, fingerprint)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_imports",
+      "name": "securities_imports_user_id_fkey",
+      "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_instruments",
+      "name": "securities_instruments_beta_check",
+      "definition": "CHECK (beta IS NULL OR beta >= 0::numeric)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_instruments",
+      "name": "securities_instruments_currency_fkey",
+      "definition": "FOREIGN KEY (currency) REFERENCES mymoneymap.currencies(code) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_instruments",
+      "name": "securities_instruments_exchange_check",
+      "definition": "CHECK (exchange IS NULL OR char_length(btrim(exchange::text)) >= 1 AND char_length(btrim(exchange::text)) <= 120)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_instruments",
+      "name": "securities_instruments_identity_unique",
+      "definition": "UNIQUE (symbol, market)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_instruments",
+      "name": "securities_instruments_market_check",
+      "definition": "CHECK (market::text = upper(btrim(market::text)) AND char_length(market::text) >= 1 AND char_length(market::text) <= 48)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_instruments",
+      "name": "securities_instruments_name_check",
+      "definition": "CHECK (name IS NULL OR char_length(btrim(name::text)) >= 1 AND char_length(btrim(name::text)) <= 240)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_instruments",
+      "name": "securities_instruments_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_instruments",
+      "name": "securities_instruments_symbol_check",
+      "definition": "CHECK (symbol::text = upper(btrim(symbol::text)) AND char_length(symbol::text) >= 1 AND char_length(symbol::text) <= 32)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lot_consumptions",
+      "name": "securities_lot_consumptions_lot_id_fkey",
+      "definition": "FOREIGN KEY (lot_id) REFERENCES mymoneymap.securities_lots(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lot_consumptions",
+      "name": "securities_lot_consumptions_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lot_consumptions",
+      "name": "securities_lot_consumptions_trade_owner_fk",
+      "definition": "FOREIGN KEY (sell_trade_id, user_id) REFERENCES mymoneymap.securities_trades(id, user_id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lot_consumptions",
+      "name": "securities_lot_consumptions_unique",
+      "definition": "UNIQUE (sell_trade_id, lot_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lot_consumptions",
+      "name": "securities_lot_consumptions_values_check",
+      "definition": "CHECK (quantity > 0::numeric AND cost_local > 0::numeric AND cost_base > 0::numeric)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lots",
+      "name": "securities_lots_base_currency_fkey",
+      "definition": "FOREIGN KEY (base_currency) REFERENCES mymoneymap.currencies(code) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lots",
+      "name": "securities_lots_buy_trade_unique",
+      "definition": "UNIQUE (buy_trade_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lots",
+      "name": "securities_lots_currency_fkey",
+      "definition": "FOREIGN KEY (currency) REFERENCES mymoneymap.currencies(code) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lots",
+      "name": "securities_lots_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lots",
+      "name": "securities_lots_position_owner_fk",
+      "definition": "FOREIGN KEY (position_id, user_id, instrument_id) REFERENCES mymoneymap.securities_positions(id, user_id, instrument_id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lots",
+      "name": "securities_lots_trade_owner_fk",
+      "definition": "FOREIGN KEY (buy_trade_id, user_id) REFERENCES mymoneymap.securities_trades(id, user_id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lots",
+      "name": "securities_lots_values_check",
+      "definition": "CHECK (original_quantity > 0::numeric AND remaining_quantity >= 0::numeric AND remaining_quantity <= original_quantity AND total_cost_local > 0::numeric AND total_cost_base > 0::numeric)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_portfolios",
+      "name": "securities_portfolio_account_guard",
+      "definition": "TRIGGER DEFERRABLE INITIALLY DEFERRED"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_portfolios",
+      "name": "securities_portfolios_cash_account_id_key",
+      "definition": "UNIQUE (cash_account_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_portfolios",
+      "name": "securities_portfolios_cash_owner_fk",
+      "definition": "FOREIGN KEY (cash_account_id, user_id) REFERENCES mymoneymap.ledger_accounts(id, user_id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_portfolios",
+      "name": "securities_portfolios_id_user_unique",
+      "definition": "UNIQUE (id, user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_portfolios",
+      "name": "securities_portfolios_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_portfolios",
+      "name": "securities_portfolios_user_id_fkey",
+      "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_portfolios",
+      "name": "securities_portfolios_user_id_key",
+      "definition": "UNIQUE (user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_positions",
+      "name": "securities_position_account_guard",
+      "definition": "TRIGGER DEFERRABLE INITIALLY DEFERRED"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_positions",
+      "name": "securities_positions_base_currency_fkey",
+      "definition": "FOREIGN KEY (base_currency) REFERENCES mymoneymap.currencies(code) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_positions",
+      "name": "securities_positions_holding_account_id_key",
+      "definition": "UNIQUE (holding_account_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_positions",
+      "name": "securities_positions_holding_owner_fk",
+      "definition": "FOREIGN KEY (holding_account_id, user_id) REFERENCES mymoneymap.ledger_accounts(id, user_id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_positions",
+      "name": "securities_positions_id_user_instrument_unique",
+      "definition": "UNIQUE (id, user_id, instrument_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_positions",
+      "name": "securities_positions_instrument_id_fkey",
+      "definition": "FOREIGN KEY (instrument_id) REFERENCES mymoneymap.securities_instruments(id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_positions",
+      "name": "securities_positions_local_currency_fkey",
+      "definition": "FOREIGN KEY (local_currency) REFERENCES mymoneymap.currencies(code) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_positions",
+      "name": "securities_positions_nonnegative_check",
+      "definition": "CHECK (quantity >= 0::numeric AND remaining_cost_local >= 0::numeric AND remaining_cost_base >= 0::numeric)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_positions",
+      "name": "securities_positions_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_positions",
+      "name": "securities_positions_user_id_fkey",
+      "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_positions",
+      "name": "securities_positions_user_instrument_unique",
+      "definition": "UNIQUE (user_id, instrument_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_quotes",
+      "name": "securities_quotes_currency_fkey",
+      "definition": "FOREIGN KEY (currency) REFERENCES mymoneymap.currencies(code) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_quotes",
+      "name": "securities_quotes_instrument_id_fkey",
+      "definition": "FOREIGN KEY (instrument_id) REFERENCES mymoneymap.securities_instruments(id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_quotes",
+      "name": "securities_quotes_nonnegative_check",
+      "definition": "CHECK (previous_close IS NULL OR previous_close >= 0::numeric)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_quotes",
+      "name": "securities_quotes_pkey",
+      "definition": "PRIMARY KEY (instrument_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_quotes",
+      "name": "securities_quotes_status_check",
+      "definition": "CHECK (status::text = ANY (ARRAY['available'::character varying, 'delayed'::character varying, 'stale'::character varying, 'unavailable'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_quotes",
+      "name": "securities_quotes_values_check",
+      "definition": "CHECK (status::text = 'unavailable'::text AND last IS NULL OR status::text <> 'unavailable'::text AND last IS NOT NULL AND last > 0::numeric AND quote_at IS NOT NULL)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "securities_realized_method_check",
+      "definition": "CHECK (method::text = 'FIFO'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "securities_realized_results_base_currency_fkey",
+      "definition": "FOREIGN KEY (base_currency) REFERENCES mymoneymap.currencies(code) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "securities_realized_results_currency_fkey",
+      "definition": "FOREIGN KEY (currency) REFERENCES mymoneymap.currencies(code) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "securities_realized_results_instrument_id_fkey",
+      "definition": "FOREIGN KEY (instrument_id) REFERENCES mymoneymap.securities_instruments(id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "securities_realized_results_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "securities_realized_trade_owner_fk",
+      "definition": "FOREIGN KEY (sell_trade_id, user_id) REFERENCES mymoneymap.securities_trades(id, user_id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "securities_realized_trade_unique",
+      "definition": "UNIQUE (sell_trade_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "securities_realized_values_check",
+      "definition": "CHECK (quantity > 0::numeric AND proceeds_local > 0::numeric AND cost_local > 0::numeric AND fees_local >= 0::numeric AND proceeds_base > 0::numeric AND cost_base > 0::numeric AND fees_base >= 0::numeric)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_refresh_jobs",
+      "name": "securities_refresh_attempt_check",
+      "definition": "CHECK (attempt_count >= 0 AND max_attempts >= 1 AND max_attempts <= 10 AND attempt_count <= max_attempts)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_refresh_jobs",
+      "name": "securities_refresh_jobs_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_refresh_jobs",
+      "name": "securities_refresh_jobs_queue_job_id_key",
+      "definition": "UNIQUE (queue_job_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_refresh_jobs",
+      "name": "securities_refresh_jobs_user_id_fkey",
+      "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_refresh_jobs",
+      "name": "securities_refresh_status_check",
+      "definition": "CHECK (status::text = ANY (ARRAY['queued'::character varying, 'running'::character varying, 'completed'::character varying, 'retryable_failed'::character varying, 'dead_letter'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trade_journal_guard",
+      "definition": "TRIGGER DEFERRABLE INITIALLY DEFERRED"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_base_currency_fkey",
+      "definition": "FOREIGN KEY (base_currency) REFERENCES mymoneymap.currencies(code) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_cash_journal_owner_fk",
+      "definition": "FOREIGN KEY (cash_journal_entry_id, user_id) REFERENCES mymoneymap.journal_entries(id, user_id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_cash_journal_unique",
+      "definition": "UNIQUE (cash_journal_entry_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_cash_reversal_owner_fk",
+      "definition": "FOREIGN KEY (reversed_by_cash_journal_entry_id, user_id) REFERENCES mymoneymap.journal_entries(id, user_id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_cash_reversal_unique",
+      "definition": "UNIQUE (reversed_by_cash_journal_entry_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_conversion_check",
+      "definition": "CHECK (conversion_status::text = ANY (ARRAY['available'::character varying, 'stale'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_currency_fkey",
+      "definition": "FOREIGN KEY (currency) REFERENCES mymoneymap.currencies(code) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_fee_journal_owner_fk",
+      "definition": "FOREIGN KEY (fee_journal_entry_id, user_id) REFERENCES mymoneymap.journal_entries(id, user_id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_fee_journal_unique",
+      "definition": "UNIQUE (fee_journal_entry_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_fee_pair_check",
+      "definition": "CHECK (fee = 0::numeric AND fee_journal_entry_id IS NULL AND fee_base = 0::numeric OR fee > 0::numeric AND fee_journal_entry_id IS NOT NULL AND fee_base > 0::numeric)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_fee_reversal_owner_fk",
+      "definition": "FOREIGN KEY (reversed_by_fee_journal_entry_id, user_id) REFERENCES mymoneymap.journal_entries(id, user_id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_fee_reversal_unique",
+      "definition": "UNIQUE (reversed_by_fee_journal_entry_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_id_user_unique",
+      "definition": "UNIQUE (id, user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_note_check",
+      "definition": "CHECK (note IS NULL OR char_length(btrim(note::text)) >= 1 AND char_length(btrim(note::text)) <= 1000)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_position_owner_fk",
+      "definition": "FOREIGN KEY (position_id, user_id, instrument_id) REFERENCES mymoneymap.securities_positions(id, user_id, instrument_id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_reversal_pair_check",
+      "definition": "CHECK (reversed_by_cash_journal_entry_id IS NULL AND reversed_by_fee_journal_entry_id IS NULL OR reversed_by_cash_journal_entry_id IS NOT NULL AND (fee_journal_entry_id IS NULL OR reversed_by_fee_journal_entry_id IS NOT NULL))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_side_check",
+      "definition": "CHECK (side::text = ANY (ARRAY['buy'::character varying, 'sell'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_user_id_fkey",
+      "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_values_check",
+      "definition": "CHECK (quantity > 0::numeric AND unit_price > 0::numeric AND fee >= 0::numeric AND notional = (quantity * unit_price) AND notional_base > 0::numeric AND fee_base >= 0::numeric AND conversion_rate > 0::numeric)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_watchlist",
+      "name": "securities_watchlist_instrument_id_fkey",
+      "definition": "FOREIGN KEY (instrument_id) REFERENCES mymoneymap.securities_instruments(id) ON DELETE RESTRICT"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_watchlist",
+      "name": "securities_watchlist_pkey",
+      "definition": "PRIMARY KEY (user_id, instrument_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_watchlist",
+      "name": "securities_watchlist_user_id_fkey",
+      "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
       "relation": "user_currencies",
       "name": "user_currencies_code_fkey",
       "definition": "FOREIGN KEY (code) REFERENCES mymoneymap.currencies(code) ON DELETE RESTRICT"
@@ -4729,6 +6711,264 @@
       "relation": "recurring_rules",
       "name": "recurring_rules_user_start_index",
       "definition": "CREATE INDEX recurring_rules_user_start_index ON mymoneymap.recurring_rules USING btree (user_id, starts_on, lower((title)::text), id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_cash_movements",
+      "name": "securities_cash_history_index",
+      "definition": "CREATE INDEX securities_cash_history_index ON mymoneymap.securities_cash_movements USING btree (user_id, occurred_on DESC, created_at DESC, id DESC)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_cash_movements",
+      "name": "securities_cash_id_user_unique",
+      "definition": "CREATE UNIQUE INDEX securities_cash_id_user_unique ON mymoneymap.securities_cash_movements USING btree (id, user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_cash_movements",
+      "name": "securities_cash_journal_unique",
+      "definition": "CREATE UNIQUE INDEX securities_cash_journal_unique ON mymoneymap.securities_cash_movements USING btree (journal_entry_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_cash_movements",
+      "name": "securities_cash_movements_pkey",
+      "definition": "CREATE UNIQUE INDEX securities_cash_movements_pkey ON mymoneymap.securities_cash_movements USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_cash_movements",
+      "name": "securities_cash_reversal_unique",
+      "definition": "CREATE UNIQUE INDEX securities_cash_reversal_unique ON mymoneymap.securities_cash_movements USING btree (reversed_by_journal_entry_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_clear_requests",
+      "name": "securities_clear_requests_pkey",
+      "definition": "CREATE UNIQUE INDEX securities_clear_requests_pkey ON mymoneymap.securities_clear_requests USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_daily_prices",
+      "name": "securities_daily_prices_history_index",
+      "definition": "CREATE INDEX securities_daily_prices_history_index ON mymoneymap.securities_daily_prices USING btree (instrument_id, trading_on DESC)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_daily_prices",
+      "name": "securities_daily_prices_pkey",
+      "definition": "CREATE UNIQUE INDEX securities_daily_prices_pkey ON mymoneymap.securities_daily_prices USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_daily_prices",
+      "name": "securities_daily_prices_unique",
+      "definition": "CREATE UNIQUE INDEX securities_daily_prices_unique ON mymoneymap.securities_daily_prices USING btree (instrument_id, trading_on, provider)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_imports",
+      "name": "securities_imports_id_user_unique",
+      "definition": "CREATE UNIQUE INDEX securities_imports_id_user_unique ON mymoneymap.securities_imports USING btree (id, user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_imports",
+      "name": "securities_imports_pkey",
+      "definition": "CREATE UNIQUE INDEX securities_imports_pkey ON mymoneymap.securities_imports USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_imports",
+      "name": "securities_imports_user_fingerprint_unique",
+      "definition": "CREATE UNIQUE INDEX securities_imports_user_fingerprint_unique ON mymoneymap.securities_imports USING btree (user_id, fingerprint)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_instruments",
+      "name": "securities_instruments_active_index",
+      "definition": "CREATE INDEX securities_instruments_active_index ON mymoneymap.securities_instruments USING btree (active, symbol, market)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_instruments",
+      "name": "securities_instruments_identity_unique",
+      "definition": "CREATE UNIQUE INDEX securities_instruments_identity_unique ON mymoneymap.securities_instruments USING btree (symbol, market)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_instruments",
+      "name": "securities_instruments_pkey",
+      "definition": "CREATE UNIQUE INDEX securities_instruments_pkey ON mymoneymap.securities_instruments USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lot_consumptions",
+      "name": "securities_lot_consumptions_pkey",
+      "definition": "CREATE UNIQUE INDEX securities_lot_consumptions_pkey ON mymoneymap.securities_lot_consumptions USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lot_consumptions",
+      "name": "securities_lot_consumptions_unique",
+      "definition": "CREATE UNIQUE INDEX securities_lot_consumptions_unique ON mymoneymap.securities_lot_consumptions USING btree (sell_trade_id, lot_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lots",
+      "name": "securities_lots_buy_trade_unique",
+      "definition": "CREATE UNIQUE INDEX securities_lots_buy_trade_unique ON mymoneymap.securities_lots USING btree (buy_trade_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lots",
+      "name": "securities_lots_fifo_index",
+      "definition": "CREATE INDEX securities_lots_fifo_index ON mymoneymap.securities_lots USING btree (user_id, position_id, opened_at, id) WHERE (remaining_quantity > (0)::numeric)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_lots",
+      "name": "securities_lots_pkey",
+      "definition": "CREATE UNIQUE INDEX securities_lots_pkey ON mymoneymap.securities_lots USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_portfolios",
+      "name": "securities_portfolios_cash_account_id_key",
+      "definition": "CREATE UNIQUE INDEX securities_portfolios_cash_account_id_key ON mymoneymap.securities_portfolios USING btree (cash_account_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_portfolios",
+      "name": "securities_portfolios_id_user_unique",
+      "definition": "CREATE UNIQUE INDEX securities_portfolios_id_user_unique ON mymoneymap.securities_portfolios USING btree (id, user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_portfolios",
+      "name": "securities_portfolios_pkey",
+      "definition": "CREATE UNIQUE INDEX securities_portfolios_pkey ON mymoneymap.securities_portfolios USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_portfolios",
+      "name": "securities_portfolios_user_id_key",
+      "definition": "CREATE UNIQUE INDEX securities_portfolios_user_id_key ON mymoneymap.securities_portfolios USING btree (user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_positions",
+      "name": "securities_positions_holding_account_id_key",
+      "definition": "CREATE UNIQUE INDEX securities_positions_holding_account_id_key ON mymoneymap.securities_positions USING btree (holding_account_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_positions",
+      "name": "securities_positions_id_user_instrument_unique",
+      "definition": "CREATE UNIQUE INDEX securities_positions_id_user_instrument_unique ON mymoneymap.securities_positions USING btree (id, user_id, instrument_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_positions",
+      "name": "securities_positions_pkey",
+      "definition": "CREATE UNIQUE INDEX securities_positions_pkey ON mymoneymap.securities_positions USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_positions",
+      "name": "securities_positions_user_instrument_unique",
+      "definition": "CREATE UNIQUE INDEX securities_positions_user_instrument_unique ON mymoneymap.securities_positions USING btree (user_id, instrument_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_positions",
+      "name": "securities_positions_user_quantity_index",
+      "definition": "CREATE INDEX securities_positions_user_quantity_index ON mymoneymap.securities_positions USING btree (user_id, instrument_id) WHERE (quantity > (0)::numeric)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_quotes",
+      "name": "securities_quotes_pkey",
+      "definition": "CREATE UNIQUE INDEX securities_quotes_pkey ON mymoneymap.securities_quotes USING btree (instrument_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "securities_realized_results_pkey",
+      "definition": "CREATE UNIQUE INDEX securities_realized_results_pkey ON mymoneymap.securities_realized_results USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_realized_results",
+      "name": "securities_realized_trade_unique",
+      "definition": "CREATE UNIQUE INDEX securities_realized_trade_unique ON mymoneymap.securities_realized_results USING btree (sell_trade_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_refresh_jobs",
+      "name": "securities_refresh_jobs_pkey",
+      "definition": "CREATE UNIQUE INDEX securities_refresh_jobs_pkey ON mymoneymap.securities_refresh_jobs USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_refresh_jobs",
+      "name": "securities_refresh_jobs_queue_job_id_key",
+      "definition": "CREATE UNIQUE INDEX securities_refresh_jobs_queue_job_id_key ON mymoneymap.securities_refresh_jobs USING btree (queue_job_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_cash_journal_unique",
+      "definition": "CREATE UNIQUE INDEX securities_trades_cash_journal_unique ON mymoneymap.securities_trades USING btree (cash_journal_entry_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_cash_reversal_unique",
+      "definition": "CREATE UNIQUE INDEX securities_trades_cash_reversal_unique ON mymoneymap.securities_trades USING btree (reversed_by_cash_journal_entry_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_fee_journal_unique",
+      "definition": "CREATE UNIQUE INDEX securities_trades_fee_journal_unique ON mymoneymap.securities_trades USING btree (fee_journal_entry_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_fee_reversal_unique",
+      "definition": "CREATE UNIQUE INDEX securities_trades_fee_reversal_unique ON mymoneymap.securities_trades USING btree (reversed_by_fee_journal_entry_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_history_index",
+      "definition": "CREATE INDEX securities_trades_history_index ON mymoneymap.securities_trades USING btree (user_id, executed_at DESC, id DESC)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_id_user_unique",
+      "definition": "CREATE UNIQUE INDEX securities_trades_id_user_unique ON mymoneymap.securities_trades USING btree (id, user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_pkey",
+      "definition": "CREATE UNIQUE INDEX securities_trades_pkey ON mymoneymap.securities_trades USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_trades",
+      "name": "securities_trades_rebuild_index",
+      "definition": "CREATE INDEX securities_trades_rebuild_index ON mymoneymap.securities_trades USING btree (user_id, instrument_id, executed_at, id) WHERE (reversed_by_cash_journal_entry_id IS NULL)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "securities_watchlist",
+      "name": "securities_watchlist_pkey",
+      "definition": "CREATE UNIQUE INDEX securities_watchlist_pkey ON mymoneymap.securities_watchlist USING btree (user_id, instrument_id)"
     },
     {
       "schema": "mymoneymap",

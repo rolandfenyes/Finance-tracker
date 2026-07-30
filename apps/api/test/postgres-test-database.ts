@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Pool } from 'pg';
 import { createDatabase } from '../src/platform/database/create-database';
+import { getMigrationStatus, migrateOneDown } from '../src/platform/database/migration-runner';
 import {
   createPostgresPoolConfig,
   type PostgresConnectionPolicy,
@@ -69,6 +70,25 @@ export function testPostgresPolicy(): PostgresConnectionPolicy {
     idleTimeoutMs: 1_000,
     maxLifetimeSeconds: 300,
   };
+}
+
+export async function rollbackMigrationsAfter(
+  database: IsolatedPostgresDatabase['database'],
+  targetMigrationName: string,
+): Promise<void> {
+  for (;;) {
+    const migrations = await getMigrationStatus(database);
+    const latestExecuted = migrations.filter(({ executedAt }) => executedAt !== undefined).at(-1);
+
+    if (latestExecuted?.name === targetMigrationName) {
+      return;
+    }
+    if (!latestExecuted) {
+      throw new Error(`Migration ${targetMigrationName} is not applied`);
+    }
+
+    await migrateOneDown(database);
+  }
 }
 
 function quoteIdentifier(identifier: string): string {

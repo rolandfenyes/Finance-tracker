@@ -1,6 +1,6 @@
 import type { Pool } from 'pg';
 import { migrateOneDown, migrateToLatest } from '../src/platform/database/migration-runner';
-import { withIsolatedPostgresDatabase } from './postgres-test-database';
+import { rollbackMigrationsAfter, withIsolatedPostgresDatabase } from './postgres-test-database';
 
 describe('loans PostgreSQL migration contract', () => {
   it('migrates Step 13 up and rolls it back without disturbing Step 12', async () => {
@@ -10,6 +10,7 @@ describe('loans PostgreSQL migration contract', () => {
       expect(await relation(pool, 'loan_payments')).toBe('mymoneymap.loan_payments');
       expect(await column(pool, 'recurring_rules', 'loan_id')).toBe(true);
 
+      await rollbackMigrationsAfter(database, '20260729120000_generic_investments');
       await migrateOneDown(database);
       expect(await relation(pool, 'loans')).toBe('mymoneymap.loans');
       expect(await column(pool, 'recurring_rules', 'investment_id')).toBe(false);

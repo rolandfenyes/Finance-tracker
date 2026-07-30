@@ -410,6 +410,206 @@ export interface RecurringOccurrencesTable {
   created_at: DatabaseTimestamp;
 }
 
+export interface SecuritiesPortfoliosTable {
+  id: string;
+  user_id: string;
+  cash_account_id: string;
+  created_at: DatabaseTimestamp;
+}
+
+export interface SecuritiesInstrumentsTable {
+  id: string;
+  symbol: string;
+  market: string;
+  exchange: string | null;
+  name: string | null;
+  currency: string;
+  sector: string | null;
+  industry: string | null;
+  beta: DatabaseDecimal | null;
+  metadata_provider: string | null;
+  metadata_observed_at: DatabaseTimestamp | null;
+  active: boolean;
+  created_at: DatabaseTimestamp;
+  updated_at: DatabaseTimestamp;
+}
+
+export interface SecuritiesPositionsTable {
+  id: string;
+  user_id: string;
+  instrument_id: string;
+  holding_account_id: string;
+  quantity: DatabaseDecimal;
+  remaining_cost_local: DatabaseDecimal;
+  remaining_cost_base: DatabaseDecimal;
+  local_currency: string;
+  base_currency: string;
+  created_at: DatabaseTimestamp;
+  updated_at: DatabaseTimestamp;
+}
+
+export interface SecuritiesTradesTable {
+  id: string;
+  user_id: string;
+  position_id: string;
+  instrument_id: string;
+  side: 'buy' | 'sell';
+  quantity: DatabaseDecimal;
+  unit_price: DatabaseDecimal;
+  fee: DatabaseDecimal;
+  currency: string;
+  notional: DatabaseDecimal;
+  notional_base: DatabaseDecimal;
+  fee_base: DatabaseDecimal;
+  base_currency: string;
+  conversion_status: 'available' | 'stale';
+  conversion_rate: DatabaseDecimal;
+  conversion_provider: string;
+  rate_at: DatabaseTimestamp;
+  fetched_at: DatabaseTimestamp;
+  executed_at: DatabaseTimestamp;
+  traded_on: DatabaseDate;
+  note: string | null;
+  cash_journal_entry_id: string;
+  fee_journal_entry_id: string | null;
+  reversed_by_cash_journal_entry_id: string | null;
+  reversed_by_fee_journal_entry_id: string | null;
+  created_at: DatabaseTimestamp;
+}
+
+export interface SecuritiesLotsTable {
+  id: string;
+  user_id: string;
+  position_id: string;
+  instrument_id: string;
+  buy_trade_id: string;
+  original_quantity: DatabaseDecimal;
+  remaining_quantity: DatabaseDecimal;
+  total_cost_local: DatabaseDecimal;
+  total_cost_base: DatabaseDecimal;
+  currency: string;
+  base_currency: string;
+  opened_at: DatabaseTimestamp;
+  created_at: DatabaseTimestamp;
+}
+
+export interface SecuritiesLotConsumptionsTable {
+  id: string;
+  user_id: string;
+  sell_trade_id: string;
+  lot_id: string;
+  quantity: DatabaseDecimal;
+  cost_local: DatabaseDecimal;
+  cost_base: DatabaseDecimal;
+  created_at: DatabaseTimestamp;
+}
+
+export interface SecuritiesRealizedResultsTable {
+  id: string;
+  user_id: string;
+  instrument_id: string;
+  sell_trade_id: string;
+  quantity: DatabaseDecimal;
+  proceeds_local: DatabaseDecimal;
+  cost_local: DatabaseDecimal;
+  fees_local: DatabaseDecimal;
+  realized_local: DatabaseDecimal;
+  proceeds_base: DatabaseDecimal;
+  cost_base: DatabaseDecimal;
+  fees_base: DatabaseDecimal;
+  realized_base: DatabaseDecimal;
+  currency: string;
+  base_currency: string;
+  method: 'FIFO';
+  closed_at: DatabaseTimestamp;
+  created_at: DatabaseTimestamp;
+}
+
+export interface SecuritiesCashMovementsTable {
+  id: string;
+  user_id: string;
+  direction: 'deposit' | 'withdrawal';
+  amount: DatabaseDecimal;
+  currency: string;
+  occurred_on: DatabaseDate;
+  note: string | null;
+  journal_entry_id: string;
+  reversed_by_journal_entry_id: string | null;
+  created_at: DatabaseTimestamp;
+}
+
+export interface SecuritiesQuotesTable {
+  instrument_id: string;
+  last: DatabaseDecimal | null;
+  previous_close: DatabaseDecimal | null;
+  day_high: DatabaseDecimal | null;
+  day_low: DatabaseDecimal | null;
+  volume: DatabaseDecimal | null;
+  currency: string;
+  provider: string;
+  quote_at: DatabaseTimestamp | null;
+  retrieved_at: DatabaseTimestamp;
+  status: 'available' | 'delayed' | 'stale' | 'unavailable';
+}
+
+export interface SecuritiesDailyPricesTable {
+  id: string;
+  instrument_id: string;
+  trading_on: DatabaseDate;
+  open: DatabaseDecimal | null;
+  high: DatabaseDecimal | null;
+  low: DatabaseDecimal | null;
+  close: DatabaseDecimal;
+  volume: DatabaseDecimal | null;
+  currency: string;
+  provider: string;
+  observed_at: DatabaseTimestamp;
+  retrieved_at: DatabaseTimestamp;
+}
+
+export interface SecuritiesWatchlistTable {
+  user_id: string;
+  instrument_id: string;
+  created_at: DatabaseTimestamp;
+}
+
+export interface SecuritiesImportsTable {
+  id: string;
+  user_id: string;
+  fingerprint: string;
+  status: 'preview' | 'committed';
+  row_count: number;
+  valid_count: number;
+  error_count: number;
+  ignored_count: number;
+  rows: JsonValue;
+  committed_at: DatabaseTimestamp | null;
+  created_at: DatabaseTimestamp;
+}
+
+export interface SecuritiesRefreshJobsTable {
+  id: string;
+  user_id: string;
+  queue_job_id: string;
+  status: 'queued' | 'running' | 'completed' | 'retryable_failed' | 'dead_letter';
+  attempt_count: number;
+  max_attempts: number;
+  error_code: string | null;
+  created_at: DatabaseTimestamp;
+  started_at: DatabaseTimestamp | null;
+  finished_at: DatabaseTimestamp | null;
+}
+
+export interface SecuritiesClearRequestsTable {
+  id: string;
+  user_id: string;
+  status: 'completed';
+  trade_count: number;
+  cash_count: number;
+  created_at: DatabaseTimestamp;
+  completed_at: DatabaseTimestamp;
+}
+
 export interface DatabaseSchema {
   'mymoneymap.idempotency_keys': IdempotencyKeysTable;
   'mymoneymap.users': UsersTable;
@@ -438,4 +638,18 @@ export interface DatabaseSchema {
   'mymoneymap.recurrence_job_executions': RecurrenceJobExecutionsTable;
   'mymoneymap.recurrence_job_events': RecurrenceJobEventsTable;
   'mymoneymap.recurring_occurrences': RecurringOccurrencesTable;
+  'mymoneymap.securities_portfolios': SecuritiesPortfoliosTable;
+  'mymoneymap.securities_instruments': SecuritiesInstrumentsTable;
+  'mymoneymap.securities_positions': SecuritiesPositionsTable;
+  'mymoneymap.securities_trades': SecuritiesTradesTable;
+  'mymoneymap.securities_lots': SecuritiesLotsTable;
+  'mymoneymap.securities_lot_consumptions': SecuritiesLotConsumptionsTable;
+  'mymoneymap.securities_realized_results': SecuritiesRealizedResultsTable;
+  'mymoneymap.securities_cash_movements': SecuritiesCashMovementsTable;
+  'mymoneymap.securities_quotes': SecuritiesQuotesTable;
+  'mymoneymap.securities_daily_prices': SecuritiesDailyPricesTable;
+  'mymoneymap.securities_watchlist': SecuritiesWatchlistTable;
+  'mymoneymap.securities_imports': SecuritiesImportsTable;
+  'mymoneymap.securities_refresh_jobs': SecuritiesRefreshJobsTable;
+  'mymoneymap.securities_clear_requests': SecuritiesClearRequestsTable;
 }

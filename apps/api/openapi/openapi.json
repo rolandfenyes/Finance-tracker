@@ -1835,6 +1835,281 @@
         "tags": ["Investments"]
       }
     },
+    "/api/v1/securities/portfolio": {
+      "get": {
+        "operationId": "SecuritiesController_portfolio",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SecuritiesResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Read the owned FIFO portfolio without fetching or mutating market data",
+        "tags": ["Securities"]
+      }
+    },
+    "/api/v1/securities/activity": {
+      "get": {
+        "operationId": "SecuritiesController_activity",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SecuritiesResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Read immutable trades, cash movements, and FIFO realized results",
+        "tags": ["Securities"]
+      }
+    },
+    "/api/v1/securities/trades": {
+      "post": {
+        "operationId": "SecuritiesController_trade",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SecuritiesResponseDto" }
+              }
+            }
+          },
+          "422": { "description": "FX, currency, or available-holdings invariant failed" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Post an atomic buy or sell with fees, FX provenance, and FIFO rebuild",
+        "tags": ["Securities"]
+      }
+    },
+    "/api/v1/securities/trades/{id}/reversals": {
+      "post": {
+        "operationId": "SecuritiesController_reverse",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SecuritiesResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Reverse linked trade cash and fee journals and rebuild FIFO",
+        "tags": ["Securities"]
+      }
+    },
+    "/api/v1/securities/cash-movements": {
+      "post": {
+        "operationId": "SecuritiesController_cash",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SecuritiesResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Transfer cash between the default cash and securities cash accounts",
+        "tags": ["Securities"]
+      }
+    },
+    "/api/v1/securities/imports": {
+      "post": {
+        "operationId": "SecuritiesController_preview",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SecuritiesResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Validate and persist a fingerprinted broker CSV preview",
+        "tags": ["Securities"]
+      }
+    },
+    "/api/v1/securities/imports/{id}/commit": {
+      "post": {
+        "operationId": "SecuritiesController_commit",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SecuritiesResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Commit a valid preview atomically; repeated commit is idempotent",
+        "tags": ["Securities"]
+      }
+    },
+    "/api/v1/securities/refresh-jobs": {
+      "post": {
+        "operationId": "SecuritiesController_refresh",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SecuritiesResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Queue an observable, retry-safe market-data refresh",
+        "tags": ["Securities"]
+      }
+    },
+    "/api/v1/securities/refresh-jobs/{id}": {
+      "get": {
+        "operationId": "SecuritiesController_refreshStatus",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SecuritiesResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Read owned market-data refresh status and retry outcome",
+        "tags": ["Securities"]
+      }
+    },
+    "/api/v1/securities/portfolio-clear-requests": {
+      "post": {
+        "operationId": "SecuritiesController_clear",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SecuritiesResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Explicitly reverse all owned securities history and clear projections",
+        "tags": ["Securities"]
+      }
+    },
+    "/api/v1/securities/quotes": {
+      "get": {
+        "operationId": "SecuritiesController_quote",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SecuritiesResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Read a stored quote; absent quotes are explicitly unavailable",
+        "tags": ["Securities"]
+      }
+    },
+    "/api/v1/securities/instruments/{id}": {
+      "get": {
+        "operationId": "SecuritiesController_instrument",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SecuritiesResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Read an owned or watched canonical market instrument",
+        "tags": ["Securities"]
+      }
+    },
+    "/api/v1/securities/instruments/{id}/prices": {
+      "get": {
+        "operationId": "SecuritiesController_prices",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SecuritiesResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Read actual trading-day prices and descriptive indicators",
+        "tags": ["Securities"]
+      }
+    },
+    "/api/v1/securities/watchlist/{id}": {
+      "put": {
+        "operationId": "SecuritiesController_watch",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SecuritiesResponseDto" }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Add a canonical instrument to the owned watchlist",
+        "tags": ["Securities"]
+      },
+      "delete": {
+        "operationId": "SecuritiesController_unwatch",
+        "parameters": [],
+        "responses": { "204": { "description": "" } },
+        "security": [{ "cookie": [] }],
+        "summary": "Remove an instrument from the owned watchlist",
+        "tags": ["Securities"]
+      }
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "HealthController_live",
@@ -3326,6 +3601,11 @@
           }
         },
         "required": ["type", "name", "currency"]
+      },
+      "SecuritiesResponseDto": {
+        "type": "object",
+        "properties": { "data": { "type": "object" } },
+        "required": ["data"]
       },
       "ApiViolationResponse": {
         "type": "object",

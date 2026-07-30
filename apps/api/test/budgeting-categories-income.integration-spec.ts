@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Pool } from 'pg';
 import { migrateOneDown, migrateToLatest } from '../src/platform/database/migration-runner';
-import { withIsolatedPostgresDatabase } from './postgres-test-database';
+import { rollbackMigrationsAfter, withIsolatedPostgresDatabase } from './postgres-test-database';
 
 describe('budgeting, categories, and basic income PostgreSQL invariants', () => {
   it('migrates Step 08 up and rolls it back without disturbing Step 07', async () => {
@@ -11,17 +11,7 @@ describe('budgeting, categories, and basic income PostgreSQL invariants', () => 
       expect(await relation(pool, 'categories')).toBe('mymoneymap.categories');
       expect(await relation(pool, 'basic_incomes')).toBe('mymoneymap.basic_incomes');
 
-      await migrateOneDown(database);
-      await migrateOneDown(database);
-      await migrateOneDown(database);
-      expect(await relation(pool, 'recurring_rules')).toBe('mymoneymap.recurring_rules');
-      expect(await relation(pool, 'budget_rules')).toBe('mymoneymap.budget_rules');
-
-      await migrateOneDown(database);
-      expect(await relation(pool, 'recurring_rules')).toBe('mymoneymap.recurring_rules');
-      expect(await relation(pool, 'budget_rules')).toBe('mymoneymap.budget_rules');
-
-      await migrateOneDown(database);
+      await rollbackMigrationsAfter(database, '20260729070000_recurrence_scheduling');
       expect(await relation(pool, 'recurring_rules')).toBe('mymoneymap.recurring_rules');
       expect(await relation(pool, 'budget_rules')).toBe('mymoneymap.budget_rules');
 

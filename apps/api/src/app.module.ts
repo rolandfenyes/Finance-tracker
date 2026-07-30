@@ -16,6 +16,7 @@ import { GoalsModule } from './goals/goals.module';
 import { EmergencyReserveModule } from './emergency-reserve/emergency-reserve.module';
 import { LoansModule } from './loans/loans.module';
 import { InvestmentsModule } from './investments/investments.module';
+import { SecuritiesModule } from './securities/securities.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { InvestmentsModule } from './investments/investments.module';
     EmergencyReserveModule,
     LoansModule,
     InvestmentsModule,
+    SecuritiesModule,
     HealthModule,
   ],
 })

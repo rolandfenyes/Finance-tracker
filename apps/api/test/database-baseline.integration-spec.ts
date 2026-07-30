@@ -84,6 +84,18 @@ describe('PostgreSQL baseline and migration system', () => {
           name: '20260729120000_generic_investments',
           executedAt: expect.any(Date),
         }),
+        expect.objectContaining({
+          name: '20260729130000_securities',
+          executedAt: expect.any(Date),
+        }),
+        expect.objectContaining({
+          name: '20260729130100_securities_account_guard_revision',
+          executedAt: expect.any(Date),
+        }),
+        expect.objectContaining({
+          name: '20260729130200_securities_ledger_guard_revision',
+          executedAt: expect.any(Date),
+        }),
       ]);
 
       expect(fingerprint.relations.map(({ schema, name }) => `${schema}.${name}`)).toEqual([
@@ -112,6 +124,20 @@ describe('PostgreSQL baseline and migration system', () => {
         'mymoneymap.recurrence_job_executions',
         'mymoneymap.recurring_occurrences',
         'mymoneymap.recurring_rules',
+        'mymoneymap.securities_cash_movements',
+        'mymoneymap.securities_clear_requests',
+        'mymoneymap.securities_daily_prices',
+        'mymoneymap.securities_imports',
+        'mymoneymap.securities_instruments',
+        'mymoneymap.securities_lot_consumptions',
+        'mymoneymap.securities_lots',
+        'mymoneymap.securities_portfolios',
+        'mymoneymap.securities_positions',
+        'mymoneymap.securities_quotes',
+        'mymoneymap.securities_realized_results',
+        'mymoneymap.securities_refresh_jobs',
+        'mymoneymap.securities_trades',
+        'mymoneymap.securities_watchlist',
         'mymoneymap.user_currencies',
         'mymoneymap.users',
         'mymoneymap_meta.kysely_migration',
@@ -135,7 +161,7 @@ describe('PostgreSQL baseline and migration system', () => {
       const rollback = await migrateOneDown(database);
       expect(rollback.results).toEqual([
         {
-          migrationName: '20260729120000_generic_investments',
+          migrationName: '20260729130200_securities_ledger_guard_revision',
           direction: 'Down',
           status: 'Success',
         },
@@ -159,8 +185,9 @@ describe('PostgreSQL baseline and migration system', () => {
       expect(rolledBack.relations.map(({ name }) => name)).toContain('emergency_reserve_movements');
       expect(rolledBack.relations.map(({ name }) => name)).toContain('loans');
       expect(rolledBack.relations.map(({ name }) => name)).toContain('loan_payments');
-      expect(rolledBack.relations.map(({ name }) => name)).not.toContain('investments');
-      expect(rolledBack.relations.map(({ name }) => name)).not.toContain('investment_movements');
+      expect(rolledBack.relations.map(({ name }) => name)).toContain('investments');
+      expect(rolledBack.relations.map(({ name }) => name)).toContain('investment_movements');
+      expect(rolledBack.relations.map(({ name }) => name)).toContain('securities_trades');
       expect(rolledBack.columns).toContainEqual(
         expect.objectContaining({ relation: 'recurring_rules', name: 'goal_id' }),
       );
@@ -197,7 +224,7 @@ describe('PostgreSQL baseline and migration system', () => {
       const ledger = await pool.query<{ count: string }>(
         'SELECT count(*)::text AS count FROM mymoneymap_meta.kysely_migration',
       );
-      expect(ledger.rows[0]?.count).toBe('15');
+      expect(ledger.rows[0]?.count).toBe('18');
       const concurrentFingerprint = await readSchemaFingerprint(pool);
       expect(() => assertSchemaMatchesExpected(concurrentFingerprint)).not.toThrow();
     });
@@ -262,6 +289,9 @@ describe('PostgreSQL baseline and migration system', () => {
       '20260729100000_emergency_reserve',
       '20260729110000_loans',
       '20260729120000_generic_investments',
+      '20260729130000_securities',
+      '20260729130100_securities_account_guard_revision',
+      '20260729130200_securities_ledger_guard_revision',
     ]);
     expect(targetStatusNames).not.toContain('028_default_admin');
   });

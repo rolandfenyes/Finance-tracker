@@ -14,6 +14,9 @@ import * as goals from './20260729090000_goals';
 import * as emergencyReserve from './20260729100000_emergency_reserve';
 import * as loans from './20260729110000_loans';
 import * as genericInvestments from './20260729120000_generic_investments';
+import * as securities from './20260729130000_securities';
+import * as securitiesAccountGuardRevision from './20260729130100_securities_account_guard_revision';
+import * as securitiesLedgerGuardRevision from './20260729130200_securities_ledger_guard_revision';
 
 export const registeredMigrations = {
   '20260729000000_database_baseline': databaseBaseline,
@@ -31,6 +34,9 @@ export const registeredMigrations = {
   '20260729100000_emergency_reserve': emergencyReserve,
   '20260729110000_loans': loans,
   '20260729120000_generic_investments': genericInvestments,
+  '20260729130000_securities': securities,
+  '20260729130100_securities_account_guard_revision': securitiesAccountGuardRevision,
+  '20260729130200_securities_ledger_guard_revision': securitiesLedgerGuardRevision,
 } satisfies Record<string, Migration>;
 
 export class RegisteredMigrationProvider implements MigrationProvider {

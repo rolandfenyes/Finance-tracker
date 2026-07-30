@@ -13,7 +13,7 @@ import {
   recurrenceJobKey,
 } from '../src/recurrence/recurrence-queue.service';
 import { RecurrenceRepository } from '../src/recurrence/recurrence.repository';
-import { withIsolatedPostgresDatabase } from './postgres-test-database';
+import { rollbackMigrationsAfter, withIsolatedPostgresDatabase } from './postgres-test-database';
 
 describe('recurrence scheduling PostgreSQL and BullMQ invariants', () => {
   it('migrates Step 09 up and rolls it back without disturbing Step 08', async () => {
@@ -27,21 +27,7 @@ describe('recurrence scheduling PostgreSQL and BullMQ invariants', () => {
         'mymoneymap.recurrence_job_executions',
       );
 
-      await migrateOneDown(database);
-      await migrateOneDown(database);
-      await migrateOneDown(database);
-      expect(await relation(pool, 'recurring_rules')).toBe('mymoneymap.recurring_rules');
-      expect(await relation(pool, 'recurring_occurrences')).toBe(
-        'mymoneymap.recurring_occurrences',
-      );
-
-      await migrateOneDown(database);
-      expect(await relation(pool, 'recurring_rules')).toBe('mymoneymap.recurring_rules');
-      expect(await relation(pool, 'recurring_occurrences')).toBe(
-        'mymoneymap.recurring_occurrences',
-      );
-
-      await migrateOneDown(database);
+      await rollbackMigrationsAfter(database, '20260729070000_recurrence_scheduling');
       expect(await relation(pool, 'recurring_rules')).toBe('mymoneymap.recurring_rules');
       expect(await relation(pool, 'recurring_occurrences')).toBe(
         'mymoneymap.recurring_occurrences',

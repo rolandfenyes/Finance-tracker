@@ -45,6 +45,11 @@ describe('environment validation', () => {
       FX_REFRESH_ENABLED: false,
       RECURRENCE_ENABLED: false,
       FX_PROVIDER_TIMEOUT_MS: 5000,
+      SECURITIES_MARKET_DATA_ENABLED: false,
+      SECURITIES_MARKET_DATA_PRODUCTION_APPROVED: false,
+      SECURITIES_PROVIDER: 'disabled',
+      SECURITIES_PROVIDER_TIMEOUT_MS: 5000,
+      FINNHUB_BASE_URL: 'https://finnhub.io/api/v1',
       SESSION_IDLE_TTL_SECONDS: 1800,
       SESSION_ABSOLUTE_TTL_SECONDS: 43200,
       REMEMBER_SESSION_ABSOLUTE_TTL_SECONDS: 2592000,
@@ -98,6 +103,22 @@ describe('environment validation', () => {
         DATABASE_TLS_MODE: 'require',
       }),
     ).toThrow('Invalid application configuration: DATABASE_TLS_MODE');
+  });
+
+  it('keeps production securities market data disabled until provider approval is recorded', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validEnvironment,
+        NODE_ENV: 'production',
+        APP_BASE_URL: 'https://api.example.test',
+        DATABASE_TLS_MODE: 'verify-full',
+        RECURRENCE_ENABLED: 'true',
+        WEBAUTHN_EXPECTED_ORIGINS: 'https://app.example.test',
+        SECURITIES_MARKET_DATA_ENABLED: 'true',
+        SECURITIES_PROVIDER: 'finnhub',
+        FINNHUB_API_KEY: 'synthetic-provider-key',
+      }),
+    ).toThrow('Invalid application configuration: SECURITIES_MARKET_DATA_PRODUCTION_APPROVED');
   });
 
   it('requires the recurrence worker in production', () => {

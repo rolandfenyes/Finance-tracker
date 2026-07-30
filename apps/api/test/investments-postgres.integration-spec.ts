@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Pool } from 'pg';
 import { LedgerRepository } from '../src/ledger/ledger.repository';
 import { migrateOneDown, migrateToLatest } from '../src/platform/database/migration-runner';
-import { withIsolatedPostgresDatabase } from './postgres-test-database';
+import { rollbackMigrationsAfter, withIsolatedPostgresDatabase } from './postgres-test-database';
 
 jest.setTimeout(30_000);
 
@@ -14,6 +14,7 @@ describe('generic investment PostgreSQL invariants', () => {
       expect(await relation(pool, 'investment_movements')).toBe('mymoneymap.investment_movements');
       expect(await column(pool, 'recurring_rules', 'investment_id')).toBe(true);
 
+      await rollbackMigrationsAfter(database, '20260729120000_generic_investments');
       await migrateOneDown(database);
       expect(await relation(pool, 'investments')).toBeNull();
       expect(await relation(pool, 'investment_movements')).toBeNull();
