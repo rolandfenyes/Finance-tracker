@@ -23,6 +23,7 @@ const commandEnvironmentSchema = z
     DATABASE_TLS_MODE: z.enum(['disable', 'require', 'verify-full']),
     DATABASE_TLS_CA: z.string().min(1).optional(),
     DATABASE_CONNECTION_TIMEOUT_MS: z.coerce.number().int().min(100).max(300_000),
+    DATABASE_STATEMENT_TIMEOUT_MS: z.coerce.number().int().min(100).max(300_000).default(10_000),
   })
   .superRefine((environment, context) => {
     if (!environment.DATABASE_URL && !environment.DATABASE_MIGRATION_URL) {
@@ -67,6 +68,7 @@ export function loadDatabaseCommandEnvironment(
     tlsCa: result.data.DATABASE_TLS_CA,
     poolMax: 1,
     connectionTimeoutMs: result.data.DATABASE_CONNECTION_TIMEOUT_MS,
+    statementTimeoutMs: result.data.DATABASE_STATEMENT_TIMEOUT_MS,
     idleTimeoutMs: 1_000,
     maxLifetimeSeconds: 300,
   };

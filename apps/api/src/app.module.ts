@@ -22,6 +22,8 @@ import { AdministrationModule } from './administration/administration.module';
 import { BillingModule } from './billing/billing.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PrivacyModule } from './privacy/privacy.module';
+import { OperationsModule } from './platform/operations/operations.module';
+import { SentryModule } from '@sentry/nestjs/setup';
 
 @Module({
   imports: [
@@ -33,6 +35,7 @@ import { PrivacyModule } from './privacy/privacy.module';
       validate: validateEnvironment,
     }),
     PlatformLoggingModule,
+    SentryModule.forRoot(),
     DatabaseModule,
     IdempotencyModule,
     IdentityModule,
@@ -52,6 +55,7 @@ import { PrivacyModule } from './privacy/privacy.module';
     BillingModule,
     NotificationsModule,
     PrivacyModule,
+    OperationsModule,
     HealthModule,
   ],
 })

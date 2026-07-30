@@ -8,7 +8,14 @@ export class RedisSecurityService implements OnApplicationShutdown {
   private connecting?: Promise<void>;
 
   constructor(@Inject(ConfigService) config: ConfigService) {
-    this.client = createClient({ url: config.getOrThrow<string>('REDIS_URL') });
+    this.client = createClient({
+      url: config.getOrThrow<string>('REDIS_URL'),
+      socket: {
+        connectTimeout: config.get<number>('REDIS_CONNECT_TIMEOUT_MS') ?? 2_000,
+        reconnectStrategy: (retries) =>
+          retries >= 3 ? false : Math.min(100 * 2 ** retries, 1_000),
+      },
+    });
     this.client.on('error', () => {
       // Command failures propagate to callers; credentials and payloads are never logged here.
     });

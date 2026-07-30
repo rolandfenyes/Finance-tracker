@@ -67,6 +67,7 @@ export function testPostgresPolicy(): PostgresConnectionPolicy {
     tlsCa: process.env.DATABASE_TLS_CA,
     poolMax: 4,
     connectionTimeoutMs: Number(process.env.DATABASE_CONNECTION_TIMEOUT_MS ?? 2_000),
+    statementTimeoutMs: Number(process.env.DATABASE_STATEMENT_TIMEOUT_MS ?? 30_000),
     idleTimeoutMs: 1_000,
     maxLifetimeSeconds: 300,
   };

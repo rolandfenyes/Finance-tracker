@@ -3,6 +3,7 @@ import { z } from 'zod';
 const booleanText = z.enum(['true', 'false']).transform((value) => value === 'true');
 const positiveMilliseconds = z.coerce.number().int().min(100).max(300_000);
 const positiveSeconds = z.coerce.number().int().min(1).max(31_536_000);
+const rateLimit = z.coerce.number().int().min(1).max(100_000);
 
 const trustProxy = z
   .union([z.enum(['true', 'false']), z.string().regex(/^[1-9]\d*$/)])
@@ -24,6 +25,18 @@ const environmentSchema = z
     API_HOST: z.string().min(1),
     API_PORT: z.coerce.number().int().min(1).max(65_535),
     APP_BASE_URL: z.url(),
+    HTTP_JSON_BODY_LIMIT_BYTES: z.coerce
+      .number()
+      .int()
+      .min(16_384)
+      .max(10_485_760)
+      .default(2_097_152),
+    HTTP_REQUEST_TIMEOUT_MS: positiveMilliseconds.default(15_000),
+    HTTP_HEADERS_TIMEOUT_MS: positiveMilliseconds.default(10_000),
+    HTTP_KEEP_ALIVE_TIMEOUT_MS: positiveMilliseconds.default(5_000),
+    HTTP_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().min(10).max(3_600).default(60),
+    HTTP_RATE_LIMIT_MAX_REQUESTS: rateLimit.default(300),
+    HTTP_ADMIN_RATE_LIMIT_MAX_REQUESTS: rateLimit.default(120),
     DATABASE_URL: z
       .string()
       .min(1)
@@ -46,6 +59,7 @@ const environmentSchema = z
     DATABASE_TLS_CA: z.string().min(1).optional(),
     DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(50),
     DATABASE_CONNECTION_TIMEOUT_MS: positiveMilliseconds,
+    DATABASE_STATEMENT_TIMEOUT_MS: positiveMilliseconds.default(10_000),
     DATABASE_IDLE_TIMEOUT_MS: positiveMilliseconds,
     DATABASE_MAX_LIFETIME_SECONDS: z.coerce.number().int().min(30).max(86_400),
     REDIS_URL: z
@@ -54,6 +68,7 @@ const environmentSchema = z
       .refine((value) => value.startsWith('redis://') || value.startsWith('rediss://'), {
         message: 'must use the redis:// or rediss:// scheme',
       }),
+    REDIS_CONNECT_TIMEOUT_MS: positiveMilliseconds.default(2_000),
     FX_REFRESH_ENABLED: booleanText,
     RECURRENCE_ENABLED: booleanText.default(false),
     FX_PROVIDER_TIMEOUT_MS: positiveMilliseconds,
@@ -110,6 +125,13 @@ const environmentSchema = z
       .pipe(z.array(z.url()).min(1)),
     WEBAUTHN_CHALLENGE_TTL_SECONDS: z.coerce.number().int().min(30).max(600),
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']),
+    OPERATIONS_METRICS_ENABLED: booleanText.default(false),
+    OPERATIONS_METRICS_TOKEN: z.string().min(32).optional(),
+    SENTRY_ENABLED: booleanText.default(false),
+    SENTRY_PRODUCTION_APPROVED: booleanText.default(false),
+    SENTRY_DSN: z.url().optional(),
+    SENTRY_ENVIRONMENT: z.string().min(1).max(64).optional(),
+    SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0),
     TRUST_PROXY: trustProxy,
     OPENAPI_ENABLED: booleanText,
   })
@@ -119,6 +141,22 @@ const environmentSchema = z
         code: 'custom',
         path: ['LEGACY_DATABASE_URL'],
         message: 'enabled legacy migration requires an explicit read-only source URL',
+      });
+    }
+
+    if (environment.OPERATIONS_METRICS_ENABLED && !environment.OPERATIONS_METRICS_TOKEN) {
+      context.addIssue({
+        code: 'custom',
+        path: ['OPERATIONS_METRICS_TOKEN'],
+        message: 'enabled metrics require an independent bearer token',
+      });
+    }
+
+    if (environment.SENTRY_ENABLED && !environment.SENTRY_DSN) {
+      context.addIssue({
+        code: 'custom',
+        path: ['SENTRY_DSN'],
+        message: 'enabled error tracking requires an explicit Sentry DSN',
       });
     }
 
@@ -174,6 +212,22 @@ const environmentSchema = z
         code: 'custom',
         path: ['RECURRENCE_ENABLED'],
         message: 'must be enabled in production',
+      });
+    }
+
+    if (!environment.OPERATIONS_METRICS_ENABLED) {
+      context.addIssue({
+        code: 'custom',
+        path: ['OPERATIONS_METRICS_ENABLED'],
+        message: 'must be enabled in production',
+      });
+    }
+
+    if (!environment.SENTRY_ENABLED || !environment.SENTRY_PRODUCTION_APPROVED) {
+      context.addIssue({
+        code: 'custom',
+        path: ['SENTRY_PRODUCTION_APPROVED'],
+        message: 'production error tracking requires the approved PII-scrubbed Sentry gate',
       });
     }
 

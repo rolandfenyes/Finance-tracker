@@ -73,6 +73,7 @@ describe('feedback/administration/system HTTP contract', () => {
     await agent.get('/api/v1/admin/users').expect(403);
     await agent.get('/api/v1/admin/feedback').expect(403);
     await agent.get('/api/v1/admin/system').expect(403);
+    await agent.get('/api/v1/admin/operations/queues').expect(403);
     await agent
       .put('/api/v1/admin/integrations/finnhub')
       .send({ name: 'Finnhub', secret })
@@ -116,6 +117,13 @@ describe('feedback/administration/system HTTP contract', () => {
 
   it('redacts PII, exposes defined non-billing metrics, moderates feedback, and writes audit records', async () => {
     const admin = await login(users.admin.email);
+    const operations = await admin.get('/api/v1/admin/operations/queues').expect(200);
+    expect(operations.body.queues).toHaveLength(6);
+    expect(operations.body.providerCircuits).toEqual({
+      frankfurter: 'closed',
+      finnhub: 'closed',
+    });
+    expect(JSON.stringify(operations.body)).not.toContain(users.admin.email);
     const userList = await admin.get('/api/v1/admin/users?limit=2').expect(200);
     expect(userList.body.items).toHaveLength(2);
     expect(userList.body.nextCursor).toEqual(expect.any(String));

@@ -8,6 +8,7 @@ export interface PostgresConnectionPolicy {
   tlsCa?: string;
   poolMax: number;
   connectionTimeoutMs: number;
+  statementTimeoutMs: number;
   idleTimeoutMs: number;
   maxLifetimeSeconds: number;
 }
@@ -26,6 +27,7 @@ export function createPostgresPoolConfig(policy: PostgresConnectionPolicy): Pool
     ssl,
     max: policy.poolMax,
     connectionTimeoutMillis: policy.connectionTimeoutMs,
+    statement_timeout: policy.statementTimeoutMs,
     idleTimeoutMillis: policy.idleTimeoutMs,
     maxLifetimeSeconds: policy.maxLifetimeSeconds,
   };

@@ -34,14 +34,37 @@ const validEnvironment = {
   TRUST_PROXY: 'false',
   OPENAPI_ENABLED: 'true',
 };
+const validProductionEnvironment = {
+  ...validEnvironment,
+  NODE_ENV: 'production',
+  APP_BASE_URL: 'https://api.example.test',
+  DATABASE_TLS_MODE: 'verify-full',
+  RECURRENCE_ENABLED: 'true',
+  WEBAUTHN_EXPECTED_ORIGINS: 'https://app.example.test',
+  OPERATIONS_METRICS_ENABLED: 'true',
+  OPERATIONS_METRICS_TOKEN: 'synthetic-operations-token-at-least-32-characters',
+  SENTRY_ENABLED: 'true',
+  SENTRY_PRODUCTION_APPROVED: 'true',
+  SENTRY_DSN: 'https://public@example.invalid/1',
+  SENTRY_ENVIRONMENT: 'production',
+  SENTRY_TRACES_SAMPLE_RATE: '0.05',
+};
 
 describe('environment validation', () => {
   it('parses an explicit development contract', () => {
     expect(validateEnvironment(validEnvironment)).toEqual({
       ...validEnvironment,
       API_PORT: 3000,
+      HTTP_JSON_BODY_LIMIT_BYTES: 2_097_152,
+      HTTP_REQUEST_TIMEOUT_MS: 15_000,
+      HTTP_HEADERS_TIMEOUT_MS: 10_000,
+      HTTP_KEEP_ALIVE_TIMEOUT_MS: 5_000,
+      HTTP_RATE_LIMIT_WINDOW_SECONDS: 60,
+      HTTP_RATE_LIMIT_MAX_REQUESTS: 300,
+      HTTP_ADMIN_RATE_LIMIT_MAX_REQUESTS: 120,
       DATABASE_POOL_MAX: 4,
       DATABASE_CONNECTION_TIMEOUT_MS: 2000,
+      DATABASE_STATEMENT_TIMEOUT_MS: 10_000,
       DATABASE_IDLE_TIMEOUT_MS: 10000,
       DATABASE_MAX_LIFETIME_SECONDS: 300,
       FX_REFRESH_ENABLED: false,
@@ -70,6 +93,11 @@ describe('environment validation', () => {
       LOGIN_RATE_LIMIT_WINDOW_SECONDS: 900,
       LOGIN_RATE_LIMIT_MAX_ATTEMPTS: 5,
       LOGIN_RATE_LIMIT_IP_MAX_ATTEMPTS: 25,
+      REDIS_CONNECT_TIMEOUT_MS: 2_000,
+      OPERATIONS_METRICS_ENABLED: false,
+      SENTRY_ENABLED: false,
+      SENTRY_PRODUCTION_APPROVED: false,
+      SENTRY_TRACES_SAMPLE_RATE: 0,
       WEBAUTHN_EXPECTED_ORIGINS: ['http://localhost:4200'],
       WEBAUTHN_CHALLENGE_TTL_SECONDS: 300,
       TRUST_PROXY: false,
@@ -121,10 +149,8 @@ describe('environment validation', () => {
   it('fails closed for an insecure production public URL', () => {
     expect(() =>
       validateEnvironment({
-        ...validEnvironment,
-        NODE_ENV: 'production',
+        ...validProductionEnvironment,
         APP_BASE_URL: 'http://localhost:3000',
-        DATABASE_TLS_MODE: 'verify-full',
       }),
     ).toThrow('Invalid application configuration: APP_BASE_URL');
   });
@@ -132,9 +158,7 @@ describe('environment validation', () => {
   it('requires verified database TLS in production', () => {
     expect(() =>
       validateEnvironment({
-        ...validEnvironment,
-        NODE_ENV: 'production',
-        APP_BASE_URL: 'https://api.example.test',
+        ...validProductionEnvironment,
         DATABASE_TLS_MODE: 'require',
       }),
     ).toThrow('Invalid application configuration: DATABASE_TLS_MODE');
@@ -143,12 +167,7 @@ describe('environment validation', () => {
   it('keeps production securities market data disabled until provider approval is recorded', () => {
     expect(() =>
       validateEnvironment({
-        ...validEnvironment,
-        NODE_ENV: 'production',
-        APP_BASE_URL: 'https://api.example.test',
-        DATABASE_TLS_MODE: 'verify-full',
-        RECURRENCE_ENABLED: 'true',
-        WEBAUTHN_EXPECTED_ORIGINS: 'https://app.example.test',
+        ...validProductionEnvironment,
         SECURITIES_MARKET_DATA_ENABLED: 'true',
         SECURITIES_PROVIDER: 'finnhub',
         FINNHUB_API_KEY: 'synthetic-provider-key',
@@ -159,13 +178,22 @@ describe('environment validation', () => {
   it('requires the recurrence worker in production', () => {
     expect(() =>
       validateEnvironment({
-        ...validEnvironment,
-        NODE_ENV: 'production',
-        APP_BASE_URL: 'https://api.example.test',
-        DATABASE_TLS_MODE: 'verify-full',
-        WEBAUTHN_EXPECTED_ORIGINS: 'https://app.example.test',
+        ...validProductionEnvironment,
+        RECURRENCE_ENABLED: 'false',
       }),
     ).toThrow('Invalid application configuration: RECURRENCE_ENABLED');
+  });
+
+  it('requires protected metrics and PII-scrubbed error tracking in production', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validProductionEnvironment,
+        OPERATIONS_METRICS_ENABLED: 'false',
+        SENTRY_PRODUCTION_APPROVED: 'false',
+      }),
+    ).toThrow(
+      'Invalid application configuration: OPERATIONS_METRICS_ENABLED, SENTRY_PRODUCTION_APPROVED',
+    );
   });
 
   it('rejects an ambiguous sslmode embedded in the connection URL', () => {

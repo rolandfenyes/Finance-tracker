@@ -359,6 +359,7 @@ describe('PostgreSQL baseline and migration system', () => {
       tlsMode: 'disable',
       poolMax: 1,
       connectionTimeoutMs: 100,
+      statementTimeoutMs: 100,
       idleTimeoutMs: 100,
       maxLifetimeSeconds: 30,
     });

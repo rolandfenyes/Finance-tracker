@@ -3,6 +3,7 @@ import { Inject, Injectable, OnApplicationShutdown, OnModuleInit, Optional } fro
 import { ConfigService } from '@nestjs/config';
 import { Job, Queue, Worker, type ConnectionOptions } from 'bullmq';
 import { randomUUID } from 'node:crypto';
+import { RedisSecurityService } from '../identity/redis-security.service';
 import { CLOCK, type Clock } from '../platform/time/clock';
 import { SecuritiesRepository } from './securities.repository';
 import {
@@ -20,19 +21,20 @@ interface RefreshJobData {
 
 @Injectable()
 export class SecuritiesRefreshProcessor {
-  private consecutiveFailures = 0;
-  private circuitOpenedAt: number | null = null;
-
   constructor(
     @Inject(SecuritiesRepository) private readonly repository: SecuritiesRepository,
     @Inject(SECURITIES_MARKET_DATA_PROVIDER)
     private readonly provider: SecuritiesMarketDataProvider,
     @Inject(CLOCK) private readonly clock: Clock,
+    @Inject(RedisSecurityService) private readonly redis: RedisSecurityService,
   ) {}
 
   async process(data: RefreshJobData, attempt: number): Promise<void> {
     const now = this.clock.now().toDate();
-    if (this.circuitOpenedAt !== null && now.getTime() - this.circuitOpenedAt < 60_000) {
+    const redis = await this.redis.ready();
+    const circuitKey = 'mymoneymap:securities:circuit:finnhub';
+    const failuresKey = `${circuitKey}:failures`;
+    if (await redis.get(circuitKey)) {
       throw new Error('Market-data circuit is temporarily open');
     }
     await this.repository.updateRefreshJob(data.requestId, {
@@ -56,8 +58,7 @@ export class SecuritiesRefreshProcessor {
         await this.repository.upsertPrices(prices.map((price) => ({ ...price, currency })));
         if (metadata) await this.repository.updateMetadata(metadata);
       }
-      this.consecutiveFailures = 0;
-      this.circuitOpenedAt = null;
+      await redis.del([failuresKey, circuitKey]);
       await this.repository.updateRefreshJob(data.requestId, {
         status: 'completed',
         attemptCount: attempt,
@@ -65,8 +66,9 @@ export class SecuritiesRefreshProcessor {
         finishedAt: this.clock.now().toDate(),
       });
     } catch (error) {
-      this.consecutiveFailures += 1;
-      if (this.consecutiveFailures >= 5) this.circuitOpenedAt = Date.now();
+      const failures = await redis.incr(failuresKey);
+      await redis.expire(failuresKey, 300);
+      if (failures >= 5) await redis.set(circuitKey, 'open', { EX: 60 });
       await this.repository.updateRefreshJob(data.requestId, {
         status: attempt >= ATTEMPTS ? 'dead_letter' : 'retryable_failed',
         attemptCount: attempt,

@@ -1,0 +1,28 @@
+FROM node:22.13.1-alpine AS build
+WORKDIR /workspace
+RUN npm install --global pnpm@10.30.3
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml nx.json tsconfig.base.json ./
+COPY apps/api/package.json apps/api/package.json
+RUN pnpm install --frozen-lockfile
+COPY apps/api apps/api
+RUN pnpm build \
+  && pnpm --filter @mymoneymap/api deploy --prod --legacy /prod
+
+FROM node:22.13.1-alpine AS runtime
+ENV NODE_ENV=production
+WORKDIR /app
+RUN apk upgrade --no-cache \
+  && rm -rf /usr/local/lib/node_modules/npm \
+            /usr/local/lib/node_modules/corepack \
+            /usr/local/bin/npm \
+            /usr/local/bin/npx \
+            /usr/local/bin/corepack \
+            /usr/local/bin/pnpm \
+            /usr/local/bin/pnpx \
+  && addgroup -S mymoneymap \
+  && adduser -S -G mymoneymap mymoneymap
+COPY --from=build --chown=mymoneymap:mymoneymap /prod/node_modules ./node_modules
+COPY --from=build --chown=mymoneymap:mymoneymap /workspace/apps/api/dist ./apps/api/dist
+USER mymoneymap
+EXPOSE 3000
+CMD ["node", "apps/api/dist/main.js"]

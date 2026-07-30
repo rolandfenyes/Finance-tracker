@@ -1,0 +1,13 @@
+.git
+.github
+.nx
+.env*
+coverage
+docs
+graphify-out
+node_modules
+**/node_modules
+**/*.log
+**/*.tsbuildinfo
+apps/api/openapi
+apps/api/test

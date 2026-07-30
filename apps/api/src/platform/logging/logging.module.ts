@@ -30,8 +30,29 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
               'req.body.secret',
               'req.body.apiKey',
               'req.body.credential',
+              'req.body.email',
+              'req.body.recipientEmail',
+              'req.body.fullName',
+              'req.body.note',
+              'req.body.message',
+              'req.body.templateData',
+              'req.query',
             ],
             censor: '[REDACTED]',
+          },
+          serializers: {
+            req(request: IncomingMessage & { id?: string }): { id?: string; method?: string } {
+              return {
+                id: request.id,
+                method: request.method,
+              };
+            },
+            res(response: ServerResponse): { statusCode: number } {
+              return { statusCode: response.statusCode };
+            },
+            err(error: Error): { type: string } {
+              return { type: error.constructor.name };
+            },
           },
         },
       }),

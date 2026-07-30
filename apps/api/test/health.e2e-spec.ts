@@ -35,7 +35,25 @@ describe('platform HTTP contract', () => {
     expect(response.body).toEqual({ status: 'ok' });
     expect(response.headers['x-request-id']).toMatch(uuidPattern);
     expect(response.headers['x-content-type-options']).toBe('nosniff');
-    expect(response.headers['x-frame-options']).toBe('SAMEORIGIN');
+    expect(response.headers['x-frame-options']).toBe('DENY');
+    expect(response.headers['content-security-policy']).toContain("default-src 'none'");
+    expect(response.headers['referrer-policy']).toBe('no-referrer');
+    expect(response.headers['permissions-policy']).toContain('payment=()');
+  });
+
+  it('rejects oversized JSON before controller dispatch with a safe error', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/finance')
+      .send({ value: 'x'.repeat(2_097_152) })
+      .expect(413);
+
+    expect(response.body).toEqual({
+      error: {
+        code: 'PAYLOAD_TOO_LARGE',
+        message: 'Request payload exceeds the configured limit',
+        requestId: response.headers['x-request-id'],
+      },
+    });
   });
 
   it('serves readiness only when both required dependencies are available', async () => {
@@ -93,6 +111,7 @@ describe('platform HTTP contract', () => {
       '/api/v1/admin/integrations/{service}',
       '/api/v1/admin/invoices/{id}',
       '/api/v1/admin/notification-channels/email',
+      '/api/v1/admin/operations/queues',
       '/api/v1/admin/payments',
       '/api/v1/admin/payments/{id}',
       '/api/v1/admin/system',

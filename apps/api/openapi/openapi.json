@@ -2935,6 +2935,79 @@
         "tags": ["Privacy"]
       }
     },
+    "/api/v1/admin/operations/queues": {
+      "get": {
+        "operationId": "AdminOperationsController_queues",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["generatedAt", "queues", "providerCircuits"],
+                  "properties": {
+                    "generatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "example": "2026-07-30T12:00:00.000Z"
+                    },
+                    "queues": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": ["queue", "counts", "oldestPendingSeconds", "alertCodes"],
+                        "properties": {
+                          "queue": { "type": "string", "example": "mymoneymap-email-delivery" },
+                          "counts": {
+                            "type": "object",
+                            "additionalProperties": { "type": "integer", "minimum": 0 },
+                            "example": { "wait": 0, "active": 1, "completed": 50, "failed": 0 }
+                          },
+                          "oldestPendingSeconds": { "type": "integer", "minimum": 0, "example": 0 },
+                          "alertCodes": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "PERMANENT_FAILURE_PRESENT",
+                                "QUEUE_BACKLOG_HIGH",
+                                "OLDEST_PENDING_OVER_300_SECONDS"
+                              ]
+                            },
+                            "example": []
+                          }
+                        }
+                      }
+                    },
+                    "providerCircuits": {
+                      "type": "object",
+                      "required": ["frankfurter", "finnhub"],
+                      "properties": {
+                        "frankfurter": {
+                          "type": "string",
+                          "enum": ["open", "closed"],
+                          "example": "closed"
+                        },
+                        "finnhub": {
+                          "type": "string",
+                          "enum": ["open", "closed"],
+                          "example": "closed"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Read PII-safe BullMQ backlog, failure, and provider-circuit diagnostics",
+        "tags": ["Administration"]
+      }
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "HealthController_live",

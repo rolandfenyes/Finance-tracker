@@ -30,6 +30,7 @@ class DatabaseLifecycle implements OnModuleDestroy {
             tlsCa: config.get<string>('DATABASE_TLS_CA'),
             poolMax: config.getOrThrow<number>('DATABASE_POOL_MAX'),
             connectionTimeoutMs: config.getOrThrow<number>('DATABASE_CONNECTION_TIMEOUT_MS'),
+            statementTimeoutMs: config.getOrThrow<number>('DATABASE_STATEMENT_TIMEOUT_MS'),
             idleTimeoutMs: config.getOrThrow<number>('DATABASE_IDLE_TIMEOUT_MS'),
             maxLifetimeSeconds: config.getOrThrow<number>('DATABASE_MAX_LIFETIME_SECONDS'),
           }),

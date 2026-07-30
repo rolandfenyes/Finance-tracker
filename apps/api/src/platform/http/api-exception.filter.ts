@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { isApiErrorCode, type ApiErrorCode } from './api-error-code';
 import { ApplicationError } from './application-error';
 import type { ApiViolation } from './validation';
+import { SentryExceptionCaptured } from '@sentry/nestjs';
 
 interface ExceptionBody {
   code?: unknown;
@@ -47,6 +48,7 @@ function safeViolations(value: unknown): ApiViolation[] | undefined {
 export class ApiExceptionFilter implements ExceptionFilter {
   constructor(private readonly adapterHost: HttpAdapterHost) {}
 
+  @SentryExceptionCaptured()
   catch(exception: unknown, host: ArgumentsHost): void {
     const http = host.switchToHttp();
     const request = http.getRequest<Request>();

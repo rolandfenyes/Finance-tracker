@@ -3,13 +3,13 @@ import { ConfigService } from '@nestjs/config';
 import { HttpAdapterHost } from '@nestjs/core';
 import { RedisStore } from 'connect-redis';
 import type { NextFunction, Request, Response } from 'express';
-import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 import { ApiExceptionFilter } from './platform/http/api-exception.filter';
 import { createGlobalValidationPipe } from './platform/http/validation';
 import { installOpenApi } from './openapi/openapi';
 import session from 'express-session';
 import { RedisSecurityService } from './identity/redis-security.service';
+import { installHttpHardening } from './platform/http/http-hardening';
 
 export interface BootstrapOptions {
   installOpenApi?: boolean;
@@ -26,7 +26,7 @@ export function configureApiApplication(
   };
 
   express.set('trust proxy', config.getOrThrow('TRUST_PROXY'));
-  app.use(helmet());
+  installHttpHardening(app);
   const redis = app.get(RedisSecurityService);
   app.use((request: Request, _response: Response, next: NextFunction) => {
     if (

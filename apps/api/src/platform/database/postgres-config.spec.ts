@@ -5,6 +5,7 @@ const basePolicy = {
   tlsMode: 'disable' as const,
   poolMax: 7,
   connectionTimeoutMs: 2_000,
+  statementTimeoutMs: 10_000,
   idleTimeoutMs: 10_000,
   maxLifetimeSeconds: 300,
 };
@@ -16,6 +17,7 @@ describe('PostgreSQL connection policy', () => {
       ssl: false,
       max: 7,
       connectionTimeoutMillis: 2_000,
+      statement_timeout: 10_000,
       idleTimeoutMillis: 10_000,
       maxLifetimeSeconds: 300,
     });
