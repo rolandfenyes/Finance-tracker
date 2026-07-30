@@ -14,6 +14,7 @@ import { RecurrenceModule } from './recurrence/recurrence.module';
 import { ReportingModule } from './reporting/reporting.module';
 import { GoalsModule } from './goals/goals.module';
 import { EmergencyReserveModule } from './emergency-reserve/emergency-reserve.module';
+import { LoansModule } from './loans/loans.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { EmergencyReserveModule } from './emergency-reserve/emergency-reserve.mo
     ReportingModule,
     GoalsModule,
     EmergencyReserveModule,
+    LoansModule,
     HealthModule,
   ],
 })

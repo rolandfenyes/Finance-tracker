@@ -276,6 +276,7 @@ export class EmergencyReserveRepository {
       categoryId: row.category_id,
       categoryLabel: null,
       goalId: row.goal_id,
+      loanId: row.loan_id,
       createdAt: row.created_at.toISOString(),
       updatedAt: row.updated_at.toISOString(),
     }));

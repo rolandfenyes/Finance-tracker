@@ -227,8 +227,58 @@ export interface RecurringRulesTable {
   rrule: string;
   category_id: string | null;
   goal_id: string | null;
+  loan_id: string | null;
   created_at: DatabaseTimestamp;
   updated_at: DatabaseTimestamp;
+}
+
+export interface LoansTable {
+  id: string;
+  user_id: string;
+  title: string;
+  principal: DatabaseDecimal;
+  currency: string;
+  nominal_annual_rate: DatabaseDecimal;
+  term_months: number;
+  starts_on: DatabaseDate;
+  ends_on: DatabaseDate | null;
+  payment_day: number | null;
+  extra_payment_scenario: DatabaseDecimal;
+  insurance_monthly: DatabaseDecimal;
+  estimate_version: 'standard_nominal_monthly_annuity_v1';
+  liability_account_id: string;
+  completed_at: DatabaseTimestamp | null;
+  archived_at: DatabaseTimestamp | null;
+  created_at: DatabaseTimestamp;
+  updated_at: DatabaseTimestamp;
+}
+
+export interface LoanPaymentsTable {
+  id: string;
+  user_id: string;
+  loan_id: string;
+  journal_entry_id: string;
+  amount: DatabaseDecimal;
+  currency: string;
+  principal_component: DatabaseDecimal;
+  interest_component: DatabaseDecimal;
+  fee_component: DatabaseDecimal;
+  loan_principal_component: DatabaseDecimal;
+  loan_interest_component: DatabaseDecimal;
+  loan_fee_component: DatabaseDecimal;
+  loan_currency: string;
+  conversion_status: 'available' | 'stale';
+  conversion_rate: DatabaseDecimal;
+  conversion_provider: string;
+  rate_at: DatabaseTimestamp;
+  fetched_at: DatabaseTimestamp;
+  paid_on: DatabaseDate;
+  source: 'manual' | 'scheduled';
+  recurring_occurrence_id: string | null;
+  note: string | null;
+  reversed_by_journal_entry_id: string | null;
+  corrects_payment_id: string | null;
+  created_at: DatabaseTimestamp;
 }
 
 export interface EmergencyReservesTable {
@@ -347,6 +397,8 @@ export interface DatabaseSchema {
   'mymoneymap.emergency_reserve_movements': EmergencyReserveMovementsTable;
   'mymoneymap.goals': GoalsTable;
   'mymoneymap.goal_contributions': GoalContributionsTable;
+  'mymoneymap.loans': LoansTable;
+  'mymoneymap.loan_payments': LoanPaymentsTable;
   'mymoneymap.recurrence_job_executions': RecurrenceJobExecutionsTable;
   'mymoneymap.recurrence_job_events': RecurrenceJobEventsTable;
   'mymoneymap.recurring_occurrences': RecurringOccurrencesTable;

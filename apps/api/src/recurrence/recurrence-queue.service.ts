@@ -5,6 +5,7 @@ import { CalendarDate } from '../platform/time/calendar-date';
 import { CLOCK, type Clock } from '../platform/time/clock';
 import { expandRecurrence, InvalidRecurrenceRuleError } from './recurrence-rule';
 import { RecurrenceRepository } from './recurrence.repository';
+import { LoansService } from '../loans/loans.service';
 
 export const RECURRENCE_QUEUE = 'mymoneymap-recurrence';
 export const RECURRENCE_MAX_ATTEMPTS = 3;
@@ -25,6 +26,7 @@ export class RecurrenceProcessor {
   constructor(
     @Inject(RecurrenceRepository) private readonly repository: RecurrenceRepository,
     @Inject(CLOCK) private readonly clock: Clock,
+    @Optional() @Inject(LoansService) private readonly loans?: LoansService,
   ) {}
 
   async process(
@@ -49,8 +51,20 @@ export class RecurrenceProcessor {
           const expansion = expandRecurrence(rule.startsOn, rule.rrule, rule.startsOn, dueThrough);
           if (expansion.truncated) throw new RecurrenceCatchUpLimitError();
           for (const dueOn of expansion.dates) {
-            await this.repository.insertOccurrence(transaction, rule, dueOn, executionId, now);
-            occurrences += 1;
+            const occurrence = await this.repository.insertOccurrence(
+              transaction,
+              rule,
+              dueOn,
+              executionId,
+              now,
+            );
+            if (occurrence.inserted) {
+              if (rule.loanId !== null) {
+                if (!this.loans) throw new Error('Loan schedule materializer is unavailable');
+                await this.loans.postScheduledPayment(transaction, rule, occurrence.id, dueOn);
+              }
+              occurrences += 1;
+            }
           }
         }
         await this.repository.completeExecution(transaction, executionId, attempt, now);

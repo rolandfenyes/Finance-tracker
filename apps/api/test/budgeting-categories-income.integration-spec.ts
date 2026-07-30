@@ -12,6 +12,7 @@ describe('budgeting, categories, and basic income PostgreSQL invariants', () => 
       expect(await relation(pool, 'basic_incomes')).toBe('mymoneymap.basic_incomes');
 
       await migrateOneDown(database);
+      await migrateOneDown(database);
       expect(await relation(pool, 'recurring_rules')).toBe('mymoneymap.recurring_rules');
       expect(await relation(pool, 'budget_rules')).toBe('mymoneymap.budget_rules');
 

@@ -872,6 +872,223 @@
         "tags": ["Recurrence"]
       }
     },
+    "/api/v1/loans": {
+      "get": {
+        "operationId": "LoansController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/LoansResponseDto" } }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "List owned loans with separate projected schedule and posted payment history",
+        "tags": ["Loans"]
+      },
+      "post": {
+        "operationId": "LoansController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateLoanDto" },
+              "examples": {
+                "fixedNominal": {
+                  "value": {
+                    "title": "Synthetic fixed-rate loan",
+                    "principal": "120000",
+                    "currency": "HUF",
+                    "nominalAnnualRate": "12",
+                    "termMonths": 12,
+                    "startsOn": "2026-07-30",
+                    "paymentDay": 30,
+                    "extraPaymentScenario": "0",
+                    "insuranceMonthly": "500"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/LoansResponseDto" } }
+            }
+          },
+          "422": { "description": "Loan financial or ownership invariant failed" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Create an owned loan and its liability ledger account",
+        "tags": ["Loans"]
+      }
+    },
+    "/api/v1/loans/{id}": {
+      "patch": {
+        "operationId": "LoansController_update",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/LoansResponseDto" } }
+            }
+          },
+          "404": { "description": "" },
+          "409": { "description": "The loan is archived" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Update open loan configuration without rewriting posted history",
+        "tags": ["Loans"]
+      },
+      "delete": {
+        "operationId": "LoansController_delete",
+        "parameters": [],
+        "responses": {
+          "204": { "description": "" },
+          "409": { "description": "The loan has immutable payment history" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Delete a history-free loan; otherwise archive it",
+        "tags": ["Loans"]
+      }
+    },
+    "/api/v1/loans/{id}/archive": {
+      "post": {
+        "operationId": "LoansController_archive",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/LoansResponseDto" } }
+            }
+          },
+          "409": { "description": "The loan still has outstanding principal" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Archive a fully repaid loan without deleting payment history",
+        "tags": ["Loans"]
+      }
+    },
+    "/api/v1/loans/{id}/payments": {
+      "post": {
+        "operationId": "LoansController_payment",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/LoanResponseDto" } }
+            }
+          },
+          "422": { "description": "FX, component, or overpayment policy failed" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Post an idempotent repayment with explicit financial components",
+        "tags": ["Loans"]
+      }
+    },
+    "/api/v1/loans/{loanId}/payments/{id}/corrections": {
+      "post": {
+        "operationId": "LoansController_correct",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/LoanResponseDto" } }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Reverse and replace an owned loan payment atomically",
+        "tags": ["Loans"]
+      }
+    },
+    "/api/v1/loans/{loanId}/payments/{id}/reversals": {
+      "post": {
+        "operationId": "LoansController_reverse",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/LoanResponseDto" } }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Reverse an owned repayment and reopen a paid-off loan",
+        "tags": ["Loans"]
+      }
+    },
+    "/api/v1/loans/{id}/recurring-rule": {
+      "post": {
+        "operationId": "LoansController_createRule",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/LoansResponseDto" } }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Create the loan repayment schedule used by the recurrence worker",
+        "tags": ["Loans"]
+      },
+      "put": {
+        "operationId": "LoansController_updateRule",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/LoansResponseDto" } }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Replace an owned loan repayment schedule",
+        "tags": ["Loans"]
+      },
+      "delete": {
+        "operationId": "LoansController_deleteRule",
+        "parameters": [],
+        "responses": { "204": { "description": "" } },
+        "security": [{ "cookie": [] }],
+        "summary": "Delete an owned loan repayment schedule and its forecasts",
+        "tags": ["Loans"]
+      }
+    },
     "/api/v1/reports/months/current": {
       "get": {
         "description": "Separates posted activity, forecast sources, and the combined projection. This is a cash-flow report, not net worth.",
@@ -2201,6 +2418,7 @@
             "nullable": true,
             "description": "Goal link when this transfer forecast is managed by the goals API."
           },
+          "loanId": { "type": "string", "format": "uuid", "nullable": true },
           "forecast": {
             "nullable": true,
             "type": "object",
@@ -2220,6 +2438,7 @@
           "categoryId",
           "categoryLabel",
           "goalId",
+          "loanId",
           "forecast",
           "createdAt",
           "updatedAt"
@@ -2265,6 +2484,135 @@
           }
         },
         "required": ["title", "amount", "currency", "economicType", "startsOn", "rrule"]
+      },
+      "LoanPaymentResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "journalEntryId": { "type": "string", "format": "uuid" },
+          "amount": { "type": "string" },
+          "currency": { "type": "string" },
+          "principalComponent": { "type": "string" },
+          "interestComponent": { "type": "string" },
+          "feeComponent": { "type": "string" },
+          "loanPrincipalComponent": { "type": "string" },
+          "loanInterestComponent": { "type": "string" },
+          "loanFeeComponent": { "type": "string" },
+          "loanCurrency": { "type": "string" },
+          "conversion": { "type": "object" },
+          "paidOn": { "type": "string", "format": "date" },
+          "source": { "type": "string", "enum": ["manual", "scheduled"] },
+          "recurringOccurrenceId": { "type": "string", "format": "uuid", "nullable": true },
+          "note": { "type": "string", "nullable": true },
+          "reversedByJournalEntryId": { "type": "string", "format": "uuid", "nullable": true },
+          "correctsPaymentId": { "type": "string", "format": "uuid", "nullable": true },
+          "createdAt": { "type": "string", "format": "date-time" }
+        },
+        "required": [
+          "id",
+          "journalEntryId",
+          "amount",
+          "currency",
+          "principalComponent",
+          "interestComponent",
+          "feeComponent",
+          "loanPrincipalComponent",
+          "loanInterestComponent",
+          "loanFeeComponent",
+          "loanCurrency",
+          "conversion",
+          "paidOn",
+          "source",
+          "recurringOccurrenceId",
+          "note",
+          "reversedByJournalEntryId",
+          "correctsPaymentId",
+          "createdAt"
+        ]
+      },
+      "LoanResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "principal": { "type": "string" },
+          "outstandingPrincipal": { "type": "string" },
+          "currency": { "type": "string" },
+          "nominalAnnualRate": { "type": "string" },
+          "termMonths": { "type": "number" },
+          "startsOn": { "type": "string", "format": "date" },
+          "endsOn": { "type": "string", "format": "date", "nullable": true },
+          "paymentDay": { "type": "number", "nullable": true },
+          "extraPaymentScenario": { "type": "string" },
+          "insuranceMonthly": { "type": "string" },
+          "estimate": { "type": "object" },
+          "projectedSchedule": { "type": "array", "items": { "type": "object" } },
+          "payments": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/LoanPaymentResponseDto" }
+          },
+          "recurringRule": { "type": "object", "nullable": true },
+          "completedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "archivedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": [
+          "id",
+          "title",
+          "principal",
+          "outstandingPrincipal",
+          "currency",
+          "nominalAnnualRate",
+          "termMonths",
+          "startsOn",
+          "endsOn",
+          "paymentDay",
+          "extraPaymentScenario",
+          "insuranceMonthly",
+          "estimate",
+          "projectedSchedule",
+          "payments",
+          "recurringRule",
+          "completedAt",
+          "archivedAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "LoansResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/LoanResponseDto" } }
+        },
+        "required": ["items"]
+      },
+      "CreateLoanDto": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "example": "Synthetic fixed-rate loan", "maxLength": 120 },
+          "principal": { "type": "string", "example": "120000" },
+          "currency": { "type": "string", "example": "HUF", "pattern": "^[A-Z]{3}$" },
+          "nominalAnnualRate": { "type": "string", "example": "12" },
+          "termMonths": { "type": "number", "example": 12 },
+          "startsOn": { "type": "string", "format": "date", "example": "2026-07-30" },
+          "endsOn": { "type": "string", "format": "date", "nullable": true },
+          "paymentDay": { "type": "number", "minimum": 1, "maximum": 31, "nullable": true },
+          "extraPaymentScenario": {
+            "type": "string",
+            "default": "0",
+            "description": "Projection scenario only."
+          },
+          "insuranceMonthly": { "type": "string", "default": "0" }
+        },
+        "required": [
+          "title",
+          "principal",
+          "currency",
+          "nominalAnnualRate",
+          "termMonths",
+          "startsOn"
+        ]
       },
       "ReportPeriodDto": {
         "type": "object",

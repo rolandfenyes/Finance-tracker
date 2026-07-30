@@ -40,6 +40,7 @@ describe('emergency reserve calculations', () => {
       categoryId: null,
       categoryLabel: null,
       goalId: null,
+      loanId: null,
       createdAt: '2026-07-29T00:00:00.000Z',
       updatedAt: '2026-07-29T00:00:00.000Z',
     });

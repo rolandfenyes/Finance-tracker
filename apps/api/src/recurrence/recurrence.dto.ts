@@ -176,6 +176,8 @@ export class RecurringRuleResponseDto {
     description: 'Goal link when this transfer forecast is managed by the goals API.',
   })
   goalId!: string | null;
+  @ApiProperty({ type: String, format: 'uuid', nullable: true })
+  loanId!: string | null;
 
   @ApiProperty({ type: RecurrenceForecastResponseDto, nullable: true })
   forecast!: RecurrenceForecastResponseDto | null;

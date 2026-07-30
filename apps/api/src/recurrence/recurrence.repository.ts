@@ -22,6 +22,7 @@ export interface RecurringRuleWrite {
   rrule: string;
   categoryId: string | null;
   goalId?: string | null;
+  loanId?: string | null;
 }
 
 export interface MaterializedRule {
@@ -33,6 +34,7 @@ export interface MaterializedRule {
   startsOn: string;
   rrule: string;
   categoryId: string | null;
+  loanId: string | null;
 }
 
 @Injectable()
@@ -72,6 +74,7 @@ export class RecurrenceRepository {
         'r.rrule',
         'r.category_id',
         'r.goal_id',
+        'r.loan_id',
         'r.created_at',
         'r.updated_at',
         'c.label as category_label',
@@ -92,6 +95,7 @@ export class RecurrenceRepository {
       categoryId: row.category_id,
       categoryLabel: row.category_label,
       goalId: row.goal_id,
+      loanId: row.loan_id,
       createdAt: row.created_at.toISOString(),
       updatedAt: row.updated_at.toISOString(),
     }));
@@ -134,6 +138,7 @@ export class RecurrenceRepository {
         rrule: values.rrule,
         category_id: values.categoryId,
         goal_id: values.goalId ?? null,
+        loan_id: values.loanId ?? null,
         created_at: now,
         updated_at: now,
       })
@@ -302,6 +307,9 @@ export class RecurrenceRepository {
       .leftJoin('mymoneymap.goals as g', (join) =>
         join.onRef('g.id', '=', 'r.goal_id').onRef('g.user_id', '=', 'r.user_id'),
       )
+      .leftJoin('mymoneymap.loans as l', (join) =>
+        join.onRef('l.id', '=', 'r.loan_id').onRef('l.user_id', '=', 'r.user_id'),
+      )
       .select([
         'r.id',
         'r.user_id as userId',
@@ -311,6 +319,7 @@ export class RecurrenceRepository {
         'r.starts_on as startsOn',
         'r.rrule',
         'r.category_id as categoryId',
+        'r.loan_id as loanId',
       ])
       .where('r.starts_on', '<=', dueThrough)
       .where((expression) =>
@@ -319,6 +328,15 @@ export class RecurrenceRepository {
           expression.and([
             expression('g.archived_at', 'is', null),
             expression('g.status', '!=', 'completed'),
+          ]),
+        ]),
+      )
+      .where((expression) =>
+        expression.or([
+          expression('r.loan_id', 'is', null),
+          expression.and([
+            expression('l.completed_at', 'is', null),
+            expression('l.archived_at', 'is', null),
           ]),
         ]),
       )
@@ -339,11 +357,12 @@ export class RecurrenceRepository {
     dueOn: string,
     executionId: string,
     now: Date,
-  ): Promise<void> {
-    await transaction
+  ): Promise<{ id: string; inserted: boolean }> {
+    const id = randomUUID();
+    const row = await transaction
       .insertInto('mymoneymap.recurring_occurrences')
       .values({
-        id: randomUUID(),
+        id,
         rule_id: rule.id,
         user_id: rule.userId,
         due_on: dueOn,
@@ -356,7 +375,9 @@ export class RecurrenceRepository {
         created_at: now,
       })
       .onConflict((conflict) => conflict.columns(['rule_id', 'due_on']).doNothing())
-      .execute();
+      .returning('id')
+      .executeTakeFirst();
+    return { id, inserted: row !== undefined };
   }
 
   async completeExecution(

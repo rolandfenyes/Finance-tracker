@@ -522,6 +522,7 @@ export class GoalsRepository {
           categoryId: null,
           categoryLabel: null,
           goalId: row.goal_id!,
+          loanId: null,
           createdAt: row.created_at.toISOString(),
           updatedAt: row.updated_at.toISOString(),
         }
