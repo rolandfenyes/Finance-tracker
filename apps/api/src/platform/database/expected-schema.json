@@ -43,6 +43,26 @@
     },
     {
       "schema": "mymoneymap",
+      "name": "email_channel_settings",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "email_deliveries",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "email_suppressions",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "email_templates",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
       "name": "email_verification_tokens",
       "kind": "r"
     },
@@ -239,6 +259,11 @@
     {
       "schema": "mymoneymap",
       "name": "user_currencies",
+      "kind": "r"
+    },
+    {
+      "schema": "mymoneymap",
+      "name": "user_email_preferences",
       "kind": "r"
     },
     {
@@ -928,6 +953,374 @@
       "type": "boolean",
       "nullable": false,
       "default": "true"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_channel_settings",
+      "name": "id",
+      "type": "smallint",
+      "nullable": false,
+      "default": "1"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_channel_settings",
+      "name": "enabled",
+      "type": "boolean",
+      "nullable": false,
+      "default": "false"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_channel_settings",
+      "name": "provider",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": "'disabled'::character varying"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_channel_settings",
+      "name": "from_address",
+      "type": "character varying(320)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_channel_settings",
+      "name": "reply_to_address",
+      "type": "character varying(320)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_channel_settings",
+      "name": "updated_by",
+      "type": "uuid",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_channel_settings",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_channel_settings",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "event_key",
+      "type": "character varying(255)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "correlation_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "recipient_email",
+      "type": "character varying(320)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "template_code",
+      "type": "character varying(80)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "template_version",
+      "type": "integer",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "locale",
+      "type": "character varying(5)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "classification",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "template_data",
+      "type": "jsonb",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "status",
+      "type": "character varying(24)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "queue_job_id",
+      "type": "character varying(255)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "attempt_count",
+      "type": "integer",
+      "nullable": false,
+      "default": "0"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "max_attempts",
+      "type": "integer",
+      "nullable": false,
+      "default": "3"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "provider_message_id",
+      "type": "character varying(255)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "error_code",
+      "type": "character varying(80)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "queued_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "started_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "delivered_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "failed_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_suppressions",
+      "name": "email_hash",
+      "type": "character(64)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_suppressions",
+      "name": "reason",
+      "type": "character varying(32)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_suppressions",
+      "name": "provider",
+      "type": "character varying(16)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_suppressions",
+      "name": "provider_event_id",
+      "type": "character varying(255)",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_suppressions",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_templates",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_templates",
+      "name": "code",
+      "type": "character varying(80)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_templates",
+      "name": "version",
+      "type": "integer",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_templates",
+      "name": "locale",
+      "type": "character varying(5)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_templates",
+      "name": "name",
+      "type": "character varying(160)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_templates",
+      "name": "subject",
+      "type": "character varying(255)",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_templates",
+      "name": "body",
+      "type": "text",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_templates",
+      "name": "data_contract",
+      "type": "jsonb",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_templates",
+      "name": "active",
+      "type": "boolean",
+      "nullable": false,
+      "default": "true"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_templates",
+      "name": "last_tested_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_templates",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_templates",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
     },
     {
       "schema": "mymoneymap",
@@ -4475,6 +4868,30 @@
     },
     {
       "schema": "mymoneymap",
+      "relation": "user_email_preferences",
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_email_preferences",
+      "name": "educational_enabled",
+      "type": "boolean",
+      "nullable": false,
+      "default": "true"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_email_preferences",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "default": null
+    },
+    {
+      "schema": "mymoneymap",
       "relation": "user_invoices",
       "name": "id",
       "type": "uuid",
@@ -5410,6 +5827,144 @@
       "relation": "currencies",
       "name": "currencies_rounding_mode_check",
       "definition": "CHECK (rounding_mode::text = ANY (ARRAY['DOWN'::character varying, 'UP'::character varying, 'HALF_UP'::character varying, 'HALF_EVEN'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_channel_settings",
+      "name": "email_channel_enabled_check",
+      "definition": "CHECK (NOT enabled OR provider::text <> 'disabled'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_channel_settings",
+      "name": "email_channel_provider_check",
+      "definition": "CHECK (provider::text = ANY (ARRAY['disabled'::character varying, 'log'::character varying, 'postmark'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_channel_settings",
+      "name": "email_channel_settings_id_check",
+      "definition": "CHECK (id = 1)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_channel_settings",
+      "name": "email_channel_settings_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_channel_settings",
+      "name": "email_channel_settings_updated_by_fkey",
+      "definition": "FOREIGN KEY (updated_by) REFERENCES mymoneymap.users(id) ON DELETE SET NULL"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "email_deliveries_attempt_check",
+      "definition": "CHECK (attempt_count >= 0 AND max_attempts >= 1 AND max_attempts <= 10 AND attempt_count <= max_attempts)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "email_deliveries_classification_check",
+      "definition": "CHECK (classification::text = ANY (ARRAY['transactional'::character varying, 'educational'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "email_deliveries_data_check",
+      "definition": "CHECK (jsonb_typeof(template_data) = 'object'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "email_deliveries_event_key_key",
+      "definition": "UNIQUE (event_key)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "email_deliveries_locale_check",
+      "definition": "CHECK (locale::text = ANY (ARRAY['en'::character varying, 'es'::character varying, 'hu'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "email_deliveries_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "email_deliveries_status_check",
+      "definition": "CHECK (status::text = ANY (ARRAY['queued'::character varying, 'running'::character varying, 'delivered'::character varying, 'suppressed'::character varying, 'preference_blocked'::character varying, 'retryable_failed'::character varying, 'dead_letter'::character varying, 'disabled'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "email_deliveries_user_id_fkey",
+      "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE SET NULL"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_suppressions",
+      "name": "email_suppressions_pkey",
+      "definition": "PRIMARY KEY (email_hash)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_suppressions",
+      "name": "email_suppressions_provider_check",
+      "definition": "CHECK (provider::text = ANY (ARRAY['postmark'::character varying, 'internal'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_suppressions",
+      "name": "email_suppressions_reason_check",
+      "definition": "CHECK (reason::text = ANY (ARRAY['hard_bounce'::character varying, 'spam_complaint'::character varying, 'manual'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_templates",
+      "name": "email_templates_code_check",
+      "definition": "CHECK (code::text ~ '^[a-z][a-z0-9_]{0,79}$'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_templates",
+      "name": "email_templates_contract_check",
+      "definition": "CHECK (jsonb_typeof(data_contract) = 'array'::text)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_templates",
+      "name": "email_templates_identity_unique",
+      "definition": "UNIQUE (code, version, locale)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_templates",
+      "name": "email_templates_locale_check",
+      "definition": "CHECK (locale::text = ANY (ARRAY['en'::character varying, 'es'::character varying, 'hu'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_templates",
+      "name": "email_templates_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_templates",
+      "name": "email_templates_text_check",
+      "definition": "CHECK (char_length(btrim(name::text)) >= 1 AND char_length(btrim(name::text)) <= 160 AND char_length(btrim(subject::text)) >= 1 AND char_length(btrim(subject::text)) <= 255 AND char_length(btrim(body)) > 0)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_templates",
+      "name": "email_templates_version_check",
+      "definition": "CHECK (version > 0)"
     },
     {
       "schema": "mymoneymap",
@@ -7561,6 +8116,18 @@
     },
     {
       "schema": "mymoneymap",
+      "relation": "user_email_preferences",
+      "name": "user_email_preferences_pkey",
+      "definition": "PRIMARY KEY (user_id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_email_preferences",
+      "name": "user_email_preferences_user_id_fkey",
+      "definition": "FOREIGN KEY (user_id) REFERENCES mymoneymap.users(id) ON DELETE CASCADE"
+    },
+    {
+      "schema": "mymoneymap",
       "relation": "user_invoices",
       "name": "user_invoices_amount_check",
       "definition": "CHECK (total_amount >= 0::numeric)"
@@ -7914,6 +8481,60 @@
       "relation": "currencies",
       "name": "currencies_pkey",
       "definition": "CREATE UNIQUE INDEX currencies_pkey ON mymoneymap.currencies USING btree (code)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_channel_settings",
+      "name": "email_channel_settings_pkey",
+      "definition": "CREATE UNIQUE INDEX email_channel_settings_pkey ON mymoneymap.email_channel_settings USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "email_deliveries_event_key_key",
+      "definition": "CREATE UNIQUE INDEX email_deliveries_event_key_key ON mymoneymap.email_deliveries USING btree (event_key)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "email_deliveries_pkey",
+      "definition": "CREATE UNIQUE INDEX email_deliveries_pkey ON mymoneymap.email_deliveries USING btree (id)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "email_deliveries_status_index",
+      "definition": "CREATE INDEX email_deliveries_status_index ON mymoneymap.email_deliveries USING btree (status, created_at)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_deliveries",
+      "name": "email_deliveries_user_index",
+      "definition": "CREATE INDEX email_deliveries_user_index ON mymoneymap.email_deliveries USING btree (user_id, created_at DESC, id DESC)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_suppressions",
+      "name": "email_suppressions_pkey",
+      "definition": "CREATE UNIQUE INDEX email_suppressions_pkey ON mymoneymap.email_suppressions USING btree (email_hash)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_templates",
+      "name": "email_templates_active_unique",
+      "definition": "CREATE UNIQUE INDEX email_templates_active_unique ON mymoneymap.email_templates USING btree (code, locale) WHERE active"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_templates",
+      "name": "email_templates_identity_unique",
+      "definition": "CREATE UNIQUE INDEX email_templates_identity_unique ON mymoneymap.email_templates USING btree (code, version, locale)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "email_templates",
+      "name": "email_templates_pkey",
+      "definition": "CREATE UNIQUE INDEX email_templates_pkey ON mymoneymap.email_templates USING btree (id)"
     },
     {
       "schema": "mymoneymap",
@@ -8718,6 +9339,12 @@
       "relation": "user_currencies",
       "name": "user_currencies_pkey",
       "definition": "CREATE UNIQUE INDEX user_currencies_pkey ON mymoneymap.user_currencies USING btree (user_id, code)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "user_email_preferences",
+      "name": "user_email_preferences_pkey",
+      "definition": "CREATE UNIQUE INDEX user_email_preferences_pkey ON mymoneymap.user_email_preferences USING btree (user_id)"
     },
     {
       "schema": "mymoneymap",

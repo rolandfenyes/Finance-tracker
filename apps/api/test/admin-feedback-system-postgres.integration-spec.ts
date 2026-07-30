@@ -51,6 +51,7 @@ describe('admin/feedback/system PostgreSQL contract', () => {
 
       await migrateOneDown(database);
       await migrateOneDown(database);
+      await migrateOneDown(database);
       expect(await relation(pool, 'feedback')).toBeNull();
       expect(await relation(pool, 'privileged_audit_events')).toBeNull();
       expect(await relation(pool, 'securities_trades')).toBe('mymoneymap.securities_trades');

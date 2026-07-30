@@ -20,6 +20,7 @@ import { SecuritiesModule } from './securities/securities.module';
 import { FeedbackModule } from './feedback/feedback.module';
 import { AdministrationModule } from './administration/administration.module';
 import { BillingModule } from './billing/billing.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { BillingModule } from './billing/billing.module';
     FeedbackModule,
     AdministrationModule,
     BillingModule,
+    NotificationsModule,
     HealthModule,
   ],
 })

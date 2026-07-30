@@ -8,9 +8,12 @@ import { PasskeyService } from './passkey.service';
 import { PasswordService } from './password.service';
 import { RedisSecurityService } from './redis-security.service';
 import { SessionService } from './session.service';
-import { DeferredVerificationNotifier, VERIFICATION_NOTIFIER } from './verification-notifier';
+import { VERIFICATION_NOTIFIER } from './verification-notifier';
+import { NotificationsCoreModule } from '../notifications/notifications-core.module';
+import { QueuedVerificationNotifier } from '../notifications/notification-notifier.adapters';
 
 @Module({
+  imports: [NotificationsCoreModule],
   controllers: [IdentityController],
   providers: [
     IdentityRepository,
@@ -22,7 +25,8 @@ import { DeferredVerificationNotifier, VERIFICATION_NOTIFIER } from './verificat
     PasskeyService,
     AuthenticationGuard,
     VerifiedEmailGuard,
-    { provide: VERIFICATION_NOTIFIER, useClass: DeferredVerificationNotifier },
+    QueuedVerificationNotifier,
+    { provide: VERIFICATION_NOTIFIER, useExisting: QueuedVerificationNotifier },
   ],
   exports: [
     AuthenticationGuard,

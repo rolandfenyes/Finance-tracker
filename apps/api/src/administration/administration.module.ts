@@ -6,17 +6,20 @@ import { ENCRYPTED_SETTING_PORT } from '../platform/security/encrypted-setting.p
 import { AdminGuard } from './admin.guard';
 import { AdministrationController } from './administration.controller';
 import { AdministrationService } from './administration.service';
-import { DeferredRecoveryNotifier, RECOVERY_NOTIFIER } from './recovery-notifier';
+import { RECOVERY_NOTIFIER } from './recovery-notifier';
+import { NotificationsCoreModule } from '../notifications/notifications-core.module';
+import { QueuedRecoveryNotifier } from '../notifications/notification-notifier.adapters';
 
 @Module({
-  imports: [IdentityModule, FeedbackModule],
+  imports: [IdentityModule, FeedbackModule, NotificationsCoreModule],
   controllers: [AdministrationController],
   providers: [
     AdministrationService,
     AdminGuard,
     AesGcmEncryptedSettingAdapter,
     { provide: ENCRYPTED_SETTING_PORT, useExisting: AesGcmEncryptedSettingAdapter },
-    { provide: RECOVERY_NOTIFIER, useClass: DeferredRecoveryNotifier },
+    QueuedRecoveryNotifier,
+    { provide: RECOVERY_NOTIFIER, useExisting: QueuedRecoveryNotifier },
   ],
 })
 export class AdministrationModule {}

@@ -2727,6 +2727,134 @@
         "tags": ["Administrative billing"]
       }
     },
+    "/api/v1/users/me/notification-preferences": {
+      "get": {
+        "operationId": "NotificationsController_preference",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": { "educationalEnabled": true, "transactionalEnabled": true }
+                }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Read email preferences; transactional security mail remains required",
+        "tags": ["Notifications"]
+      },
+      "patch": {
+        "operationId": "NotificationsController_update",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": { "educationalEnabled": false, "transactionalEnabled": true }
+                }
+              }
+            }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Enable or disable educational email without disabling transactional mail",
+        "tags": ["Notifications"]
+      }
+    },
+    "/api/v1/admin/email-templates": {
+      "get": {
+        "operationId": "NotificationsAdminController_templates",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": { "application/json": { "schema": { "type": "object" } } }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "List versioned EN/ES/HU email template contracts without recipient data",
+        "tags": ["Administration"]
+      }
+    },
+    "/api/v1/admin/email-templates/{code}/preview": {
+      "post": {
+        "operationId": "NotificationsAdminController_preview",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": { "application/json": { "schema": { "type": "object" } } }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Validate a template contract and render a synthetic preview",
+        "tags": ["Administration"]
+      }
+    },
+    "/api/v1/admin/email-test-jobs": {
+      "post": {
+        "operationId": "NotificationsAdminController_test",
+        "parameters": [],
+        "responses": {
+          "202": {
+            "description": "",
+            "content": { "application/json": { "schema": { "type": "object" } } }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Queue an idempotent template test using synthetic template data",
+        "tags": ["Administration"]
+      }
+    },
+    "/api/v1/admin/notification-channels/email": {
+      "get": {
+        "operationId": "NotificationsAdminController_channel",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": { "application/json": { "schema": { "type": "object" } } }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Read the only approved notification channel without provider secrets",
+        "tags": ["Administration"]
+      },
+      "patch": {
+        "operationId": "NotificationsAdminController_updateChannel",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": { "application/json": { "schema": { "type": "object" } } }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Configure the email channel; production enabling remains gated",
+        "tags": ["Administration"]
+      }
+    },
+    "/api/v1/admin/email-settings": {
+      "patch": {
+        "operationId": "NotificationsAdminController_updateSettings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": { "application/json": { "schema": { "type": "object" } } }
+          }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "Compatibility alias for the approved email channel settings contract",
+        "tags": ["Administration"]
+      }
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "HealthController_live",

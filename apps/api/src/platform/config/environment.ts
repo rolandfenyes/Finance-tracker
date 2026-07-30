@@ -63,6 +63,13 @@ const environmentSchema = z
     SECURITIES_PROVIDER_TIMEOUT_MS: positiveMilliseconds.default(5000),
     FINNHUB_API_KEY: z.string().min(1).optional(),
     FINNHUB_BASE_URL: z.url().default('https://finnhub.io/api/v1'),
+    EMAIL_DELIVERY_ENABLED: booleanText.default(false),
+    EMAIL_DELIVERY_PRODUCTION_APPROVED: booleanText.default(false),
+    EMAIL_PROVIDER: z.enum(['disabled', 'log', 'postmark']).default('disabled'),
+    EMAIL_FROM_ADDRESS: z.email().optional(),
+    EMAIL_REPLY_TO_ADDRESS: z.email().optional(),
+    POSTMARK_SERVER_TOKEN: z.string().min(1).optional(),
+    POSTMARK_BASE_URL: z.url().default('https://api.postmarkapp.com'),
     SETTINGS_ENCRYPTION_KEY: z.string().optional(),
     ACCOUNT_RECOVERY_TTL_SECONDS: positiveSeconds.default(3600),
     SESSION_SECRET: z.string().min(32),
@@ -125,6 +132,27 @@ const environmentSchema = z
         code: 'custom',
         path: ['SECURITIES_MARKET_DATA_PRODUCTION_APPROVED'],
         message: 'must remain false until delay, coverage, quota, and redistribution are approved',
+      });
+    }
+
+    if (environment.EMAIL_DELIVERY_ENABLED && !environment.EMAIL_DELIVERY_PRODUCTION_APPROVED) {
+      context.addIssue({
+        code: 'custom',
+        path: ['EMAIL_DELIVERY_PRODUCTION_APPROVED'],
+        message: 'must remain false until the Step 21 email production gate is approved',
+      });
+    }
+
+    if (
+      environment.EMAIL_DELIVERY_ENABLED &&
+      (environment.EMAIL_PROVIDER !== 'postmark' ||
+        !environment.POSTMARK_SERVER_TOKEN ||
+        !environment.EMAIL_FROM_ADDRESS)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['EMAIL_PROVIDER'],
+        message: 'enabled production delivery requires approved Postmark credentials and sender',
       });
     }
 
