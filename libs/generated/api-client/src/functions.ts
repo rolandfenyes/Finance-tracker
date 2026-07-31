@@ -15,6 +15,8 @@ export type { IdentityControllerChangePassword$Params as IdentityControllerChang
 export { identityControllerChangePassword as identityControllerChangePassword } from './fn/identity/identity-controller-change-password';
 export type { IdentityControllerRegistrationOptions$Params as IdentityControllerRegistrationOptions$Params } from './fn/identity/identity-controller-registration-options';
 export { identityControllerRegistrationOptions as identityControllerRegistrationOptions } from './fn/identity/identity-controller-registration-options';
+export type { IdentityControllerListPasskeys$Params as IdentityControllerListPasskeys$Params } from './fn/identity/identity-controller-list-passkeys';
+export { identityControllerListPasskeys as identityControllerListPasskeys } from './fn/identity/identity-controller-list-passkeys';
 export type { IdentityControllerRegisterPasskey$Params as IdentityControllerRegisterPasskey$Params } from './fn/identity/identity-controller-register-passkey';
 export { identityControllerRegisterPasskey as identityControllerRegisterPasskey } from './fn/identity/identity-controller-register-passkey';
 export type { IdentityControllerPasskeyOptions$Params as IdentityControllerPasskeyOptions$Params } from './fn/identity/identity-controller-passkey-options';

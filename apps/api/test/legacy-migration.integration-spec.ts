@@ -65,6 +65,7 @@ describe('legacy migration rehearsal (PostgreSQL)', () => {
     await withIsolatedPostgresDatabase(async ({ database, pool }) => {
       await migrateToLatest(database);
       await migrateOneDown(database);
+      await migrateOneDown(database);
       const rolledBack = await pool.query<{ name: string | null }>(
         `SELECT to_regclass('mymoneymap.legacy_migration_batches')::text AS name`,
       );

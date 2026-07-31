@@ -29,6 +29,6 @@ request or response type differs from these documents, regenerate from OpenAPI
 and resolve the discrepancy before changing frontend behavior.
 
 The runnable Step 00 includes a mandatory generated-schema usability audit.
-Known passkey, notification, securities, administration, and billing response
+Known notification, securities, administration, and billing response
 typing gaps must be corrected at the backend/OpenAPI boundary before their
 dependent Angular feature steps.

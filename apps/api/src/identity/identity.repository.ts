@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 import { POSTGRES_POOL } from '../platform/database/database.constants';
 import type { IdentityUser, UserRole, UserStatus } from './identity.types';
@@ -26,6 +26,9 @@ export interface PasskeyRecord {
   transports: string[];
   deviceType: string;
   backedUp: boolean;
+  label: string;
+  createdAt: Date;
+  lastUsedAt: Date | null;
 }
 
 @Injectable()
@@ -171,10 +174,14 @@ export class IdentityRepository {
       transports: string[];
       device_type: string;
       backed_up: boolean;
+      label: string;
+      created_at: Date;
+      last_used_at: Date | null;
     }>(
       `SELECT id, user_id, credential_id, public_key, counter::text, revision::text, transports,
-              device_type, backed_up
-         FROM mymoneymap.passkeys WHERE user_id = $1`,
+              device_type, backed_up, label, created_at, last_used_at
+         FROM mymoneymap.passkeys WHERE user_id = $1
+         ORDER BY created_at ASC, id ASC`,
       [userId],
     );
     return result.rows.map(mapPasskey);
@@ -191,9 +198,12 @@ export class IdentityRepository {
       transports: string[];
       device_type: string;
       backed_up: boolean;
+      label: string;
+      created_at: Date;
+      last_used_at: Date | null;
     }>(
       `SELECT id, user_id, credential_id, public_key, counter::text, revision::text, transports,
-              device_type, backed_up
+              device_type, backed_up, label, created_at, last_used_at
          FROM mymoneymap.passkeys WHERE credential_id = $1 LIMIT 1`,
       [credentialId],
     );
@@ -212,24 +222,32 @@ export class IdentityRepository {
     now: Date;
   }): Promise<string> {
     const id = randomUUID();
-    await this.pool.query(
-      `INSERT INTO mymoneymap.passkeys
-         (id, user_id, credential_id, public_key, counter, transports, device_type,
-          backed_up, label, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-      [
-        id,
-        input.userId,
-        input.credentialId,
-        Buffer.from(input.publicKey),
-        String(input.counter),
-        input.transports,
-        input.deviceType,
-        input.backedUp,
-        input.label,
-        input.now,
-      ],
-    );
+    await this.transaction(async (client) => {
+      await client.query(
+        `INSERT INTO mymoneymap.passkeys
+           (id, user_id, credential_id, public_key, counter, transports, device_type,
+            backed_up, label, created_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+        [
+          id,
+          input.userId,
+          input.credentialId,
+          Buffer.from(input.publicKey),
+          String(input.counter),
+          input.transports,
+          input.deviceType,
+          input.backedUp,
+          input.label,
+          input.now,
+        ],
+      );
+      await insertPasskeyAudit(client, {
+        userId: input.userId,
+        action: 'passkey.registered',
+        passkeyId: id,
+        now: input.now,
+      });
+    });
     return id;
   }
 
@@ -249,12 +267,21 @@ export class IdentityRepository {
     return result.rowCount === 1;
   }
 
-  async deleteOwnedPasskey(userId: string, passkeyId: string): Promise<boolean> {
-    const result = await this.pool.query(
-      'DELETE FROM mymoneymap.passkeys WHERE id = $1 AND user_id = $2',
-      [passkeyId, userId],
-    );
-    return result.rowCount === 1;
+  async deleteOwnedPasskey(userId: string, passkeyId: string, now: Date): Promise<boolean> {
+    return this.transaction(async (client) => {
+      const result = await client.query(
+        'DELETE FROM mymoneymap.passkeys WHERE id = $1 AND user_id = $2 RETURNING id',
+        [passkeyId, userId],
+      );
+      if (result.rowCount !== 1) return false;
+      await insertPasskeyAudit(client, {
+        userId,
+        action: 'passkey.deleted',
+        passkeyId,
+        now,
+      });
+      return true;
+    });
   }
 
   private async transaction<T>(work: (client: PoolClient) => Promise<T>): Promise<T> {
@@ -297,6 +324,9 @@ function mapPasskey(row: {
   transports: string[];
   device_type: string;
   backed_up: boolean;
+  label: string;
+  created_at: Date;
+  last_used_at: Date | null;
 }): PasskeyRecord {
   return {
     id: row.id,
@@ -308,5 +338,32 @@ function mapPasskey(row: {
     transports: row.transports,
     deviceType: row.device_type,
     backedUp: row.backed_up,
+    label: row.label,
+    createdAt: row.created_at,
+    lastUsedAt: row.last_used_at,
   };
+}
+
+function insertPasskeyAudit(
+  client: PoolClient,
+  input: {
+    userId: string;
+    action: 'passkey.registered' | 'passkey.deleted';
+    passkeyId: string;
+    now: Date;
+  },
+): Promise<unknown> {
+  return client.query(
+    `INSERT INTO mymoneymap.security_audit_events
+       (id,actor_user_id,subject_user_id,subject_hash,action,target_type,target_id,details,created_at)
+     VALUES ($1,$2,$2,$3,$4,'passkey',$5,'{}'::jsonb,$6)`,
+    [
+      randomUUID(),
+      input.userId,
+      createHash('sha256').update(input.userId).digest('hex'),
+      input.action,
+      input.passkeyId,
+      input.now,
+    ],
+  );
 }

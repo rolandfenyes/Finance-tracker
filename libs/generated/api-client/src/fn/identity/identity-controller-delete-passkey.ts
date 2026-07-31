@@ -9,6 +9,10 @@ import { RequestBuilder } from '../../request-builder';
 
 
 export interface IdentityControllerDeletePasskey$Params {
+
+/**
+ * Server-owned passkey ID
+ */
   id: string;
 }
 

@@ -100,7 +100,7 @@ describe('privacy, export, deletion, and audit PostgreSQL contract', () => {
         `INSERT INTO mymoneymap.passkeys
          (id,user_id,credential_id,public_key,counter,revision,transports,device_type,backed_up,
           label,created_at)
-         VALUES($1,$2,$3,$4,0,0,'{}','single_device',false,'Synthetic',$5)`,
+         VALUES($1,$2,$3,$4,0,0,'{}','singleDevice',false,'Synthetic',$5)`,
         [randomUUID(), userId, 'credential-secret', Buffer.from('public-key'), now],
       );
       await pool.query(

@@ -75,6 +75,122 @@ describe('identity/access HTTP contract', () => {
     await agent.post('/api/v1/auth/passkeys/registration-options').send({}).expect(403);
   });
 
+  it('publishes typed WebAuthn options and validates complete credential payloads', async () => {
+    const agent = request.agent(app.getHttpServer());
+    await login(agent, verifiedEmail, password);
+
+    await agent
+      .post('/api/v1/auth/passkeys/registration-options')
+      .send({})
+      .expect(201)
+      .expect((response) => {
+        expect(response.body).toMatchObject({
+          rp: { name: 'MyMoneyMap' },
+          user: { name: verifiedEmail },
+        });
+        expect(response.body.challenge).toEqual(expect.any(String));
+        expect(response.body.pubKeyCredParams).toEqual(expect.any(Array));
+      });
+
+    await request(app.getHttpServer())
+      .post('/api/v1/auth/passkey-sessions/options')
+      .send({})
+      .expect(201)
+      .expect((response) => {
+        expect(response.body).toMatchObject({
+          challenge: expect.any(String),
+          userVerification: 'required',
+        });
+      });
+
+    const invalid = await request(app.getHttpServer())
+      .post('/api/v1/auth/passkey-sessions')
+      .send({ credential: { id: 'not a base64url credential' } })
+      .expect(400);
+    expect(invalid.body.error.code).toBe('VALIDATION_FAILED');
+    expect(invalid.body.error.violations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ field: 'credential.id' }),
+        expect.objectContaining({ field: 'credential.rawId' }),
+        expect.objectContaining({ field: 'credential.response' }),
+      ]),
+    );
+  });
+
+  it('lists only owned safe passkey metadata and audits successful deletion', async () => {
+    const ownerId = randomUUID();
+    const otherId = randomUUID();
+    const ownerEmail = `list-owner-${randomUUID()}@example.test`;
+    const otherEmail = `list-other-${randomUUID()}@example.test`;
+    await insertUser(ownerEmail, true, ownerId);
+    await insertUser(otherEmail, true, otherId);
+    const ownedPasskeyId = randomUUID();
+    const otherPasskeyId = randomUUID();
+    await pool.query(
+      `INSERT INTO mymoneymap.passkeys
+         (id,user_id,credential_id,public_key,counter,device_type,backed_up,label,created_at)
+       VALUES
+         ($1,$2,$3,decode('0102','hex'),0,'singleDevice',false,'Owner key',$5),
+         ($4,$6,$7,decode('0304','hex'),0,'multiDevice',true,'Other key',$5)`,
+      [
+        ownedPasskeyId,
+        ownerId,
+        `owned-credential-${randomUUID()}`,
+        otherPasskeyId,
+        new Date('2026-07-31T10:00:00.000Z'),
+        otherId,
+        `other-credential-${randomUUID()}`,
+      ],
+    );
+    const owner = request.agent(app.getHttpServer());
+    await login(owner, ownerEmail, password);
+
+    const listed = await owner.get('/api/v1/auth/passkeys').expect(200);
+    expect(listed.body).toEqual({
+      items: [
+        {
+          id: ownedPasskeyId,
+          label: 'Owner key',
+          deviceType: 'singleDevice',
+          backedUp: false,
+          transports: [],
+          createdAt: '2026-07-31T10:00:00.000Z',
+          lastUsedAt: null,
+        },
+      ],
+    });
+    expect(JSON.stringify(listed.body)).not.toContain('credential');
+    expect(JSON.stringify(listed.body)).not.toContain('public_key');
+
+    await request(app.getHttpServer()).get('/api/v1/auth/passkeys').expect(401);
+    await owner.delete('/api/v1/auth/passkeys/not-a-uuid').expect(400);
+    await owner.delete(`/api/v1/auth/passkeys/${ownedPasskeyId}`).expect(204);
+
+    const audit = await pool.query<{
+      actor_user_id: string;
+      subject_hash: string;
+      action: string;
+      target_type: string;
+      target_id: string;
+      details: Record<string, unknown>;
+    }>(
+      `SELECT actor_user_id,subject_hash,action,target_type,target_id,details
+         FROM mymoneymap.security_audit_events
+        WHERE action='passkey.deleted' AND target_id=$1`,
+      [ownedPasskeyId],
+    );
+    expect(audit.rows).toEqual([
+      expect.objectContaining({
+        actor_user_id: ownerId,
+        subject_hash: hash(ownerId),
+        action: 'passkey.deleted',
+        target_type: 'passkey',
+        target_id: ownedPasskeyId,
+        details: {},
+      }),
+    ]);
+  });
+
   it('uses the same generic failure for unknown accounts and wrong passwords', async () => {
     const unknown = await request(app.getHttpServer())
       .post('/api/v1/auth/sessions')

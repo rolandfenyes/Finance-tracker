@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import type { Pool } from 'pg';
 import { migrateOneDown, migrateToLatest } from '../src/platform/database/migration-runner';
 import { PasswordService } from '../src/identity/password.service';
 import { IdentityRepository } from '../src/identity/identity.repository';
@@ -6,6 +7,19 @@ import { hash } from '../src/identity/identity.service';
 import { withIsolatedPostgresDatabase } from './postgres-test-database';
 
 describe('identity/access PostgreSQL invariants', () => {
+  it('rolls the passkey audit contract back and reapplies it deterministically', async () => {
+    await withIsolatedPostgresDatabase(async ({ database, pool }) => {
+      await migrateToLatest(database);
+      await expect(auditConstraint(pool)).resolves.toContain('passkey.registered');
+
+      await migrateOneDown(database);
+      await expect(auditConstraint(pool)).resolves.not.toContain('passkey.registered');
+
+      await migrateToLatest(database);
+      await expect(auditConstraint(pool)).resolves.toContain('passkey.deleted');
+    });
+  });
+
   it('migrates up and rolls Step 04 back without disturbing prior tables', async () => {
     await withIsolatedPostgresDatabase(async ({ database, pool }) => {
       await migrateToLatest(database);
@@ -71,6 +85,22 @@ describe('identity/access PostgreSQL invariants', () => {
           [randomUUID(), randomUUID()],
         ),
       ).rejects.toMatchObject({ code: '23503' });
+      await expect(
+        pool.query(
+          `INSERT INTO mymoneymap.passkeys
+            (id,user_id,credential_id,public_key,counter,device_type,backed_up,label,created_at)
+           VALUES ($1,$2,'invalid-device',decode('00','hex'),0,'unknown',false,'Key',now())`,
+          [randomUUID(), userId],
+        ),
+      ).rejects.toMatchObject({ code: '23514' });
+      await expect(
+        pool.query(
+          `INSERT INTO mymoneymap.passkeys
+            (id,user_id,credential_id,public_key,counter,device_type,backed_up,transports,label,created_at)
+           VALUES ($1,$2,'invalid-transport',decode('00','hex'),0,'singleDevice',false,ARRAY['carrier-pigeon'],'Key',now())`,
+          [randomUUID(), userId],
+        ),
+      ).rejects.toMatchObject({ code: '23514' });
     });
   });
 
@@ -167,12 +197,49 @@ describe('identity/access PostgreSQL invariants', () => {
         label: 'Synthetic key',
         now,
       });
-      await expect(repository.deleteOwnedPasskey(users[1]!.id, passkeyId)).resolves.toBe(false);
+      await expect(repository.deleteOwnedPasskey(users[1]!.id, passkeyId, now)).resolves.toBe(
+        false,
+      );
+      await expect(repository.listPasskeys(users[1]!.id)).resolves.toEqual([]);
+      await expect(repository.listPasskeys(users[0]!.id)).resolves.toEqual([
+        expect.objectContaining({
+          id: passkeyId,
+          userId: users[0]!.id,
+          label: 'Synthetic key',
+          createdAt: now,
+        }),
+      ]);
       const updates = await Promise.all([
         repository.updatePasskeyCounter(passkeyId, 1, 0, 1, now),
         repository.updatePasskeyCounter(passkeyId, 1, 0, 1, now),
       ]);
       expect(updates.sort()).toEqual([false, true]);
+      await expect(repository.deleteOwnedPasskey(users[0]!.id, passkeyId, now)).resolves.toBe(true);
+      expect(
+        (
+          await pool.query<{ action: string; target_id: string; details: Record<string, unknown> }>(
+            `SELECT action,target_id,details
+               FROM mymoneymap.security_audit_events
+              WHERE target_type='passkey' AND target_id=$1
+              ORDER BY action`,
+            [passkeyId],
+          )
+        ).rows,
+      ).toEqual([
+        { action: 'passkey.deleted', target_id: passkeyId, details: {} },
+        { action: 'passkey.registered', target_id: passkeyId, details: {} },
+      ]);
     });
   });
 });
+
+async function auditConstraint(pool: Pool): Promise<string> {
+  const result = await pool.query<{ definition: string }>(
+    `SELECT pg_get_constraintdef(oid) AS definition
+       FROM pg_constraint
+      WHERE connamespace='mymoneymap'::regnamespace
+        AND conrelid='mymoneymap.security_audit_events'::regclass
+        AND conname='security_audit_action_check'`,
+  );
+  return result.rows[0]?.definition ?? '';
+}

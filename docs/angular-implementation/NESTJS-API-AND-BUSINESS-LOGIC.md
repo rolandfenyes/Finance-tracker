@@ -6,7 +6,7 @@ This is the frontend-facing reference for the completed MyMoneyMap backend v1.
 It explains what the Angular application may call, what each domain means, and
 which invariants must remain server-owned.
 
-The frozen contract contains **113 paths, 148 operations, and 138 schemas** at
+The frozen contract contains **113 paths, 149 operations, and 155 schemas** at
 `/api/v1`. It has automated OpenAPI, generated-client, Postman, route-coverage,
 database, and integration checks. The backend completion report is technically
 green but still records owner acceptance as pending. Angular development may
@@ -223,9 +223,9 @@ Operation and route coverage does not by itself guarantee that a generated
 client is usable. The current frozen artifact has frontend-blocking response
 typing gaps:
 
-- WebAuthn registration/authentication options and passkey registration are
-  generated as `void`; the API also has no passkey-list response for selecting
-  an existing credential to delete.
+- CG-001 is closed: WebAuthn registration/authentication options, nested browser
+  credentials, registration success, owned-passkey listing, and UUID deletion
+  are explicitly typed.
 - Notification-preference reads and updates have no generated response schema.
 - Securities, administration, and billing operations use wrappers whose
   generated `data` property is `{}`.
@@ -463,22 +463,23 @@ All paths below are relative to the API origin.
 
 ### Identity, profile, and onboarding
 
-| Method    | Path                                         | Frontend use                                 |
-| --------- | -------------------------------------------- | -------------------------------------------- |
-| POST      | `/api/v1/auth/registrations`                 | Register; accepted/non-enumerating           |
-| POST      | `/api/v1/auth/email-verifications`           | Consume verification token                   |
-| POST      | `/api/v1/auth/email-verification-requests`   | Request throttled resend                     |
-| POST      | `/api/v1/auth/sessions`                      | Password login and optional remember session |
-| DELETE    | `/api/v1/auth/session`                       | Logout                                       |
-| PUT       | `/api/v1/users/me/password`                  | Change password and revoke sessions          |
-| POST      | `/api/v1/auth/passkeys/registration-options` | Begin passkey enrollment                     |
-| POST      | `/api/v1/auth/passkeys`                      | Finish passkey enrollment                    |
-| POST      | `/api/v1/auth/passkey-sessions/options`      | Begin passkey authentication                 |
-| POST      | `/api/v1/auth/passkey-sessions`              | Finish passkey authentication                |
-| DELETE    | `/api/v1/auth/passkeys/{id}`                 | Delete owned passkey                         |
-| GET/PATCH | `/api/v1/users/me`                           | Read/update profile and locale               |
-| GET/PATCH | `/api/v1/users/me/preferences/theme`         | Read/update palette                          |
-| GET/PATCH | `/api/v1/users/me/onboarding`                | Read progress/complete tutorial              |
+| Method    | Path                                         | Frontend use                                   |
+| --------- | -------------------------------------------- | ---------------------------------------------- |
+| POST      | `/api/v1/auth/registrations`                 | Register; accepted/non-enumerating             |
+| POST      | `/api/v1/auth/email-verifications`           | Consume verification token                     |
+| POST      | `/api/v1/auth/email-verification-requests`   | Request throttled resend                       |
+| POST      | `/api/v1/auth/sessions`                      | Password login and optional remember session   |
+| DELETE    | `/api/v1/auth/session`                       | Logout                                         |
+| PUT       | `/api/v1/users/me/password`                  | Change password and revoke sessions            |
+| POST      | `/api/v1/auth/passkeys/registration-options` | Begin passkey enrollment                       |
+| POST      | `/api/v1/auth/passkeys`                      | Finish passkey enrollment                      |
+| GET       | `/api/v1/auth/passkeys`                      | List the current user's safe passkey summaries |
+| POST      | `/api/v1/auth/passkey-sessions/options`      | Begin passkey authentication                   |
+| POST      | `/api/v1/auth/passkey-sessions`              | Finish passkey authentication                  |
+| DELETE    | `/api/v1/auth/passkeys/{id}`                 | Delete owned passkey                           |
+| GET/PATCH | `/api/v1/users/me`                           | Read/update profile and locale                 |
+| GET/PATCH | `/api/v1/users/me/preferences/theme`         | Read/update palette                            |
+| GET/PATCH | `/api/v1/users/me/onboarding`                | Read progress/complete tutorial                |
 
 ### Currency, planning, and journal
 

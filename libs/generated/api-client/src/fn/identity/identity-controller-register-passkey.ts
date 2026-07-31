@@ -8,23 +8,24 @@ import { StrictHttpResponse } from '../../strict-http-response';
 import { RequestBuilder } from '../../request-builder';
 
 import { PasskeyLabelDto } from '../../models/passkey-label-dto';
+import { PasskeyRegistrationResponseDto } from '../../models/passkey-registration-response-dto';
 
 export interface IdentityControllerRegisterPasskey$Params {
       body: PasskeyLabelDto
 }
 
-export function identityControllerRegisterPasskey(http: HttpClient, rootUrl: string, params: IdentityControllerRegisterPasskey$Params, context?: HttpContext): Observable<StrictHttpResponse<void>> {
+export function identityControllerRegisterPasskey(http: HttpClient, rootUrl: string, params: IdentityControllerRegisterPasskey$Params, context?: HttpContext): Observable<StrictHttpResponse<PasskeyRegistrationResponseDto>> {
   const rb = new RequestBuilder(rootUrl, identityControllerRegisterPasskey.PATH, 'post');
   if (params) {
     rb.body(params.body, 'application/json');
   }
 
   return http.request(
-    rb.build({ responseType: 'text', accept: '*/*', context })
+    rb.build({ responseType: 'json', accept: 'application/json', context })
   ).pipe(
     filter((r: any): r is HttpResponse<any> => r instanceof HttpResponse),
     map((r: HttpResponse<any>) => {
-      return (r as HttpResponse<any>).clone({ body: undefined }) as StrictHttpResponse<void>;
+      return r as StrictHttpResponse<PasskeyRegistrationResponseDto>;
     })
   );
 }

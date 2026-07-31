@@ -106,7 +106,7 @@ prove the UI does not misrepresent or bypass them.
 
 | Invariant                                  | Owners            | Required evidence                                                        |
 | ------------------------------------------ | ----------------- | ------------------------------------------------------------------------ |
-| Frozen OpenAPI/generated-client ownership  | 00, 02, 12        | 113/148 baseline, drift check, no generated edits                        |
+| Frozen OpenAPI/generated-client ownership  | 00, 02, 12        | 113/149 baseline, drift check, no generated edits                        |
 | Same-origin HttpOnly session               | 01–03, 12         | relative `/api`, storage inspection, 401/session tests                   |
 | Server-owned onboarding/role/entitlements  | 02–04, 07–11      | route guards from `/users/me`, server rejection preserved                |
 | Exact decimal strings                      | 02, 04–09, 11, 12 | adapter tests, forbidden `number`/`parseFloat` audit                     |

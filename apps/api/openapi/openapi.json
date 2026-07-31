@@ -90,8 +90,20 @@
       "post": {
         "operationId": "IdentityController_registrationOptions",
         "parameters": [],
-        "responses": { "201": { "description": "" } },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PasskeyRegistrationOptionsResponseDto" }
+              }
+            }
+          },
+          "401": { "description": "An authenticated session is required" },
+          "403": { "description": "Email verification is required" }
+        },
         "security": [{ "cookie": [] }],
+        "summary": "Create single-use passkey registration options",
         "tags": ["Identity"]
       }
     },
@@ -105,8 +117,41 @@
             "application/json": { "schema": { "$ref": "#/components/schemas/PasskeyLabelDto" } }
           }
         },
-        "responses": { "201": { "description": "" } },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PasskeyRegistrationResponseDto" }
+              }
+            }
+          },
+          "400": { "description": "The credential payload is invalid" },
+          "401": { "description": "The session or WebAuthn ceremony is invalid" },
+          "403": { "description": "Email verification is required" },
+          "409": { "description": "The passkey is already registered" }
+        },
         "security": [{ "cookie": [] }],
+        "summary": "Register a verified WebAuthn credential for the current user",
+        "tags": ["Identity"]
+      },
+      "get": {
+        "operationId": "IdentityController_listPasskeys",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PasskeyListResponseDto" }
+              }
+            }
+          },
+          "401": { "description": "An authenticated session is required" },
+          "403": { "description": "Email verification is required" }
+        },
+        "security": [{ "cookie": [] }],
+        "summary": "List safe metadata for the current user passkeys",
         "tags": ["Identity"]
       }
     },
@@ -122,7 +167,17 @@
             }
           }
         },
-        "responses": { "201": { "description": "" } },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PasskeyAuthenticationOptionsResponseDto" }
+              }
+            }
+          }
+        },
+        "summary": "Create single-use passkey authentication options",
         "tags": ["Identity"]
       }
     },
@@ -138,7 +193,11 @@
             }
           }
         },
-        "responses": { "204": { "description": "" } },
+        "responses": {
+          "204": { "description": "" },
+          "400": { "description": "The credential payload is invalid" },
+          "401": { "description": "Passkey authentication failed" }
+        },
         "tags": ["Identity"]
       }
     },
@@ -146,9 +205,21 @@
       "delete": {
         "operationId": "IdentityController_deletePasskey",
         "parameters": [
-          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Server-owned passkey ID",
+            "schema": { "format": "uuid", "type": "string" }
+          }
         ],
-        "responses": { "204": { "description": "" } },
+        "responses": {
+          "204": { "description": "" },
+          "400": { "description": "The server-owned passkey identifier is invalid" },
+          "401": { "description": "An authenticated session is required" },
+          "403": { "description": "Email verification is required" },
+          "404": { "description": "The owned passkey was not found" }
+        },
         "security": [{ "cookie": [] }],
         "tags": ["Identity"]
       }
@@ -3890,22 +3961,284 @@
         },
         "required": ["currentPassword", "newPassword"]
       },
+      "WebAuthnRpEntityDto": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "example": "MyMoneyMap" },
+          "id": { "type": "string", "example": "wallet.example.test" }
+        },
+        "required": ["name"]
+      },
+      "WebAuthnUserEntityDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "Base64url-encoded user handle" },
+          "name": { "type": "string", "example": "ada@example.test" },
+          "displayName": { "type": "string", "example": "Ada Example" }
+        },
+        "required": ["id", "name", "displayName"]
+      },
+      "WebAuthnCredentialParameterDto": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string", "enum": ["public-key"] },
+          "alg": { "type": "number", "example": -7 }
+        },
+        "required": ["type", "alg"]
+      },
+      "WebAuthnCredentialDescriptorDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "Base64url-encoded credential identifier" },
+          "type": { "type": "string", "enum": ["public-key"] },
+          "transports": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["ble", "cable", "hybrid", "internal", "nfc", "smart-card", "usb"]
+            }
+          }
+        },
+        "required": ["id", "type"]
+      },
+      "WebAuthnAuthenticatorSelectionDto": {
+        "type": "object",
+        "properties": {
+          "authenticatorAttachment": { "type": "string", "enum": ["cross-platform", "platform"] },
+          "requireResidentKey": { "type": "boolean" },
+          "residentKey": { "type": "string", "enum": ["discouraged", "preferred", "required"] },
+          "userVerification": { "type": "string", "enum": ["discouraged", "preferred", "required"] }
+        }
+      },
+      "WebAuthnExtensionInputsDto": {
+        "type": "object",
+        "properties": {
+          "appid": { "type": "string" },
+          "credProps": { "type": "boolean" },
+          "hmacCreateSecret": { "type": "boolean" },
+          "minPinLength": { "type": "boolean" }
+        }
+      },
+      "PasskeyRegistrationOptionsResponseDto": {
+        "type": "object",
+        "properties": {
+          "rp": { "$ref": "#/components/schemas/WebAuthnRpEntityDto" },
+          "user": { "$ref": "#/components/schemas/WebAuthnUserEntityDto" },
+          "challenge": {
+            "type": "string",
+            "description": "Base64url-encoded single-use challenge"
+          },
+          "pubKeyCredParams": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/WebAuthnCredentialParameterDto" }
+          },
+          "timeout": { "type": "number", "example": 60000 },
+          "excludeCredentials": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/WebAuthnCredentialDescriptorDto" }
+          },
+          "authenticatorSelection": {
+            "$ref": "#/components/schemas/WebAuthnAuthenticatorSelectionDto"
+          },
+          "hints": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["hybrid", "security-key", "client-device"] }
+          },
+          "attestation": { "type": "string", "enum": ["direct", "enterprise", "indirect", "none"] },
+          "attestationFormats": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "fido-u2f",
+                "packed",
+                "android-safetynet",
+                "android-key",
+                "tpm",
+                "apple",
+                "none"
+              ]
+            }
+          },
+          "extensions": { "$ref": "#/components/schemas/WebAuthnExtensionInputsDto" }
+        },
+        "required": ["rp", "user", "challenge", "pubKeyCredParams"]
+      },
+      "PasskeyRegistrationCredentialResponseDto": {
+        "type": "object",
+        "properties": {
+          "clientDataJSON": {
+            "type": "string",
+            "description": "Base64url-encoded client data JSON"
+          },
+          "attestationObject": {
+            "type": "string",
+            "description": "Base64url-encoded attestation object"
+          },
+          "authenticatorData": {
+            "type": "string",
+            "description": "Base64url-encoded authenticator data"
+          },
+          "transports": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["ble", "cable", "hybrid", "internal", "nfc", "smart-card", "usb"]
+            }
+          },
+          "publicKeyAlgorithm": { "type": "number" },
+          "publicKey": {
+            "type": "string",
+            "description": "Base64url-encoded credential public key"
+          }
+        },
+        "required": ["clientDataJSON", "attestationObject"]
+      },
+      "WebAuthnCredentialPropertiesOutputDto": {
+        "type": "object",
+        "properties": { "rk": { "type": "boolean" } }
+      },
+      "WebAuthnExtensionOutputsDto": {
+        "type": "object",
+        "properties": {
+          "appid": { "type": "boolean" },
+          "credProps": { "$ref": "#/components/schemas/WebAuthnCredentialPropertiesOutputDto" },
+          "hmacCreateSecret": { "type": "boolean" }
+        }
+      },
+      "PasskeyRegistrationCredentialDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "Base64url-encoded credential identifier" },
+          "rawId": { "type": "string", "description": "Base64url-encoded credential identifier" },
+          "type": { "type": "string", "enum": ["public-key"] },
+          "authenticatorAttachment": { "type": "string", "enum": ["cross-platform", "platform"] },
+          "response": { "$ref": "#/components/schemas/PasskeyRegistrationCredentialResponseDto" },
+          "clientExtensionResults": { "$ref": "#/components/schemas/WebAuthnExtensionOutputsDto" }
+        },
+        "required": ["id", "rawId", "type", "response", "clientExtensionResults"]
+      },
       "PasskeyLabelDto": {
         "type": "object",
         "properties": {
           "label": { "type": "string", "example": "Work laptop" },
-          "credential": { "type": "object" }
+          "credential": { "$ref": "#/components/schemas/PasskeyRegistrationCredentialDto" }
         },
         "required": ["label", "credential"]
+      },
+      "PasskeyRegistrationResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Server-owned passkey identifier"
+          }
+        },
+        "required": ["id"]
+      },
+      "PasskeySummaryResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Server-owned passkey identifier"
+          },
+          "label": { "type": "string", "example": "Work laptop" },
+          "deviceType": { "type": "string", "enum": ["singleDevice", "multiDevice"] },
+          "backedUp": { "type": "boolean" },
+          "transports": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["ble", "cable", "hybrid", "internal", "nfc", "smart-card", "usb"]
+            }
+          },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "lastUsedAt": { "type": "string", "format": "date-time", "nullable": true }
+        },
+        "required": [
+          "id",
+          "label",
+          "deviceType",
+          "backedUp",
+          "transports",
+          "createdAt",
+          "lastUsedAt"
+        ]
+      },
+      "PasskeyListResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PasskeySummaryResponseDto" }
+          }
+        },
+        "required": ["items"]
       },
       "PasskeyAuthenticationOptionsDto": {
         "type": "object",
         "properties": { "email": { "type": "string", "example": "ada@example.test" } }
       },
+      "PasskeyAuthenticationOptionsResponseDto": {
+        "type": "object",
+        "properties": {
+          "challenge": {
+            "type": "string",
+            "description": "Base64url-encoded single-use challenge"
+          },
+          "timeout": { "type": "number", "example": 60000 },
+          "rpId": { "type": "string", "example": "wallet.example.test" },
+          "allowCredentials": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/WebAuthnCredentialDescriptorDto" }
+          },
+          "userVerification": {
+            "type": "string",
+            "enum": ["discouraged", "preferred", "required"]
+          },
+          "hints": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["hybrid", "security-key", "client-device"] }
+          },
+          "extensions": { "$ref": "#/components/schemas/WebAuthnExtensionInputsDto" }
+        },
+        "required": ["challenge"]
+      },
+      "PasskeyAuthenticationCredentialResponseDto": {
+        "type": "object",
+        "properties": {
+          "clientDataJSON": {
+            "type": "string",
+            "description": "Base64url-encoded client data JSON"
+          },
+          "authenticatorData": {
+            "type": "string",
+            "description": "Base64url-encoded authenticator data"
+          },
+          "signature": { "type": "string", "description": "Base64url-encoded assertion signature" },
+          "userHandle": { "type": "string", "description": "Base64url-encoded user handle" }
+        },
+        "required": ["clientDataJSON", "authenticatorData", "signature"]
+      },
+      "PasskeyAuthenticationCredentialDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "Base64url-encoded credential identifier" },
+          "rawId": { "type": "string", "description": "Base64url-encoded credential identifier" },
+          "type": { "type": "string", "enum": ["public-key"] },
+          "authenticatorAttachment": { "type": "string", "enum": ["cross-platform", "platform"] },
+          "response": { "$ref": "#/components/schemas/PasskeyAuthenticationCredentialResponseDto" },
+          "clientExtensionResults": { "$ref": "#/components/schemas/WebAuthnExtensionOutputsDto" }
+        },
+        "required": ["id", "rawId", "type", "response", "clientExtensionResults"]
+      },
       "PasskeyAuthenticationDto": {
         "type": "object",
         "properties": {
-          "credential": { "type": "object" },
+          "credential": { "$ref": "#/components/schemas/PasskeyAuthenticationCredentialDto" },
           "remember": { "type": "boolean", "default": false }
         },
         "required": ["credential"]

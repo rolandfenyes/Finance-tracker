@@ -127,7 +127,7 @@ No automated tool is treated as proof of full WCAG conformance.
 
 | Step | Minimum gates                                                                           |
 | ---- | --------------------------------------------------------------------------------------- |
-| 00   | doc completeness, 113/148 audit, generated-client drift, whitespace                     |
+| 00   | doc completeness, 113/149 audit, generated-client drift, whitespace                     |
 | 01   | format, lint, typecheck, unit/component, build, mobile/desktop shell/a11y/visual        |
 | 02   | previous + HTTP contract, exact-decimal, session/security                               |
 | 03   | previous + identity/onboarding Playwright                                               |

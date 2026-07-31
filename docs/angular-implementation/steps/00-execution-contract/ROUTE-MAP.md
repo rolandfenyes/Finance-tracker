@@ -27,7 +27,7 @@ the generated client.
 | `/auth/register`          | Auth  | anonymous-only | identity / 03 | yes  | `POST /auth/registrations`                                                                |
 | `/auth/verify-email`      | Auth  | none           | identity / 03 | yes  | `POST /auth/email-verifications`; remove token from URL/history immediately after reading |
 | `/auth/verification-sent` | Auth  | none           | identity / 03 | yes  | `POST /auth/email-verification-requests`                                                  |
-| `/auth/passkey`           | Auth  | anonymous-only | identity / 03 | yes  | passkey option/login operations; blocked by CG-001                                        |
+| `/auth/passkey`           | Auth  | anonymous-only | identity / 03 | yes  | typed passkey option/login operations; CG-001 closed                                      |
 
 Password reset is deliberately absent: no public reset-consumption contract is
 in the frozen OpenAPI. The admin request action is not a user reset page.
@@ -88,7 +88,7 @@ in the frozen OpenAPI. The admin request action is not a user reset page.
 | `/app/feedback/new`               | contextual    | session               | feedback / 10       | child | Create feedback; blocked by CG-003                                   |
 | `/app/settings`                   | more          | session               | settings / 10       | yes   | Grouped settings hub                                                 |
 | `/app/settings/profile`           | contextual    | session               | settings / 10       | child | Current user profile/language                                        |
-| `/app/settings/security`          | contextual    | session               | settings / 10       | child | Password and passkeys; passkeys blocked by CG-001                    |
+| `/app/settings/security`          | contextual    | session               | settings / 10       | child | Password and typed owned-passkey enrollment/list/deletion            |
 | `/app/settings/appearance`        | contextual    | session               | settings / 10       | child | Server palette + device-local display mode                           |
 | `/app/settings/currencies`        | contextual    | session               | settings / 10       | child | Currency membership/main currency                                    |
 | `/app/settings/categories`        | contextual    | session               | planning reuse / 10 | child | Reuse category feature                                               |

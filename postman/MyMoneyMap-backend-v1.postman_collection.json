@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "MyMoneyMap Backend v1 — Step 22 Freeze",
-    "description": "Generated from apps/api/openapi/openapi.json (148 operations).\n\nThe Contract catalogue is generated from the complete OpenAPI contract.\n\nThe Acceptance folder is an executable synthetic smoke/contract journey; deeper PostgreSQL/Redis evidence is mapped in the Step 22 completion report.\n\nDo not put credentials or production data in this collection.",
+    "description": "Generated from apps/api/openapi/openapi.json (149 operations).\n\nThe Contract catalogue is generated from the complete OpenAPI contract.\n\nThe Acceptance folder is an executable synthetic smoke/contract journey; deeper PostgreSQL/Redis evidence is mapped in the Step 22 completion report.\n\nDo not put credentials or production data in this collection.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -3865,7 +3865,7 @@
               "response": []
             },
             {
-              "name": "IdentityController_registrationOptions",
+              "name": "Create single-use passkey registration options",
               "request": {
                 "method": "POST",
                 "header": [
@@ -3880,7 +3880,22 @@
               "response": []
             },
             {
-              "name": "IdentityController_registerPasskey",
+              "name": "List safe metadata for the current user passkeys",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/passkeys",
+                "description": "OpenAPI operation: IdentityController_listPasskeys\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Register a verified WebAuthn credential for the current user",
               "request": {
                 "method": "POST",
                 "header": [
@@ -3903,7 +3918,7 @@
               "response": []
             },
             {
-              "name": "IdentityController_passkeyOptions",
+              "name": "Create single-use passkey authentication options",
               "request": {
                 "method": "POST",
                 "header": [

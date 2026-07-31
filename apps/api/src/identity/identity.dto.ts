@@ -1,17 +1,23 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDateString,
+  IsDefined,
   IsEmail,
   IsNotEmpty,
-  IsObject,
   IsOptional,
   IsString,
   Length,
   Matches,
   MaxLength,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
+import {
+  PasskeyAuthenticationCredentialDto,
+  PasskeyRegistrationCredentialDto,
+} from './webauthn.dto';
 
 export class RegistrationDto {
   @ApiProperty({ type: String, example: 'ada@example.test' })
@@ -90,9 +96,11 @@ export class PasskeyLabelDto {
   @Length(1, 100)
   label!: string;
 
-  @ApiProperty({ type: Object })
-  @IsObject()
-  credential!: Record<string, unknown>;
+  @ApiProperty({ type: PasskeyRegistrationCredentialDto })
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => PasskeyRegistrationCredentialDto)
+  credential!: PasskeyRegistrationCredentialDto;
 }
 
 export class PasskeyAuthenticationOptionsDto {
@@ -104,9 +112,11 @@ export class PasskeyAuthenticationOptionsDto {
 }
 
 export class PasskeyAuthenticationDto {
-  @ApiProperty({ type: Object })
-  @IsObject()
-  credential!: Record<string, unknown>;
+  @ApiProperty({ type: PasskeyAuthenticationCredentialDto })
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => PasskeyAuthenticationCredentialDto)
+  credential!: PasskeyAuthenticationCredentialDto;
 
   @ApiProperty({ type: Boolean, required: false, default: false })
   @IsOptional()

@@ -3,14 +3,14 @@
 Audit date: 2026-07-31  
 Baseline: `apps/api/openapi/openapi.json`  
 Generated client: `libs/generated/api-client/src`  
-Status: **correction workflow approved; gaps remain frontend-blocking until
-closed**
+Status: **correction workflow approved; CG-001 closed; remaining gaps stay
+frontend-blocking until closed**
 
 ## Audit result
 
 - OpenAPI paths: **113**
-- OpenAPI operations: **148**
-- Generated operation functions: **148**
+- OpenAPI operations: **149**
+- Generated operation functions: **149**
 - Every operation has one UI/operational disposition in
   `API-UI-COVERAGE.md`.
 - Successful operations that intentionally return no body (principally 204
@@ -31,7 +31,7 @@ For each approved correction:
    changing runtime business behavior unless separately approved;
 2. regenerate `apps/api/openapi/openapi.json`;
 3. regenerate `libs/generated/api-client/src`;
-4. run backend HTTP/OpenAPI tests, the 113/148 coverage check (or approve and
+4. run backend HTTP/OpenAPI tests, the 113/149 coverage check (or approve and
    record a new baseline), generated-client drift, Postman/Newman freeze checks,
    and frontend contract checks;
 5. record closure here before starting the dependent feature.
@@ -40,7 +40,7 @@ Step 00 does not perform those corrections.
 
 ## Blocking gaps
 
-### CG-001 — Passkey request and response contracts
+### CG-001 — Passkey request and response contracts — CLOSED
 
 Affected operations:
 
@@ -51,7 +51,7 @@ Affected operations:
 - `IdentityController_deletePasskey`;
 - missing passkey-list operation required to obtain a server-owned deletion ID.
 
-Observed:
+Original observation:
 
 - both option operations return runtime WebAuthn option objects but generate
   `void`;
@@ -61,12 +61,32 @@ Observed:
   `PasskeyAuthenticationDto.credential` generate `{}`;
 - no list response exposes registered passkey identifiers/labels.
 
-Owner/action: backend identity/OpenAPI owner must add explicit WebAuthn-compatible
-request/response schemas and a privacy-safe owned passkey list contract, or
-approve removing enrollment/deletion UI from scope. Authentication cannot be
-implemented safely without typed options/credential submission.
+Implemented 2026-07-31:
 
-Blocks: Step 03 passkey login and Step 10 passkey enrollment/deletion.
+- registration and authentication option operations now return explicit,
+  recursively typed WebAuthn DTOs;
+- registration and authentication credential requests use explicit nested
+  credential/response/extension DTOs instead of `{}`;
+- registration returns the stable server-owned passkey UUID;
+- authenticated `GET /api/v1/auth/passkeys` returns only owned passkey UUIDs,
+  labels, authenticator metadata, and timestamps; it never exposes credential
+  IDs, public keys, or counters;
+- authenticated `DELETE /api/v1/auth/passkeys/{id}` validates a UUID, filters by
+  current-user ownership, is idempotent for an absent/non-owned identifier, and
+  records a PII-safe immutable security-audit event on an actual deletion;
+- registration records the corresponding PII-safe immutable security-audit
+  event, and PostgreSQL constrains WebAuthn device/transport values.
+
+Evidence: `webauthn.dto.ts`, `identity.controller.ts`,
+`identity.repository.ts`, `webauthn-openapi.spec.ts`,
+`identity-http.integration-spec.ts`, `identity-access.integration-spec.ts`, and
+migration `20260731120000_passkey_security_audit.ts`. The approved client
+generation workflow produced typed functions/models with no handwritten output
+changes. Contract, migration, PostgreSQL isolation, Postman, generated-client,
+and complete repository freeze checks passed before closure.
+
+Formerly blocked: Step 03 passkey login and Step 10 passkey
+enrollment/deletion. This dependency is now closed.
 
 ### CG-002 — Journal conversion provenance
 
@@ -323,19 +343,19 @@ allowance by CG-001 because the browser workflow requires their runtime result.
 
 ## Closure register
 
-| Gap    | Approval            | Backend correction | Client regenerated | Freeze checks | Status  |
-| ------ | ------------------- | ------------------ | ------------------ | ------------- | ------- |
-| CG-001 | approved 2026-07-31 | not started        | no                 | not rerun     | blocked |
-| CG-002 | approved 2026-07-31 | not started        | no                 | not rerun     | blocked |
-| CG-003 | approved 2026-07-31 | not started        | no                 | not rerun     | blocked |
-| CG-004 | approved 2026-07-31 | not started        | no                 | not rerun     | blocked |
-| CG-005 | approved 2026-07-31 | not started        | no                 | not rerun     | blocked |
-| CG-006 | approved 2026-07-31 | not started        | no                 | not rerun     | blocked |
-| CG-007 | approved 2026-07-31 | not started        | no                 | not rerun     | blocked |
-| CG-008 | approved 2026-07-31 | not started        | no                 | not rerun     | blocked |
-| CG-009 | approved 2026-07-31 | not started        | no                 | not rerun     | blocked |
-| CG-010 | approved 2026-07-31 | not started        | no                 | not rerun     | blocked |
-| CG-011 | approved 2026-07-31 | not started        | no                 | not rerun     | blocked |
-| CG-012 | approved 2026-07-31 | not started        | no                 | not rerun     | blocked |
-| CG-013 | approved 2026-07-31 | not started        | no                 | not rerun     | blocked |
-| CG-014 | approved 2026-07-31 | not started        | no                 | not rerun     | blocked |
+| Gap    | Approval            | Backend correction  | Client regenerated | Freeze checks | Status  |
+| ------ | ------------------- | ------------------- | ------------------ | ------------- | ------- |
+| CG-001 | approved 2026-07-31 | complete 2026-07-31 | yes                | passed        | closed  |
+| CG-002 | approved 2026-07-31 | not started         | no                 | not rerun     | blocked |
+| CG-003 | approved 2026-07-31 | not started         | no                 | not rerun     | blocked |
+| CG-004 | approved 2026-07-31 | not started         | no                 | not rerun     | blocked |
+| CG-005 | approved 2026-07-31 | not started         | no                 | not rerun     | blocked |
+| CG-006 | approved 2026-07-31 | not started         | no                 | not rerun     | blocked |
+| CG-007 | approved 2026-07-31 | not started         | no                 | not rerun     | blocked |
+| CG-008 | approved 2026-07-31 | not started         | no                 | not rerun     | blocked |
+| CG-009 | approved 2026-07-31 | not started         | no                 | not rerun     | blocked |
+| CG-010 | approved 2026-07-31 | not started         | no                 | not rerun     | blocked |
+| CG-011 | approved 2026-07-31 | not started         | no                 | not rerun     | blocked |
+| CG-012 | approved 2026-07-31 | not started         | no                 | not rerun     | blocked |
+| CG-013 | approved 2026-07-31 | not started         | no                 | not rerun     | blocked |
+| CG-014 | approved 2026-07-31 | not started         | no                 | not rerun     | blocked |

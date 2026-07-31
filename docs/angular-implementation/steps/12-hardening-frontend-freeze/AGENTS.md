@@ -26,7 +26,7 @@ all frontend tests.
 
 ### Contract and feature coverage
 
-- Reconcile all 148 operations against the final application.
+- Reconcile all 149 operations against the final application.
 - Run OpenAPI, generated-client, Postman, and route-coverage drift checks.
 - Confirm health, migrations, legacy migration, metrics bearer access, and
   worker runners correctly have no end-user route.
@@ -93,7 +93,7 @@ Do not mark owner acceptance yourself.
 ## Acceptance criteria
 
 - All repository-owned verification passes.
-- All 148 operations have an accepted disposition.
+- All 149 operations have an accepted disposition.
 - Critical journeys pass at mobile and desktop viewports.
 - Exact-value/calculation-source audits pass.
 - Accessibility, locale, palette, mode, security, and performance gates pass or

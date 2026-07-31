@@ -3,9 +3,7 @@ import {
   generateRegistrationOptions,
   verifyAuthenticationResponse,
   verifyRegistrationResponse,
-  type AuthenticationResponseJSON,
   type AuthenticatorTransportFuture,
-  type RegistrationResponseJSON,
 } from '@simplewebauthn/server';
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -15,6 +13,14 @@ import { ApplicationError } from '../platform/http/application-error';
 import { IdentityRepository } from './identity.repository';
 import type { IdentityUser } from './identity.types';
 import { SessionService } from './session.service';
+import {
+  PasskeyAuthenticationCredentialDto,
+  PasskeyAuthenticationOptionsResponseDto,
+  PasskeyListResponseDto,
+  PasskeyRegistrationCredentialDto,
+  PasskeyRegistrationOptionsResponseDto,
+  PasskeyRegistrationResponseDto,
+} from './webauthn.dto';
 
 @Injectable()
 export class PasskeyService {
@@ -34,7 +40,10 @@ export class PasskeyService {
     this.challengeSeconds = config.getOrThrow('WEBAUTHN_CHALLENGE_TTL_SECONDS');
   }
 
-  async registrationOptions(userId: string, request: Request): Promise<unknown> {
+  async registrationOptions(
+    userId: string,
+    request: Request,
+  ): Promise<PasskeyRegistrationOptionsResponseDto> {
     const user = await this.requireActiveUser(userId);
     const credentials = await this.repository.listPasskeys(userId);
     const options = await generateRegistrationOptions({
@@ -57,14 +66,14 @@ export class PasskeyService {
   async register(
     userId: string,
     label: string,
-    response: Record<string, unknown>,
+    response: PasskeyRegistrationCredentialDto,
     request: Request,
-  ): Promise<string> {
+  ): Promise<PasskeyRegistrationResponseDto> {
     const challenge = this.takeChallenge(request, 'registration', userId);
     let verification;
     try {
       verification = await verifyRegistrationResponse({
-        response: response as unknown as RegistrationResponseJSON,
+        response,
         expectedChallenge: challenge,
         expectedOrigin: this.origins,
         expectedRPID: this.rpId,
@@ -75,22 +84,30 @@ export class PasskeyService {
     }
     if (!verification.verified) throw invalidPasskey();
     const info = verification.registrationInfo;
-    const id = await this.repository.addPasskey({
-      userId,
-      credentialId: info.credential.id,
-      publicKey: info.credential.publicKey,
-      counter: info.credential.counter,
-      transports: info.credential.transports ?? [],
-      deviceType: info.credentialDeviceType,
-      backedUp: info.credentialBackedUp,
-      label: label.trim(),
-      now: new Date(),
-    });
+    let id: string;
+    try {
+      id = await this.repository.addPasskey({
+        userId,
+        credentialId: info.credential.id,
+        publicKey: info.credential.publicKey,
+        counter: info.credential.counter,
+        transports: info.credential.transports ?? [],
+        deviceType: info.credentialDeviceType,
+        backedUp: info.credentialBackedUp,
+        label: label.trim(),
+        now: new Date(),
+      });
+    } catch (error) {
+      if ((error as { code?: unknown }).code === '23505') {
+        throw new ApplicationError(409, 'CONFLICT', 'Passkey is already registered');
+      }
+      throw error;
+    }
     await save(request);
-    return id;
+    return { id };
   }
 
-  async authenticationOptions(request: Request): Promise<unknown> {
+  async authenticationOptions(request: Request): Promise<PasskeyAuthenticationOptionsResponseDto> {
     const options = await generateAuthenticationOptions({
       rpID: this.rpId,
       userVerification: 'required',
@@ -100,7 +117,7 @@ export class PasskeyService {
   }
 
   async authenticate(
-    response: Record<string, unknown>,
+    response: PasskeyAuthenticationCredentialDto,
     remember: boolean,
     request: Request,
   ): Promise<void> {
@@ -113,7 +130,7 @@ export class PasskeyService {
   }
 
   private async authenticateVerified(
-    response: Record<string, unknown>,
+    response: PasskeyAuthenticationCredentialDto,
     remember: boolean,
     request: Request,
   ): Promise<void> {
@@ -127,7 +144,7 @@ export class PasskeyService {
     let verification;
     try {
       verification = await verifyAuthenticationResponse({
-        response: response as unknown as AuthenticationResponseJSON,
+        response,
         expectedChallenge: challenge,
         expectedOrigin: this.origins,
         expectedRPID: this.rpId,
@@ -159,8 +176,23 @@ export class PasskeyService {
     await this.auditPasskey(user.id, { email: user.email }, request, 'success');
   }
 
+  async list(userId: string): Promise<PasskeyListResponseDto> {
+    const items = await this.repository.listPasskeys(userId);
+    return {
+      items: items.map((passkey) => ({
+        id: passkey.id,
+        label: passkey.label,
+        deviceType: passkey.deviceType as 'singleDevice' | 'multiDevice',
+        backedUp: passkey.backedUp,
+        transports: passkey.transports as PasskeyListResponseDto['items'][number]['transports'],
+        createdAt: passkey.createdAt.toISOString(),
+        lastUsedAt: passkey.lastUsedAt?.toISOString() ?? null,
+      })),
+    };
+  }
+
   async delete(userId: string, passkeyId: string): Promise<void> {
-    if (!(await this.repository.deleteOwnedPasskey(userId, passkeyId))) {
+    if (!(await this.repository.deleteOwnedPasskey(userId, passkeyId, new Date()))) {
       throw new ApplicationError(404, 'NOT_FOUND', 'Passkey not found');
     }
   }
@@ -205,7 +237,7 @@ export class PasskeyService {
 
   private auditPasskey(
     userId: string | null,
-    subject: Record<string, unknown>,
+    subject: { email?: string; id?: string },
     request: Request,
     outcome: 'success' | 'failure',
   ): Promise<void> {

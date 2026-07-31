@@ -33,7 +33,7 @@ Create under this step directory:
 - `DECISIONS.md` with approved frontend ADRs;
 - `ROUTE-MAP.md` with every proposed Angular route, shell, guard, feature owner,
   lazy boundary, and API dependency;
-- `API-UI-COVERAGE.md` mapping all 148 operations to a page, indirect workflow,
+- `API-UI-COVERAGE.md` mapping all 149 operations to a page, indirect workflow,
   operational owner, or provider-disabled state;
 - `DESIGN-SYSTEM-CONTRACT.md` defining semantic tokens, density, breakpoints,
   Material/Tailwind ownership, modes, palettes, accessibility, and motion;
@@ -64,7 +64,7 @@ licensing, contract behavior, or long-term maintenance.
 
 ## Required checks
 
-- Prove the frozen OpenAPI contains 113 paths and 148 operations or document an
+- Prove the frozen OpenAPI contains 113 paths and 149 operations or document an
   approved newer baseline.
 - Confirm generated-client drift checks pass.
 - Confirm generated-client response types are usable, not merely present.

@@ -9,7 +9,7 @@ Angular implementation steps.
 ## Evidence and baseline
 
 - Angular target: 21.x, standalone APIs, Nx workspace.
-- Contract baseline: `apps/api/openapi/openapi.json`, 113 paths and 148
+- Contract baseline: `apps/api/openapi/openapi.json`, 113 paths and 149
   operations.
 - Generated client: `libs/generated/api-client/src`, generated from the frozen
   contract and never edited by hand.

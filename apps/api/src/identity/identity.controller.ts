@@ -2,10 +2,12 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   HttpCode,
   HttpStatus,
   Inject,
   Param,
+  ParseUUIDPipe,
   Post,
   Put,
   Req,
@@ -13,10 +15,17 @@ import {
 } from '@nestjs/common';
 import {
   ApiCookieAuth,
+  ApiBadRequestResponse,
+  ApiConflictResponse,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiNoContentResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import type { Request } from 'express';
 import {
@@ -33,6 +42,12 @@ import { AuthenticationGuard, VerifiedEmailGuard } from './authentication.guard'
 import { IdentityService } from './identity.service';
 import { PasskeyService } from './passkey.service';
 import { SessionService } from './session.service';
+import {
+  PasskeyAuthenticationOptionsResponseDto,
+  PasskeyListResponseDto,
+  PasskeyRegistrationOptionsResponseDto,
+  PasskeyRegistrationResponseDto,
+} from './webauthn.dto';
 
 @ApiTags('Identity')
 @Controller()
@@ -103,39 +118,61 @@ export class IdentityController {
   @Post('auth/passkeys/registration-options')
   @UseGuards(AuthenticationGuard, VerifiedEmailGuard)
   @ApiCookieAuth()
-  registrationOptions(@Req() request: Request): Promise<unknown> {
+  @ApiOperation({ summary: 'Create single-use passkey registration options' })
+  @ApiCreatedResponse({ type: PasskeyRegistrationOptionsResponseDto })
+  @ApiUnauthorizedResponse({ description: 'An authenticated session is required' })
+  @ApiForbiddenResponse({ description: 'Email verification is required' })
+  registrationOptions(@Req() request: Request): Promise<PasskeyRegistrationOptionsResponseDto> {
     return this.passkeys.registrationOptions(request.session.principal!.userId, request);
   }
 
   @Post('auth/passkeys')
   @UseGuards(AuthenticationGuard, VerifiedEmailGuard)
   @ApiCookieAuth()
-  @ApiCreatedResponse()
+  @ApiOperation({ summary: 'Register a verified WebAuthn credential for the current user' })
+  @ApiCreatedResponse({ type: PasskeyRegistrationResponseDto })
+  @ApiBadRequestResponse({ description: 'The credential payload is invalid' })
+  @ApiUnauthorizedResponse({ description: 'The session or WebAuthn ceremony is invalid' })
+  @ApiForbiddenResponse({ description: 'Email verification is required' })
+  @ApiConflictResponse({ description: 'The passkey is already registered' })
   async registerPasskey(
     @Body() dto: PasskeyLabelDto,
     @Req() request: Request,
-  ): Promise<{ id: string }> {
-    return {
-      id: await this.passkeys.register(
-        request.session.principal!.userId,
-        dto.label,
-        dto.credential,
-        request,
-      ),
-    };
+  ): Promise<PasskeyRegistrationResponseDto> {
+    return this.passkeys.register(
+      request.session.principal!.userId,
+      dto.label,
+      dto.credential,
+      request,
+    );
+  }
+
+  @Get('auth/passkeys')
+  @UseGuards(AuthenticationGuard, VerifiedEmailGuard)
+  @ApiCookieAuth()
+  @ApiOperation({ summary: 'List safe metadata for the current user passkeys' })
+  @ApiOkResponse({ type: PasskeyListResponseDto })
+  @ApiUnauthorizedResponse({ description: 'An authenticated session is required' })
+  @ApiForbiddenResponse({ description: 'Email verification is required' })
+  listPasskeys(@Req() request: Request): Promise<PasskeyListResponseDto> {
+    return this.passkeys.list(request.session.principal!.userId);
   }
 
   @Post('auth/passkey-sessions/options')
+  @ApiOperation({ summary: 'Create single-use passkey authentication options' })
+  @ApiCreatedResponse({ type: PasskeyAuthenticationOptionsResponseDto })
   passkeyOptions(
     @Body() _dto: PasskeyAuthenticationOptionsDto,
     @Req() request: Request,
-  ): Promise<unknown> {
+  ): Promise<PasskeyAuthenticationOptionsResponseDto> {
     return this.passkeys.authenticationOptions(request);
   }
 
   @Post('auth/passkey-sessions')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
+  @ApiBadRequestResponse({ description: 'The credential payload is invalid' })
+  @ApiUnauthorizedResponse({ description: 'Passkey authentication failed' })
   async passkeyLogin(
     @Body() dto: PasskeyAuthenticationDto,
     @Req() request: Request,
@@ -148,7 +185,15 @@ export class IdentityController {
   @ApiCookieAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
-  async deletePasskey(@Param('id') id: string, @Req() request: Request): Promise<void> {
+  @ApiBadRequestResponse({ description: 'The server-owned passkey identifier is invalid' })
+  @ApiUnauthorizedResponse({ description: 'An authenticated session is required' })
+  @ApiForbiddenResponse({ description: 'Email verification is required' })
+  @ApiNotFoundResponse({ description: 'The owned passkey was not found' })
+  @ApiParam({ name: 'id', type: String, format: 'uuid', description: 'Server-owned passkey ID' })
+  async deletePasskey(
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Req() request: Request,
+  ): Promise<void> {
     await this.passkeys.delete(request.session.principal!.userId, id);
   }
 }

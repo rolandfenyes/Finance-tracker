@@ -14,6 +14,8 @@ import { identityControllerChangePassword } from '../fn/identity/identity-contro
 import { IdentityControllerChangePassword$Params } from '../fn/identity/identity-controller-change-password';
 import { identityControllerDeletePasskey } from '../fn/identity/identity-controller-delete-passkey';
 import { IdentityControllerDeletePasskey$Params } from '../fn/identity/identity-controller-delete-passkey';
+import { identityControllerListPasskeys } from '../fn/identity/identity-controller-list-passkeys';
+import { IdentityControllerListPasskeys$Params } from '../fn/identity/identity-controller-list-passkeys';
 import { identityControllerLogin } from '../fn/identity/identity-controller-login';
 import { IdentityControllerLogin$Params } from '../fn/identity/identity-controller-login';
 import { identityControllerLogout } from '../fn/identity/identity-controller-logout';
@@ -32,6 +34,10 @@ import { identityControllerRequestVerification } from '../fn/identity/identity-c
 import { IdentityControllerRequestVerification$Params } from '../fn/identity/identity-controller-request-verification';
 import { identityControllerVerify } from '../fn/identity/identity-controller-verify';
 import { IdentityControllerVerify$Params } from '../fn/identity/identity-controller-verify';
+import { PasskeyAuthenticationOptionsResponseDto } from '../models/passkey-authentication-options-response-dto';
+import { PasskeyListResponseDto } from '../models/passkey-list-response-dto';
+import { PasskeyRegistrationOptionsResponseDto } from '../models/passkey-registration-options-response-dto';
+import { PasskeyRegistrationResponseDto } from '../models/passkey-registration-response-dto';
 
 @Injectable({ providedIn: 'root' })
 export class IdentityService extends BaseService {
@@ -213,26 +219,69 @@ export class IdentityService extends BaseService {
   static readonly IdentityControllerRegistrationOptionsPath = '/api/v1/auth/passkeys/registration-options';
 
   /**
+   * Create single-use passkey registration options.
+   *
+   *
+   *
    * This method provides access to the full `HttpResponse`, allowing access to response headers.
    * To access only the response body, use `identityControllerRegistrationOptions()` instead.
    *
    * This method doesn't expect any request body.
    */
-  identityControllerRegistrationOptions$Response(params?: IdentityControllerRegistrationOptions$Params, context?: HttpContext): Observable<StrictHttpResponse<void>> {
+  identityControllerRegistrationOptions$Response(params?: IdentityControllerRegistrationOptions$Params, context?: HttpContext): Observable<StrictHttpResponse<PasskeyRegistrationOptionsResponseDto>> {
     const obs = identityControllerRegistrationOptions(this.http, this.rootUrl, params, context);
     return obs;
   }
 
   /**
+   * Create single-use passkey registration options.
+   *
+   *
+   *
    * This method provides access only to the response body.
    * To access the full response (for headers, for example), `identityControllerRegistrationOptions$Response()` instead.
    *
    * This method doesn't expect any request body.
    */
-  identityControllerRegistrationOptions(params?: IdentityControllerRegistrationOptions$Params, context?: HttpContext): Observable<void> {
+  identityControllerRegistrationOptions(params?: IdentityControllerRegistrationOptions$Params, context?: HttpContext): Observable<PasskeyRegistrationOptionsResponseDto> {
     const resp = this.identityControllerRegistrationOptions$Response(params, context);
     return resp.pipe(
-      map((r: StrictHttpResponse<void>): void => r.body)
+      map((r: StrictHttpResponse<PasskeyRegistrationOptionsResponseDto>): PasskeyRegistrationOptionsResponseDto => r.body)
+    );
+  }
+
+  /** Path part for operation `identityControllerListPasskeys()` */
+  static readonly IdentityControllerListPasskeysPath = '/api/v1/auth/passkeys';
+
+  /**
+   * List safe metadata for the current user passkeys.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `identityControllerListPasskeys()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  identityControllerListPasskeys$Response(params?: IdentityControllerListPasskeys$Params, context?: HttpContext): Observable<StrictHttpResponse<PasskeyListResponseDto>> {
+    const obs = identityControllerListPasskeys(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * List safe metadata for the current user passkeys.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `identityControllerListPasskeys$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  identityControllerListPasskeys(params?: IdentityControllerListPasskeys$Params, context?: HttpContext): Observable<PasskeyListResponseDto> {
+    const resp = this.identityControllerListPasskeys$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<PasskeyListResponseDto>): PasskeyListResponseDto => r.body)
     );
   }
 
@@ -240,26 +289,34 @@ export class IdentityService extends BaseService {
   static readonly IdentityControllerRegisterPasskeyPath = '/api/v1/auth/passkeys';
 
   /**
+   * Register a verified WebAuthn credential for the current user.
+   *
+   *
+   *
    * This method provides access to the full `HttpResponse`, allowing access to response headers.
    * To access only the response body, use `identityControllerRegisterPasskey()` instead.
    *
    * This method sends `application/json` and handles request body of type `application/json`.
    */
-  identityControllerRegisterPasskey$Response(params: IdentityControllerRegisterPasskey$Params, context?: HttpContext): Observable<StrictHttpResponse<void>> {
+  identityControllerRegisterPasskey$Response(params: IdentityControllerRegisterPasskey$Params, context?: HttpContext): Observable<StrictHttpResponse<PasskeyRegistrationResponseDto>> {
     const obs = identityControllerRegisterPasskey(this.http, this.rootUrl, params, context);
     return obs;
   }
 
   /**
+   * Register a verified WebAuthn credential for the current user.
+   *
+   *
+   *
    * This method provides access only to the response body.
    * To access the full response (for headers, for example), `identityControllerRegisterPasskey$Response()` instead.
    *
    * This method sends `application/json` and handles request body of type `application/json`.
    */
-  identityControllerRegisterPasskey(params: IdentityControllerRegisterPasskey$Params, context?: HttpContext): Observable<void> {
+  identityControllerRegisterPasskey(params: IdentityControllerRegisterPasskey$Params, context?: HttpContext): Observable<PasskeyRegistrationResponseDto> {
     const resp = this.identityControllerRegisterPasskey$Response(params, context);
     return resp.pipe(
-      map((r: StrictHttpResponse<void>): void => r.body)
+      map((r: StrictHttpResponse<PasskeyRegistrationResponseDto>): PasskeyRegistrationResponseDto => r.body)
     );
   }
 
@@ -267,26 +324,34 @@ export class IdentityService extends BaseService {
   static readonly IdentityControllerPasskeyOptionsPath = '/api/v1/auth/passkey-sessions/options';
 
   /**
+   * Create single-use passkey authentication options.
+   *
+   *
+   *
    * This method provides access to the full `HttpResponse`, allowing access to response headers.
    * To access only the response body, use `identityControllerPasskeyOptions()` instead.
    *
    * This method sends `application/json` and handles request body of type `application/json`.
    */
-  identityControllerPasskeyOptions$Response(params: IdentityControllerPasskeyOptions$Params, context?: HttpContext): Observable<StrictHttpResponse<void>> {
+  identityControllerPasskeyOptions$Response(params: IdentityControllerPasskeyOptions$Params, context?: HttpContext): Observable<StrictHttpResponse<PasskeyAuthenticationOptionsResponseDto>> {
     const obs = identityControllerPasskeyOptions(this.http, this.rootUrl, params, context);
     return obs;
   }
 
   /**
+   * Create single-use passkey authentication options.
+   *
+   *
+   *
    * This method provides access only to the response body.
    * To access the full response (for headers, for example), `identityControllerPasskeyOptions$Response()` instead.
    *
    * This method sends `application/json` and handles request body of type `application/json`.
    */
-  identityControllerPasskeyOptions(params: IdentityControllerPasskeyOptions$Params, context?: HttpContext): Observable<void> {
+  identityControllerPasskeyOptions(params: IdentityControllerPasskeyOptions$Params, context?: HttpContext): Observable<PasskeyAuthenticationOptionsResponseDto> {
     const resp = this.identityControllerPasskeyOptions$Response(params, context);
     return resp.pipe(
-      map((r: StrictHttpResponse<void>): void => r.body)
+      map((r: StrictHttpResponse<PasskeyAuthenticationOptionsResponseDto>): PasskeyAuthenticationOptionsResponseDto => r.body)
     );
   }
 

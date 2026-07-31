@@ -118,10 +118,9 @@ delivery, EN/ES/HU, and light/dark/multiple palettes are already fixed.
 The frozen contract currently contains operations whose existence is covered
 but whose generated response type is not sufficient for Angular:
 
-- passkey registration/authentication option responses and passkey registration
-  success have no response schema, so the generated methods return `void`;
-- there is no passkey-list response from which an existing credential ID can be
-  selected for deletion;
+- CG-001 is closed: passkey registration/authentication options, nested browser
+  credentials, registration success, owned-passkey listing, and UUID deletion
+  are explicitly typed;
 - notification-preference reads and updates have no response schema;
 - securities responses collapse to `SecuritiesResponseDto.data: {}`;
 - administration responses collapse to `AdministrationResponseDto.data: {}`;

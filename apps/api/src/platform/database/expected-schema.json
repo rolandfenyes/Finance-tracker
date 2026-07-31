@@ -8213,6 +8213,12 @@
     {
       "schema": "mymoneymap",
       "relation": "passkeys",
+      "name": "passkeys_device_type_check",
+      "definition": "CHECK (device_type::text = ANY (ARRAY['singleDevice'::character varying, 'multiDevice'::character varying]::text[]))"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "passkeys",
       "name": "passkeys_label_check",
       "definition": "CHECK (char_length(btrim(label::text)) >= 1 AND char_length(btrim(label::text)) <= 100)"
     },
@@ -8227,6 +8233,12 @@
       "relation": "passkeys",
       "name": "passkeys_revision_check",
       "definition": "CHECK (revision >= 0)"
+    },
+    {
+      "schema": "mymoneymap",
+      "relation": "passkeys",
+      "name": "passkeys_transports_check",
+      "definition": "CHECK (transports <@ ARRAY['ble'::text, 'cable'::text, 'hybrid'::text, 'internal'::text, 'nfc'::text, 'smart-card'::text, 'usb'::text])"
     },
     {
       "schema": "mymoneymap",
@@ -9306,7 +9318,7 @@
       "schema": "mymoneymap",
       "relation": "security_audit_events",
       "name": "security_audit_action_check",
-      "definition": "CHECK (action::text = ANY (ARRAY['privacy.export_requested'::character varying, 'privacy.export_completed'::character varying, 'privacy.export_failed'::character varying, 'privacy.export_accessed'::character varying, 'privacy.deletion_requested'::character varying, 'privacy.deletion_completed'::character varying, 'privacy.deletion_failed'::character varying]::text[]))"
+      "definition": "CHECK (action::text = ANY (ARRAY['privacy.export_requested'::character varying, 'privacy.export_completed'::character varying, 'privacy.export_failed'::character varying, 'privacy.export_accessed'::character varying, 'privacy.deletion_requested'::character varying, 'privacy.deletion_completed'::character varying, 'privacy.deletion_failed'::character varying, 'passkey.registered'::character varying, 'passkey.deleted'::character varying]::text[]))"
     },
     {
       "schema": "mymoneymap",
@@ -9348,7 +9360,7 @@
       "schema": "mymoneymap",
       "relation": "security_audit_events",
       "name": "security_audit_target_type_check",
-      "definition": "CHECK (target_type::text = ANY (ARRAY['privacy_export'::character varying, 'privacy_deletion'::character varying, 'user'::character varying]::text[]))"
+      "definition": "CHECK (target_type::text = ANY (ARRAY['privacy_export'::character varying, 'privacy_deletion'::character varying, 'user'::character varying, 'passkey'::character varying]::text[]))"
     },
     {
       "schema": "mymoneymap",
