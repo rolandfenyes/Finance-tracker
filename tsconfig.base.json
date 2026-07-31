@@ -23,7 +23,9 @@
       "@mymoneymap/generated-api-client/*": ["./libs/generated/api-client/src/*"],
       "@mymoneymap/web-core": ["./libs/web/core/src/index.ts"],
       "@mymoneymap/web-design-system": ["./libs/web/design-system/src/index.ts"],
-      "@mymoneymap/web-shared": ["./libs/web/shared/src/index.ts"]
+      "@mymoneymap/web-shared": ["./libs/web/shared/src/index.ts"],
+      "@mymoneymap/feature-auth": ["./libs/web/feature-auth/src/index.ts"],
+      "@mymoneymap/feature-onboarding": ["./libs/web/feature-onboarding/src/index.ts"]
     }
   }
 }

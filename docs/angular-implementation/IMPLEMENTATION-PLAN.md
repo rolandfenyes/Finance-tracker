@@ -84,7 +84,7 @@ journeys. Step 12 runs the complete suite and records the final evidence.
 
 ### API coverage
 
-By the end of Step 12 every one of the 148 frozen operations must have one of:
+By the end of Step 12 every one of the 149 frozen operations must have one of:
 
 - an implemented Angular interaction;
 - an explicit internal/operational owner with no end-user page;

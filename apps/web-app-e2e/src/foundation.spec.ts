@@ -133,7 +133,7 @@ test('uses the configured same-origin development proxy', async ({ request }) =>
 test('enforces the signed-out, personal, onboarding, and admin route matrix', async ({ page }) => {
   await setSyntheticSession(page, 'anonymous');
   await page.goto('/app');
-  await expect(page).toHaveURL(/\/auth$/);
+  await expect(page).toHaveURL(/\/auth\/login$/);
 
   await setSyntheticSession(page, 'personal');
   await page.goto('/admin');

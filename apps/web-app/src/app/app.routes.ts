@@ -7,7 +7,6 @@ import {
   onboardingRequiredGuard,
   personalFinanceGuard,
   RouteStatusPageComponent,
-  signedOutGuard,
   verifiedEmailGuard,
 } from '@mymoneymap/web-core';
 
@@ -20,9 +19,7 @@ export const appRoutes: Route[] = [
   },
   {
     path: 'auth',
-    canMatch: [signedOutGuard],
-    loadComponent: () =>
-      import('./shells/auth-shell').then((component) => component.AuthShellComponent),
+    loadChildren: () => import('@mymoneymap/feature-auth').then((feature) => feature.AUTH_ROUTES),
   },
   {
     path: 'onboarding',
@@ -32,8 +29,8 @@ export const appRoutes: Route[] = [
       personalFinanceGuard,
       onboardingRequiredGuard,
     ],
-    loadComponent: () =>
-      import('./shells/onboarding-shell').then((component) => component.OnboardingShellComponent),
+    loadChildren: () =>
+      import('@mymoneymap/feature-onboarding').then((feature) => feature.ONBOARDING_ROUTES),
   },
   {
     path: 'app',

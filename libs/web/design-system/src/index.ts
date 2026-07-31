@@ -1,6 +1,7 @@
 export * from './lib/components/async-button';
 export * from './lib/components/empty-state';
 export * from './lib/components/error-state';
+export * from './lib/components/form-error-summary';
 export * from './lib/components/inline-alert';
 export * from './lib/components/loading-state';
 export * from './lib/components/page-header';

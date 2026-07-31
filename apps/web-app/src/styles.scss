@@ -1,1 +1,236 @@
 @use '../../../libs/web/design-system/src/styles';
+
+.feature-shell {
+  min-height: 100dvh;
+  padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
+  background:
+    radial-gradient(
+      circle at 15% 5%,
+      color-mix(in srgb, var(--accent) 18%, transparent),
+      transparent 30rem
+    ),
+    var(--surface-page);
+}
+
+.auth-feature-shell {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 1rem;
+  place-items: center;
+}
+
+.feature-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 2.75rem;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.feature-brand > span {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  border-radius: 0.75rem;
+  color: var(--accent-contrast);
+  background: var(--accent);
+  box-shadow: var(--shadow-card);
+}
+
+.feature-panel {
+  width: min(100%, 44rem);
+  padding: clamp(1.25rem, 4vw, 2.5rem);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--surface-card) 94%, transparent);
+  box-shadow: var(--shadow-card);
+}
+
+.feature-trust {
+  max-width: 32rem;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
+.feature-form,
+.feature-stack {
+  display: grid;
+  gap: 1rem;
+  margin-block: 1.25rem;
+}
+
+.feature-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.feature-form .mat-mdc-form-field {
+  width: 100%;
+}
+
+.form-error-summary,
+mmm-inline-alert {
+  display: block;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  background: var(--surface-muted);
+}
+
+mmm-inline-alert[data-tone='danger'] {
+  border-color: var(--status-danger);
+}
+
+.onboarding-feature-shell {
+  display: grid;
+  align-content: start;
+  gap: 1.25rem;
+}
+
+.onboarding-feature-shell .feature-panel {
+  justify-self: center;
+}
+
+.onboarding-topbar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.onboarding-topbar mmm-onboarding-progress {
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+
+.onboarding-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.onboarding-progress progress {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-block: 1.25rem;
+  padding: 0;
+  border: 0;
+}
+
+.palette-grid legend,
+.mode-selector legend {
+  grid-column: 1 / -1;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+.palette-option {
+  display: grid;
+  min-height: 4.5rem;
+  padding: 0.75rem;
+  border: 2px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  color: var(--text-primary);
+  background: var(--surface-muted);
+  text-align: left;
+}
+
+.palette-option[aria-pressed='true'] {
+  border-color: var(--accent);
+}
+
+.palette-swatch {
+  width: 2rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.mode-selector {
+  margin-block: 1.25rem;
+  padding: 0;
+  border: 0;
+}
+
+.mode-selector mat-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.rule-row {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+}
+
+.selection-list,
+.security-list,
+.tutorial-list {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.selection-list li,
+.security-list li,
+.tutorial-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 3.25rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+}
+
+.security-list span,
+.tutorial-list li {
+  display: grid;
+}
+
+.security-list small,
+.tutorial-list span {
+  color: var(--text-secondary);
+}
+
+@media (min-width: 48rem) {
+  .feature-shell {
+    padding-inline: 2rem;
+  }
+
+  .onboarding-topbar {
+    grid-template-columns: auto minmax(16rem, 1fr) auto;
+  }
+
+  .onboarding-topbar mmm-onboarding-progress {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .palette-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .rule-row {
+    grid-template-columns: 2fr 1fr 2fr auto;
+    align-items: center;
+  }
+}
