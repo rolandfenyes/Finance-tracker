@@ -1,0 +1,5080 @@
+{
+  "info": {
+    "name": "MyMoneyMap Backend v1 — Step 22 Freeze",
+    "description": "Generated from apps/api/openapi/openapi.json (148 operations).\n\nThe Contract catalogue is generated from the complete OpenAPI contract.\n\nThe Acceptance folder is an executable synthetic smoke/contract journey; deeper PostgreSQL/Redis evidence is mapped in the Step 22 completion report.\n\nDo not put credentials or production data in this collection.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:3010",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Acceptance",
+      "description": "Executable synthetic acceptance path. Deep concurrency, rollback, retry, provider, and cross-module invariants remain in the PostgreSQL/Redis integration suite and are mapped in the freeze report.",
+      "item": [
+        {
+          "name": "01 Health and public contract",
+          "item": [
+            {
+              "name": "Liveness",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/health/live",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used."
+              }
+            },
+            {
+              "name": "Readiness",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/health/ready",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used."
+              }
+            },
+            {
+              "name": "Protected currency catalogue rejects anonymous access",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 401\", () => pm.expect([401]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/currencies",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used."
+              }
+            },
+            {
+              "name": "Reject malformed registration",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 400\", () => pm.expect([400]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/registrations",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"not-an-email\",\n  \"password\": \"short\",\n  \"fullName\": \"\",\n  \"dateOfBirth\": \"2026-02-30\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Registration is enumeration-safe",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 202\", () => pm.expect([202]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/registrations",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{registrationEmail}}\",\n  \"password\": \"{{registrationPassword}}\",\n  \"fullName\": \"Synthetic Registration\",\n  \"dateOfBirth\": \"1992-04-05\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Verification request is enumeration-safe",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 202\", () => pm.expect([202]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/email-verification-requests",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{registrationEmail}}\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Passkey authentication options",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 201\", () => pm.expect([201]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));",
+                      "pm.test(\"challenge is returned\", () => pm.expect(pm.response.json()).to.have.property(\"challenge\"));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/passkey-sessions/options",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{premiumEmail}}\"\n}"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 Premium user financial workflow",
+          "item": [
+            {
+              "name": "Login premium owner",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 204\", () => pm.expect([204]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));",
+                      "pm.test(\"session cookie is issued\", () => pm.expect(pm.cookies.has(\"mymoneymap.sid\")).to.eql(true));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/sessions",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{premiumEmail}}\",\n  \"password\": \"{{premiumPassword}}\",\n  \"remember\": false\n}"
+                }
+              }
+            },
+            {
+              "name": "Current user",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/users/me",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used."
+              }
+            },
+            {
+              "name": "Theme preference",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/users/me/preferences/theme",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"theme\": \"verdant-horizon\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Notification preferences",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/users/me/notification-preferences",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used."
+              }
+            },
+            {
+              "name": "List owned currencies",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/users/me/currencies",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used."
+              }
+            },
+            {
+              "name": "Create spending category",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 201\", () => pm.expect([201]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));",
+                      "const body=pm.response.json(); const item=(body.items||[]).find(x=>x.label===\"Step 22 groceries\"); pm.expect(item).to.exist; pm.collectionVariables.set(\"categoryId\", item.id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/categories",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"label\": \"Step 22 groceries\",\n  \"kind\": \"spending\",\n  \"color\": \"#FACC15\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Create exact-decimal income",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 201\", () => pm.expect([201]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));",
+                      "const body=pm.response.json(); pm.collectionVariables.set(\"entryId\", body.id); pm.test(\"money remains a string\",()=>pm.expect(body.legs[0].amount).to.be.a(\"string\"));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "step22-journal-stable-event"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/journal/entries",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"economicType\": \"external_income\",\n  \"amount\": \"1000.25\",\n  \"currency\": \"HUF\",\n  \"postedOn\": \"2026-07-29\",\n  \"note\": \"Synthetic Step 22 income\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Replay journal idempotency key",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 201\", () => pm.expect([201]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));",
+                      "pm.test(\"replay returns the same entry\",()=>pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get(\"entryId\")));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "step22-journal-stable-event"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/journal/entries",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"economicType\": \"external_income\",\n  \"amount\": \"1000.25\",\n  \"currency\": \"HUF\",\n  \"postedOn\": \"2026-07-29\",\n  \"note\": \"Synthetic Step 22 income\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Reverse immutable journal entry",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 201\", () => pm.expect([201]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "step22-reversal-stable-event"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/journal/entries/{{entryId}}/reversals",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"postedOn\": \"2026-07-30\",\n  \"note\": \"Synthetic reversal\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Paginated journal read",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/journal/entries?limit=1",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used."
+              }
+            },
+            {
+              "name": "Current report read model",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/reports/months/current?limit=1",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used."
+              }
+            },
+            {
+              "name": "Create goal",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 201\", () => pm.expect([201]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/goals",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Step 22 goal\",\n  \"targetAmount\": \"1000.00\",\n  \"currency\": \"HUF\",\n  \"deadline\": \"2026-12-31\",\n  \"priority\": 3,\n  \"status\": \"active\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Set emergency reserve target",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/emergency-reserve/target",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"targetAmount\": \"250000.00\",\n  \"currency\": \"HUF\",\n  \"linkedInvestmentAccountId\": null\n}"
+                }
+              }
+            },
+            {
+              "name": "Create loan",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 201\", () => pm.expect([201]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/loans",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Step 22 loan\",\n  \"principal\": \"120000\",\n  \"currency\": \"HUF\",\n  \"nominalAnnualRate\": \"12\",\n  \"termMonths\": 12,\n  \"startsOn\": \"2026-07-30\",\n  \"paymentDay\": 30,\n  \"extraPaymentScenario\": \"0\",\n  \"insuranceMonthly\": \"500\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Create generic investment",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 201\", () => pm.expect([201]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/investments",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"type\": \"savings\",\n  \"name\": \"Step 22 reserve\",\n  \"provider\": \"Synthetic provider\",\n  \"currency\": \"HUF\",\n  \"scenarioAnnualRate\": \"5\",\n  \"scenarioFrequency\": \"monthly\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Securities portfolio without live provider",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/securities/portfolio",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used."
+              }
+            },
+            {
+              "name": "List feedback",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/feedback",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used."
+              }
+            },
+            {
+              "name": "Privacy export production gate",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 503\", () => pm.expect([503]).to.include(pm.response.code));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/privacy/exports",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used."
+              }
+            },
+            {
+              "name": "Logout",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 204\", () => pm.expect([204]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/session",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used."
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 Ownership, verification, entitlement, and quota",
+          "item": [
+            {
+              "name": "Login second premium user",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 204\", () => pm.expect([204]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));",
+                      "pm.test(\"session cookie is issued\", () => pm.expect(pm.cookies.has(\"mymoneymap.sid\")).to.eql(true));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/sessions",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{otherEmail}}\",\n  \"password\": \"{{otherPassword}}\",\n  \"remember\": false\n}"
+                }
+              }
+            },
+            {
+              "name": "Other user creates category",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 201\", () => pm.expect([201]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));",
+                      "const item=pm.response.json().items.find(x=>x.label===\"Other private category\"); pm.collectionVariables.set(\"otherCategoryId\",item.id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/categories",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"label\": \"Other private category\",\n  \"kind\": \"spending\",\n  \"color\": \"#123456\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Logout second user",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 204\", () => pm.expect([204]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/session",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used."
+              }
+            },
+            {
+              "name": "Login first premium user",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 204\", () => pm.expect([204]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));",
+                      "pm.test(\"session cookie is issued\", () => pm.expect(pm.cookies.has(\"mymoneymap.sid\")).to.eql(true));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/sessions",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{premiumEmail}}\",\n  \"password\": \"{{premiumPassword}}\",\n  \"remember\": false\n}"
+                }
+              }
+            },
+            {
+              "name": "Cross-user update is hidden",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 404\", () => pm.expect([404]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/categories/{{otherCategoryId}}",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"label\": \"Forbidden update\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Logout premium user",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 204\", () => pm.expect([204]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/session",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used."
+              }
+            },
+            {
+              "name": "Login unverified user",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 204\", () => pm.expect([204]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));",
+                      "pm.test(\"session cookie is issued\", () => pm.expect(pm.cookies.has(\"mymoneymap.sid\")).to.eql(true));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/sessions",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{unverifiedEmail}}\",\n  \"password\": \"{{unverifiedPassword}}\",\n  \"remember\": false\n}"
+                }
+              }
+            },
+            {
+              "name": "Unverified financial access denied",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 403\", () => pm.expect([403]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/categories",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used."
+              }
+            },
+            {
+              "name": "Logout unverified user",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 204\", () => pm.expect([204]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/session",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used."
+              }
+            },
+            {
+              "name": "Login free user",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 204\", () => pm.expect([204]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));",
+                      "pm.test(\"session cookie is issued\", () => pm.expect(pm.cookies.has(\"mymoneymap.sid\")).to.eql(true));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/sessions",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{freeEmail}}\",\n  \"password\": \"{{freePassword}}\",\n  \"remember\": false\n}"
+                }
+              }
+            },
+            {
+              "name": "Free user sees own profile",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/users/me",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used."
+              }
+            },
+            {
+              "name": "Free user cannot edit premium budget rules",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 403\", () => pm.expect([403]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/budget-rules",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"label\": \"Premium-only rule\",\n  \"percent\": \"10\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Free category quota 1",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 201\", () => pm.expect([201]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/categories",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"label\": \"Free quota category 1\",\n  \"kind\": \"spending\",\n  \"color\": \"#ABCDEF\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Free category quota 2",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 201\", () => pm.expect([201]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/categories",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"label\": \"Free quota category 2\",\n  \"kind\": \"spending\",\n  \"color\": \"#ABCDEF\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Free category quota 3",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 201\", () => pm.expect([201]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/categories",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"label\": \"Free quota category 3\",\n  \"kind\": \"spending\",\n  \"color\": \"#ABCDEF\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Free category quota 4",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 201\", () => pm.expect([201]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/categories",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"label\": \"Free quota category 4\",\n  \"kind\": \"spending\",\n  \"color\": \"#ABCDEF\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Free category quota 5",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 201\", () => pm.expect([201]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/categories",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"label\": \"Free quota category 5\",\n  \"kind\": \"spending\",\n  \"color\": \"#ABCDEF\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Free category quota 6",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 201\", () => pm.expect([201]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/categories",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"label\": \"Free quota category 6\",\n  \"kind\": \"spending\",\n  \"color\": \"#ABCDEF\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Free category quota 7",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 201\", () => pm.expect([201]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/categories",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"label\": \"Free quota category 7\",\n  \"kind\": \"spending\",\n  \"color\": \"#ABCDEF\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Free category quota 8",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 201\", () => pm.expect([201]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/categories",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"label\": \"Free quota category 8\",\n  \"kind\": \"spending\",\n  \"color\": \"#ABCDEF\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Free category quota 9",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 201\", () => pm.expect([201]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/categories",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"label\": \"Free quota category 9\",\n  \"kind\": \"spending\",\n  \"color\": \"#ABCDEF\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Free category quota 10",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 201\", () => pm.expect([201]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/categories",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"label\": \"Free quota category 10\",\n  \"kind\": \"spending\",\n  \"color\": \"#ABCDEF\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Free category quota 11",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 403\", () => pm.expect([403]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/categories",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"label\": \"Free quota category 11\",\n  \"kind\": \"spending\",\n  \"color\": \"#ABCDEF\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Logout free user",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 204\", () => pm.expect([204]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/session",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used."
+              }
+            },
+            {
+              "name": "Login idle-expiry user",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 204\", () => pm.expect([204]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));",
+                      "pm.test(\"session cookie is issued\", () => pm.expect(pm.cookies.has(\"mymoneymap.sid\")).to.eql(true));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/sessions",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{expiryEmail}}\",\n  \"password\": \"{{expiryPassword}}\",\n  \"remember\": false\n}"
+                }
+              }
+            },
+            {
+              "name": "Idle-expired session is rejected",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const deadline = Date.now() + 3000;",
+                      "while (Date.now() < deadline) { /* deterministic idle-expiry wait */ }"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 401\", () => pm.expect([401]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/users/me",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used."
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 Administration, billing, jobs, and provider gates",
+          "item": [
+            {
+              "name": "Login administrator",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 204\", () => pm.expect([204]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));",
+                      "pm.test(\"session cookie is issued\", () => pm.expect(pm.cookies.has(\"mymoneymap.sid\")).to.eql(true));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/sessions",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\",\n  \"remember\": false\n}"
+                }
+              }
+            },
+            {
+              "name": "Admin dashboard",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/dashboard",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used."
+              }
+            },
+            {
+              "name": "Admin queue observability",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/operations/queues",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used."
+              }
+            },
+            {
+              "name": "Billing summary",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/billing/summary",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used."
+              }
+            },
+            {
+              "name": "Email channel status",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/notification-channels/email",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used."
+              }
+            },
+            {
+              "name": "Disabled email provider test job",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 202\", () => pm.expect([202]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/email-test-jobs",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"templateCode\": \"welcome\",\n  \"locale\": \"en\",\n  \"recipientEmail\": \"{{adminEmail}}\",\n  \"data\": {\n    \"user_first_name\": \"Synthetic admin\"\n  }\n}"
+                }
+              }
+            },
+            {
+              "name": "Market data refresh remains gated",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 403 or 409 or 503\", () => pm.expect([403,409,503]).to.include(pm.response.code));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/securities/refresh-jobs",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used."
+              }
+            },
+            {
+              "name": "Logout administrator",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 204\", () => pm.expect([204]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/session",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used."
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 Rate limiting",
+          "item": [
+            {
+              "name": "Failed login 1",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 401\", () => pm.expect([401]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/sessions",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{rateLimitEmail}}\",\n  \"password\": \"deliberately-wrong-password\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Failed login 2",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 401\", () => pm.expect([401]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/sessions",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{rateLimitEmail}}\",\n  \"password\": \"deliberately-wrong-password\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Failed login 3",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 401\", () => pm.expect([401]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/sessions",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{rateLimitEmail}}\",\n  \"password\": \"deliberately-wrong-password\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Failed login 4",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 401\", () => pm.expect([401]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/sessions",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{rateLimitEmail}}\",\n  \"password\": \"deliberately-wrong-password\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Failed login 5",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 401\", () => pm.expect([401]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/sessions",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{rateLimitEmail}}\",\n  \"password\": \"deliberately-wrong-password\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Failed login 6",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status is 429\", () => pm.expect([429]).to.include(pm.response.code));",
+                      "pm.test(\"response has no server error\", () => pm.expect(pm.response.code).to.be.below(500));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/sessions",
+                "description": "Synthetic Step 22 acceptance scenario. No production data or provider is used.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{rateLimitEmail}}\",\n  \"password\": \"deliberately-wrong-password\"\n}"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Contract catalogue",
+      "item": [
+        {
+          "name": "Administration",
+          "item": [
+            {
+              "name": "Read evidenced operational counts with explicit definitions",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/dashboard",
+                "description": "OpenAPI operation: AdministrationController_dashboard\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Read defined account metrics and trailing registration counts",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/analytics",
+                "description": "OpenAPI operation: AdministrationController_analytics\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "List users with cursor pagination and masked identity fields",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/users",
+                "description": "OpenAPI operation: AdministrationController_users\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Read a masked user administration summary and redacted login activity",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/users/:id",
+                "description": "OpenAPI operation: AdministrationController_user\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Assign one of the approved fixed roles and audit the action",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/users/:id/role",
+                "description": "OpenAPI operation: AdministrationController_role\n\nRequest schema: UpdateUserRoleDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Activate or deactivate an account and revoke inactive sessions",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/users/:id/status",
+                "description": "OpenAPI operation: AdministrationController_status\n\nRequest schema: UpdateUserStatusDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Issue an expiring password-reset action without returning a password or token",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/users/:id/password-reset-request",
+                "description": "OpenAPI operation: AdministrationController_passwordReset\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Issue an expiring email-verification action without returning its token",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/users/:id/email-verification-request",
+                "description": "OpenAPI operation: AdministrationController_verification\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Request a verified email change without changing the current address",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/users/:id/email-change-request",
+                "description": "OpenAPI operation: AdministrationController_emailChange\n\nRequest schema: EmailChangeRequestDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "List feedback across users with masked author identity and pagination",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/feedback",
+                "description": "OpenAPI operation: AdministrationController_feedback\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Update staff-managed feedback fields and audit changed field names",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/feedback/:id",
+                "description": "OpenAPI operation: AdministrationController_updateFeedback\n\nRequest schema: UpdateAdminFeedbackDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Add an attributed admin response and immutable audit event",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/feedback/:id/responses",
+                "description": "OpenAPI operation: AdministrationController_respond\n\nRequest schema: CreateAdminFeedbackResponseDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Read non-secret system settings and masked integration state",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/system",
+                "description": "OpenAPI operation: AdministrationController_system\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Update validated non-secret system settings and audit field names",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/system/settings",
+                "description": "OpenAPI operation: AdministrationController_settings\n\nRequest schema: UpdateSystemSettingsDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Encrypt and replace a write-only integration secret",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/integrations/:service",
+                "description": "OpenAPI operation: AdministrationController_integration\n\nRequest schema: PutIntegrationDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Delete an integration configuration and its encrypted secret",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/integrations/:service",
+                "description": "OpenAPI operation: AdministrationController_deleteIntegration\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "List versioned EN/ES/HU email template contracts without recipient data",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/email-templates",
+                "description": "OpenAPI operation: NotificationsAdminController_templates\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Validate a template contract and render a synthetic preview",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/email-templates/:code/preview",
+                "description": "OpenAPI operation: NotificationsAdminController_preview\n\nRequest schema: PreviewEmailTemplateDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Queue an idempotent template test using synthetic template data",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/email-test-jobs",
+                "description": "OpenAPI operation: NotificationsAdminController_test\n\nRequest schema: CreateEmailTestJobDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Read the only approved notification channel without provider secrets",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/notification-channels/email",
+                "description": "OpenAPI operation: NotificationsAdminController_channel\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Configure the email channel; production enabling remains gated",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/notification-channels/email",
+                "description": "OpenAPI operation: NotificationsAdminController_updateChannel\n\nRequest schema: UpdateEmailChannelDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Compatibility alias for the approved email channel settings contract",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/email-settings",
+                "description": "OpenAPI operation: NotificationsAdminController_updateSettings\n\nRequest schema: UpdateEmailChannelDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Read PII-safe BullMQ backlog, failure, and provider-circuit diagnostics",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/operations/queues",
+                "description": "OpenAPI operation: AdminOperationsController_queues\n\nRequest schema: none"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Administrative billing",
+          "item": [
+            {
+              "name": "Read administrative billing records; no provider operations are available",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/billing/summary",
+                "description": "OpenAPI operation: BillingController_summary\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "BillingController_plans",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/billing/plans",
+                "description": "OpenAPI operation: BillingController_plans\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "BillingController_createPlan",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/billing/plans",
+                "description": "OpenAPI operation: BillingController_createPlan\n\nRequest schema: PlanDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "BillingController_plan",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/billing/plans/:id",
+                "description": "OpenAPI operation: BillingController_plan\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "BillingController_updatePlan",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/billing/plans/:id",
+                "description": "OpenAPI operation: BillingController_updatePlan\n\nRequest schema: PlanDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "BillingController_deletePlan",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/billing/plans/:id",
+                "description": "OpenAPI operation: BillingController_deletePlan\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "BillingController_promotions",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/billing/promotions",
+                "description": "OpenAPI operation: BillingController_promotions\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "BillingController_createPromotion",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/billing/promotions",
+                "description": "OpenAPI operation: BillingController_createPromotion\n\nRequest schema: PromotionDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "BillingController_promotion",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/billing/promotions/:id",
+                "description": "OpenAPI operation: BillingController_promotion\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "BillingController_updatePromotion",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/billing/promotions/:id",
+                "description": "OpenAPI operation: BillingController_updatePromotion\n\nRequest schema: PromotionDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "BillingController_deletePromotion",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/billing/promotions/:id",
+                "description": "OpenAPI operation: BillingController_deletePromotion\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "BillingController_trial",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/billing/promotions/trial",
+                "description": "OpenAPI operation: BillingController_trial\n\nRequest schema: TrialPromotionDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "BillingController_assign",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/users/:id/subscription",
+                "description": "OpenAPI operation: BillingController_assign\n\nRequest schema: AssignSubscriptionDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "BillingController_invoice",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/invoices/:id",
+                "description": "OpenAPI operation: BillingController_invoice\n\nRequest schema: UpdateInvoiceDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "BillingController_createPayment",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/payments",
+                "description": "OpenAPI operation: BillingController_createPayment\n\nRequest schema: PaymentDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "BillingController_updatePayment",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/admin/payments/:id",
+                "description": "OpenAPI operation: BillingController_updatePayment\n\nRequest schema: PaymentDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Basic income",
+          "item": [
+            {
+              "name": "List recurring baseline income planning definitions",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/basic-incomes",
+                "description": "OpenAPI operation: BudgetingController_basicIncomes\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Create a forecast-only baseline income definition",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/basic-incomes",
+                "description": "OpenAPI operation: BudgetingController_createBasicIncome\n\nRequest schema: CreateBasicIncomeDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"label\": \"Salary\",\n  \"amount\": \"1000.00\",\n  \"currency\": \"HUF\",\n  \"validFrom\": \"2026-07-01\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update an owned baseline income definition without posting income",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/basic-incomes/:id",
+                "description": "OpenAPI operation: BudgetingController_updateBasicIncome\n\nRequest schema: UpdateBasicIncomeDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Delete an owned baseline income planning definition",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/basic-incomes/:id",
+                "description": "OpenAPI operation: BudgetingController_deleteBasicIncome\n\nRequest schema: none"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Budgeting",
+          "item": [
+            {
+              "name": "List exact percentage rules, assignments, allocation status, and optional month plan",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/budget-rules",
+                "description": "OpenAPI operation: BudgetingController_rules\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Create a premium cash-flow rule",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/budget-rules",
+                "description": "OpenAPI operation: BudgetingController_createRule\n\nRequest schema: CreateBudgetRuleDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"label\": \"Needs\",\n  \"percent\": \"50\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Configure the initial onboarding budget-rule set atomically",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/budget-rules",
+                "description": "OpenAPI operation: BudgetingController_initialize\n\nRequest schema: ReplaceBudgetRulesDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"rules\": [\n    {\n      \"label\": \"Needs\",\n      \"percent\": \"50\"\n    },\n    {\n      \"label\": \"Goals\",\n      \"percent\": \"30\",\n      \"targetHint\": \"Descriptive target only\"\n    }\n  ]\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update an owned premium cash-flow rule",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/budget-rules/:id",
+                "description": "OpenAPI operation: BudgetingController_updateRule\n\nRequest schema: UpdateBudgetRuleDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Delete an owned rule and leave assigned categories unassigned",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/budget-rules/:id",
+                "description": "OpenAPI operation: BudgetingController_deleteRule\n\nRequest schema: none"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Categories",
+          "item": [
+            {
+              "name": "List owned income and spending categories",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/categories",
+                "description": "OpenAPI operation: BudgetingController_categories\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Create an owned category within the current plan quota",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/categories",
+                "description": "OpenAPI operation: BudgetingController_createCategory\n\nRequest schema: CreateCategoryDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"label\": \"Groceries\",\n  \"kind\": \"spending\",\n  \"color\": \"#FACC15\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update an unprotected owned category",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/categories/:id",
+                "description": "OpenAPI operation: BudgetingController_updateCategory\n\nRequest schema: UpdateCategoryDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Delete an unprotected, unreferenced owned category",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/categories/:id",
+                "description": "OpenAPI operation: BudgetingController_deleteCategory\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Assign or clear a premium rule on an owned spending category",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/categories/:id/budget-rule",
+                "description": "OpenAPI operation: BudgetingController_assignRule\n\nRequest schema: AssignBudgetRuleDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"budgetRuleId\": \"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\"\n}"
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Currencies",
+          "item": [
+            {
+              "name": "List supported currencies and exact rounding metadata",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/currencies",
+                "description": "OpenAPI operation: CurrencyController_catalogue\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "List the current user currency memberships and main currency",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/users/me/currencies",
+                "description": "OpenAPI operation: CurrencyController_userCurrencies\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Add a supported currency within the current entitlement",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/users/me/currencies",
+                "description": "OpenAPI operation: CurrencyController_add\n\nRequest schema: AddUserCurrencyDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"code\": \"EUR\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Remove a non-main currency membership",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/users/me/currencies/:code",
+                "description": "OpenAPI operation: CurrencyController_remove\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Atomically select exactly one owned main currency",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/users/me/main-currency",
+                "description": "OpenAPI operation: CurrencyController_setMain\n\nRequest schema: SetMainCurrencyDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"code\": \"EUR\"\n}"
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Emergency reserve",
+          "item": [
+            {
+              "name": "Read the owned reserve, ledger-derived allocation, history, and raw schedule context",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/emergency-reserve",
+                "description": "OpenAPI operation: EmergencyReserveController_read\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Set the manual reserve target and optional owned investment-account linkage",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/emergency-reserve/target",
+                "description": "OpenAPI operation: EmergencyReserveController_updateTarget\n\nRequest schema: UpdateEmergencyReserveTargetDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"targetAmount\": \"250000.00\",\n  \"currency\": \"HUF\",\n  \"linkedInvestmentAccountId\": null\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Post one idempotent internal transfer into the emergency reserve allocation",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/emergency-reserve/contributions",
+                "description": "OpenAPI operation: EmergencyReserveController_contribution\n\nRequest schema: CreateEmergencyReserveMovementDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Post one idempotent internal transfer out of the emergency reserve allocation",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/emergency-reserve/withdrawals",
+                "description": "OpenAPI operation: EmergencyReserveController_withdrawal\n\nRequest schema: CreateEmergencyReserveMovementDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Reverse an owned reserve movement without deleting immutable financial history",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/emergency-reserve/movements/:id/reversals",
+                "description": "OpenAPI operation: EmergencyReserveController_reverse\n\nRequest schema: ReverseEmergencyReserveMovementDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Feedback",
+          "item": [
+            {
+              "name": "List only the authenticated user’s feedback and staff responses",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/feedback",
+                "description": "OpenAPI operation: FeedbackController_list\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Create owned bug or idea feedback",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/feedback",
+                "description": "OpenAPI operation: FeedbackController_create\n\nRequest schema: CreateFeedbackDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Close or reopen owned feedback without changing staff workflow states",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/feedback/:id/status",
+                "description": "OpenAPI operation: FeedbackController_status\n\nRequest schema: UpdateOwnedFeedbackStatusDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Delete owned feedback",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/feedback/:id",
+                "description": "OpenAPI operation: FeedbackController_delete\n\nRequest schema: none"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Goals",
+          "item": [
+            {
+              "name": "List owned goals with ledger-derived progress, contribution history, and schedule",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/goals",
+                "description": "OpenAPI operation: GoalsController_list\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Create an owned zero-balance goal and its ledger bucket",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/goals",
+                "description": "OpenAPI operation: GoalsController_create\n\nRequest schema: CreateGoalDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Emergency laptop\",\n  \"targetAmount\": \"1000.00\",\n  \"currency\": \"HUF\",\n  \"deadline\": \"2026-12-31\",\n  \"priority\": 3,\n  \"status\": \"active\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update an open goal without reducing its target below derived progress",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/goals/:id",
+                "description": "OpenAPI operation: GoalsController_update\n\nRequest schema: UpdateGoalDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Delete an empty goal; goals with financial history must be archived",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/goals/:id",
+                "description": "OpenAPI operation: GoalsController_delete\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Archive a goal without posting income or changing its balance",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/goals/:id/archive",
+                "description": "OpenAPI operation: GoalsController_archive\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Restore goal visibility without posting or deleting financial history",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/goals/:id/unarchive",
+                "description": "OpenAPI operation: GoalsController_unarchive\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Post an idempotent internal transfer into a goal without overfunding",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/goals/:id/contributions",
+                "description": "OpenAPI operation: GoalsController_contribute\n\nRequest schema: CreateGoalContributionDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": \"400.00\",\n  \"currency\": \"HUF\",\n  \"occurredOn\": \"2026-07-29\",\n  \"note\": \"Synthetic contribution\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Reverse and replace an owned goal contribution atomically",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/goals/:goalId/contributions/:id/corrections",
+                "description": "OpenAPI operation: GoalsController_correct\n\nRequest schema: CreateGoalContributionDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Reverse an owned goal contribution and reconcile derived progress",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/goals/:goalId/contributions/:id/reversals",
+                "description": "OpenAPI operation: GoalsController_reverse\n\nRequest schema: ReverseGoalContributionDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Attach one transfer forecast to an open goal",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/goals/:id/recurring-rule",
+                "description": "OpenAPI operation: GoalsController_createRule\n\nRequest schema: CreateGoalRecurringRuleDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Replace the attached goal transfer forecast",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/goals/:id/recurring-rule",
+                "description": "OpenAPI operation: GoalsController_updateRule\n\nRequest schema: CreateGoalRecurringRuleDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Remove the attached goal forecast without changing goal progress",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/goals/:id/recurring-rule",
+                "description": "OpenAPI operation: GoalsController_deleteRule\n\nRequest schema: none"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "health",
+          "item": [
+            {
+              "name": "Report that the API process is alive",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/health/live",
+                "description": "OpenAPI operation: HealthController_live\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Verify required PostgreSQL and Redis dependencies",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/health/ready",
+                "description": "OpenAPI operation: HealthController_ready\n\nRequest schema: none"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Identity",
+          "item": [
+            {
+              "name": "Register an account and issue email verification",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/registrations",
+                "description": "OpenAPI operation: IdentityController_register\n\nRequest schema: RegistrationDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "IdentityController_verify",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/email-verifications",
+                "description": "OpenAPI operation: IdentityController_verify\n\nRequest schema: EmailVerificationDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "IdentityController_requestVerification",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/email-verification-requests",
+                "description": "OpenAPI operation: IdentityController_requestVerification\n\nRequest schema: EmailVerificationRequestDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "IdentityController_login",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/sessions",
+                "description": "OpenAPI operation: IdentityController_login\n\nRequest schema: PasswordSessionDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "IdentityController_logout",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/session",
+                "description": "OpenAPI operation: IdentityController_logout\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "IdentityController_changePassword",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/users/me/password",
+                "description": "OpenAPI operation: IdentityController_changePassword\n\nRequest schema: PasswordChangeDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "IdentityController_registrationOptions",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/passkeys/registration-options",
+                "description": "OpenAPI operation: IdentityController_registrationOptions\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "IdentityController_registerPasskey",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/passkeys",
+                "description": "OpenAPI operation: IdentityController_registerPasskey\n\nRequest schema: PasskeyLabelDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "IdentityController_passkeyOptions",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/passkey-sessions/options",
+                "description": "OpenAPI operation: IdentityController_passkeyOptions\n\nRequest schema: PasskeyAuthenticationOptionsDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "IdentityController_passkeyLogin",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/passkey-sessions",
+                "description": "OpenAPI operation: IdentityController_passkeyLogin\n\nRequest schema: PasskeyAuthenticationDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "IdentityController_deletePasskey",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/auth/passkeys/:id",
+                "description": "OpenAPI operation: IdentityController_deletePasskey\n\nRequest schema: none"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Investments",
+          "item": [
+            {
+              "name": "List owned generic investments with ledger-derived balances and labeled scenarios",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/investments",
+                "description": "OpenAPI operation: InvestmentsController_list\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Create a generic investment and its owned ledger account",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/investments",
+                "description": "OpenAPI operation: InvestmentsController_create\n\nRequest schema: CreateInvestmentDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"type\": \"savings\",\n  \"name\": \"Synthetic reserve account\",\n  \"provider\": \"Synthetic provider\",\n  \"currency\": \"HUF\",\n  \"scenarioAnnualRate\": \"5\",\n  \"scenarioFrequency\": \"monthly\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update investment metadata or its user-authored scenario without changing balance",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/investments/:id",
+                "description": "OpenAPI operation: InvestmentsController_update\n\nRequest schema: UpdateInvestmentDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Delete a history-free investment and its recurring forecast",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/investments/:id",
+                "description": "OpenAPI operation: InvestmentsController_delete\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Post an idempotent deposit or withdrawal as an internal transfer",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/investments/:id/movements",
+                "description": "OpenAPI operation: InvestmentsController_movement\n\nRequest schema: CreateInvestmentMovementDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Reverse an owned investment transfer without deleting history",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/investments/:investmentId/movements/:id/reversals",
+                "description": "OpenAPI operation: InvestmentsController_reverseMovement\n\nRequest schema: ReverseInvestmentMovementDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Create a transfer forecast for recurring investment contributions",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/investments/:id/recurring-rule",
+                "description": "OpenAPI operation: InvestmentsController_createRule\n\nRequest schema: CreateInvestmentRecurringRuleDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Ledger",
+          "item": [
+            {
+              "name": "List posted journal entries using stable cursor and date filters",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/journal/entries",
+                "description": "OpenAPI operation: LedgerController_list\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Post an immutable balanced journal entry",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/journal/entries",
+                "description": "OpenAPI operation: LedgerController_create\n\nRequest schema: CreateJournalEntryDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"economicType\": \"external_income\",\n  \"amount\": \"1000.00\",\n  \"currency\": \"HUF\",\n  \"postedOn\": \"2026-07-29\",\n  \"note\": \"Synthetic salary fixture\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Reverse a posted journal entry without deleting history",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/journal/entries/:id/reversals",
+                "description": "OpenAPI operation: LedgerController_reverse\n\nRequest schema: ReverseJournalEntryDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Atomically reverse and replace a posted journal entry",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/journal/entries/:id/corrections",
+                "description": "OpenAPI operation: LedgerController_correct\n\nRequest schema: CorrectJournalEntryDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Loans",
+          "item": [
+            {
+              "name": "List owned loans with separate projected schedule and posted payment history",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/loans",
+                "description": "OpenAPI operation: LoansController_list\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Create an owned loan and its liability ledger account",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/loans",
+                "description": "OpenAPI operation: LoansController_create\n\nRequest schema: CreateLoanDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Synthetic fixed-rate loan\",\n  \"principal\": \"120000\",\n  \"currency\": \"HUF\",\n  \"nominalAnnualRate\": \"12\",\n  \"termMonths\": 12,\n  \"startsOn\": \"2026-07-30\",\n  \"paymentDay\": 30,\n  \"extraPaymentScenario\": \"0\",\n  \"insuranceMonthly\": \"500\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update open loan configuration without rewriting posted history",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/loans/:id",
+                "description": "OpenAPI operation: LoansController_update\n\nRequest schema: UpdateLoanDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Delete a history-free loan; otherwise archive it",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/loans/:id",
+                "description": "OpenAPI operation: LoansController_delete\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Archive a fully repaid loan without deleting payment history",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/loans/:id/archive",
+                "description": "OpenAPI operation: LoansController_archive\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Post an idempotent repayment with explicit financial components",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/loans/:id/payments",
+                "description": "OpenAPI operation: LoansController_payment\n\nRequest schema: CreateLoanPaymentDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Reverse and replace an owned loan payment atomically",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/loans/:loanId/payments/:id/corrections",
+                "description": "OpenAPI operation: LoansController_correct\n\nRequest schema: CreateLoanPaymentDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Reverse an owned repayment and reopen a paid-off loan",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/loans/:loanId/payments/:id/reversals",
+                "description": "OpenAPI operation: LoansController_reverse\n\nRequest schema: ReverseLoanPaymentDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Create the loan repayment schedule used by the recurrence worker",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/loans/:id/recurring-rule",
+                "description": "OpenAPI operation: LoansController_createRule\n\nRequest schema: CreateLoanRecurringRuleDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Replace an owned loan repayment schedule",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/loans/:id/recurring-rule",
+                "description": "OpenAPI operation: LoansController_updateRule\n\nRequest schema: CreateLoanRecurringRuleDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Delete an owned loan repayment schedule and its forecasts",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/loans/:id/recurring-rule",
+                "description": "OpenAPI operation: LoansController_deleteRule\n\nRequest schema: none"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Notifications",
+          "item": [
+            {
+              "name": "Read email preferences; transactional security mail remains required",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/users/me/notification-preferences",
+                "description": "OpenAPI operation: NotificationsController_preference\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Enable or disable educational email without disabling transactional mail",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/users/me/notification-preferences",
+                "description": "OpenAPI operation: NotificationsController_update\n\nRequest schema: UpdateEmailPreferenceDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Privacy",
+          "item": [
+            {
+              "name": "Queue a complete manifest-versioned JSON and CSV account export",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/privacy/exports",
+                "description": "OpenAPI operation: PrivacyController_createExport\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Read owned export status and short-lived private download links",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/privacy/exports/:id",
+                "description": "OpenAPI operation: PrivacyController_exportStatus\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Reauthenticate and queue complete account deletion and external-state cleanup",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/privacy/deletion-requests",
+                "description": "OpenAPI operation: PrivacyController_createDeletion\n\nRequest schema: CreateDeletionRequestDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Recurrence",
+          "item": [
+            {
+              "name": "List owned recurring rules with an optional side-effect-free forecast range",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/recurring-rules",
+                "description": "OpenAPI operation: RecurrenceController_rules\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Create a forecast recurrence with an explicit economic type",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/recurring-rules",
+                "description": "OpenAPI operation: RecurrenceController_create\n\nRequest schema: CreateRecurringRuleDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Rent\",\n  \"amount\": \"125.50\",\n  \"currency\": \"HUF\",\n  \"economicType\": \"expense\",\n  \"startsOn\": \"2026-07-31\",\n  \"rrule\": \"FREQ=MONTHLY;BYMONTHDAY=31\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update an owned recurring rule and invalidate stored forecasts",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/recurring-rules/:id",
+                "description": "OpenAPI operation: RecurrenceController_update\n\nRequest schema: UpdateRecurringRuleDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Delete an owned recurring rule and its forecast occurrences",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/recurring-rules/:id",
+                "description": "OpenAPI operation: RecurrenceController_delete\n\nRequest schema: none"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Reporting",
+          "item": [
+            {
+              "name": "Read the current Budapest calendar-month dashboard report",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/reports/months/current",
+                "description": "OpenAPI operation: ReportingController_current\n\nRequest schema: none\n\nSeparates posted activity, forecast sources, and the combined projection. This is a cash-flow report, not net worth."
+              },
+              "response": []
+            },
+            {
+              "name": "Read a month report with stable posted-activity pagination and filters",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/reports/months/:year/:month",
+                "description": "OpenAPI operation: ReportingController_month\n\nRequest schema: none\n\nTotals reconcile over the complete filtered source set and therefore do not change between activity pages."
+              },
+              "response": []
+            },
+            {
+              "name": "List years that have owned report sources",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/reports/years",
+                "description": "OpenAPI operation: ReportingController_years\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Read explainable month-by-month and annual cash-flow aggregates",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/reports/years/:year",
+                "description": "OpenAPI operation: ReportingController_year\n\nRequest schema: none"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Securities",
+          "item": [
+            {
+              "name": "Read the owned FIFO portfolio without fetching or mutating market data",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/securities/portfolio",
+                "description": "OpenAPI operation: SecuritiesController_portfolio\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Read immutable trades, cash movements, and FIFO realized results",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/securities/activity",
+                "description": "OpenAPI operation: SecuritiesController_activity\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Post an atomic buy or sell with fees, FX provenance, and FIFO rebuild",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/securities/trades",
+                "description": "OpenAPI operation: SecuritiesController_trade\n\nRequest schema: CreateSecuritiesTradeDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Reverse linked trade cash and fee journals and rebuild FIFO",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/securities/trades/:id/reversals",
+                "description": "OpenAPI operation: SecuritiesController_reverse\n\nRequest schema: ReverseSecuritiesTradeDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Transfer cash between the default cash and securities cash accounts",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/securities/cash-movements",
+                "description": "OpenAPI operation: SecuritiesController_cash\n\nRequest schema: CreateSecuritiesCashMovementDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Validate and persist a fingerprinted broker CSV preview",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/securities/imports",
+                "description": "OpenAPI operation: SecuritiesController_preview\n\nRequest schema: PreviewSecuritiesImportDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Commit a valid preview atomically; repeated commit is idempotent",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/securities/imports/:id/commit",
+                "description": "OpenAPI operation: SecuritiesController_commit\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Queue an observable, retry-safe market-data refresh",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/securities/refresh-jobs",
+                "description": "OpenAPI operation: SecuritiesController_refresh\n\nRequest schema: CreateSecuritiesRefreshJobDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Read owned market-data refresh status and retry outcome",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/securities/refresh-jobs/:id",
+                "description": "OpenAPI operation: SecuritiesController_refreshStatus\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Explicitly reverse all owned securities history and clear projections",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/securities/portfolio-clear-requests",
+                "description": "OpenAPI operation: SecuritiesController_clear\n\nRequest schema: ClearSecuritiesPortfolioDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Read a stored quote; absent quotes are explicitly unavailable",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/securities/quotes",
+                "description": "OpenAPI operation: SecuritiesController_quote\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Read an owned or watched canonical market instrument",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/securities/instruments/:id",
+                "description": "OpenAPI operation: SecuritiesController_instrument\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Read actual trading-day prices and descriptive indicators",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/securities/instruments/:id/prices",
+                "description": "OpenAPI operation: SecuritiesController_prices\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Add a canonical instrument to the owned watchlist",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/securities/watchlist/:id",
+                "description": "OpenAPI operation: SecuritiesController_watch\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Remove an instrument from the owned watchlist",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/securities/watchlist/:id",
+                "description": "OpenAPI operation: SecuritiesController_unwatch\n\nRequest schema: none"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Users and settings",
+          "item": [
+            {
+              "name": "Get the authenticated user profile, preferences, and entitlements",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/users/me",
+                "description": "OpenAPI operation: UsersController_currentUser\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Update the authenticated user profile and desired language",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/users/me",
+                "description": "OpenAPI operation: UsersController_updateCurrentUser\n\nRequest schema: UpdateCurrentUserDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"fullName\": \"Ada Example\",\n  \"dateOfBirth\": \"1990-01-15\",\n  \"desiredLanguage\": \"hu\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get the current and supported theme identifiers",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/users/me/preferences/theme",
+                "description": "OpenAPI operation: UsersController_theme\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Set a validated theme identifier",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/users/me/preferences/theme",
+                "description": "OpenAPI operation: UsersController_updateTheme\n\nRequest schema: UpdateThemeDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"theme\": \"verdant-horizon\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get persisted onboarding and tutorial progress",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/users/me/onboarding",
+                "description": "OpenAPI operation: UsersController_onboarding\n\nRequest schema: none"
+              },
+              "response": []
+            },
+            {
+              "name": "Complete the post-onboarding tutorial",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/v1/users/me/onboarding",
+                "description": "OpenAPI operation: UsersController_completeTutorial\n\nRequest schema: CompleteTutorialDto",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tutorialCompleted\": true\n}"
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -3,6 +3,9 @@ storage/
 dist/
 coverage/
 node_modules/
+libs/generated/api-client/src/
+postman/MyMoneyMap-backend-v1.postman_collection.json
+docs/backend-implementation/steps/22-postman-backend-freeze/ENDPOINT-COVERAGE-MATRIX.md
 pnpm-lock.yaml
 *.php
 *.sql

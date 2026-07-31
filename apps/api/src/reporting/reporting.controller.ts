@@ -14,7 +14,6 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiParam,
-  ApiQuery,
   ApiTags,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
@@ -43,7 +42,6 @@ export class ReportingController {
       'Separates posted activity, forecast sources, and the combined projection. This is a cash-flow report, not net worth.',
   })
   @ApiOkResponse({ type: MonthReportResponseDto })
-  @ApiQuery({ type: MonthReportQueryDto })
   @ApiBadRequestResponse({ description: 'An activity filter or cursor is invalid' })
   @ApiUnprocessableEntityResponse({ description: 'A financial filter or forecast is invalid' })
   current(
@@ -68,7 +66,6 @@ export class ReportingController {
     name: 'month',
     schema: { type: 'integer', example: 7, minimum: 1, maximum: 12 },
   })
-  @ApiQuery({ type: MonthReportQueryDto })
   @ApiBadRequestResponse({ description: 'The period, activity filter, or cursor is invalid' })
   @ApiUnprocessableEntityResponse({ description: 'A financial filter or forecast is invalid' })
   month(

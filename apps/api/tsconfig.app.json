@@ -7,5 +7,5 @@
     "rootDir": "src"
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.spec.ts", "src/openapi/generate-openapi.ts", "src/openapi/check-openapi.ts"]
+  "exclude": ["src/**/*.spec.ts"]
 }

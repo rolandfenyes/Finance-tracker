@@ -8,6 +8,7 @@ export default tseslint.config(
       'coverage/**',
       '**/dist/**',
       'graphify-out/**',
+      'libs/generated/api-client/src/**',
       'node_modules/**',
       'storage/**',
     ],

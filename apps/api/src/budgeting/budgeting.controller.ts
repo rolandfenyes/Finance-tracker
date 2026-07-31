@@ -173,7 +173,7 @@ export class BudgetingController {
   }
 
   @Put('categories/:id/budget-rule')
-  @ApiTags('Categories', 'Budgeting')
+  @ApiTags('Categories')
   @ApiOperation({ summary: 'Assign or clear a premium rule on an owned spending category' })
   @ApiBody({
     type: AssignBudgetRuleDto,

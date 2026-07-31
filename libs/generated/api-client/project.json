@@ -4,5 +4,19 @@
   "projectType": "library",
   "sourceRoot": "libs/generated/api-client/src",
   "tags": ["scope:generated", "type:api-client"],
-  "targets": {}
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/libs/generated/api-client"],
+      "options": {
+        "command": "tsc -p libs/generated/api-client/tsconfig.lib.json"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p libs/generated/api-client/tsconfig.lib.json --noEmit"
+      }
+    }
+  }
 }

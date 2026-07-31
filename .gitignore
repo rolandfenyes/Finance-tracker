@@ -35,6 +35,8 @@
 
 # Node.js / Nx backend workspace
 node_modules/
+artifacts/
+postman/environments/runtime*.postman_environment.json
 /.nx/
 dist/
 coverage/

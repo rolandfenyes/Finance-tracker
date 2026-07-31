@@ -10,7 +10,7 @@ export function setOpenApiGenerationEnvironment(): void {
     DATABASE_CONNECTION_TIMEOUT_MS: '2000',
     DATABASE_IDLE_TIMEOUT_MS: '10000',
     DATABASE_MAX_LIFETIME_SECONDS: '300',
-    REDIS_URL: 'redis://127.0.0.1:6380',
+    REDIS_URL: process.env.REDIS_URL || 'redis://127.0.0.1:6380',
     FX_REFRESH_ENABLED: 'false',
     RECURRENCE_ENABLED: 'false',
     FX_PROVIDER_TIMEOUT_MS: '5000',

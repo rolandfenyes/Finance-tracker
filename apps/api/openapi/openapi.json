@@ -5,6 +5,12 @@
       "post": {
         "operationId": "IdentityController_register",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/RegistrationDto" } }
+          }
+        },
         "responses": { "202": { "description": "" } },
         "summary": "Register an account and issue email verification",
         "tags": ["Identity"]
@@ -14,6 +20,14 @@
       "post": {
         "operationId": "IdentityController_verify",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EmailVerificationDto" }
+            }
+          }
+        },
         "responses": { "204": { "description": "" } },
         "tags": ["Identity"]
       }
@@ -22,6 +36,14 @@
       "post": {
         "operationId": "IdentityController_requestVerification",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EmailVerificationRequestDto" }
+            }
+          }
+        },
         "responses": { "202": { "description": "" } },
         "tags": ["Identity"]
       }
@@ -30,6 +52,12 @@
       "post": {
         "operationId": "IdentityController_login",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/PasswordSessionDto" } }
+          }
+        },
         "responses": { "204": { "description": "" } },
         "tags": ["Identity"]
       }
@@ -47,6 +75,12 @@
       "put": {
         "operationId": "IdentityController_changePassword",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/PasswordChangeDto" } }
+          }
+        },
         "responses": { "204": { "description": "" } },
         "security": [{ "cookie": [] }],
         "tags": ["Identity"]
@@ -65,6 +99,12 @@
       "post": {
         "operationId": "IdentityController_registerPasskey",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/PasskeyLabelDto" } }
+          }
+        },
         "responses": { "201": { "description": "" } },
         "security": [{ "cookie": [] }],
         "tags": ["Identity"]
@@ -74,6 +114,14 @@
       "post": {
         "operationId": "IdentityController_passkeyOptions",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PasskeyAuthenticationOptionsDto" }
+            }
+          }
+        },
         "responses": { "201": { "description": "" } },
         "tags": ["Identity"]
       }
@@ -82,6 +130,14 @@
       "post": {
         "operationId": "IdentityController_passkeyLogin",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PasskeyAuthenticationDto" }
+            }
+          }
+        },
         "responses": { "204": { "description": "" } },
         "tags": ["Identity"]
       }
@@ -89,7 +145,9 @@
     "/api/v1/auth/passkeys/{id}": {
       "delete": {
         "operationId": "IdentityController_deletePasskey",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": { "204": { "description": "" } },
         "security": [{ "cookie": [] }],
         "tags": ["Identity"]
@@ -316,7 +374,9 @@
     "/api/v1/users/me/currencies/{code}": {
       "delete": {
         "operationId": "CurrencyController_remove",
-        "parameters": [],
+        "parameters": [
+          { "name": "code", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": { "204": { "description": "" } },
         "security": [{ "cookie": [] }],
         "summary": "Remove a non-main currency membership",
@@ -410,7 +470,27 @@
       },
       "get": {
         "operationId": "LedgerController_list",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "dateFrom",
+            "required": false,
+            "in": "query",
+            "schema": { "format": "date", "type": "string" }
+          },
+          {
+            "name": "dateTo",
+            "required": false,
+            "in": "query",
+            "schema": { "format": "date", "type": "string" }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": { "minimum": 1, "maximum": 100, "default": 25, "type": "number" }
+          },
+          { "name": "cursor", "required": false, "in": "query", "schema": { "type": "string" } }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -430,6 +510,7 @@
       "post": {
         "operationId": "LedgerController_reverse",
         "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } },
           {
             "name": "Idempotency-Key",
             "in": "header",
@@ -437,6 +518,14 @@
             "schema": { "type": "string" }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReverseJournalEntryDto" }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -458,6 +547,7 @@
       "post": {
         "operationId": "LedgerController_correct",
         "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } },
           {
             "name": "Idempotency-Key",
             "in": "header",
@@ -465,6 +555,14 @@
             "schema": { "type": "string" }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CorrectJournalEntryDto" }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -485,7 +583,19 @@
     "/api/v1/budget-rules": {
       "get": {
         "operationId": "BudgetingController_rules",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "month",
+            "required": false,
+            "in": "query",
+            "description": "When supplied, includes forecast-income planning and signed rule variance for this month.",
+            "schema": {
+              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])$",
+              "example": "2026-07",
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -498,7 +608,7 @@
         },
         "security": [{ "cookie": [] }],
         "summary": "List exact percentage rules, assignments, allocation status, and optional month plan",
-        "tags": ["Budgeting", "Budgeting"]
+        "tags": ["Budgeting"]
       },
       "put": {
         "operationId": "BudgetingController_initialize",
@@ -534,7 +644,7 @@
         },
         "security": [{ "cookie": [] }],
         "summary": "Configure the initial onboarding budget-rule set atomically",
-        "tags": ["Budgeting", "Budgeting"]
+        "tags": ["Budgeting"]
       },
       "post": {
         "operationId": "BudgetingController_createRule",
@@ -560,13 +670,21 @@
         },
         "security": [{ "cookie": [] }],
         "summary": "Create a premium cash-flow rule",
-        "tags": ["Budgeting", "Budgeting"]
+        "tags": ["Budgeting"]
       }
     },
     "/api/v1/budget-rules/{id}": {
       "patch": {
         "operationId": "BudgetingController_updateRule",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/UpdateBudgetRuleDto" } }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -580,15 +698,17 @@
         },
         "security": [{ "cookie": [] }],
         "summary": "Update an owned premium cash-flow rule",
-        "tags": ["Budgeting", "Budgeting"]
+        "tags": ["Budgeting"]
       },
       "delete": {
         "operationId": "BudgetingController_deleteRule",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": { "204": { "description": "" } },
         "security": [{ "cookie": [] }],
         "summary": "Delete an owned rule and leave assigned categories unassigned",
-        "tags": ["Budgeting", "Budgeting"]
+        "tags": ["Budgeting"]
       }
     },
     "/api/v1/categories": {
@@ -607,7 +727,7 @@
         },
         "security": [{ "cookie": [] }],
         "summary": "List owned income and spending categories",
-        "tags": ["Budgeting", "Categories"]
+        "tags": ["Categories"]
       },
       "post": {
         "operationId": "BudgetingController_createCategory",
@@ -637,13 +757,21 @@
         },
         "security": [{ "cookie": [] }],
         "summary": "Create an owned category within the current plan quota",
-        "tags": ["Budgeting", "Categories"]
+        "tags": ["Categories"]
       }
     },
     "/api/v1/categories/{id}": {
       "patch": {
         "operationId": "BudgetingController_updateCategory",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/UpdateCategoryDto" } }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -656,24 +784,28 @@
         },
         "security": [{ "cookie": [] }],
         "summary": "Update an unprotected owned category",
-        "tags": ["Budgeting", "Categories"]
+        "tags": ["Categories"]
       },
       "delete": {
         "operationId": "BudgetingController_deleteCategory",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": {
           "204": { "description": "" },
           "409": { "description": "The category is protected or referenced by financial data" }
         },
         "security": [{ "cookie": [] }],
         "summary": "Delete an unprotected, unreferenced owned category",
-        "tags": ["Budgeting", "Categories"]
+        "tags": ["Categories"]
       }
     },
     "/api/v1/categories/{id}/budget-rule": {
       "put": {
         "operationId": "BudgetingController_assignRule",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -698,7 +830,7 @@
         },
         "security": [{ "cookie": [] }],
         "summary": "Assign or clear a premium rule on an owned spending category",
-        "tags": ["Budgeting", "Categories", "Budgeting"]
+        "tags": ["Categories"]
       }
     },
     "/api/v1/basic-incomes": {
@@ -717,7 +849,7 @@
         },
         "security": [{ "cookie": [] }],
         "summary": "List recurring baseline income planning definitions",
-        "tags": ["Budgeting", "Basic income"]
+        "tags": ["Basic income"]
       },
       "post": {
         "operationId": "BudgetingController_createBasicIncome",
@@ -755,13 +887,23 @@
         },
         "security": [{ "cookie": [] }],
         "summary": "Create a forecast-only baseline income definition",
-        "tags": ["Budgeting", "Basic income"]
+        "tags": ["Basic income"]
       }
     },
     "/api/v1/basic-incomes/{id}": {
       "patch": {
         "operationId": "BudgetingController_updateBasicIncome",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateBasicIncomeDto" }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -774,21 +916,36 @@
         },
         "security": [{ "cookie": [] }],
         "summary": "Update an owned baseline income definition without posting income",
-        "tags": ["Budgeting", "Basic income"]
+        "tags": ["Basic income"]
       },
       "delete": {
         "operationId": "BudgetingController_deleteBasicIncome",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": { "204": { "description": "" } },
         "security": [{ "cookie": [] }],
         "summary": "Delete an owned baseline income planning definition",
-        "tags": ["Budgeting", "Basic income"]
+        "tags": ["Basic income"]
       }
     },
     "/api/v1/recurring-rules": {
       "get": {
         "operationId": "RecurrenceController_rules",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": { "format": "date", "example": "2026-07-01", "type": "string" }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": { "format": "date", "example": "2026-07-31", "type": "string" }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -847,7 +1004,17 @@
     "/api/v1/recurring-rules/{id}": {
       "patch": {
         "operationId": "RecurrenceController_update",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateRecurringRuleDto" }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -865,7 +1032,9 @@
       },
       "delete": {
         "operationId": "RecurrenceController_delete",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": { "204": { "description": "" } },
         "security": [{ "cookie": [] }],
         "summary": "Delete an owned recurring rule and its forecast occurrences",
@@ -931,7 +1100,15 @@
     "/api/v1/loans/{id}": {
       "patch": {
         "operationId": "LoansController_update",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/UpdateLoanDto" } }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -948,7 +1125,9 @@
       },
       "delete": {
         "operationId": "LoansController_delete",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": {
           "204": { "description": "" },
           "409": { "description": "The loan has immutable payment history" }
@@ -961,7 +1140,9 @@
     "/api/v1/loans/{id}/archive": {
       "post": {
         "operationId": "LoansController_archive",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -980,6 +1161,7 @@
       "post": {
         "operationId": "LoansController_payment",
         "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } },
           {
             "name": "Idempotency-Key",
             "in": "header",
@@ -987,6 +1169,14 @@
             "schema": { "type": "string" }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateLoanPaymentDto" }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -1005,6 +1195,8 @@
       "post": {
         "operationId": "LoansController_correct",
         "parameters": [
+          { "name": "loanId", "required": true, "in": "path", "schema": { "type": "string" } },
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } },
           {
             "name": "Idempotency-Key",
             "in": "header",
@@ -1012,6 +1204,14 @@
             "schema": { "type": "string" }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateLoanPaymentDto" }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -1029,6 +1229,8 @@
       "post": {
         "operationId": "LoansController_reverse",
         "parameters": [
+          { "name": "loanId", "required": true, "in": "path", "schema": { "type": "string" } },
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } },
           {
             "name": "Idempotency-Key",
             "in": "header",
@@ -1036,6 +1238,14 @@
             "schema": { "type": "string" }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReverseLoanPaymentDto" }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -1052,7 +1262,17 @@
     "/api/v1/loans/{id}/recurring-rule": {
       "post": {
         "operationId": "LoansController_createRule",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateLoanRecurringRuleDto" }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -1067,7 +1287,17 @@
       },
       "put": {
         "operationId": "LoansController_updateRule",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateLoanRecurringRuleDto" }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -1082,7 +1312,9 @@
       },
       "delete": {
         "operationId": "LoansController_deleteRule",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": { "204": { "description": "" } },
         "security": [{ "cookie": [] }],
         "summary": "Delete an owned loan repayment schedule and its forecasts",
@@ -1094,46 +1326,54 @@
         "description": "Separates posted activity, forecast sources, and the combined projection. This is a cash-flow report, not net worth.",
         "operationId": "ReportingController_current",
         "parameters": [
-          { "required": false, "name": "kind", "in": "query", "schema": { "type": "string" } },
           {
+            "name": "kind",
             "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["income", "expense", "transfer", "adjustment", "trade_cash"]
+            }
+          },
+          {
             "name": "categoryId",
+            "required": false,
             "in": "query",
             "schema": { "format": "uuid", "type": "string" }
           },
           {
-            "required": false,
             "name": "currency",
+            "required": false,
             "in": "query",
             "schema": { "pattern": "^[A-Z]{3}$", "type": "string" }
           },
           {
-            "required": false,
             "name": "query",
+            "required": false,
             "in": "query",
             "schema": { "minLength": 1, "maxLength": 120, "type": "string" }
           },
           {
-            "required": false,
             "name": "minAmount",
+            "required": false,
             "in": "query",
             "schema": { "pattern": "^(?:0|[1-9]\\d{0,17})(?:\\.\\d{1,12})?$", "type": "string" }
           },
           {
-            "required": false,
             "name": "maxAmount",
+            "required": false,
             "in": "query",
             "schema": { "pattern": "^(?:0|[1-9]\\d{0,17})(?:\\.\\d{1,12})?$", "type": "string" }
           },
           {
-            "required": false,
             "name": "limit",
+            "required": false,
             "in": "query",
             "schema": { "minimum": 1, "maximum": 100, "default": 25, "type": "number" }
           },
           {
-            "required": false,
             "name": "cursor",
+            "required": false,
             "in": "query",
             "schema": { "minLength": 1, "maxLength": 1000, "type": "string" }
           }
@@ -1160,48 +1400,11 @@
         "description": "Totals reconcile over the complete filtered source set and therefore do not change between activity pages.",
         "operationId": "ReportingController_month",
         "parameters": [
-          { "required": false, "name": "kind", "in": "query", "schema": { "type": "string" } },
           {
-            "required": false,
-            "name": "categoryId",
-            "in": "query",
-            "schema": { "format": "uuid", "type": "string" }
-          },
-          {
-            "required": false,
-            "name": "currency",
-            "in": "query",
-            "schema": { "pattern": "^[A-Z]{3}$", "type": "string" }
-          },
-          {
-            "required": false,
-            "name": "query",
-            "in": "query",
-            "schema": { "minLength": 1, "maxLength": 120, "type": "string" }
-          },
-          {
-            "required": false,
-            "name": "minAmount",
-            "in": "query",
-            "schema": { "pattern": "^(?:0|[1-9]\\d{0,17})(?:\\.\\d{1,12})?$", "type": "string" }
-          },
-          {
-            "required": false,
-            "name": "maxAmount",
-            "in": "query",
-            "schema": { "pattern": "^(?:0|[1-9]\\d{0,17})(?:\\.\\d{1,12})?$", "type": "string" }
-          },
-          {
-            "required": false,
-            "name": "limit",
-            "in": "query",
-            "schema": { "minimum": 1, "maximum": 100, "default": 25, "type": "number" }
-          },
-          {
-            "required": false,
-            "name": "cursor",
-            "in": "query",
-            "schema": { "minLength": 1, "maxLength": 1000, "type": "string" }
+            "name": "year",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "integer", "example": 2026, "minimum": 1, "maximum": 9999 }
           },
           {
             "name": "month",
@@ -1210,10 +1413,55 @@
             "schema": { "type": "integer", "example": 7, "minimum": 1, "maximum": 12 }
           },
           {
-            "name": "year",
-            "required": true,
-            "in": "path",
-            "schema": { "type": "integer", "example": 2026, "minimum": 1, "maximum": 9999 }
+            "name": "kind",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["income", "expense", "transfer", "adjustment", "trade_cash"]
+            }
+          },
+          {
+            "name": "categoryId",
+            "required": false,
+            "in": "query",
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "name": "currency",
+            "required": false,
+            "in": "query",
+            "schema": { "pattern": "^[A-Z]{3}$", "type": "string" }
+          },
+          {
+            "name": "query",
+            "required": false,
+            "in": "query",
+            "schema": { "minLength": 1, "maxLength": 120, "type": "string" }
+          },
+          {
+            "name": "minAmount",
+            "required": false,
+            "in": "query",
+            "schema": { "pattern": "^(?:0|[1-9]\\d{0,17})(?:\\.\\d{1,12})?$", "type": "string" }
+          },
+          {
+            "name": "maxAmount",
+            "required": false,
+            "in": "query",
+            "schema": { "pattern": "^(?:0|[1-9]\\d{0,17})(?:\\.\\d{1,12})?$", "type": "string" }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": { "minimum": 1, "maximum": 100, "default": 25, "type": "number" }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": { "minLength": 1, "maxLength": 1000, "type": "string" }
           }
         ],
         "responses": {
@@ -1335,7 +1583,15 @@
     "/api/v1/goals/{id}": {
       "patch": {
         "operationId": "GoalsController_update",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/UpdateGoalDto" } }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -1352,7 +1608,9 @@
       },
       "delete": {
         "operationId": "GoalsController_delete",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": {
           "204": { "description": "" },
           "409": { "description": "The goal has immutable contribution history" }
@@ -1365,7 +1623,9 @@
     "/api/v1/goals/{id}/archive": {
       "post": {
         "operationId": "GoalsController_archive",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -1382,7 +1642,9 @@
     "/api/v1/goals/{id}/unarchive": {
       "post": {
         "operationId": "GoalsController_unarchive",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -1400,6 +1662,7 @@
       "post": {
         "operationId": "GoalsController_contribute",
         "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } },
           {
             "name": "Idempotency-Key",
             "in": "header",
@@ -1444,6 +1707,8 @@
       "post": {
         "operationId": "GoalsController_correct",
         "parameters": [
+          { "name": "goalId", "required": true, "in": "path", "schema": { "type": "string" } },
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } },
           {
             "name": "Idempotency-Key",
             "in": "header",
@@ -1451,6 +1716,14 @@
             "schema": { "type": "string" }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateGoalContributionDto" }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -1470,6 +1743,8 @@
       "post": {
         "operationId": "GoalsController_reverse",
         "parameters": [
+          { "name": "goalId", "required": true, "in": "path", "schema": { "type": "string" } },
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } },
           {
             "name": "Idempotency-Key",
             "in": "header",
@@ -1477,6 +1752,14 @@
             "schema": { "type": "string" }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReverseGoalContributionDto" }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -1495,7 +1778,17 @@
     "/api/v1/goals/{id}/recurring-rule": {
       "post": {
         "operationId": "GoalsController_createRule",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateGoalRecurringRuleDto" }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -1511,7 +1804,17 @@
       },
       "put": {
         "operationId": "GoalsController_updateRule",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateGoalRecurringRuleDto" }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -1527,7 +1830,9 @@
       },
       "delete": {
         "operationId": "GoalsController_deleteRule",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": { "204": { "description": "" } },
         "security": [{ "cookie": [] }],
         "summary": "Remove the attached goal forecast without changing goal progress",
@@ -1603,6 +1908,14 @@
             "schema": { "type": "string" }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateEmergencyReserveMovementDto" }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -1630,6 +1943,14 @@
             "schema": { "type": "string" }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateEmergencyReserveMovementDto" }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -1650,6 +1971,7 @@
       "post": {
         "operationId": "EmergencyReserveController_reverse",
         "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } },
           {
             "name": "Idempotency-Key",
             "in": "header",
@@ -1657,6 +1979,14 @@
             "schema": { "type": "string" }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReverseEmergencyReserveMovementDto" }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -1734,7 +2064,15 @@
     "/api/v1/investments/{id}": {
       "patch": {
         "operationId": "InvestmentsController_update",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/UpdateInvestmentDto" } }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -1752,7 +2090,9 @@
       },
       "delete": {
         "operationId": "InvestmentsController_delete",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": {
           "204": { "description": "" },
           "409": { "description": "Immutable history or emergency-reserve linkage exists" }
@@ -1766,6 +2106,7 @@
       "post": {
         "operationId": "InvestmentsController_movement",
         "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } },
           {
             "name": "Idempotency-Key",
             "in": "header",
@@ -1773,6 +2114,14 @@
             "schema": { "type": "string" }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateInvestmentMovementDto" }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -1794,12 +2143,27 @@
         "operationId": "InvestmentsController_reverseMovement",
         "parameters": [
           {
+            "name": "investmentId",
+            "required": true,
+            "in": "path",
+            "schema": { "type": "string" }
+          },
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } },
+          {
             "name": "Idempotency-Key",
             "in": "header",
             "required": true,
             "schema": { "type": "string" }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReverseInvestmentMovementDto" }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -1818,7 +2182,17 @@
     "/api/v1/investments/{id}/recurring-rule": {
       "post": {
         "operationId": "InvestmentsController_createRule",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateInvestmentRecurringRuleDto" }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -1877,6 +2251,14 @@
       "post": {
         "operationId": "SecuritiesController_trade",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateSecuritiesTradeDto" }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -1896,7 +2278,17 @@
     "/api/v1/securities/trades/{id}/reversals": {
       "post": {
         "operationId": "SecuritiesController_reverse",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReverseSecuritiesTradeDto" }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -1916,6 +2308,14 @@
       "post": {
         "operationId": "SecuritiesController_cash",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateSecuritiesCashMovementDto" }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -1935,6 +2335,14 @@
       "post": {
         "operationId": "SecuritiesController_preview",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PreviewSecuritiesImportDto" }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -1953,7 +2361,9 @@
     "/api/v1/securities/imports/{id}/commit": {
       "post": {
         "operationId": "SecuritiesController_commit",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": {
           "201": {
             "description": "",
@@ -1973,6 +2383,14 @@
       "post": {
         "operationId": "SecuritiesController_refresh",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateSecuritiesRefreshJobDto" }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -1991,7 +2409,9 @@
     "/api/v1/securities/refresh-jobs/{id}": {
       "get": {
         "operationId": "SecuritiesController_refreshStatus",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -2011,6 +2431,14 @@
       "post": {
         "operationId": "SecuritiesController_clear",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ClearSecuritiesPortfolioDto" }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -2029,7 +2457,14 @@
     "/api/v1/securities/quotes": {
       "get": {
         "operationId": "SecuritiesController_quote",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "instrumentId",
+            "required": true,
+            "in": "query",
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -2048,7 +2483,9 @@
     "/api/v1/securities/instruments/{id}": {
       "get": {
         "operationId": "SecuritiesController_instrument",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -2067,7 +2504,21 @@
     "/api/v1/securities/instruments/{id}/prices": {
       "get": {
         "operationId": "SecuritiesController_prices",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "schema": { "format": "date", "type": "string" }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "schema": { "format": "date", "type": "string" }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -2086,7 +2537,9 @@
     "/api/v1/securities/watchlist/{id}": {
       "put": {
         "operationId": "SecuritiesController_watch",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -2103,7 +2556,9 @@
       },
       "delete": {
         "operationId": "SecuritiesController_unwatch",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": { "204": { "description": "" } },
         "security": [{ "cookie": [] }],
         "summary": "Remove an instrument from the owned watchlist",
@@ -2113,7 +2568,32 @@
     "/api/v1/feedback": {
       "get": {
         "operationId": "FeedbackController_list",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "allOf": [{ "$ref": "#/components/schemas/Object" }]
+            }
+          },
+          { "name": "cursor", "required": false, "in": "query", "schema": { "type": "string" } },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": { "type": "string", "enum": ["open", "in_progress", "resolved", "closed"] }
+          },
+          {
+            "name": "kind",
+            "required": false,
+            "in": "query",
+            "schema": { "type": "string", "enum": ["bug", "idea"] }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -2131,6 +2611,12 @@
       "post": {
         "operationId": "FeedbackController_create",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreateFeedbackDto" } }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -2149,7 +2635,17 @@
     "/api/v1/feedback/{id}/status": {
       "patch": {
         "operationId": "FeedbackController_status",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateOwnedFeedbackStatusDto" }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -2168,7 +2664,9 @@
     "/api/v1/feedback/{id}": {
       "delete": {
         "operationId": "FeedbackController_delete",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": { "204": { "description": "" } },
         "security": [{ "cookie": [] }],
         "summary": "Delete owned feedback",
@@ -2216,7 +2714,44 @@
     "/api/v1/admin/users": {
       "get": {
         "operationId": "AdministrationController_users",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "allOf": [{ "$ref": "#/components/schemas/Object" }]
+            }
+          },
+          { "name": "cursor", "required": false, "in": "query", "schema": { "type": "string" } },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": { "maxLength": 160, "type": "string" }
+          },
+          {
+            "name": "role",
+            "required": false,
+            "in": "query",
+            "schema": { "type": "string", "enum": ["free", "premium", "admin"] }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": { "type": "string", "enum": ["active", "inactive"] }
+          },
+          {
+            "name": "verified",
+            "required": false,
+            "in": "query",
+            "schema": { "type": "string", "enum": ["true", "false"] }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -2235,7 +2770,9 @@
     "/api/v1/admin/users/{id}": {
       "get": {
         "operationId": "AdministrationController_user",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -2254,7 +2791,15 @@
     "/api/v1/admin/users/{id}/role": {
       "put": {
         "operationId": "AdministrationController_role",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/UpdateUserRoleDto" } }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -2273,7 +2818,15 @@
     "/api/v1/admin/users/{id}/status": {
       "put": {
         "operationId": "AdministrationController_status",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/UpdateUserStatusDto" } }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -2292,7 +2845,9 @@
     "/api/v1/admin/users/{id}/password-reset-request": {
       "post": {
         "operationId": "AdministrationController_passwordReset",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": {
           "202": {
             "description": "",
@@ -2311,7 +2866,9 @@
     "/api/v1/admin/users/{id}/email-verification-request": {
       "post": {
         "operationId": "AdministrationController_verification",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": {
           "202": {
             "description": "",
@@ -2330,7 +2887,17 @@
     "/api/v1/admin/users/{id}/email-change-request": {
       "post": {
         "operationId": "AdministrationController_emailChange",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EmailChangeRequestDto" }
+            }
+          }
+        },
         "responses": {
           "202": {
             "description": "",
@@ -2349,7 +2916,44 @@
     "/api/v1/admin/feedback": {
       "get": {
         "operationId": "AdministrationController_feedback",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "allOf": [{ "$ref": "#/components/schemas/Object" }]
+            }
+          },
+          { "name": "cursor", "required": false, "in": "query", "schema": { "type": "string" } },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": { "maxLength": 160, "type": "string" }
+          },
+          {
+            "name": "kind",
+            "required": false,
+            "in": "query",
+            "schema": { "type": "string", "enum": ["bug", "idea"] }
+          },
+          {
+            "name": "severity",
+            "required": false,
+            "in": "query",
+            "schema": { "type": "string", "enum": ["low", "medium", "high"] }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": { "type": "string", "enum": ["open", "in_progress", "resolved", "closed"] }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -2368,7 +2972,17 @@
     "/api/v1/admin/feedback/{id}": {
       "patch": {
         "operationId": "AdministrationController_updateFeedback",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateAdminFeedbackDto" }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -2387,7 +3001,17 @@
     "/api/v1/admin/feedback/{id}/responses": {
       "post": {
         "operationId": "AdministrationController_respond",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateAdminFeedbackResponseDto" }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -2426,6 +3050,14 @@
       "patch": {
         "operationId": "AdministrationController_settings",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateSystemSettingsDto" }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -2444,7 +3076,15 @@
     "/api/v1/admin/integrations/{service}": {
       "put": {
         "operationId": "AdministrationController_integration",
-        "parameters": [],
+        "parameters": [
+          { "name": "service", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/PutIntegrationDto" } }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -2461,7 +3101,9 @@
       },
       "delete": {
         "operationId": "AdministrationController_deleteIntegration",
-        "parameters": [],
+        "parameters": [
+          { "name": "service", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": { "204": { "description": "" } },
         "security": [{ "cookie": [] }],
         "summary": "Delete an integration configuration and its encrypted secret",
@@ -2471,7 +3113,19 @@
     "/api/v1/admin/billing/summary": {
       "get": {
         "operationId": "BillingController_summary",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50,
+              "allOf": [{ "$ref": "#/components/schemas/Object" }]
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -2507,6 +3161,12 @@
       "post": {
         "operationId": "BillingController_createPlan",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/PlanDto" } }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -2524,7 +3184,9 @@
     "/api/v1/admin/billing/plans/{id}": {
       "get": {
         "operationId": "BillingController_plan",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -2540,7 +3202,15 @@
       },
       "patch": {
         "operationId": "BillingController_updatePlan",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/PlanDto" } }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -2556,7 +3226,9 @@
       },
       "delete": {
         "operationId": "BillingController_deletePlan",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": { "204": { "description": "" } },
         "security": [{ "cookie": [] }],
         "tags": ["Administrative billing"]
@@ -2582,6 +3254,12 @@
       "post": {
         "operationId": "BillingController_createPromotion",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/PromotionDto" } }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -2599,7 +3277,9 @@
     "/api/v1/admin/billing/promotions/{id}": {
       "get": {
         "operationId": "BillingController_promotion",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -2615,7 +3295,15 @@
       },
       "patch": {
         "operationId": "BillingController_updatePromotion",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/PromotionDto" } }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -2631,7 +3319,9 @@
       },
       "delete": {
         "operationId": "BillingController_deletePromotion",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": { "204": { "description": "" } },
         "security": [{ "cookie": [] }],
         "tags": ["Administrative billing"]
@@ -2641,6 +3331,12 @@
       "post": {
         "operationId": "BillingController_trial",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/TrialPromotionDto" } }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -2658,7 +3354,17 @@
     "/api/v1/admin/users/{id}/subscription": {
       "put": {
         "operationId": "BillingController_assign",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AssignSubscriptionDto" }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -2676,7 +3382,15 @@
     "/api/v1/admin/invoices/{id}": {
       "patch": {
         "operationId": "BillingController_invoice",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/UpdateInvoiceDto" } }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -2695,6 +3409,12 @@
       "post": {
         "operationId": "BillingController_createPayment",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/PaymentDto" } }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -2712,7 +3432,15 @@
     "/api/v1/admin/payments/{id}": {
       "patch": {
         "operationId": "BillingController_updatePayment",
-        "parameters": [],
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/PaymentDto" } }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -2750,6 +3478,14 @@
       "patch": {
         "operationId": "NotificationsController_update",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateEmailPreferenceDto" }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -2785,7 +3521,17 @@
     "/api/v1/admin/email-templates/{code}/preview": {
       "post": {
         "operationId": "NotificationsAdminController_preview",
-        "parameters": [],
+        "parameters": [
+          { "name": "code", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PreviewEmailTemplateDto" }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -2801,6 +3547,14 @@
       "post": {
         "operationId": "NotificationsAdminController_test",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateEmailTestJobDto" }
+            }
+          }
+        },
         "responses": {
           "202": {
             "description": "",
@@ -2829,6 +3583,14 @@
       "patch": {
         "operationId": "NotificationsAdminController_updateChannel",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateEmailChannelDto" }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -2844,6 +3606,14 @@
       "patch": {
         "operationId": "NotificationsAdminController_updateSettings",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateEmailChannelDto" }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -2920,6 +3690,14 @@
             "schema": { "type": "string", "example": "delete-account-synthetic-confirmation" }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateDeletionRequestDto" }
+            }
+          }
+        },
         "responses": {
           "202": {
             "description": "",
@@ -3070,6 +3848,68 @@
   "components": {
     "securitySchemes": { "cookie": { "type": "apiKey", "in": "cookie", "name": "mymoneymap.sid" } },
     "schemas": {
+      "RegistrationDto": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string", "example": "ada@example.test" },
+          "password": { "type": "string", "minLength": 8, "example": "synthetic-long-password" },
+          "fullName": { "type": "string", "example": "Ada Example" },
+          "dateOfBirth": { "type": "string", "format": "date", "example": "1990-01-15" }
+        },
+        "required": ["email", "password", "fullName", "dateOfBirth"]
+      },
+      "EmailVerificationDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Single-use token received through the configured email channel"
+          }
+        },
+        "required": ["token"]
+      },
+      "EmailVerificationRequestDto": {
+        "type": "object",
+        "properties": { "email": { "type": "string", "example": "ada@example.test" } },
+        "required": ["email"]
+      },
+      "PasswordSessionDto": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string", "example": "ada@example.test" },
+          "password": { "type": "string", "format": "password" },
+          "remember": { "type": "boolean", "default": false }
+        },
+        "required": ["email", "password"]
+      },
+      "PasswordChangeDto": {
+        "type": "object",
+        "properties": {
+          "currentPassword": { "type": "string", "format": "password" },
+          "newPassword": { "type": "string", "format": "password", "minLength": 8 }
+        },
+        "required": ["currentPassword", "newPassword"]
+      },
+      "PasskeyLabelDto": {
+        "type": "object",
+        "properties": {
+          "label": { "type": "string", "example": "Work laptop" },
+          "credential": { "type": "object" }
+        },
+        "required": ["label", "credential"]
+      },
+      "PasskeyAuthenticationOptionsDto": {
+        "type": "object",
+        "properties": { "email": { "type": "string", "example": "ada@example.test" } }
+      },
+      "PasskeyAuthenticationDto": {
+        "type": "object",
+        "properties": {
+          "credential": { "type": "object" },
+          "remember": { "type": "boolean", "default": false }
+        },
+        "required": ["credential"]
+      },
       "UpdateCurrentUserDto": {
         "type": "object",
         "properties": {
@@ -3619,6 +4459,14 @@
         },
         "required": ["rules"]
       },
+      "UpdateBudgetRuleDto": {
+        "type": "object",
+        "properties": {
+          "label": { "type": "string", "maxLength": 120 },
+          "percent": { "type": "string", "example": "50" },
+          "targetHint": { "type": "string", "nullable": true, "maxLength": 500 }
+        }
+      },
       "CategoryResponseDto": {
         "type": "object",
         "properties": {
@@ -3668,6 +4516,14 @@
           }
         },
         "required": ["label", "kind", "color"]
+      },
+      "UpdateCategoryDto": {
+        "type": "object",
+        "properties": {
+          "label": { "type": "string", "maxLength": 120 },
+          "kind": { "type": "string", "enum": ["income", "spending"] },
+          "color": { "type": "string", "pattern": "^#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$" }
+        }
       },
       "AssignBudgetRuleDto": {
         "type": "object",
@@ -3722,6 +4578,17 @@
           "categoryId": { "type": "string", "format": "uuid", "nullable": true }
         },
         "required": ["label", "amount", "currency", "validFrom"]
+      },
+      "UpdateBasicIncomeDto": {
+        "type": "object",
+        "properties": {
+          "label": { "type": "string", "maxLength": 120 },
+          "amount": { "type": "string", "example": "1200.00" },
+          "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+          "validFrom": { "type": "string", "format": "date" },
+          "validTo": { "type": "string", "format": "date", "nullable": true },
+          "categoryId": { "type": "string", "format": "uuid", "nullable": true }
+        }
       },
       "RecurrenceForecastResponseDto": {
         "type": "object",
@@ -3825,6 +4692,18 @@
           }
         },
         "required": ["title", "amount", "currency", "economicType", "startsOn", "rrule"]
+      },
+      "UpdateRecurringRuleDto": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "maxLength": 120 },
+          "amount": { "type": "string", "example": "125.50" },
+          "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+          "economicType": { "type": "string", "enum": ["income", "expense", "transfer"] },
+          "startsOn": { "type": "string", "format": "date" },
+          "rrule": { "type": "string", "maxLength": 512 },
+          "categoryId": { "type": "string", "format": "uuid", "nullable": true }
+        }
       },
       "LoanPaymentResponseDto": {
         "type": "object",
@@ -3954,6 +4833,59 @@
           "termMonths",
           "startsOn"
         ]
+      },
+      "UpdateLoanDto": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "maxLength": 120 },
+          "principal": { "type": "string" },
+          "nominalAnnualRate": { "type": "string" },
+          "termMonths": { "type": "number" },
+          "startsOn": { "type": "string", "format": "date" },
+          "endsOn": { "type": "string", "format": "date", "nullable": true },
+          "paymentDay": { "type": "number", "nullable": true },
+          "extraPaymentScenario": { "type": "string" },
+          "insuranceMonthly": { "type": "string" }
+        }
+      },
+      "CreateLoanPaymentDto": {
+        "type": "object",
+        "properties": {
+          "amount": { "type": "string", "example": "11000" },
+          "currency": { "type": "string", "example": "HUF", "pattern": "^[A-Z]{3}$" },
+          "principalComponent": { "type": "string", "example": "9000" },
+          "interestComponent": { "type": "string", "example": "1500" },
+          "feeComponent": { "type": "string", "example": "500" },
+          "paidOn": { "type": "string", "format": "date", "example": "2026-07-30" },
+          "note": { "type": "string", "maxLength": 1000 }
+        },
+        "required": [
+          "amount",
+          "currency",
+          "principalComponent",
+          "interestComponent",
+          "feeComponent",
+          "paidOn"
+        ]
+      },
+      "ReverseLoanPaymentDto": {
+        "type": "object",
+        "properties": {
+          "postedOn": { "type": "string", "format": "date", "example": "2026-07-30" },
+          "note": { "type": "string", "maxLength": 1000 }
+        },
+        "required": ["postedOn"]
+      },
+      "CreateLoanRecurringRuleDto": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "example": "Monthly loan repayment", "maxLength": 120 },
+          "amount": { "type": "string", "example": "11000" },
+          "currency": { "type": "string", "example": "HUF", "pattern": "^[A-Z]{3}$" },
+          "startsOn": { "type": "string", "format": "date", "example": "2026-08-31" },
+          "rrule": { "type": "string", "example": "FREQ=MONTHLY;BYMONTHDAY=31", "maxLength": 512 }
+        },
+        "required": ["title", "amount", "currency", "startsOn", "rrule"]
       },
       "ReportPeriodDto": {
         "type": "object",
@@ -4312,6 +5244,18 @@
         },
         "required": ["title", "targetAmount", "currency"]
       },
+      "UpdateGoalDto": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "maxLength": 120 },
+          "targetAmount": { "type": "string", "example": "1200.00" },
+          "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+          "deadline": { "type": "string", "format": "date", "nullable": true },
+          "priority": { "type": "number" },
+          "status": { "type": "string", "enum": ["active", "paused"] },
+          "categoryId": { "type": "string", "format": "uuid", "nullable": true }
+        }
+      },
       "CreateGoalContributionDto": {
         "type": "object",
         "properties": {
@@ -4321,6 +5265,24 @@
           "note": { "type": "string", "maxLength": 1000 }
         },
         "required": ["amount", "currency", "occurredOn"]
+      },
+      "ReverseGoalContributionDto": {
+        "type": "object",
+        "properties": {
+          "postedOn": { "type": "string", "format": "date", "example": "2026-07-30" },
+          "note": { "type": "string", "maxLength": 1000 }
+        },
+        "required": ["postedOn"]
+      },
+      "CreateGoalRecurringRuleDto": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "example": "Monthly laptop contribution", "maxLength": 120 },
+          "amount": { "type": "string", "example": "100.00" },
+          "startsOn": { "type": "string", "format": "date", "example": "2026-08-01" },
+          "rrule": { "type": "string", "example": "FREQ=MONTHLY;BYMONTHDAY=1", "maxLength": 512 }
+        },
+        "required": ["title", "amount", "startsOn", "rrule"]
       },
       "EmergencyReserveTargetMethodologyResponseDto": {
         "type": "object",
@@ -4431,6 +5393,24 @@
         },
         "required": ["targetAmount", "currency"]
       },
+      "CreateEmergencyReserveMovementDto": {
+        "type": "object",
+        "properties": {
+          "amount": { "type": "string", "example": "250.00" },
+          "currency": { "type": "string", "example": "HUF", "pattern": "^[A-Z]{3}$" },
+          "occurredOn": { "type": "string", "format": "date", "example": "2026-07-29" },
+          "note": { "type": "string", "maxLength": 1000 }
+        },
+        "required": ["amount", "currency", "occurredOn"]
+      },
+      "ReverseEmergencyReserveMovementDto": {
+        "type": "object",
+        "properties": {
+          "postedOn": { "type": "string", "format": "date", "example": "2026-07-30" },
+          "note": { "type": "string", "maxLength": 1000 }
+        },
+        "required": ["postedOn"]
+      },
       "InvestmentResponseDto": {
         "type": "object",
         "properties": {
@@ -4500,25 +5480,365 @@
         },
         "required": ["type", "name", "currency"]
       },
+      "UpdateInvestmentDto": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string", "enum": ["savings", "etf", "stock"] },
+          "name": { "type": "string", "maxLength": 180 },
+          "provider": { "type": "string", "nullable": true, "maxLength": 180 },
+          "identifier": { "type": "string", "nullable": true, "maxLength": 120 },
+          "notes": { "type": "string", "nullable": true, "maxLength": 2000 },
+          "scenarioAnnualRate": { "type": "string", "nullable": true },
+          "scenarioFrequency": {
+            "type": "string",
+            "enum": ["daily", "weekly", "monthly", "annual"]
+          }
+        }
+      },
+      "CreateInvestmentMovementDto": {
+        "type": "object",
+        "properties": {
+          "direction": { "type": "string", "enum": ["deposit", "withdrawal"] },
+          "amount": { "type": "string", "example": "10000" },
+          "currency": { "type": "string", "example": "HUF" },
+          "occurredOn": { "type": "string", "format": "date", "example": "2026-07-30" },
+          "note": { "type": "string", "maxLength": 1000 }
+        },
+        "required": ["direction", "amount", "currency", "occurredOn"]
+      },
+      "ReverseInvestmentMovementDto": {
+        "type": "object",
+        "properties": {
+          "postedOn": { "type": "string", "format": "date", "example": "2026-07-30" },
+          "note": { "type": "string", "maxLength": 1000 }
+        },
+        "required": ["postedOn"]
+      },
+      "CreateInvestmentRecurringRuleDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 120,
+            "example": "Monthly investment contribution"
+          },
+          "amount": { "type": "string", "example": "10000" },
+          "currency": { "type": "string", "example": "HUF" },
+          "startsOn": { "type": "string", "format": "date", "example": "2026-08-01" },
+          "rrule": { "type": "string", "maxLength": 512, "example": "FREQ=MONTHLY;BYMONTHDAY=1" }
+        },
+        "required": ["title", "amount", "currency", "startsOn", "rrule"]
+      },
       "SecuritiesResponseDto": {
         "type": "object",
         "properties": { "data": { "type": "object" } },
         "required": ["data"]
       },
+      "CreateSecuritiesTradeDto": {
+        "type": "object",
+        "properties": {
+          "side": { "type": "string", "enum": ["buy", "sell"] },
+          "symbol": { "type": "string", "example": "ACME" },
+          "market": { "type": "string", "example": "NASDAQ" },
+          "exchange": { "type": "string", "maxLength": 120 },
+          "name": { "type": "string", "maxLength": 240 },
+          "quantity": { "type": "string", "example": "1.250000000000000001" },
+          "unitPrice": { "type": "string", "example": "125.50" },
+          "fee": { "type": "string", "default": "0" },
+          "currency": { "type": "string", "example": "USD" },
+          "executedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-07-30T13:00:00.000Z"
+          },
+          "note": { "type": "string", "maxLength": 1000 }
+        },
+        "required": ["side", "symbol", "market", "quantity", "unitPrice", "currency", "executedAt"]
+      },
+      "ReverseSecuritiesTradeDto": {
+        "type": "object",
+        "properties": {
+          "postedOn": { "type": "string", "format": "date", "example": "2026-07-30" },
+          "note": { "type": "string", "maxLength": 1000 }
+        },
+        "required": ["postedOn"]
+      },
+      "CreateSecuritiesCashMovementDto": {
+        "type": "object",
+        "properties": {
+          "direction": { "type": "string", "enum": ["deposit", "withdrawal"] },
+          "amount": { "type": "string", "example": "1000" },
+          "currency": { "type": "string", "example": "USD" },
+          "occurredOn": { "type": "string", "format": "date", "example": "2026-07-30" },
+          "note": { "type": "string", "maxLength": 1000 }
+        },
+        "required": ["direction", "amount", "currency", "occurredOn"]
+      },
+      "PreviewSecuritiesImportDto": {
+        "type": "object",
+        "properties": {
+          "csv": {
+            "type": "string",
+            "description": "UTF-8 broker CSV. Preview is persisted by SHA-256 fingerprint before commit."
+          },
+          "defaultMarket": {
+            "type": "string",
+            "example": "NASDAQ",
+            "description": "Required when trade rows do not contain a Market or Exchange column."
+          }
+        },
+        "required": ["csv"]
+      },
+      "CreateSecuritiesRefreshJobDto": {
+        "type": "object",
+        "properties": {
+          "instrumentIds": { "maxItems": 100, "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "ClearSecuritiesPortfolioDto": {
+        "type": "object",
+        "properties": {
+          "confirmation": {
+            "type": "string",
+            "enum": ["CLEAR"],
+            "description": "Explicit step-up confirmation phrase for the immutable reversal operation."
+          }
+        },
+        "required": ["confirmation"]
+      },
+      "Object": { "type": "object", "properties": {} },
       "FeedbackResponseDto": {
         "type": "object",
         "properties": { "data": { "type": "object" } },
         "required": ["data"]
+      },
+      "CreateFeedbackDto": {
+        "type": "object",
+        "properties": {
+          "kind": { "type": "string", "enum": ["bug", "idea"] },
+          "title": { "type": "string", "maxLength": 200 },
+          "message": { "type": "string", "maxLength": 10000 },
+          "severity": { "type": "string", "enum": ["low", "medium", "high"] }
+        },
+        "required": ["kind", "title", "message"]
+      },
+      "UpdateOwnedFeedbackStatusDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["open", "closed"],
+            "description": "Authors may reopen or close their own feedback; staff workflow states are admin-only."
+          }
+        },
+        "required": ["status"]
       },
       "AdministrationResponseDto": {
         "type": "object",
         "properties": { "data": { "type": "object" } },
         "required": ["data"]
       },
+      "UpdateUserRoleDto": {
+        "type": "object",
+        "properties": { "role": { "type": "string", "enum": ["free", "premium", "admin"] } },
+        "required": ["role"]
+      },
+      "UpdateUserStatusDto": {
+        "type": "object",
+        "properties": { "status": { "type": "string", "enum": ["active", "inactive"] } },
+        "required": ["status"]
+      },
+      "EmailChangeRequestDto": {
+        "type": "object",
+        "properties": { "email": { "type": "string", "format": "email" } },
+        "required": ["email"]
+      },
+      "UpdateAdminFeedbackDto": {
+        "type": "object",
+        "properties": {
+          "kind": { "type": "string", "enum": ["bug", "idea"] },
+          "severity": {
+            "type": "string",
+            "enum": ["low", "medium", "high", null],
+            "nullable": true
+          },
+          "status": { "type": "string", "enum": ["open", "in_progress", "resolved", "closed"] },
+          "title": { "type": "string", "maxLength": 200 },
+          "message": { "type": "string", "maxLength": 10000 }
+        }
+      },
+      "CreateAdminFeedbackResponseDto": {
+        "type": "object",
+        "properties": { "message": { "type": "string", "maxLength": 10000 } },
+        "required": ["message"]
+      },
+      "UpdateSystemSettingsDto": {
+        "type": "object",
+        "properties": {
+          "siteName": { "type": "string", "maxLength": 160 },
+          "primaryUrl": { "type": "object", "format": "uri", "nullable": true },
+          "supportEmail": { "type": "object", "format": "email", "nullable": true },
+          "contactEmail": { "type": "object", "format": "email", "nullable": true },
+          "logoUrl": { "type": "object", "format": "uri", "nullable": true },
+          "faviconUrl": { "type": "object", "format": "uri", "nullable": true },
+          "maintenanceMode": { "type": "boolean" },
+          "maintenanceMessage": { "type": "object", "maxLength": 1000, "nullable": true }
+        }
+      },
+      "PutIntegrationDto": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "maxLength": 160 },
+          "secret": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 4096,
+            "writeOnly": true,
+            "description": "Accepted for encryption and never returned by the API."
+          },
+          "status": { "type": "string", "enum": ["active", "inactive"], "default": "active" },
+          "metadata": { "type": "object" }
+        },
+        "required": ["name", "secret"]
+      },
       "BillingResponseDto": {
         "type": "object",
         "properties": { "data": { "type": "object" } },
         "required": ["data"]
+      },
+      "PlanDto": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,79}$" },
+          "name": { "type": "string", "maxLength": 160 },
+          "description": { "type": "object", "nullable": true, "maxLength": 2000 },
+          "price": { "type": "string" },
+          "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+          "billingInterval": {
+            "type": "string",
+            "enum": ["weekly", "monthly", "yearly", "lifetime"]
+          },
+          "intervalCount": { "type": "number", "minimum": 1 },
+          "roleSlug": { "type": "string", "enum": ["free", "premium"] },
+          "trialDays": { "type": "object", "nullable": true, "minimum": 0 },
+          "isActive": { "type": "object", "default": true },
+          "stripeProductId": { "type": "object", "nullable": true, "maxLength": 255 },
+          "stripePriceId": { "type": "object", "nullable": true, "maxLength": 255 },
+          "metadata": { "type": "object" }
+        },
+        "required": [
+          "code",
+          "name",
+          "price",
+          "currency",
+          "billingInterval",
+          "intervalCount",
+          "roleSlug"
+        ]
+      },
+      "PromotionDto": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string", "pattern": "^[A-Z0-9][A-Z0-9_-]{0,79}$" },
+          "name": { "type": "string", "maxLength": 160 },
+          "description": { "type": "object", "nullable": true, "maxLength": 2000 },
+          "discountPercent": { "type": "string", "nullable": true },
+          "discountAmount": { "type": "string", "nullable": true },
+          "currency": { "type": "object", "nullable": true },
+          "maxRedemptions": { "type": "object", "nullable": true, "minimum": 0 },
+          "redeemBy": { "type": "object", "nullable": true, "format": "date-time" },
+          "trialDays": { "type": "object", "nullable": true, "minimum": 0 },
+          "planCode": { "type": "object", "nullable": true, "maxLength": 80 },
+          "stripeCouponId": { "type": "object", "nullable": true, "maxLength": 255 },
+          "stripePromoCodeId": { "type": "object", "nullable": true, "maxLength": 255 },
+          "metadata": { "type": "object" }
+        },
+        "required": ["code", "name"]
+      },
+      "TrialPromotionDto": {
+        "type": "object",
+        "properties": {
+          "planCode": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,79}$" },
+          "trialDays": { "type": "object", "nullable": true, "minimum": 1, "maximum": 3650 },
+          "maxRedemptions": { "type": "object", "nullable": true, "minimum": 1 }
+        },
+        "required": ["planCode"]
+      },
+      "AssignSubscriptionDto": {
+        "type": "object",
+        "properties": {
+          "planId": { "type": "string", "format": "uuid" },
+          "status": {
+            "type": "string",
+            "enum": ["active", "trialing", "past_due", "canceled", "expired"]
+          },
+          "notes": { "type": "string", "maxLength": 4000 }
+        },
+        "required": ["planId", "status"]
+      },
+      "UpdateInvoiceDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["draft", "open", "paid", "failed", "past_due", "refunded", "void"]
+          },
+          "paidAt": { "type": "object", "nullable": true, "format": "date-time" },
+          "failureReason": { "type": "object", "nullable": true, "maxLength": 2000 },
+          "refundReason": { "type": "object", "nullable": true, "maxLength": 2000 },
+          "notes": { "type": "object", "nullable": true, "maxLength": 4000 }
+        },
+        "required": ["status"]
+      },
+      "PaymentDto": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string", "format": "uuid" },
+          "invoiceId": { "type": "object", "nullable": true, "format": "uuid" },
+          "type": { "type": "string", "enum": ["charge", "refund", "adjustment"] },
+          "status": { "type": "string", "enum": ["pending", "succeeded", "failed", "canceled"] },
+          "amount": { "type": "string" },
+          "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+          "gateway": { "type": "object", "nullable": true, "maxLength": 120 },
+          "transactionReference": { "type": "object", "nullable": true, "maxLength": 255 },
+          "failureReason": { "type": "object", "nullable": true, "maxLength": 2000 },
+          "notes": { "type": "object", "nullable": true, "maxLength": 4000 },
+          "processedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["userId", "type", "status", "amount", "currency", "processedAt"]
+      },
+      "UpdateEmailPreferenceDto": {
+        "type": "object",
+        "properties": { "educationalEnabled": { "type": "boolean" } },
+        "required": ["educationalEnabled"]
+      },
+      "PreviewEmailTemplateDto": {
+        "type": "object",
+        "properties": {
+          "locale": { "type": "string", "enum": ["en", "es", "hu"] },
+          "data": { "type": "object", "additionalProperties": { "type": "string" } }
+        },
+        "required": ["locale", "data"]
+      },
+      "CreateEmailTestJobDto": {
+        "type": "object",
+        "properties": {
+          "locale": { "type": "string", "enum": ["en", "es", "hu"] },
+          "data": { "type": "object", "additionalProperties": { "type": "string" } },
+          "templateCode": { "type": "string" },
+          "recipientEmail": { "type": "string" }
+        },
+        "required": ["locale", "data", "templateCode", "recipientEmail"]
+      },
+      "UpdateEmailChannelDto": {
+        "type": "object",
+        "properties": {
+          "enabled": { "type": "boolean" },
+          "provider": { "type": "string", "enum": ["disabled", "log", "postmark"] },
+          "fromAddress": { "type": "string" },
+          "replyToAddress": { "type": "string" }
+        },
+        "required": ["enabled", "provider"]
       },
       "PrivacyExportRequestResponseDto": {
         "type": "object",
@@ -4600,6 +5920,14 @@
           "expiresAt",
           "artifacts"
         ]
+      },
+      "CreateDeletionRequestDto": {
+        "type": "object",
+        "properties": {
+          "confirmEmail": { "type": "string", "example": "synthetic.user@example.test" },
+          "password": { "type": "string", "example": "synthetic-current-password-123" }
+        },
+        "required": ["confirmEmail", "password"]
       },
       "PrivacyRequestResponseDto": {
         "type": "object",

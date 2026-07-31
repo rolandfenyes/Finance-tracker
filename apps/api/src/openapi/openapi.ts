@@ -13,6 +13,7 @@ export function createOpenApiDocument(app: INestApplication): OpenAPIObject {
     .build();
 
   return SwaggerModule.createDocument(app, config, {
+    autoTagControllers: false,
     operationIdFactory: (controllerKey, methodKey) => `${controllerKey}_${methodKey}`,
   });
 }

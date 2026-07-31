@@ -102,15 +102,17 @@
     },
     "openapi-generate": {
       "executor": "nx:run-commands",
+      "dependsOn": ["build"],
       "outputs": ["{projectRoot}/openapi/openapi.json"],
       "options": {
-        "command": "tsx --tsconfig apps/api/tsconfig.json apps/api/src/openapi/generate-openapi.ts"
+        "command": "node apps/api/dist/openapi/generate-openapi.js"
       }
     },
     "openapi-check": {
       "executor": "nx:run-commands",
+      "dependsOn": ["build"],
       "options": {
-        "command": "tsx --tsconfig apps/api/tsconfig.json apps/api/src/openapi/check-openapi.ts"
+        "command": "node apps/api/dist/openapi/check-openapi.js"
       }
     },
     "notification-automation": {
