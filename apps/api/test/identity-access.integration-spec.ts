@@ -13,6 +13,7 @@ describe('identity/access PostgreSQL invariants', () => {
       await expect(auditConstraint(pool)).resolves.toContain('passkey.registered');
 
       await migrateOneDown(database);
+      await migrateOneDown(database);
       await expect(auditConstraint(pool)).resolves.not.toContain('passkey.registered');
 
       await migrateToLatest(database);

@@ -56,6 +56,11 @@ Initial adapters and production candidates are:
 | Hosting | Render | final region, private networking, database, Redis, backup, and restore configuration must pass Step 21 |
 | Payment checkout | none in v1 | administrative billing records only |
 
+Owner amendment, 2026-07-31: authenticated Nethely SMTP is approved as an
+alternative transactional-email transport. It must use TLS, environment-only
+credentials, the existing durable queue and suppression boundary, and the same
+explicit production-delivery approval gate.
+
 All providers sit behind application ports. Credentials are environment/secret-manager references and are never returned after write.
 
 ## ADR-009 — Backend v1 scope

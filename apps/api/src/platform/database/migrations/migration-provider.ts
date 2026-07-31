@@ -23,6 +23,7 @@ import * as notificationsEmail from './20260729160000_notifications_email';
 import * as privacyAudit from './20260729170000_privacy_audit';
 import * as legacyMigration from './20260729180000_legacy_migration';
 import * as passkeySecurityAudit from './20260731120000_passkey_security_audit';
+import * as smtpEmailProvider from './20260731130000_smtp_email_provider';
 
 export const registeredMigrations = {
   '20260729000000_database_baseline': databaseBaseline,
@@ -49,6 +50,7 @@ export const registeredMigrations = {
   '20260729170000_privacy_audit': privacyAudit,
   '20260729180000_legacy_migration': legacyMigration,
   '20260731120000_passkey_security_audit': passkeySecurityAudit,
+  '20260731130000_smtp_email_provider': smtpEmailProvider,
 } satisfies Record<string, Migration>;
 
 export class RegisteredMigrationProvider implements MigrationProvider {

@@ -151,11 +151,11 @@ export class NotificationsRepository {
   ): Promise<void> {
     await this.pool.query(
       `UPDATE mymoneymap.email_deliveries
-       SET status=$2,attempt_count=$3,error_code=$4,
+       SET status=$2::varchar,attempt_count=$3,error_code=$4,
            provider_message_id=COALESCE($5,provider_message_id),
            started_at=COALESCE(started_at,$6),
-           delivered_at=CASE WHEN $2='delivered' THEN $6 ELSE delivered_at END,
-           failed_at=CASE WHEN $2 IN ('dead_letter','suppressed') THEN $6 ELSE failed_at END
+           delivered_at=CASE WHEN $2::varchar='delivered' THEN $6 ELSE delivered_at END,
+           failed_at=CASE WHEN $2::varchar IN ('dead_letter','suppressed') THEN $6 ELSE failed_at END
        WHERE id=$1`,
       [
         id,

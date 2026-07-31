@@ -22,4 +22,4 @@ Provide the implementation plan and ADRs, this step’s threat model/runbook/bud
 
 Findings include severity, affected boundary, reproducible synthetic evidence, impact, recommended remediation, and whether launch is blocked. The product owner records acceptance or remediation. Review does not approve unverified provider rights, regional claims, encryption, PITR, retention, or legal terms.
 
-Open external evidence still required before production: hosting region/private network/encrypted backup/PITR/DPA; Sentry region/retention/DPA; Postmark delivery approval; Finnhub delay/coverage/quota/redistribution rights; private export storage policy/lifecycle. Their feature gates remain false until that evidence is recorded.
+Open external evidence still required before production: hosting region/private network/encrypted backup/PITR/DPA; Sentry region/retention/DPA; transactional-email delivery approval (including Nethely SMTP sender, TLS, bounce/suppression operations, and retention evidence); Finnhub delay/coverage/quota/redistribution rights; private export storage policy/lifecycle. Their feature gates remain false until that evidence is recorded.

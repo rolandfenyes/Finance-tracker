@@ -6678,7 +6678,7 @@
       "schema": "mymoneymap",
       "relation": "email_channel_settings",
       "name": "email_channel_provider_check",
-      "definition": "CHECK (provider::text = ANY (ARRAY['disabled'::character varying, 'log'::character varying, 'postmark'::character varying]::text[]))"
+      "definition": "CHECK (provider::text = ANY (ARRAY['disabled'::character varying, 'log'::character varying, 'postmark'::character varying, 'smtp'::character varying]::text[]))"
     },
     {
       "schema": "mymoneymap",

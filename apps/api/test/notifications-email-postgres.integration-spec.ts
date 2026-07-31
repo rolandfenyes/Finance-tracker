@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { migrateToLatest } from '../src/platform/database/migration-runner';
+import { NotificationsRepository } from '../src/notifications/notifications.repository';
 import { rollbackMigrationsAfter, withIsolatedPostgresDatabase } from './postgres-test-database';
 
 jest.setTimeout(30_000);
@@ -37,6 +38,18 @@ describe('notifications/email PostgreSQL contract', () => {
                 '{"user_first_name":"Synthetic"}','queued',0,3,now())`,
         delivery,
       );
+      const repository = new NotificationsRepository(pool);
+      await repository.updateAttempt(delivery[0]!, {
+        status: 'running',
+        attempt: 1,
+        now: new Date('2026-07-31T12:00:00.000Z'),
+      });
+      await expect(
+        pool.query<{ status: string; attempt_count: number }>(
+          'SELECT status,attempt_count FROM mymoneymap.email_deliveries WHERE id=$1',
+          [delivery[0]],
+        ),
+      ).resolves.toMatchObject({ rows: [{ status: 'running', attempt_count: 1 }] });
       await expect(
         pool.query(
           `INSERT INTO mymoneymap.email_deliveries

@@ -80,11 +80,18 @@ const environmentSchema = z
     FINNHUB_BASE_URL: z.url().default('https://finnhub.io/api/v1'),
     EMAIL_DELIVERY_ENABLED: booleanText.default(false),
     EMAIL_DELIVERY_PRODUCTION_APPROVED: booleanText.default(false),
-    EMAIL_PROVIDER: z.enum(['disabled', 'log', 'postmark']).default('disabled'),
+    EMAIL_PROVIDER: z.enum(['disabled', 'log', 'postmark', 'smtp']).default('disabled'),
     EMAIL_FROM_ADDRESS: z.email().optional(),
+    EMAIL_FROM_NAME: z.string().trim().min(1).max(160).default('MyMoneyMap'),
     EMAIL_REPLY_TO_ADDRESS: z.email().optional(),
     POSTMARK_SERVER_TOKEN: z.string().min(1).optional(),
     POSTMARK_BASE_URL: z.url().default('https://api.postmarkapp.com'),
+    SMTP_HOST: z.string().trim().min(1).max(253).optional(),
+    SMTP_PORT: z.coerce.number().int().min(1).max(65_535).default(587),
+    SMTP_USERNAME: z.string().min(1).optional(),
+    SMTP_PASSWORD: z.string().min(1).optional(),
+    SMTP_SECURITY: z.enum(['none', 'starttls', 'tls']).default('starttls'),
+    SMTP_CONNECTION_TIMEOUT_MS: positiveMilliseconds.default(15_000),
     PRIVACY_EXPORTS_ENABLED: booleanText.default(false),
     PRIVACY_EXPORT_STORAGE_PROVIDER: z.enum(['disabled', 's3']).default('disabled'),
     PRIVACY_EXPORT_S3_BUCKET: z.string().min(3).max(63).optional(),
@@ -157,6 +164,48 @@ const environmentSchema = z
         code: 'custom',
         path: ['SENTRY_DSN'],
         message: 'enabled error tracking requires an explicit Sentry DSN',
+      });
+    }
+
+    if (environment.EMAIL_DELIVERY_ENABLED && environment.EMAIL_PROVIDER === 'postmark') {
+      if (!environment.POSTMARK_SERVER_TOKEN) {
+        context.addIssue({
+          code: 'custom',
+          path: ['POSTMARK_SERVER_TOKEN'],
+          message: 'enabled Postmark delivery requires a server token',
+        });
+      }
+      if (!environment.EMAIL_FROM_ADDRESS) {
+        context.addIssue({
+          code: 'custom',
+          path: ['EMAIL_FROM_ADDRESS'],
+          message: 'enabled email delivery requires a sender address',
+        });
+      }
+    }
+
+    if (environment.EMAIL_DELIVERY_ENABLED && environment.EMAIL_PROVIDER === 'smtp') {
+      for (const [key, value] of [
+        ['EMAIL_FROM_ADDRESS', environment.EMAIL_FROM_ADDRESS],
+        ['SMTP_HOST', environment.SMTP_HOST],
+        ['SMTP_USERNAME', environment.SMTP_USERNAME],
+        ['SMTP_PASSWORD', environment.SMTP_PASSWORD],
+      ] as const) {
+        if (!value) {
+          context.addIssue({
+            code: 'custom',
+            path: [key],
+            message: 'enabled SMTP delivery requires complete authenticated configuration',
+          });
+        }
+      }
+    }
+
+    if (environment.EMAIL_DELIVERY_ENABLED && environment.EMAIL_PROVIDER === 'disabled') {
+      context.addIssue({
+        code: 'custom',
+        path: ['EMAIL_PROVIDER'],
+        message: 'enabled email delivery requires a configured provider',
       });
     }
 
@@ -264,16 +313,23 @@ const environmentSchema = z
       });
     }
 
-    if (
-      environment.EMAIL_DELIVERY_ENABLED &&
-      (environment.EMAIL_PROVIDER !== 'postmark' ||
-        !environment.POSTMARK_SERVER_TOKEN ||
-        !environment.EMAIL_FROM_ADDRESS)
-    ) {
+    if (environment.EMAIL_DELIVERY_ENABLED && environment.EMAIL_PROVIDER === 'log') {
       context.addIssue({
         code: 'custom',
         path: ['EMAIL_PROVIDER'],
-        message: 'enabled production delivery requires approved Postmark credentials and sender',
+        message: 'production delivery requires an approved external provider',
+      });
+    }
+
+    if (
+      environment.EMAIL_DELIVERY_ENABLED &&
+      environment.EMAIL_PROVIDER === 'smtp' &&
+      environment.SMTP_SECURITY === 'none'
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['SMTP_SECURITY'],
+        message: 'production SMTP delivery requires transport encryption',
       });
     }
 

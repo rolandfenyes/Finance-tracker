@@ -9,6 +9,7 @@ import {
   Matches,
   MaxLength,
 } from 'class-validator';
+import type { EmailProviderKind } from './email-provider';
 
 export class UpdateEmailPreferenceDto {
   @ApiProperty()
@@ -40,9 +41,9 @@ export class UpdateEmailChannelDto {
   @IsBoolean()
   enabled!: boolean;
 
-  @ApiProperty({ enum: ['disabled', 'log', 'postmark'] })
-  @IsIn(['disabled', 'log', 'postmark'])
-  provider!: 'disabled' | 'log' | 'postmark';
+  @ApiProperty({ enum: ['disabled', 'log', 'postmark', 'smtp'] })
+  @IsIn(['disabled', 'log', 'postmark', 'smtp'])
+  provider!: EmailProviderKind;
 
   @ApiPropertyOptional()
   @IsOptional()

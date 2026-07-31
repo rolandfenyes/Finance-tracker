@@ -6167,7 +6167,7 @@
         "type": "object",
         "properties": {
           "enabled": { "type": "boolean" },
-          "provider": { "type": "string", "enum": ["disabled", "log", "postmark"] },
+          "provider": { "type": "string", "enum": ["disabled", "log", "postmark", "smtp"] },
           "fromAddress": { "type": "string" },
           "replyToAddress": { "type": "string" }
         },

@@ -6,6 +6,7 @@ import { CLOCK, type Clock } from '../platform/time/clock';
 import { ApplicationError } from '../platform/http/application-error';
 import { catalogTemplate, type EmailLocale } from './email-template.catalog';
 import { NotificationsRepository } from './notifications.repository';
+import type { EmailProviderKind } from './email-provider';
 
 @Injectable()
 export class NotificationsService {
@@ -123,7 +124,7 @@ export class NotificationsService {
     actorId: string,
     input: {
       enabled: boolean;
-      provider: 'disabled' | 'log' | 'postmark';
+      provider: EmailProviderKind;
       fromAddress?: string;
       replyToAddress?: string;
     },

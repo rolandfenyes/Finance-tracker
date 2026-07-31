@@ -4,6 +4,6 @@
 export interface UpdateEmailChannelDto {
   enabled: boolean;
   fromAddress?: string;
-  provider: 'disabled' | 'log' | 'postmark';
+  provider: 'disabled' | 'log' | 'postmark' | 'smtp';
   replyToAddress?: string;
 }

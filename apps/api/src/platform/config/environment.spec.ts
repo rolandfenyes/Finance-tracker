@@ -78,7 +78,11 @@ describe('environment validation', () => {
       EMAIL_DELIVERY_ENABLED: false,
       EMAIL_DELIVERY_PRODUCTION_APPROVED: false,
       EMAIL_PROVIDER: 'disabled',
+      EMAIL_FROM_NAME: 'MyMoneyMap',
       POSTMARK_BASE_URL: 'https://api.postmarkapp.com',
+      SMTP_PORT: 587,
+      SMTP_SECURITY: 'starttls',
+      SMTP_CONNECTION_TIMEOUT_MS: 15_000,
       PRIVACY_EXPORTS_ENABLED: false,
       PRIVACY_EXPORT_STORAGE_PROVIDER: 'disabled',
       LEGACY_MIGRATION_ENABLED: false,
@@ -194,6 +198,85 @@ describe('environment validation', () => {
     ).toThrow(
       'Invalid application configuration: OPERATIONS_METRICS_ENABLED, SENTRY_PRODUCTION_APPROVED',
     );
+  });
+
+  it('requires complete authenticated SMTP settings when SMTP delivery is enabled', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validEnvironment,
+        EMAIL_DELIVERY_ENABLED: 'true',
+        EMAIL_PROVIDER: 'smtp',
+      }),
+    ).toThrow(
+      'Invalid application configuration: EMAIL_FROM_ADDRESS, SMTP_HOST, SMTP_PASSWORD, SMTP_USERNAME',
+    );
+
+    expect(
+      validateEnvironment({
+        ...validEnvironment,
+        EMAIL_DELIVERY_ENABLED: 'true',
+        EMAIL_PROVIDER: 'smtp',
+        EMAIL_FROM_ADDRESS: 'sender@example.test',
+        SMTP_HOST: 'mail.example.test',
+        SMTP_PORT: '587',
+        SMTP_USERNAME: 'synthetic-user',
+        SMTP_PASSWORD: 'synthetic-password',
+        SMTP_SECURITY: 'starttls',
+      }),
+    ).toMatchObject({
+      EMAIL_PROVIDER: 'smtp',
+      SMTP_PORT: 587,
+      SMTP_SECURITY: 'starttls',
+    });
+  });
+
+  it('rejects enabled delivery without an active provider', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validEnvironment,
+        EMAIL_DELIVERY_ENABLED: 'true',
+        EMAIL_PROVIDER: 'disabled',
+      }),
+    ).toThrow('Invalid application configuration: EMAIL_PROVIDER');
+  });
+
+  it('keeps SMTP production delivery behind approval and encrypted transport', () => {
+    const smtpProduction = {
+      ...validProductionEnvironment,
+      EMAIL_DELIVERY_ENABLED: 'true',
+      EMAIL_PROVIDER: 'smtp',
+      EMAIL_FROM_ADDRESS: 'sender@example.test',
+      SMTP_HOST: 'mail.example.test',
+      SMTP_USERNAME: 'synthetic-user',
+      SMTP_PASSWORD: 'synthetic-password',
+    };
+
+    expect(() => validateEnvironment(smtpProduction)).toThrow(
+      'Invalid application configuration: EMAIL_DELIVERY_PRODUCTION_APPROVED',
+    );
+    expect(() =>
+      validateEnvironment({
+        ...smtpProduction,
+        EMAIL_DELIVERY_PRODUCTION_APPROVED: 'true',
+        SMTP_SECURITY: 'none',
+      }),
+    ).toThrow('Invalid application configuration: SMTP_SECURITY');
+    expect(() =>
+      validateEnvironment({
+        ...smtpProduction,
+        EMAIL_DELIVERY_PRODUCTION_APPROVED: 'true',
+        SMTP_SECURITY: 'starttls',
+      }),
+    ).not.toThrow();
+
+    expect(() =>
+      validateEnvironment({
+        ...validProductionEnvironment,
+        EMAIL_DELIVERY_ENABLED: 'true',
+        EMAIL_DELIVERY_PRODUCTION_APPROVED: 'true',
+        EMAIL_PROVIDER: 'log',
+      }),
+    ).toThrow('Invalid application configuration: EMAIL_PROVIDER');
   });
 
   it('rejects an ambiguous sslmode embedded in the connection URL', () => {
