@@ -1,0 +1,174 @@
+# API-to-UI Coverage
+
+Baseline: **113 paths / 148 operations**  
+Coverage: **148 of 148 operations have one disposition**  
+Status: contract blockers are cross-referenced to `CONTRACT-GAPS.md`
+
+`typed` means the successful result needed by the workflow has a usable
+generated response shape. `intentional void` means the workflow can complete
+from its status without a body. A blocked feature may still contain a
+technically valid void delete operation; that row says both facts explicitly.
+Health checks belong to deployment/CI operations and do not justify a public
+Angular page.
+
+|   # | Operation                                                          | Generated operation ID                        | UI/operational disposition                       | Response contract                |
+| --: | ------------------------------------------------------------------ | --------------------------------------------- | ------------------------------------------------ | -------------------------------- |
+|   1 | `POST /api/v1/auth/registrations`                                  | `IdentityController_register`                 | `/auth/register`                                 | intentional void                 |
+|   2 | `POST /api/v1/auth/email-verifications`                            | `IdentityController_verify`                   | `/auth/verify-email`                             | intentional void                 |
+|   3 | `POST /api/v1/auth/email-verification-requests`                    | `IdentityController_requestVerification`      | `/auth/verification-sent`                        | intentional void                 |
+|   4 | `POST /api/v1/auth/sessions`                                       | `IdentityController_login`                    | `/auth/login`                                    | intentional void                 |
+|   5 | `DELETE /api/v1/auth/session`                                      | `IdentityController_logout`                   | product/auth shell                               | intentional void                 |
+|   6 | `PUT /api/v1/users/me/password`                                    | `IdentityController_changePassword`           | `/app/settings/security`                         | intentional void                 |
+|   7 | `POST /api/v1/auth/passkeys/registration-options`                  | `IdentityController_registrationOptions`      | `/app/settings/security`                         | blocked CG-001                   |
+|   8 | `POST /api/v1/auth/passkeys`                                       | `IdentityController_registerPasskey`          | `/app/settings/security`                         | blocked CG-001                   |
+|   9 | `POST /api/v1/auth/passkey-sessions/options`                       | `IdentityController_passkeyOptions`           | `/auth/passkey`                                  | blocked CG-001                   |
+|  10 | `POST /api/v1/auth/passkey-sessions`                               | `IdentityController_passkeyLogin`             | `/auth/passkey`                                  | blocked CG-001                   |
+|  11 | `DELETE /api/v1/auth/passkeys/{id}`                                | `IdentityController_deletePasskey`            | `/app/settings/security`                         | blocked CG-001                   |
+|  12 | `GET /api/v1/users/me`                                             | `UsersController_currentUser`                 | `/app/settings/profile` + session routing        | typed                            |
+|  13 | `PATCH /api/v1/users/me`                                           | `UsersController_updateCurrentUser`           | `/app/settings/profile` + session routing        | typed                            |
+|  14 | `GET /api/v1/users/me/preferences/theme`                           | `UsersController_theme`                       | `/onboarding/theme` + `/app/settings/appearance` | typed                            |
+|  15 | `PATCH /api/v1/users/me/preferences/theme`                         | `UsersController_updateTheme`                 | `/onboarding/theme` + `/app/settings/appearance` | typed                            |
+|  16 | `GET /api/v1/users/me/onboarding`                                  | `UsersController_onboarding`                  | `/onboarding/**`                                 | typed                            |
+|  17 | `PATCH /api/v1/users/me/onboarding`                                | `UsersController_completeTutorial`            | `/onboarding/**`                                 | typed                            |
+|  18 | `GET /api/v1/currencies`                                           | `CurrencyController_catalogue`                | onboarding/settings currencies                   | typed                            |
+|  19 | `GET /api/v1/users/me/currencies`                                  | `CurrencyController_userCurrencies`           | onboarding/settings currencies                   | typed                            |
+|  20 | `POST /api/v1/users/me/currencies`                                 | `CurrencyController_add`                      | onboarding/settings currencies                   | typed                            |
+|  21 | `DELETE /api/v1/users/me/currencies/{code}`                        | `CurrencyController_remove`                   | onboarding/settings currencies                   | intentional void                 |
+|  22 | `PUT /api/v1/users/me/main-currency`                               | `CurrencyController_setMain`                  | onboarding/settings currencies                   | typed                            |
+|  23 | `GET /api/v1/journal/entries`                                      | `LedgerController_list`                       | `/app/activity/**`                               | blocked CG-002                   |
+|  24 | `POST /api/v1/journal/entries`                                     | `LedgerController_create`                     | `/app/activity/**`                               | blocked CG-002                   |
+|  25 | `POST /api/v1/journal/entries/{id}/reversals`                      | `LedgerController_reverse`                    | `/app/activity/**`                               | blocked CG-002                   |
+|  26 | `POST /api/v1/journal/entries/{id}/corrections`                    | `LedgerController_correct`                    | `/app/activity/**`                               | blocked CG-002                   |
+|  27 | `GET /api/v1/budget-rules`                                         | `BudgetingController_rules`                   | onboarding rules + `/app/plan/budget`            | typed                            |
+|  28 | `POST /api/v1/budget-rules`                                        | `BudgetingController_createRule`              | onboarding rules + `/app/plan/budget`            | typed                            |
+|  29 | `PUT /api/v1/budget-rules`                                         | `BudgetingController_initialize`              | onboarding rules + `/app/plan/budget`            | typed                            |
+|  30 | `PATCH /api/v1/budget-rules/{id}`                                  | `BudgetingController_updateRule`              | onboarding rules + `/app/plan/budget`            | typed                            |
+|  31 | `DELETE /api/v1/budget-rules/{id}`                                 | `BudgetingController_deleteRule`              | onboarding rules + `/app/plan/budget`            | intentional void                 |
+|  32 | `GET /api/v1/categories`                                           | `BudgetingController_categories`              | onboarding/plan/settings categories              | typed                            |
+|  33 | `POST /api/v1/categories`                                          | `BudgetingController_createCategory`          | onboarding/plan/settings categories              | typed                            |
+|  34 | `PATCH /api/v1/categories/{id}`                                    | `BudgetingController_updateCategory`          | onboarding/plan/settings categories              | typed                            |
+|  35 | `DELETE /api/v1/categories/{id}`                                   | `BudgetingController_deleteCategory`          | onboarding/plan/settings categories              | intentional void                 |
+|  36 | `PUT /api/v1/categories/{id}/budget-rule`                          | `BudgetingController_assignRule`              | onboarding/plan/settings categories              | typed                            |
+|  37 | `GET /api/v1/basic-incomes`                                        | `BudgetingController_basicIncomes`            | onboarding/plan/settings income                  | typed                            |
+|  38 | `POST /api/v1/basic-incomes`                                       | `BudgetingController_createBasicIncome`       | onboarding/plan/settings income                  | typed                            |
+|  39 | `PATCH /api/v1/basic-incomes/{id}`                                 | `BudgetingController_updateBasicIncome`       | onboarding/plan/settings income                  | typed                            |
+|  40 | `DELETE /api/v1/basic-incomes/{id}`                                | `BudgetingController_deleteBasicIncome`       | onboarding/plan/settings income                  | intentional void                 |
+|  41 | `GET /api/v1/recurring-rules`                                      | `RecurrenceController_rules`                  | `/app/plan/schedules/**`                         | typed                            |
+|  42 | `POST /api/v1/recurring-rules`                                     | `RecurrenceController_create`                 | `/app/plan/schedules/**`                         | typed                            |
+|  43 | `PATCH /api/v1/recurring-rules/{id}`                               | `RecurrenceController_update`                 | `/app/plan/schedules/**`                         | typed                            |
+|  44 | `DELETE /api/v1/recurring-rules/{id}`                              | `RecurrenceController_delete`                 | `/app/plan/schedules/**`                         | intentional void                 |
+|  45 | `GET /api/v1/loans`                                                | `LoansController_list`                        | `/app/loans/**`                                  | blocked CG-003                   |
+|  46 | `POST /api/v1/loans`                                               | `LoansController_create`                      | `/app/loans/**`                                  | blocked CG-003                   |
+|  47 | `PATCH /api/v1/loans/{id}`                                         | `LoansController_update`                      | `/app/loans/**`                                  | blocked CG-003                   |
+|  48 | `DELETE /api/v1/loans/{id}`                                        | `LoansController_delete`                      | `/app/loans/**`                                  | blocked CG-003                   |
+|  49 | `POST /api/v1/loans/{id}/archive`                                  | `LoansController_archive`                     | `/app/loans/**`                                  | blocked CG-003                   |
+|  50 | `POST /api/v1/loans/{id}/payments`                                 | `LoansController_payment`                     | `/app/loans/**`                                  | blocked CG-003                   |
+|  51 | `POST /api/v1/loans/{loanId}/payments/{id}/corrections`            | `LoansController_correct`                     | `/app/loans/**`                                  | blocked CG-003                   |
+|  52 | `POST /api/v1/loans/{loanId}/payments/{id}/reversals`              | `LoansController_reverse`                     | `/app/loans/**`                                  | blocked CG-003                   |
+|  53 | `POST /api/v1/loans/{id}/recurring-rule`                           | `LoansController_createRule`                  | `/app/loans/**`                                  | blocked CG-003                   |
+|  54 | `PUT /api/v1/loans/{id}/recurring-rule`                            | `LoansController_updateRule`                  | `/app/loans/**`                                  | blocked CG-003                   |
+|  55 | `DELETE /api/v1/loans/{id}/recurring-rule`                         | `LoansController_deleteRule`                  | `/app/loans/**`                                  | blocked CG-003                   |
+|  56 | `GET /api/v1/reports/months/current`                               | `ReportingController_current`                 | `/app/home`                                      | blocked CG-004                   |
+|  57 | `GET /api/v1/reports/months/{year}/{month}`                        | `ReportingController_month`                   | `/app/reports/**`                                | blocked CG-004                   |
+|  58 | `GET /api/v1/reports/years`                                        | `ReportingController_years`                   | `/app/reports/**`                                | typed                            |
+|  59 | `GET /api/v1/reports/years/{year}`                                 | `ReportingController_year`                    | `/app/reports/**`                                | blocked CG-004                   |
+|  60 | `GET /api/v1/goals`                                                | `GoalsController_list`                        | `/app/goals/**`                                  | typed                            |
+|  61 | `POST /api/v1/goals`                                               | `GoalsController_create`                      | `/app/goals/**`                                  | typed                            |
+|  62 | `PATCH /api/v1/goals/{id}`                                         | `GoalsController_update`                      | `/app/goals/**`                                  | typed                            |
+|  63 | `DELETE /api/v1/goals/{id}`                                        | `GoalsController_delete`                      | `/app/goals/**`                                  | intentional void                 |
+|  64 | `POST /api/v1/goals/{id}/archive`                                  | `GoalsController_archive`                     | `/app/goals/**`                                  | typed                            |
+|  65 | `POST /api/v1/goals/{id}/unarchive`                                | `GoalsController_unarchive`                   | `/app/goals/**`                                  | typed                            |
+|  66 | `POST /api/v1/goals/{id}/contributions`                            | `GoalsController_contribute`                  | `/app/goals/**`                                  | typed                            |
+|  67 | `POST /api/v1/goals/{goalId}/contributions/{id}/corrections`       | `GoalsController_correct`                     | `/app/goals/**`                                  | typed                            |
+|  68 | `POST /api/v1/goals/{goalId}/contributions/{id}/reversals`         | `GoalsController_reverse`                     | `/app/goals/**`                                  | typed                            |
+|  69 | `POST /api/v1/goals/{id}/recurring-rule`                           | `GoalsController_createRule`                  | `/app/goals/**`                                  | typed                            |
+|  70 | `PUT /api/v1/goals/{id}/recurring-rule`                            | `GoalsController_updateRule`                  | `/app/goals/**`                                  | typed                            |
+|  71 | `DELETE /api/v1/goals/{id}/recurring-rule`                         | `GoalsController_deleteRule`                  | `/app/goals/**`                                  | intentional void                 |
+|  72 | `GET /api/v1/emergency-reserve`                                    | `EmergencyReserveController_read`             | `/app/reserve`                                   | typed                            |
+|  73 | `PUT /api/v1/emergency-reserve/target`                             | `EmergencyReserveController_updateTarget`     | `/app/reserve`                                   | typed                            |
+|  74 | `POST /api/v1/emergency-reserve/contributions`                     | `EmergencyReserveController_contribution`     | `/app/reserve`                                   | typed                            |
+|  75 | `POST /api/v1/emergency-reserve/withdrawals`                       | `EmergencyReserveController_withdrawal`       | `/app/reserve`                                   | typed                            |
+|  76 | `POST /api/v1/emergency-reserve/movements/{id}/reversals`          | `EmergencyReserveController_reverse`          | `/app/reserve`                                   | typed                            |
+|  77 | `GET /api/v1/investments`                                          | `InvestmentsController_list`                  | `/app/investments/**`                            | blocked CG-005                   |
+|  78 | `POST /api/v1/investments`                                         | `InvestmentsController_create`                | `/app/investments/**`                            | blocked CG-005                   |
+|  79 | `PATCH /api/v1/investments/{id}`                                   | `InvestmentsController_update`                | `/app/investments/**`                            | blocked CG-005                   |
+|  80 | `DELETE /api/v1/investments/{id}`                                  | `InvestmentsController_delete`                | `/app/investments/**`                            | blocked CG-005                   |
+|  81 | `POST /api/v1/investments/{id}/movements`                          | `InvestmentsController_movement`              | `/app/investments/**`                            | blocked CG-005                   |
+|  82 | `POST /api/v1/investments/{investmentId}/movements/{id}/reversals` | `InvestmentsController_reverseMovement`       | `/app/investments/**`                            | blocked CG-005                   |
+|  83 | `POST /api/v1/investments/{id}/recurring-rule`                     | `InvestmentsController_createRule`            | `/app/investments/**`                            | blocked CG-005                   |
+|  84 | `GET /api/v1/securities/portfolio`                                 | `SecuritiesController_portfolio`              | `/app/securities/**`                             | blocked CG-006                   |
+|  85 | `GET /api/v1/securities/activity`                                  | `SecuritiesController_activity`               | `/app/securities/**`                             | blocked CG-006                   |
+|  86 | `POST /api/v1/securities/trades`                                   | `SecuritiesController_trade`                  | `/app/securities/**`                             | blocked CG-006                   |
+|  87 | `POST /api/v1/securities/trades/{id}/reversals`                    | `SecuritiesController_reverse`                | `/app/securities/**`                             | blocked CG-006                   |
+|  88 | `POST /api/v1/securities/cash-movements`                           | `SecuritiesController_cash`                   | `/app/securities/**`                             | blocked CG-006                   |
+|  89 | `POST /api/v1/securities/imports`                                  | `SecuritiesController_preview`                | `/app/securities/**`                             | blocked CG-006                   |
+|  90 | `POST /api/v1/securities/imports/{id}/commit`                      | `SecuritiesController_commit`                 | `/app/securities/**`                             | blocked CG-006                   |
+|  91 | `POST /api/v1/securities/refresh-jobs`                             | `SecuritiesController_refresh`                | `/app/securities/**`                             | blocked CG-006                   |
+|  92 | `GET /api/v1/securities/refresh-jobs/{id}`                         | `SecuritiesController_refreshStatus`          | `/app/securities/**`                             | blocked CG-006                   |
+|  93 | `POST /api/v1/securities/portfolio-clear-requests`                 | `SecuritiesController_clear`                  | `/app/securities/**`                             | blocked CG-006                   |
+|  94 | `GET /api/v1/securities/quotes`                                    | `SecuritiesController_quote`                  | `/app/securities/**`                             | blocked CG-006                   |
+|  95 | `GET /api/v1/securities/instruments/{id}`                          | `SecuritiesController_instrument`             | `/app/securities/**`                             | blocked CG-006                   |
+|  96 | `GET /api/v1/securities/instruments/{id}/prices`                   | `SecuritiesController_prices`                 | `/app/securities/**`                             | blocked CG-006                   |
+|  97 | `PUT /api/v1/securities/watchlist/{id}`                            | `SecuritiesController_watch`                  | `/app/securities/**`                             | blocked CG-006                   |
+|  98 | `DELETE /api/v1/securities/watchlist/{id}`                         | `SecuritiesController_unwatch`                | `/app/securities/**`                             | intentional void; feature CG-006 |
+|  99 | `GET /api/v1/feedback`                                             | `FeedbackController_list`                     | `/app/feedback/**`                               | blocked CG-007                   |
+| 100 | `POST /api/v1/feedback`                                            | `FeedbackController_create`                   | `/app/feedback/**`                               | blocked CG-007                   |
+| 101 | `PATCH /api/v1/feedback/{id}/status`                               | `FeedbackController_status`                   | `/app/feedback/**`                               | blocked CG-007                   |
+| 102 | `DELETE /api/v1/feedback/{id}`                                     | `FeedbackController_delete`                   | `/app/feedback/**`                               | intentional void; feature CG-007 |
+| 103 | `GET /api/v1/admin/dashboard`                                      | `AdministrationController_dashboard`          | `/admin`                                         | blocked CG-008                   |
+| 104 | `GET /api/v1/admin/analytics`                                      | `AdministrationController_analytics`          | `/admin/analytics`                               | blocked CG-008                   |
+| 105 | `GET /api/v1/admin/users`                                          | `AdministrationController_users`              | `/admin/users/**`                                | blocked CG-008                   |
+| 106 | `GET /api/v1/admin/users/{id}`                                     | `AdministrationController_user`               | `/admin/users/**`                                | blocked CG-008                   |
+| 107 | `PUT /api/v1/admin/users/{id}/role`                                | `AdministrationController_role`               | `/admin/users/**`                                | blocked CG-008                   |
+| 108 | `PUT /api/v1/admin/users/{id}/status`                              | `AdministrationController_status`             | `/admin/users/**`                                | blocked CG-008                   |
+| 109 | `POST /api/v1/admin/users/{id}/password-reset-request`             | `AdministrationController_passwordReset`      | `/admin/users/**`                                | blocked CG-008                   |
+| 110 | `POST /api/v1/admin/users/{id}/email-verification-request`         | `AdministrationController_verification`       | `/admin/users/**`                                | blocked CG-008                   |
+| 111 | `POST /api/v1/admin/users/{id}/email-change-request`               | `AdministrationController_emailChange`        | `/admin/users/**`                                | blocked CG-008                   |
+| 112 | `GET /api/v1/admin/feedback`                                       | `AdministrationController_feedback`           | `/admin/feedback`                                | blocked CG-008                   |
+| 113 | `PATCH /api/v1/admin/feedback/{id}`                                | `AdministrationController_updateFeedback`     | `/admin/feedback`                                | blocked CG-008                   |
+| 114 | `POST /api/v1/admin/feedback/{id}/responses`                       | `AdministrationController_respond`            | `/admin/feedback`                                | blocked CG-008                   |
+| 115 | `GET /api/v1/admin/system`                                         | `AdministrationController_system`             | `/admin/system/**`                               | blocked CG-008                   |
+| 116 | `PATCH /api/v1/admin/system/settings`                              | `AdministrationController_settings`           | `/admin/system/**`                               | blocked CG-008/CG-011            |
+| 117 | `PUT /api/v1/admin/integrations/{service}`                         | `AdministrationController_integration`        | `/admin/system/**`                               | blocked CG-008/CG-012            |
+| 118 | `DELETE /api/v1/admin/integrations/{service}`                      | `AdministrationController_deleteIntegration`  | `/admin/system/**`                               | intentional void; feature CG-008 |
+| 119 | `GET /api/v1/admin/billing/summary`                                | `BillingController_summary`                   | `/admin/billing/**`                              | blocked CG-013                   |
+| 120 | `GET /api/v1/admin/billing/plans`                                  | `BillingController_plans`                     | `/admin/billing/**`                              | blocked CG-013                   |
+| 121 | `POST /api/v1/admin/billing/plans`                                 | `BillingController_createPlan`                | `/admin/billing/**`                              | blocked CG-013/CG-014            |
+| 122 | `GET /api/v1/admin/billing/plans/{id}`                             | `BillingController_plan`                      | `/admin/billing/**`                              | blocked CG-013                   |
+| 123 | `PATCH /api/v1/admin/billing/plans/{id}`                           | `BillingController_updatePlan`                | `/admin/billing/**`                              | blocked CG-013/CG-014            |
+| 124 | `DELETE /api/v1/admin/billing/plans/{id}`                          | `BillingController_deletePlan`                | `/admin/billing/**`                              | intentional void; feature CG-013 |
+| 125 | `GET /api/v1/admin/billing/promotions`                             | `BillingController_promotions`                | `/admin/billing/**`                              | blocked CG-013                   |
+| 126 | `POST /api/v1/admin/billing/promotions`                            | `BillingController_createPromotion`           | `/admin/billing/**`                              | blocked CG-013/CG-014            |
+| 127 | `GET /api/v1/admin/billing/promotions/{id}`                        | `BillingController_promotion`                 | `/admin/billing/**`                              | blocked CG-013                   |
+| 128 | `PATCH /api/v1/admin/billing/promotions/{id}`                      | `BillingController_updatePromotion`           | `/admin/billing/**`                              | blocked CG-013/CG-014            |
+| 129 | `DELETE /api/v1/admin/billing/promotions/{id}`                     | `BillingController_deletePromotion`           | `/admin/billing/**`                              | intentional void; feature CG-013 |
+| 130 | `POST /api/v1/admin/billing/promotions/trial`                      | `BillingController_trial`                     | `/admin/billing/**`                              | blocked CG-013/CG-014            |
+| 131 | `PUT /api/v1/admin/users/{id}/subscription`                        | `BillingController_assign`                    | `/admin/billing/**`                              | blocked CG-013                   |
+| 132 | `PATCH /api/v1/admin/invoices/{id}`                                | `BillingController_invoice`                   | `/admin/billing/**`                              | blocked CG-013/CG-014            |
+| 133 | `POST /api/v1/admin/payments`                                      | `BillingController_createPayment`             | `/admin/billing/**`                              | blocked CG-013/CG-014            |
+| 134 | `PATCH /api/v1/admin/payments/{id}`                                | `BillingController_updatePayment`             | `/admin/billing/**`                              | blocked CG-013/CG-014            |
+| 135 | `GET /api/v1/users/me/notification-preferences`                    | `NotificationsController_preference`          | `/app/settings/notifications`                    | blocked CG-009                   |
+| 136 | `PATCH /api/v1/users/me/notification-preferences`                  | `NotificationsController_update`              | `/app/settings/notifications`                    | blocked CG-009                   |
+| 137 | `GET /api/v1/admin/email-templates`                                | `NotificationsAdminController_templates`      | `/admin/system/email`                            | blocked CG-010                   |
+| 138 | `POST /api/v1/admin/email-templates/{code}/preview`                | `NotificationsAdminController_preview`        | `/admin/system/email`                            | blocked CG-010                   |
+| 139 | `POST /api/v1/admin/email-test-jobs`                               | `NotificationsAdminController_test`           | `/admin/system/email`                            | blocked CG-010                   |
+| 140 | `GET /api/v1/admin/notification-channels/email`                    | `NotificationsAdminController_channel`        | `/admin/system/email`                            | blocked CG-010                   |
+| 141 | `PATCH /api/v1/admin/notification-channels/email`                  | `NotificationsAdminController_updateChannel`  | `/admin/system/email`                            | blocked CG-010                   |
+| 142 | `PATCH /api/v1/admin/email-settings`                               | `NotificationsAdminController_updateSettings` | `/admin/system/email`                            | blocked CG-010                   |
+| 143 | `POST /api/v1/privacy/exports`                                     | `PrivacyController_createExport`              | `/app/settings/privacy`                          | typed                            |
+| 144 | `GET /api/v1/privacy/exports/{id}`                                 | `PrivacyController_exportStatus`              | `/app/settings/privacy`                          | typed                            |
+| 145 | `POST /api/v1/privacy/deletion-requests`                           | `PrivacyController_createDeletion`            | `/app/settings/privacy`                          | typed                            |
+| 146 | `GET /api/v1/admin/operations/queues`                              | `AdminOperationsController_queues`            | `/admin/operations`                              | typed                            |
+| 147 | `GET /api/v1/health/live`                                          | `HealthController_live`                       | operations/CI (no public route)                  | typed                            |
+| 148 | `GET /api/v1/health/ready`                                         | `HealthController_ready`                      | operations/CI (no public route)                  | typed                            |
+
+## Coverage invariants
+
+- No row maps to an excluded feature.
+- Admin billing remains record administration, not checkout or
+  subscription self-service.
+- Securities provider-disabled states use the same routes without claiming an
+  enabled provider.
+- The frontend does not expose a notification delivery-history page; queue
+  status is an access-controlled admin operations concern.
+- No route depends on a handwritten replacement for a blocked response.
