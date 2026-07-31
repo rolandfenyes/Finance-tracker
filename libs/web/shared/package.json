@@ -1,0 +1,11 @@
+{
+  "name": "@mymoneymap/web-shared",
+  "version": "0.0.1",
+  "peerDependencies": {
+    "@angular/common": "^21.2.0",
+    "@angular/core": "^21.2.0",
+    "@jsverse/transloco": "^8.4.0",
+    "rxjs": "^7.8.0"
+  },
+  "sideEffects": false
+}

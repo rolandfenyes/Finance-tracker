@@ -1,0 +1,4 @@
+@import 'tailwindcss';
+@source '../../../apps/web-app/src';
+@source '../../../libs/web/design-system/src';
+@source '../../../libs/web/shared/src';

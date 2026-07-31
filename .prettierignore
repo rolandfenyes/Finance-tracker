@@ -9,5 +9,6 @@ docs/backend-implementation/steps/22-postman-backend-freeze/ENDPOINT-COVERAGE-MA
 pnpm-lock.yaml
 *.php
 *.sql
-*.css
 *.js
+
+/.angular/

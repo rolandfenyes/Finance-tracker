@@ -1,0 +1,65 @@
+name: Frontend CI
+
+on:
+  pull_request:
+  push: {}
+
+permissions:
+  contents: read
+
+env:
+  CI: 'true'
+
+jobs:
+  quality:
+    name: Angular format, lint, typecheck, unit, build, and contracts
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7.4.10-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      REDIS_URL: redis://127.0.0.1:6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm nx run-many -t lint,typecheck,test,build -p web-app web-design-system web-shared
+      - run: pnpm nx run-many -t lint,typecheck -p web-app-e2e
+      - run: pnpm contracts:check
+
+  playwright:
+    name: Angular Playwright
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium firefox webkit
+      - run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: angular-playwright-report
+          path: dist/.playwright/apps/web-app-e2e

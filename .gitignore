@@ -48,3 +48,5 @@ coverage/
 
 # Generated OpenAPI scratch files
 /apps/api/openapi/*.tmp
+
+/.angular/
