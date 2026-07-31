@@ -8,7 +8,7 @@
     "serve": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsx --tsconfig apps/api/tsconfig.json watch apps/api/src/main.ts"
+        "command": "tsx watch --tsconfig apps/api/tsconfig.json apps/api/src/main.ts"
       }
     },
     "start": {
