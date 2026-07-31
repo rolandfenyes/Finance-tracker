@@ -54,6 +54,15 @@ export default tseslint.config(
               onlyDependOnLibsWithTags: ['scope:web', 'scope:generated'],
             },
             {
+              sourceTag: 'type:core',
+              onlyDependOnLibsWithTags: [
+                'type:core',
+                'type:design-system',
+                'type:shared',
+                'scope:generated',
+              ],
+            },
+            {
               sourceTag: 'type:design-system',
               onlyDependOnLibsWithTags: ['type:design-system', 'type:shared'],
             },

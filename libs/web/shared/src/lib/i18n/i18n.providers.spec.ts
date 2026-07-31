@@ -31,6 +31,9 @@ describe('application localization', () => {
     expect(translation).toHaveProperty('shell.onboarding.title');
     expect(translation).toHaveProperty('shell.product.title');
     expect(translation).toHaveProperty('shell.admin.title');
+    expect(translation).toHaveProperty('routeStatus.unavailable.title');
+    expect(translation).toHaveProperty('routeStatus.forbidden.title');
+    expect(translation).toHaveProperty('routeStatus.notFound.title');
     expect(isSupportedLanguage(language)).toBe(true);
   });
 });

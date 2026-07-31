@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.lib.json",
+  "compilerOptions": {
+    "baseUrl": "../../..",
+    "paths": {
+      "@mymoneymap/generated-api-client/*": ["dist/libs/generated/api-client/*"],
+      "@mymoneymap/web-design-system": ["libs/web/design-system/src/index.ts"],
+      "@mymoneymap/web-shared": ["libs/web/shared/src/index.ts"]
+    }
+  }
+}

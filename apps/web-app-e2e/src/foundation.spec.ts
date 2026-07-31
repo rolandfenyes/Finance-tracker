@@ -1,7 +1,15 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 
-const routes = ['/auth', '/onboarding', '/app', '/admin', '/missing'];
+const routes = [
+  { path: '/auth', session: 'anonymous' },
+  { path: '/onboarding', session: 'onboarding' },
+  { path: '/app', session: 'personal' },
+  { path: '/admin', session: 'admin' },
+  { path: '/unavailable', session: 'personal' },
+  { path: '/forbidden', session: 'personal' },
+  { path: '/missing', session: 'personal' },
+] as const;
 const palettes = ['blue', 'green', 'purple', 'orange', 'teal', 'indigo', 'pink', 'red'];
 
 async function assertNoHorizontalPageScroll(page: Page): Promise<void> {
@@ -33,7 +41,8 @@ function contrast(foreground: string, background: string): number {
 
 test('serves the responsive localized shell hierarchy accessibly', async ({ page }) => {
   for (const route of routes) {
-    await page.goto(route);
+    await setSyntheticSession(page, route.session);
+    await page.goto(route.path);
     await expect(page.locator('main#main-content')).toBeVisible();
     await expect(page.locator('h1')).toHaveCount(1);
     await assertNoHorizontalPageScroll(page);
@@ -44,7 +53,9 @@ test('serves the responsive localized shell hierarchy accessibly', async ({ page
 
 test('exposes keyboard focus and reduced-motion behavior', async ({ browserName, page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
+  await setSyntheticSession(page, 'anonymous');
   await page.goto('/auth');
+  await expect(page.locator('main#main-content')).toBeVisible();
   const focusShortcut = {
     chromium: 'Tab',
     firefox: 'Tab',
@@ -65,6 +76,7 @@ test('applies display mode before bootstrap and persists only the mode key', asy
   await page.addInitScript(() => {
     window.localStorage.setItem('mymoneymap.display-mode.v1', 'dark');
   });
+  await setSyntheticSession(page, 'anonymous');
   await page.goto('/auth', { waitUntil: 'domcontentloaded' });
 
   await expect(page.locator('html')).toHaveAttribute('data-display-mode', 'dark');
@@ -79,6 +91,7 @@ test('applies display mode before bootstrap and persists only the mode key', asy
 test('registers every palette in light and dark with stable status meaning and AA text contrast', async ({
   page,
 }) => {
+  await setSyntheticSession(page, 'anonymous');
   await page.goto('/auth');
   const statusesByMode: Record<string, string[]> = { dark: [], light: [] };
 
@@ -117,11 +130,44 @@ test('uses the configured same-origin development proxy', async ({ request }) =>
   expect(await response.json()).toEqual({ status: 'ok' });
 });
 
+test('enforces the signed-out, personal, onboarding, and admin route matrix', async ({ page }) => {
+  await setSyntheticSession(page, 'anonymous');
+  await page.goto('/app');
+  await expect(page).toHaveURL(/\/auth$/);
+
+  await setSyntheticSession(page, 'personal');
+  await page.goto('/admin');
+  await expect(page).toHaveURL(/\/forbidden\?reason=administration$/);
+
+  await setSyntheticSession(page, 'admin');
+  await page.goto('/app');
+  await expect(page).toHaveURL(/\/forbidden\?reason=personal$/);
+
+  await setSyntheticSession(page, 'onboarding');
+  await page.goto('/app');
+  await expect(page).toHaveURL(/\/onboarding$/);
+
+  expect(
+    await page.evaluate(() =>
+      [...Object.keys(localStorage), ...Object.keys(sessionStorage)].filter((key) =>
+        /(token|session|jwt|auth)/i.test(key),
+      ),
+    ),
+  ).toEqual([]);
+});
+
 test('keeps the shell layout visually stable at each supported browser viewport', async ({
   page,
 }) => {
+  await setSyntheticSession(page, 'personal');
   await page.goto('/app');
   await expect(page).toHaveScreenshot('product-shell.png', {
     stylePath: 'apps/web-app-e2e/visual-stability.css',
   });
 });
+
+async function setSyntheticSession(page: Page, session: string): Promise<void> {
+  await page
+    .context()
+    .addCookies([{ name: 'mmm-e2e-session', value: session, url: 'http://localhost:4200' }]);
+}

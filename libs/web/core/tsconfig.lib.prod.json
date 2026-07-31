@@ -1,0 +1,4 @@
+{
+  "extends": "./tsconfig.lib.build.json",
+  "compilerOptions": { "declarationMap": false }
+}

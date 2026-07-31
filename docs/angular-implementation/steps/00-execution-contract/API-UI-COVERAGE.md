@@ -172,3 +172,16 @@ Angular page.
 - The frontend does not expose a notification delivery-history page; queue
   status is an access-controlled admin operations concern.
 - No route depends on a handwritten replacement for a blocked response.
+
+## Step 02 consumption record
+
+The API core and route-policy layer consumes only these frozen, generated
+operations:
+
+- `UsersController_currentUser` (`GET /api/v1/users/me`) bootstraps and refreshes
+  authenticated user, verification, role, locale, and entitlement state.
+- `UsersController_onboarding` (`GET /api/v1/users/me/onboarding`) supplies the
+  server-owned onboarding route decision independently of the session store.
+
+Health operations remain deployment/CI-only. No feature mutation or blocked
+response contract was consumed in Step 02.

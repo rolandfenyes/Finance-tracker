@@ -54,6 +54,25 @@ export const TRANSLATIONS: Readonly<Record<SupportedLanguage, Translation>> = {
       goals: 'Goals',
       more: 'More',
     },
+    navigationConfirmDiscardChanges: 'Discard your unsaved changes?',
+    routeStatus: {
+      unavailable: {
+        eyebrow: 'Service unavailable',
+        title: 'MyMoneyMap is temporarily unavailable',
+        description: 'Try again shortly. Your session and financial data remain protected.',
+      },
+      forbidden: {
+        eyebrow: 'Access restricted',
+        title: 'You cannot open this page',
+        description: 'Your account does not currently have access to this area.',
+      },
+      notFound: {
+        eyebrow: 'Page not found',
+        title: 'We could not find this page',
+        description: 'Check the address or return to your MyMoneyMap entry point.',
+      },
+      return: 'Return to MyMoneyMap',
+    },
     state: {
       loading: 'Loading',
       emptyTitle: 'Nothing to show yet',
@@ -109,6 +128,26 @@ export const TRANSLATIONS: Readonly<Record<SupportedLanguage, Translation>> = {
       goals: 'Objetivos',
       more: 'Más',
     },
+    navigationConfirmDiscardChanges: '¿Quieres descartar los cambios sin guardar?',
+    routeStatus: {
+      unavailable: {
+        eyebrow: 'Servicio no disponible',
+        title: 'MyMoneyMap no está disponible temporalmente',
+        description:
+          'Inténtalo de nuevo pronto. Tu sesión y tus datos financieros siguen protegidos.',
+      },
+      forbidden: {
+        eyebrow: 'Acceso restringido',
+        title: 'No puedes abrir esta página',
+        description: 'Tu cuenta no tiene acceso actualmente a esta sección.',
+      },
+      notFound: {
+        eyebrow: 'Página no encontrada',
+        title: 'No encontramos esta página',
+        description: 'Comprueba la dirección o vuelve al punto de entrada de MyMoneyMap.',
+      },
+      return: 'Volver a MyMoneyMap',
+    },
     state: {
       loading: 'Cargando',
       emptyTitle: 'Todavía no hay contenido',
@@ -163,6 +202,25 @@ export const TRANSLATIONS: Readonly<Record<SupportedLanguage, Translation>> = {
       plan: 'Terv',
       goals: 'Célok',
       more: 'Továbbiak',
+    },
+    navigationConfirmDiscardChanges: 'Elveted a nem mentett módosításokat?',
+    routeStatus: {
+      unavailable: {
+        eyebrow: 'A szolgáltatás nem érhető el',
+        title: 'A MyMoneyMap átmenetileg nem érhető el',
+        description: 'Próbáld újra hamarosan. A munkameneted és pénzügyi adataid védve maradnak.',
+      },
+      forbidden: {
+        eyebrow: 'Korlátozott hozzáférés',
+        title: 'Ezt az oldalt nem nyithatod meg',
+        description: 'A fiókod jelenleg nem jogosult ennek a területnek a használatára.',
+      },
+      notFound: {
+        eyebrow: 'Az oldal nem található',
+        title: 'Ez az oldal nem található',
+        description: 'Ellenőrizd a címet, vagy térj vissza a MyMoneyMap kezdőpontjához.',
+      },
+      return: 'Vissza a MyMoneyMaphez',
     },
     state: {
       loading: 'Betöltés',

@@ -29,7 +29,7 @@
     "lint": "nx run-many -t lint",
     "typecheck": "nx run-many -t typecheck",
     "test": "nx run-many -t test",
-    "test:web": "nx run-many -t test -p web-app web-design-system web-shared",
+    "test:web": "nx run-many -t test -p web-app web-core web-design-system web-shared",
     "test:e2e": "playwright test --config apps/web-app-e2e/playwright.config.mts",
     "test:integration": "nx run-many -t test-integration",
     "db:migrations:check": "nx run api:db-migrations-check",
