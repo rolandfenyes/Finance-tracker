@@ -23,7 +23,11 @@ export class QueuedVerificationNotifier implements VerificationNotifier {
       templateCode: 'registration_validation',
       data: {
         user_first_name: firstName(input.fullName),
-        verification_link: `${this.config.getOrThrow<string>('APP_BASE_URL')}/verify-email?token=${encodeURIComponent(input.token)}`,
+        verification_link: frontendTokenLink(
+          this.config.getOrThrow<string>('APP_BASE_URL'),
+          '/auth/verify-email',
+          input.token,
+        ),
       },
     });
     await this.queue.enqueuePrepared(delivery);
@@ -53,7 +57,11 @@ export class QueuedRecoveryNotifier implements RecoveryNotifier {
   sendEmailVerification(input: RecoveryNotification): Promise<void> {
     return this.send('registration_validation', input, {
       user_first_name: firstName(input.fullName),
-      verification_link: `${this.config.getOrThrow<string>('APP_BASE_URL')}/verify-email?token=${encodeURIComponent(input.token)}`,
+      verification_link: frontendTokenLink(
+        this.config.getOrThrow<string>('APP_BASE_URL'),
+        '/auth/verify-email',
+        input.token,
+      ),
     });
   }
   sendEmailChange(input: EmailChangeNotification): Promise<void> {
@@ -79,4 +87,10 @@ export class QueuedRecoveryNotifier implements RecoveryNotifier {
 }
 function firstName(fullName: string): string {
   return fullName.trim().split(/\s+/)[0] || 'there';
+}
+
+function frontendTokenLink(baseUrl: string, path: string, token: string): string {
+  const url = new URL(path, baseUrl);
+  url.searchParams.set('token', token);
+  return url.toString();
 }

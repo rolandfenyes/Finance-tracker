@@ -78,14 +78,48 @@ export class CurrencyRepository {
   async lockFinanceUser(
     transaction: Transaction<DatabaseSchema>,
     userId: string,
-  ): Promise<'free' | 'premium' | null> {
+  ): Promise<{ role: 'free' | 'premium'; onboardStep: number } | null> {
     const row = await transaction
       .selectFrom('mymoneymap.users')
-      .select('role')
+      .select(['role', 'onboard_step'])
       .where('id', '=', userId)
       .forUpdate()
       .executeTakeFirst();
-    return row?.role === 'free' || row?.role === 'premium' ? row.role : null;
+    return row?.role === 'free' || row?.role === 'premium'
+      ? { role: row.role, onboardStep: row.onboard_step }
+      : null;
+  }
+
+  async replaceOnboardingCurrency(
+    transaction: Transaction<DatabaseSchema>,
+    userId: string,
+    code: string,
+    createdAt: Date,
+  ): Promise<void> {
+    await transaction
+      .deleteFrom('mymoneymap.user_currencies')
+      .where('user_id', '=', userId)
+      .execute();
+    await transaction
+      .insertInto('mymoneymap.user_currencies')
+      .values({ user_id: userId, code, is_main: true, created_at: createdAt })
+      .execute();
+    await this.advanceCurrencyOnboarding(transaction, userId, createdAt);
+  }
+
+  async advanceCurrencyOnboarding(
+    transaction: Transaction<DatabaseSchema>,
+    userId: string,
+    updatedAt: Date,
+  ): Promise<void> {
+    await transaction
+      .updateTable('mymoneymap.users')
+      .set((expression) => ({
+        onboard_step: expression.fn('greatest', ['onboard_step', expression.val(4)]),
+        updated_at: updatedAt,
+      }))
+      .where('id', '=', userId)
+      .execute();
   }
 
   async addUserCurrency(
@@ -101,14 +135,7 @@ export class CurrencyRepository {
       .returning('code')
       .executeTakeFirst();
     if (row) {
-      await transaction
-        .updateTable('mymoneymap.users')
-        .set((expression) => ({
-          onboard_step: expression.fn('greatest', ['onboard_step', expression.val(4)]),
-          updated_at: createdAt,
-        }))
-        .where('id', '=', userId)
-        .execute();
+      await this.advanceCurrencyOnboarding(transaction, userId, createdAt);
     }
     return row !== undefined;
   }

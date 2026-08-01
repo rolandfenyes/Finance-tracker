@@ -7,3 +7,4 @@ await import('../../../../libs/web/feature-auth/src/lib/identity.facade.spec');
 await import('../../../../libs/web/feature-auth/src/lib/passkey-browser.adapter.spec');
 await import('../../../../libs/web/feature-auth/src/lib/security.facade.spec');
 await import('../../../../libs/web/feature-onboarding/src/lib/onboarding.facade.spec');
+await import('../../../../libs/web/feature-onboarding/src/lib/onboarding-pages.spec');

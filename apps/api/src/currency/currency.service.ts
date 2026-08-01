@@ -48,8 +48,8 @@ export class CurrencyService {
     let added = false;
     try {
       await this.repository.transaction(async (transaction) => {
-        const role = await this.repository.lockFinanceUser(transaction, userId);
-        if (!role) throw forbidden();
+        const user = await this.repository.lockFinanceUser(transaction, userId);
+        if (!user) throw forbidden();
         if (!(await this.repository.currency(code, transaction))) throw unsupported();
         const currentCount = await this.repository.countUserCurrencies(transaction, userId);
         if (
@@ -60,9 +60,26 @@ export class CurrencyService {
             .where('code', '=', code)
             .executeTakeFirst()
         ) {
+          if (user.onboardStep === 3) {
+            await this.repository.advanceCurrencyOnboarding(
+              transaction,
+              userId,
+              this.clock.now().toDate(),
+            );
+          }
           return;
         }
-        this.entitlements.assertWithinQuota(role, 'currencies', currentCount);
+        if (user.role === 'free' && user.onboardStep === 3 && currentCount === 1) {
+          await this.repository.replaceOnboardingCurrency(
+            transaction,
+            userId,
+            code,
+            this.clock.now().toDate(),
+          );
+          added = true;
+          return;
+        }
+        this.entitlements.assertWithinQuota(user.role, 'currencies', currentCount);
         added = await this.repository.addUserCurrency(
           transaction,
           userId,

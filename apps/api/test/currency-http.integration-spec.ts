@@ -114,6 +114,33 @@ describe('currency HTTP contract', () => {
     expect(state.rows[0]).toEqual({ onboard_step: 4, main_count: '1' });
   });
 
+  it('lets free onboarding replace the provisional main currency without raising its quota', async () => {
+    await pool.query('UPDATE mymoneymap.users SET onboard_step = 3 WHERE id = $1', [users.free.id]);
+    const free = await loggedIn('free');
+
+    await free
+      .post('/api/v1/users/me/currencies')
+      .send({ code: 'AUD' })
+      .expect(201)
+      .expect((response) => {
+        expect(response.body).toMatchObject({
+          mainCurrency: 'AUD',
+          items: [expect.objectContaining({ code: 'AUD', isMain: true })],
+        });
+      });
+
+    const state = await pool.query<{ onboard_step: number; currency_count: string }>(
+      `SELECT u.onboard_step, count(uc.code)::text AS currency_count
+         FROM mymoneymap.users u
+         JOIN mymoneymap.user_currencies uc ON uc.user_id = u.id
+        WHERE u.id = $1
+        GROUP BY u.onboard_step`,
+      [users.free.id],
+    );
+    expect(state.rows[0]).toEqual({ onboard_step: 4, currency_count: '1' });
+    await free.post('/api/v1/users/me/currencies').send({ code: 'EUR' }).expect(403);
+  });
+
   it('enforces the free quota, validation, membership ownership, verification, and admin boundary', async () => {
     const free = await loggedIn('free');
     await free.post('/api/v1/users/me/currencies').send({ code: 'EUR' }).expect(403);

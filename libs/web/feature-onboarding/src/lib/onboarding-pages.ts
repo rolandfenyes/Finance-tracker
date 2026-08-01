@@ -404,8 +404,14 @@ export class CategoriesStepComponent implements OnInit {
       /></mat-form-field>
       <mat-form-field appearance="outline"
         ><mat-label>{{ 'onboarding.income.currency' | transloco }}</mat-label
-        ><input matInput maxlength="3" formControlName="currency"
-      /></mat-form-field>
+        ><mat-select formControlName="currency">
+          @for (currency of facade.currencies()?.items ?? []; track currency.code) {
+            <mat-option [value]="currency.code"
+              >{{ currency.code }} — {{ currency.name }}</mat-option
+            >
+          }
+        </mat-select></mat-form-field
+      >
       <mat-form-field appearance="outline"
         ><mat-label>{{ 'onboarding.income.validFrom' | transloco }}</mat-label
         ><input matInput type="date" formControlName="validFrom"
@@ -416,7 +422,7 @@ export class CategoriesStepComponent implements OnInit {
     </form>
   `,
 })
-export class IncomeStepComponent {
+export class IncomeStepComponent implements OnInit {
   protected readonly facade = inject(OnboardingFacade);
   protected readonly form = new FormGroup({
     label: new FormControl('', {
@@ -433,8 +439,16 @@ export class IncomeStepComponent {
     }),
     validFrom: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
   });
+  ngOnInit(): void {
+    void this.loadCurrencies();
+  }
   protected submit(): void {
     if (this.form.valid) void this.facade.createIncome(this.form.getRawValue());
+  }
+  private async loadCurrencies(): Promise<void> {
+    await this.facade.loadCurrencies();
+    const mainCurrency = this.facade.currencies()?.mainCurrency;
+    if (mainCurrency) this.form.controls.currency.setValue(mainCurrency);
   }
 }
 
