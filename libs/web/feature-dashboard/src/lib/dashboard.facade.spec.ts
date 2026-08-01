@@ -219,7 +219,7 @@ function reportFixture(options: { nextCursor: string | null }): MonthReportRespo
           rateAt: null,
           reportingCurrency: 'EUR',
           reversesEntryId: null,
-          source: {},
+          source: { module: 'manual', referenceId: null },
           sourceEntryId: 'entry-page-one',
         },
       ],

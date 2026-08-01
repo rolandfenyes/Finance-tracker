@@ -15,4 +15,17 @@ describe('CommandLifecycle', () => {
     command.reset();
     expect(command.state()).toEqual({ phase: 'idle' });
   });
+
+  it('retains the key while an uncertain result is reconciled', () => {
+    const command = new CommandLifecycle<string>({ create: (): string => 'stable-key' });
+    command.begin('same-intent');
+    command.uncertain(new Error('connection closed'));
+
+    expect(command.state()).toMatchObject({
+      phase: 'uncertain',
+      intentId: 'same-intent',
+      idempotencyKey: 'stable-key',
+    });
+    expect(command.begin('same-intent')).toBe('stable-key');
+  });
 });

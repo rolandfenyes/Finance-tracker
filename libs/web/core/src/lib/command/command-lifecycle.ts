@@ -14,6 +14,12 @@ export type CommandState<T> =
       readonly intentId: string;
       readonly idempotencyKey: string;
       readonly error: unknown;
+    }
+  | {
+      readonly phase: 'uncertain';
+      readonly intentId: string;
+      readonly idempotencyKey: string;
+      readonly error: unknown;
     };
 
 export interface IdempotencyKeyFactory {
@@ -60,6 +66,16 @@ export class CommandLifecycle<T> {
     const active = this.requireActive();
     this.stateSignal.set({
       phase: 'failed',
+      intentId: active.intentId,
+      idempotencyKey: active.key,
+      error,
+    });
+  }
+
+  uncertain(error: unknown): void {
+    const active = this.requireActive();
+    this.stateSignal.set({
+      phase: 'uncertain',
       intentId: active.intentId,
       idempotencyKey: active.key,
       error,

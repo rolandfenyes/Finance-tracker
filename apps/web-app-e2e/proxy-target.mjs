@@ -283,7 +283,7 @@ function dashboardReport(complete) {
           rateAt: null,
           reportingCurrency: 'EUR',
           reversesEntryId: null,
-          source: {},
+          source: { module: 'manual', referenceId: null },
           sourceEntryId: 'activity-one',
         },
       ],
