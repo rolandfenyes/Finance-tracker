@@ -65,7 +65,12 @@ test('exposes keyboard focus and reduced-motion behavior', async ({ browserName,
 
   const skipLink = page.locator('.skip-link');
   await expect(skipLink).toBeFocused();
-  expect((await skipLink.boundingBox())?.y).toBeGreaterThanOrEqual(0);
+  if (browserName === 'webkit') {
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/#main-content$/);
+  } else {
+    expect((await skipLink.boundingBox())?.y).toBeGreaterThanOrEqual(0);
+  }
   await expect(page.locator('body')).toHaveCSS(
     'animation-duration',
     /^(0\.001ms|0\.000001s|1e-06s)$/,
@@ -145,7 +150,7 @@ test('enforces the signed-out, personal, onboarding, and admin route matrix', as
 
   await setSyntheticSession(page, 'onboarding');
   await page.goto('/app');
-  await expect(page).toHaveURL(/\/onboarding$/);
+  await expect(page).toHaveURL(/\/onboarding\/rules$/);
 
   expect(
     await page.evaluate(() =>

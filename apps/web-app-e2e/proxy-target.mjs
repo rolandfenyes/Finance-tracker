@@ -60,6 +60,10 @@ const server = createServer((request, response) => {
     return;
   }
 
+  if (request.url?.startsWith('/api/v1/reports/months/current')) {
+    return json(response, 200, dashboardReport(cookie(request, 'mmm-e2e-report') === 'complete'));
+  }
+
   if (request.method === 'POST' && request.url === '/api/v1/auth/registrations') {
     return json(response, 202, { accepted: true });
   }
@@ -177,6 +181,113 @@ function onboardingState(step) {
     onboardingComplete: complete,
     tutorialCompleted: complete,
     tutorialRequired: !complete,
+  };
+}
+
+function dashboardReport(complete) {
+  const conversion = {
+    complete,
+    includedSourceCount: 2,
+    newestFetchedAt: '2026-07-31T10:00:00.000Z',
+    oldestRateAt: '2026-07-31T09:00:00.000Z',
+    providers: ['synthetic-fx'],
+    staleSourceCount: complete ? 0 : 1,
+    status: complete ? 'available' : 'stale',
+    unavailableSourceCount: complete ? 0 : 1,
+  };
+  const summary = {
+    adjustmentNet: '0.00000000',
+    conversion,
+    currency: 'EUR',
+    expense: '125.75000000',
+    income: '1000.00000000',
+    netCashFlow: '874.25000000',
+    tradeCashNet: '0.00000000',
+    transfer: '50.00000000',
+  };
+  return {
+    period: {
+      first: '2026-07-01',
+      last: '2026-07-31',
+      month: 7,
+      timeZone: 'Europe/Budapest',
+      year: 2026,
+    },
+    posted: summary,
+    forecast: {
+      summary: { ...summary, income: '750.00000000', expense: '90.12500000' },
+      sources: [
+        {
+          amount: '90.12500000',
+          categoryId: null,
+          conversionStatus: 'available',
+          convertedAmount: '90.12500000',
+          currency: 'EUR',
+          fetchedAt: null,
+          kind: 'expense',
+          label: 'Synthetic rent forecast',
+          occurrenceOn: '2026-07-20',
+          provider: null,
+          rateAt: null,
+          reportingCurrency: 'EUR',
+          sourceEntryId: 'forecast:2026-07-20',
+          sourceId: 'forecast-source',
+          sourceKind: 'recurring_rule',
+        },
+      ],
+    },
+    combinedProjection: { ...summary, income: '1750.00000000', expense: '215.87500000' },
+    budget: {
+      allocation: { overAllocatedBy: '5.5', status: 'over_allocated', totalPercent: '105.5' },
+      period: {
+        currency: 'EUR',
+        forecastIncome: '1000.00000000',
+        forecastIncomeStatus: 'available',
+        month: '2026-07',
+      },
+      items: [
+        {
+          assignedCategoryIds: [],
+          createdAt: '2026-07-01T00:00:00.000Z',
+          id: 'budget-needs',
+          label: 'Needs',
+          percent: '55.5',
+          plan: {
+            assignedCategorySpending: '125.75000000',
+            currency: 'EUR',
+            plannedAmount: '555.00000000',
+            signedVariance: '429.25000000',
+            status: 'stale',
+          },
+          targetHint: null,
+          updatedAt: '2026-07-01T00:00:00.000Z',
+        },
+      ],
+    },
+    activity: {
+      nextCursor: 'opaque-dashboard-cursor',
+      items: [
+        {
+          amount: '125.75000000',
+          categoryId: null,
+          conversionStatus: complete ? 'available' : 'unavailable',
+          ...(complete ? { convertedAmount: '146.25000000' } : {}),
+          currency: 'GBP',
+          economicType: 'expense',
+          effectiveAt: '2026-07-10T10:00:00.000Z',
+          fetchedAt: null,
+          kind: 'expense',
+          note: null,
+          postedOn: '2026-07-10',
+          provider: null,
+          rateAt: null,
+          reportingCurrency: 'EUR',
+          reversesEntryId: null,
+          source: {},
+          sourceEntryId: 'activity-one',
+        },
+      ],
+    },
   };
 }
 

@@ -5,7 +5,9 @@
     "@angular/common": "^21.2.0",
     "@angular/core": "^21.2.0",
     "@angular/material": "^21.2.0",
-    "@angular/platform-browser": "^21.2.0"
+    "@angular/platform-browser": "^21.2.0",
+    "echarts": "^6.1.0",
+    "ngx-echarts": "^21.0.0"
   },
   "sideEffects": false
 }

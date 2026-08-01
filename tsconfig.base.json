@@ -25,7 +25,8 @@
       "@mymoneymap/web-design-system": ["./libs/web/design-system/src/index.ts"],
       "@mymoneymap/web-shared": ["./libs/web/shared/src/index.ts"],
       "@mymoneymap/feature-auth": ["./libs/web/feature-auth/src/index.ts"],
-      "@mymoneymap/feature-onboarding": ["./libs/web/feature-onboarding/src/index.ts"]
+      "@mymoneymap/feature-onboarding": ["./libs/web/feature-onboarding/src/index.ts"],
+      "@mymoneymap/feature-dashboard": ["./libs/web/feature-dashboard/src/index.ts"]
     }
   }
 }

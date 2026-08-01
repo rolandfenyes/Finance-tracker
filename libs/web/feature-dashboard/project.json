@@ -1,0 +1,16 @@
+{
+  "name": "web-feature-dashboard",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/web/feature-dashboard/src",
+  "tags": ["scope:web", "type:feature"],
+  "targets": {
+    "lint": { "executor": "@nx/eslint:lint" },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p libs/web/feature-dashboard/tsconfig.lib.json --noEmit && tsc -p libs/web/feature-dashboard/tsconfig.spec.json --noEmit"
+      }
+    }
+  }
+}

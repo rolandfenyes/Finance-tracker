@@ -103,7 +103,7 @@ test('logs in with the server session and completes the server-directed onboardi
 
   await expect(page.getByText(/planning baseline/i)).toHaveCount(0);
   await page.getByRole('button', { name: 'Finish setup' }).click();
-  await expect(page).toHaveURL(/\/app$/);
+  await expect(page).toHaveURL(/\/app\/home$/);
   expect(await new AxeBuilder({ page }).analyze()).toMatchObject({ violations: [] });
 });
 

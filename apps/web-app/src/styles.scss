@@ -234,3 +234,525 @@ mmm-inline-alert[data-tone='danger'] {
     align-items: center;
   }
 }
+
+.product-app-shell {
+  min-height: 100dvh;
+  background: var(--surface-page);
+}
+
+.product-sidebar {
+  display: none;
+}
+
+.product-content {
+  width: min(100%, 90rem);
+  min-height: 100dvh;
+  margin-inline: auto;
+  padding: max(1.25rem, var(--safe-area-top)) 1rem calc(6rem + var(--safe-area-bottom));
+}
+
+.product-bottom-navigation {
+  position: fixed;
+  z-index: 20;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  min-height: calc(4.25rem + var(--safe-area-bottom));
+  padding: 0.375rem max(0.25rem, var(--safe-area-right)) var(--safe-area-bottom)
+    max(0.25rem, var(--safe-area-left));
+  border-top: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--surface-card) 94%, transparent);
+  box-shadow: 0 -8px 28px rgb(15 23 42 / 0.08);
+  backdrop-filter: blur(16px);
+}
+
+.product-bottom-navigation a,
+.product-navigation a {
+  display: flex;
+  align-items: center;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.product-bottom-navigation a {
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.125rem;
+  min-width: 0;
+  border-radius: var(--radius-md);
+  font-size: 0.6875rem;
+  font-weight: 650;
+}
+
+.product-bottom-navigation a.active,
+.product-navigation a.active {
+  color: var(--accent);
+  background: var(--accent-container);
+}
+
+.product-bottom-navigation mat-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  font-size: 1.25rem;
+}
+
+.dashboard-period {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-block: 1rem;
+}
+
+.dashboard-period > div {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.875rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+}
+
+.dashboard-period span,
+.metric-card p,
+.metric-card small,
+.finance-disclaimer,
+.section-empty,
+.forecast-list small,
+.mobile-activity-row small,
+.budget-card dt,
+.conversion-status p,
+.conversion-status small {
+  color: var(--text-secondary);
+}
+
+.partial-data-banner {
+  display: block;
+  margin-block: 1rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--status-warning-border);
+  border-radius: var(--radius-md);
+  color: var(--status-warning);
+  background: var(--status-warning-container);
+}
+
+.view-selector {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.25rem;
+  margin-block: 1rem;
+  padding: 0.25rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  background: var(--surface-subtle);
+}
+
+.view-selector button {
+  min-height: 2.75rem;
+  padding: 0.5rem;
+  border: 0;
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  background: transparent;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.view-selector button[aria-pressed='true'] {
+  color: var(--text-primary);
+  background: var(--surface-card);
+  box-shadow: var(--elevation-1);
+}
+
+.dashboard-grid,
+.budget-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.finance-card,
+.dashboard-section,
+.conversion-status,
+.budget-card {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  box-shadow: var(--elevation-1);
+}
+
+.finance-card,
+.dashboard-section,
+.conversion-status {
+  padding: 1rem;
+}
+
+.finance-card-heading,
+.section-heading,
+.budget-card > div:first-child {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.finance-card-heading h2,
+.section-heading h2,
+.budget-card h3 {
+  margin: 0;
+}
+
+.data-badge,
+.allocation-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.75rem;
+  padding-inline: 0.625rem;
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  background: var(--surface-subtle);
+  font-size: 0.75rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.data-badge[data-kind='forecast'] {
+  color: var(--finance-forecast);
+}
+
+.data-badge[data-kind='projection'] {
+  color: var(--finance-projection);
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-block: 1rem;
+}
+
+.metric-card {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.875rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-subtle);
+}
+
+.metric-card p,
+.metric-card strong,
+.metric-card small,
+.finance-disclaimer,
+.conversion-status p {
+  margin: 0;
+}
+
+.metric-card strong,
+.activity-amount strong,
+.signed-variance strong {
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+mmm-metric-card[data-tone='positive'] strong {
+  color: var(--finance-positive);
+}
+
+mmm-metric-card[data-tone='negative'] strong {
+  color: var(--finance-negative);
+}
+
+.conversion-status {
+  display: flex;
+  align-items: start;
+  gap: 0.75rem;
+}
+
+.status-dot {
+  flex: 0 0 auto;
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-top: 0.375rem;
+  border-radius: var(--radius-full);
+  background: var(--status-success);
+}
+
+mmm-conversion-status[data-status='stale'] .status-dot {
+  background: var(--status-warning);
+}
+
+mmm-conversion-status[data-status='unavailable'] .status-dot {
+  background: var(--status-neutral);
+}
+
+.finance-chart-card,
+.dashboard-section {
+  margin-top: 1rem;
+}
+
+.finance-chart {
+  width: 100%;
+  height: 15rem;
+  margin-top: 1rem;
+}
+
+.finance-table {
+  width: 100%;
+  margin-top: 1rem;
+  border-collapse: collapse;
+}
+
+.finance-table caption {
+  margin-bottom: 0.5rem;
+  color: var(--text-secondary);
+  text-align: left;
+}
+
+.finance-table th,
+.finance-table td {
+  padding: 0.625rem;
+  border-bottom: 1px solid var(--divider);
+  text-align: left;
+}
+
+.finance-table td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.forecast-list,
+.activity-list {
+  display: grid;
+  gap: 0;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.forecast-list li,
+.mobile-activity-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 4.25rem;
+  padding-block: 0.75rem;
+  border-bottom: 1px solid var(--divider);
+}
+
+.forecast-list li:last-child,
+mmm-mobile-activity-row:last-child .mobile-activity-row {
+  border-bottom: 0;
+}
+
+.forecast-list li > div,
+.mobile-activity-row > div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.activity-amount {
+  text-align: right;
+}
+
+.budget-grid {
+  margin-top: 1rem;
+}
+
+.budget-card {
+  padding: 0.875rem;
+}
+
+.budget-card dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-block: 1rem;
+}
+
+.budget-card dl div,
+.signed-variance {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.budget-card dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+mmm-signed-variance[data-sign='negative'] strong {
+  color: var(--finance-negative);
+}
+
+mmm-signed-variance[data-sign='positive'] strong {
+  color: var(--finance-positive);
+}
+
+.allocation-badge[data-status='over_allocated'] {
+  color: var(--status-danger);
+  background: var(--status-danger-container);
+}
+
+.more-grid {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.more-grid a {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 4rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  background: var(--surface-card);
+  text-decoration: none;
+  box-shadow: var(--elevation-1);
+}
+
+@media (min-width: 48rem) {
+  .product-app-shell {
+    display: grid;
+    grid-template-columns: 5.25rem minmax(0, 1fr);
+  }
+
+  .product-sidebar {
+    position: sticky;
+    top: 0;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    height: 100dvh;
+    padding: 1rem 0.625rem;
+    border-right: 1px solid var(--border-subtle);
+    background: var(--surface-card);
+  }
+
+  .product-sidebar-header {
+    display: grid;
+    justify-items: center;
+    gap: 0.75rem;
+  }
+
+  .product-sidebar mmm-shell-brand {
+    overflow: hidden;
+    width: 2.75rem;
+  }
+
+  .sidebar-toggle {
+    display: none;
+  }
+
+  .product-navigation {
+    display: grid;
+    align-content: start;
+    gap: 0.375rem;
+    margin-top: 1.5rem;
+  }
+
+  .product-navigation a {
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.25rem;
+    min-height: 4rem;
+    border-radius: var(--radius-md);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  .product-bottom-navigation {
+    display: none;
+  }
+
+  .product-content {
+    width: 100%;
+    padding: 2rem;
+  }
+
+  .dashboard-grid-primary {
+    grid-template-columns: minmax(0, 2fr) minmax(15rem, 1fr);
+    align-items: start;
+  }
+
+  .budget-grid,
+  .more-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 72rem) {
+  .product-app-shell {
+    grid-template-columns: 16rem minmax(0, 1fr);
+    transition: grid-template-columns var(--motion-standard) ease;
+  }
+
+  .product-app-shell.sidebar-collapsed {
+    grid-template-columns: 5.25rem minmax(0, 1fr);
+  }
+
+  .product-sidebar {
+    padding-inline: 1rem;
+  }
+
+  .product-sidebar-header {
+    grid-template-columns: 1fr auto;
+    justify-items: start;
+  }
+
+  .product-sidebar mmm-shell-brand {
+    width: auto;
+  }
+
+  .sidebar-collapsed .product-sidebar mmm-shell-brand {
+    width: 2.75rem;
+  }
+
+  .sidebar-toggle {
+    display: inline-grid;
+  }
+
+  .product-navigation a {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 0.75rem;
+    min-height: 3.25rem;
+    padding-inline: 0.875rem;
+    font-size: 0.875rem;
+    text-align: left;
+  }
+
+  .sidebar-collapsed .product-navigation a {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  .sidebar-collapsed .product-navigation span,
+  .sidebar-collapsed .product-sidebar-header mmm-shell-brand {
+    max-width: 2.75rem;
+  }
+
+  .sidebar-collapsed .product-navigation span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  .metric-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .budget-grid,
+  .more-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

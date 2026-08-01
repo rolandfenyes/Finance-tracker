@@ -42,6 +42,8 @@ export const appRoutes: Route[] = [
     ],
     loadComponent: () =>
       import('./shells/product-shell').then((component) => component.ProductShellComponent),
+    loadChildren: () =>
+      import('@mymoneymap/feature-dashboard').then((feature) => feature.DASHBOARD_ROUTES),
   },
   {
     path: 'admin',
