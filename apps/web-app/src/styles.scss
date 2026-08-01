@@ -12,6 +12,74 @@
     var(--surface-page);
 }
 
+.planning-grid,
+.entity-list {
+  display: grid;
+  gap: var(--space-4);
+  margin-block: var(--space-5);
+}
+
+.planning-grid {
+  grid-template-columns: 1fr;
+}
+.planning-link {
+  color: inherit;
+  text-decoration: none;
+}
+.planning-link:hover,
+.planning-link:focus-visible {
+  border-color: var(--accent);
+}
+.entity-heading,
+.filter-bar,
+.actions,
+.metric-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.feature-form {
+  display: grid;
+  gap: var(--space-3);
+  margin-block: var(--space-5);
+}
+.feature-form fieldset {
+  display: grid;
+  gap: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+.metric-row > div {
+  min-width: min(100%, 10rem);
+}
+.metric-row dd {
+  margin: var(--space-1) 0 0;
+  font-variant-numeric: tabular-nums;
+}
+.disabled-link {
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+@media (min-width: 768px) {
+  .planning-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .feature-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .feature-form > h2,
+  .feature-form > fieldset,
+  .feature-form > .actions,
+  .feature-form > button,
+  .feature-form > .data-provenance {
+    grid-column: 1 / -1;
+  }
+}
+
 .auth-feature-shell {
   display: grid;
   grid-template-rows: auto 1fr auto;

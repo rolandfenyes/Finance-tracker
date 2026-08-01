@@ -23,5 +23,20 @@ export const DASHBOARD_ROUTES: Routes = [
     loadChildren: () =>
       import('@mymoneymap/feature-reports').then((feature) => feature.REPORT_ROUTES),
   },
+  {
+    path: 'plan',
+    loadChildren: () =>
+      import('@mymoneymap/feature-planning').then((feature) => feature.PLANNING_ROUTES),
+  },
+  {
+    path: 'settings/categories',
+    loadComponent: () =>
+      import('@mymoneymap/feature-planning').then((feature) => feature.CategoriesPageComponent),
+  },
+  {
+    path: 'settings/income',
+    loadComponent: () =>
+      import('@mymoneymap/feature-planning').then((feature) => feature.IncomePageComponent),
+  },
   { path: 'more', component: MoreHubPageComponent },
 ];

@@ -7,6 +7,7 @@ export * from './lib/components/financial-workflows';
 export * from './lib/components/inline-alert';
 export * from './lib/components/loading-state';
 export * from './lib/components/page-header';
+export * from './lib/components/planning-widgets';
 export * from './lib/components/section';
 export * from './lib/icons/icon.providers';
 export * from './lib/theme/theme.service';

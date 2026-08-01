@@ -1,0 +1,16 @@
+{
+  "name": "web-feature-planning",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/web/feature-planning/src",
+  "tags": ["scope:web", "type:feature"],
+  "targets": {
+    "lint": { "executor": "@nx/eslint:lint" },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p libs/web/feature-planning/tsconfig.lib.json --noEmit && tsc -p libs/web/feature-planning/tsconfig.spec.json --noEmit"
+      }
+    }
+  }
+}
