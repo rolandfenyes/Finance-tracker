@@ -3,8 +3,8 @@
 Audit date: 2026-07-31  
 Baseline: `apps/api/openapi/openapi.json`  
 Generated client: `libs/generated/api-client/src`  
-Status: **correction workflow approved; CG-001 closed; remaining gaps stay
-frontend-blocking until closed**
+Status: **correction workflow approved; CG-001, CG-002, and CG-004 closed;
+remaining gaps stay frontend-blocking until closed**
 
 ## Audit result
 
@@ -88,7 +88,7 @@ and complete repository freeze checks passed before closure.
 Formerly blocked: Step 03 passkey login and Step 10 passkey
 enrollment/deletion. This dependency is now closed.
 
-### CG-002 — Journal conversion provenance
+### CG-002 — Journal conversion provenance — CLOSED
 
 Affected operations:
 
@@ -97,16 +97,32 @@ Affected operations:
 - `LedgerController_reverse`;
 - `LedgerController_correct`.
 
-Observed: `JournalEntryResponseDto.conversion` generates `{}`. Exact converted
+Original observation: `JournalEntryResponseDto.conversion` generated `{}`. Exact converted
 amount, rate/provenance, stale/unavailable status, or other authoritative fields
-cannot be consumed.
+could not be consumed.
 
-Owner/action: backend ledger/reporting OpenAPI owner must describe the conversion
-object using an explicit DTO.
+Implemented 2026-08-01:
 
-Blocks: Step 05 entry detail and any view that requires journal conversion
-provenance. Basic journal fields may be scaffolded only after Step 05 confirms
-the affected feature is not silently relying on this object.
+- `JournalConversionResponseDto` now defines the existing ledger conversion
+  contract explicitly: status, source amount/currency, target currency, optional
+  converted amount and rates, provider and rate timestamps, precision, and
+  rounding mode;
+- `JournalEntryResponseDto.conversion` references that reusable component and
+  preserves its existing optionality;
+- internal quote identifiers remain excluded from the public response;
+- the generated Angular property is
+  `conversion?: JournalConversionResponseDto`, with decimal values represented
+  as strings and the approved status and rounding-mode unions intact.
+
+Evidence: `ledger.dto.ts`, `journal-reporting-openapi.spec.ts`,
+`ledger-http.integration-spec.ts`, the frozen OpenAPI document, and generated
+`journal-conversion-response-dto.ts`. Backend unit and PostgreSQL integration
+tests, OpenAPI/client/Postman drift checks, generated-client build, migration
+rollback/reapply/drift, and the 66-request/140-assertion Newman acceptance suite
+passed before closure.
+
+Formerly blocked: Step 05 journal conversion provenance. This dependency is now
+closed.
 
 ### CG-003 — Loan calculation/read-model substructures
 
@@ -125,7 +141,7 @@ approved calculation boundary.
 
 Blocks: Step 08 loans.
 
-### CG-004 — Report activity source provenance
+### CG-004 — Report activity source provenance — CLOSED
 
 Affected operations:
 
@@ -133,14 +149,27 @@ Affected operations:
 - `ReportingController_month`;
 - `ReportingController_year`.
 
-Observed: `ReportActivityItemDto.source` generates `{}`.
+Original observation: `ReportActivityItemDto.source` generated `{}`.
 
-Owner/action: backend reporting/OpenAPI owner must describe the existing source
-provenance shape. The frontend must not derive it from identifiers or raw
-journal state.
+Implemented 2026-08-01:
 
-Blocks: Step 04/05 provenance-dependent report activity. Summary and aggregate
-fields that are already typed remain usable.
+- `ReportActivityItemDto.source` now references the existing reusable
+  `JournalSourceResponseDto` instead of an unstructured object;
+- the public provenance contract remains exactly `module` plus nullable
+  `referenceId`, including the approved module enum and UUID format;
+- the generated Angular property is
+  `source: JournalSourceResponseDto`, so the frontend does not infer provenance
+  from raw identifiers or journal state.
+
+Evidence: `reporting.dto.ts`, `journal-reporting-openapi.spec.ts`,
+`reporting-http.integration-spec.ts`, the frozen OpenAPI document, and generated
+`report-activity-item-dto.ts`. Backend unit and PostgreSQL integration tests,
+OpenAPI/client/Postman drift checks, generated-client build, migration
+rollback/reapply/drift, and the 66-request/140-assertion Newman acceptance suite
+passed before closure.
+
+Formerly blocked: Step 04/05 provenance-dependent report activity. This
+dependency is now closed.
 
 ### CG-005 — Generic investment read-model substructures
 
@@ -346,9 +375,9 @@ allowance by CG-001 because the browser workflow requires their runtime result.
 | Gap    | Approval            | Backend correction  | Client regenerated | Freeze checks | Status  |
 | ------ | ------------------- | ------------------- | ------------------ | ------------- | ------- |
 | CG-001 | approved 2026-07-31 | complete 2026-07-31 | yes                | passed        | closed  |
-| CG-002 | approved 2026-07-31 | not started         | no                 | not rerun     | blocked |
+| CG-002 | approved 2026-07-31 | complete 2026-08-01 | yes                | passed        | closed  |
 | CG-003 | approved 2026-07-31 | not started         | no                 | not rerun     | blocked |
-| CG-004 | approved 2026-07-31 | not started         | no                 | not rerun     | blocked |
+| CG-004 | approved 2026-07-31 | complete 2026-08-01 | yes                | passed        | closed  |
 | CG-005 | approved 2026-07-31 | not started         | no                 | not rerun     | blocked |
 | CG-006 | approved 2026-07-31 | not started         | no                 | not rerun     | blocked |
 | CG-007 | approved 2026-07-31 | not started         | no                 | not rerun     | blocked |

@@ -28,7 +28,10 @@ interface ReportResponse {
     }>;
   };
   activity: {
-    items: Array<{ sourceEntryId: string }>;
+    items: Array<{
+      sourceEntryId: string;
+      source: { module: string; referenceId: string | null };
+    }>;
     nextCursor: string | null;
   };
 }
@@ -135,6 +138,13 @@ describe('reporting HTTP contract', () => {
           report.forecast.sources.every(({ sourceEntryId }) => sourceEntryId.includes(':')),
         ).toBe(true);
         expect(report.activity.items).toHaveLength(2);
+        expect(report.activity.items).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              source: { module: 'manual', referenceId: null },
+            }),
+          ]),
+        );
         expect(report.activity.nextCursor).not.toBeNull();
         const budget = report.budget.items.find(({ label }) => label === 'Needs');
         expect(budget?.plan).toMatchObject({

@@ -39,10 +39,10 @@ Angular page.
 |  21 | `POST /api/v1/users/me/currencies`                                 | `CurrencyController_add`                      | onboarding/settings currencies                   | typed                            |
 |  22 | `DELETE /api/v1/users/me/currencies/{code}`                        | `CurrencyController_remove`                   | onboarding/settings currencies                   | intentional void                 |
 |  23 | `PUT /api/v1/users/me/main-currency`                               | `CurrencyController_setMain`                  | onboarding/settings currencies                   | typed                            |
-|  24 | `GET /api/v1/journal/entries`                                      | `LedgerController_list`                       | `/app/activity/**`                               | blocked CG-002                   |
-|  25 | `POST /api/v1/journal/entries`                                     | `LedgerController_create`                     | `/app/activity/**`                               | blocked CG-002                   |
-|  26 | `POST /api/v1/journal/entries/{id}/reversals`                      | `LedgerController_reverse`                    | `/app/activity/**`                               | blocked CG-002                   |
-|  27 | `POST /api/v1/journal/entries/{id}/corrections`                    | `LedgerController_correct`                    | `/app/activity/**`                               | blocked CG-002                   |
+|  24 | `GET /api/v1/journal/entries`                                      | `LedgerController_list`                       | `/app/activity/**`                               | typed; CG-002 closed             |
+|  25 | `POST /api/v1/journal/entries`                                     | `LedgerController_create`                     | `/app/activity/**`                               | typed; CG-002 closed             |
+|  26 | `POST /api/v1/journal/entries/{id}/reversals`                      | `LedgerController_reverse`                    | `/app/activity/**`                               | typed; CG-002 closed             |
+|  27 | `POST /api/v1/journal/entries/{id}/corrections`                    | `LedgerController_correct`                    | `/app/activity/**`                               | typed; CG-002 closed             |
 |  28 | `GET /api/v1/budget-rules`                                         | `BudgetingController_rules`                   | onboarding rules + `/app/plan/budget`            | typed                            |
 |  29 | `POST /api/v1/budget-rules`                                        | `BudgetingController_createRule`              | onboarding rules + `/app/plan/budget`            | typed                            |
 |  30 | `PUT /api/v1/budget-rules`                                         | `BudgetingController_initialize`              | onboarding rules + `/app/plan/budget`            | typed                            |
@@ -72,10 +72,10 @@ Angular page.
 |  54 | `POST /api/v1/loans/{id}/recurring-rule`                           | `LoansController_createRule`                  | `/app/loans/**`                                  | blocked CG-003                   |
 |  55 | `PUT /api/v1/loans/{id}/recurring-rule`                            | `LoansController_updateRule`                  | `/app/loans/**`                                  | blocked CG-003                   |
 |  56 | `DELETE /api/v1/loans/{id}/recurring-rule`                         | `LoansController_deleteRule`                  | `/app/loans/**`                                  | blocked CG-003                   |
-|  57 | `GET /api/v1/reports/months/current`                               | `ReportingController_current`                 | `/app/home`                                      | blocked CG-004                   |
-|  58 | `GET /api/v1/reports/months/{year}/{month}`                        | `ReportingController_month`                   | `/app/reports/**`                                | blocked CG-004                   |
+|  57 | `GET /api/v1/reports/months/current`                               | `ReportingController_current`                 | `/app/home`                                      | typed; CG-004 closed             |
+|  58 | `GET /api/v1/reports/months/{year}/{month}`                        | `ReportingController_month`                   | `/app/reports/**`                                | typed; CG-004 closed             |
 |  59 | `GET /api/v1/reports/years`                                        | `ReportingController_years`                   | `/app/reports/**`                                | typed                            |
-|  60 | `GET /api/v1/reports/years/{year}`                                 | `ReportingController_year`                    | `/app/reports/**`                                | blocked CG-004                   |
+|  60 | `GET /api/v1/reports/years/{year}`                                 | `ReportingController_year`                    | `/app/reports/**`                                | typed; CG-004 closed             |
 |  61 | `GET /api/v1/goals`                                                | `GoalsController_list`                        | `/app/goals/**`                                  | typed                            |
 |  62 | `POST /api/v1/goals`                                               | `GoalsController_create`                      | `/app/goals/**`                                  | typed                            |
 |  63 | `PATCH /api/v1/goals/{id}`                                         | `GoalsController_update`                      | `/app/goals/**`                                  | typed                            |

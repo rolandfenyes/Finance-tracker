@@ -19,9 +19,9 @@ import {
   type AdjustmentDirection,
   type LedgerEconomicType,
   type LedgerSourceModule,
-  type JournalEntry,
   type ManualEconomicType,
 } from './ledger.types';
+import type { RoundingMode } from '../platform/decimal/rounding-policy';
 
 const amountPattern = /^(?:0|[1-9]\d{0,17})(?:\.\d{1,12})?$/;
 const calendarDatePattern = /^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])$/;
@@ -185,6 +185,47 @@ export class JournalSourceResponseDto {
   referenceId!: string | null;
 }
 
+export class JournalConversionResponseDto {
+  @ApiProperty({ enum: ['available', 'stale', 'unavailable'] })
+  status!: 'available' | 'stale' | 'unavailable';
+
+  @ApiProperty({ type: String, example: '125.50' })
+  sourceAmount!: string;
+
+  @ApiProperty({ type: String, example: 'USD', pattern: '^[A-Z]{3}$' })
+  sourceCurrency!: string;
+
+  @ApiProperty({ type: String, example: 'HUF', pattern: '^[A-Z]{3}$' })
+  targetCurrency!: string;
+
+  @ApiProperty({ type: String, required: false, example: '45180.00' })
+  convertedAmount?: string;
+
+  @ApiProperty({ type: String, required: false, example: '1.1' })
+  sourceRate?: string;
+
+  @ApiProperty({ type: String, required: false, example: '396' })
+  targetRate?: string;
+
+  @ApiProperty({ type: String, required: false, example: '360' })
+  conversionRate?: string;
+
+  @ApiProperty({ type: String, required: false, example: 'frankfurter' })
+  provider?: string;
+
+  @ApiProperty({ type: String, format: 'date-time', required: false })
+  rateAt?: string;
+
+  @ApiProperty({ type: String, format: 'date-time', required: false })
+  fetchedAt?: string;
+
+  @ApiProperty({ type: Number, minimum: 0, maximum: 4, example: 2 })
+  precision!: number;
+
+  @ApiProperty({ enum: ['DOWN', 'UP', 'HALF_UP', 'HALF_EVEN'] })
+  roundingMode!: RoundingMode;
+}
+
 export class JournalEntryResponseDto {
   @ApiProperty({ type: String, format: 'uuid' })
   id!: string;
@@ -220,26 +261,12 @@ export class JournalEntryResponseDto {
   replacesEntryId!: string | null;
 
   @ApiProperty({
-    type: Object,
+    type: JournalConversionResponseDto,
+    required: false,
     description:
       'Immutable main-currency conversion snapshot. convertedAmount is absent when status is unavailable.',
-    example: {
-      status: 'stale',
-      sourceAmount: '125.50',
-      sourceCurrency: 'USD',
-      targetCurrency: 'HUF',
-      convertedAmount: '45180.00',
-      sourceRate: '1.1',
-      targetRate: '396',
-      conversionRate: '360',
-      provider: 'frankfurter',
-      rateAt: '2026-07-24T00:00:00.000Z',
-      fetchedAt: '2026-07-27T08:00:00.000Z',
-      precision: 2,
-      roundingMode: 'HALF_EVEN',
-    },
   })
-  conversion?: NonNullable<JournalEntry['conversion']>;
+  conversion?: JournalConversionResponseDto;
 
   @ApiProperty({ type: JournalLegResponseDto, isArray: true })
   legs!: JournalLegResponseDto[];

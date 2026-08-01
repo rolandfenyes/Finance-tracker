@@ -68,6 +68,18 @@ describe('ledger HTTP contract', () => {
       actorUserId: users.free.id,
       reversesEntryId: null,
       replacesEntryId: null,
+      source: { module: 'manual', referenceId: null },
+      conversion: {
+        status: 'available',
+        sourceAmount: '1000.000000000000',
+        sourceCurrency: 'HUF',
+        targetCurrency: 'HUF',
+        convertedAmount: '1000.000000000000',
+        conversionRate: '1.000000000000000000',
+        provider: 'identity',
+        precision: 2,
+        roundingMode: 'HALF_EVEN',
+      },
     });
     expect(first.body.legs).toEqual(
       expect.arrayContaining([

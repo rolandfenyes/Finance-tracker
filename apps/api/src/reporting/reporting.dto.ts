@@ -12,6 +12,7 @@ import {
   Min,
 } from 'class-validator';
 import { BudgetRulesResponseDto } from '../budgeting/budgeting.dto';
+import { JournalSourceResponseDto } from '../ledger/ledger.dto';
 import { reportActivityKinds, type ReportActivityKind } from './reporting.types';
 
 const amountPattern = /^(?:0|[1-9]\d{0,17})(?:\.\d{1,12})?$/;
@@ -160,8 +161,8 @@ export class ReportActivityItemDto {
   @ApiProperty({ type: String, nullable: true })
   note!: string | null;
 
-  @ApiProperty({ type: Object })
-  source!: { module: string; referenceId: string | null };
+  @ApiProperty({ type: JournalSourceResponseDto })
+  source!: JournalSourceResponseDto;
 
   @ApiProperty({ type: String, format: 'date' })
   postedOn!: string;

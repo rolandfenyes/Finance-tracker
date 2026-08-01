@@ -126,8 +126,8 @@ prove the UI does not misrepresent or bypass them.
 |   01 | 00 approved       | Angular/Nx scaffold, design system, themes, i18n/test foundations | none beyond Step 00 approval         |
 |   02 | 00–01, drift pass | API core, session, errors, decimal/idempotency/date boundaries    | none for core                        |
 |   03 | 00–02             | identity and onboarding                                           | CG-001 for passkeys                  |
-|   04 | 00–03             | product shell/current month                                       | CG-004 for activity provenance       |
-|   05 | 00–04             | journal and reports                                               | CG-002, CG-004                       |
+|   04 | 00–03             | product shell/current month                                       | none; CG-004 closed                  |
+|   05 | 00–04             | journal and reports                                               | none; CG-002 and CG-004 closed       |
 |   06 | 00–05             | planning and recurrence                                           | none currently                       |
 |   07 | 00–06             | goals and reserve                                                 | none currently                       |
 |   08 | 00–07             | loans and investments                                             | CG-003, CG-005                       |

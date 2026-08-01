@@ -77,13 +77,13 @@ in the frozen OpenAPI. The admin request action is not a user reset page.
 | `/app/investments/new`            | contextual    | session + entitlement | investments / 08    | child | Create generic investment                                            |
 | `/app/investments/:id`            | contextual    | session + entitlement | investments / 08    | child | Read-model balance, movements, scenarios, recurrence; CG-013 applies |
 | `/app/investments/:id/edit`       | contextual    | session + entitlement | investments / 08    | child | Update configuration                                                 |
-| `/app/securities`                 | more          | session + entitlement | securities / 09     | yes   | Portfolio, positions, valuation and refresh; blocked by CG-002       |
-| `/app/securities/activity`        | contextual    | session + entitlement | securities / 09     | child | Securities activity; blocked by CG-002                               |
-| `/app/securities/trade`           | contextual    | session + entitlement | securities / 09     | child | Buy/sell command; blocked by CG-002                                  |
-| `/app/securities/cash`            | contextual    | session + entitlement | securities / 09     | child | Cash movement; blocked by CG-002                                     |
-| `/app/securities/import`          | contextual    | session + entitlement | securities / 09     | child | Preview/commit import; blocked by CG-002                             |
-| `/app/securities/instruments/:id` | contextual    | session + entitlement | securities / 09     | child | Instrument identity/price history; blocked by CG-002                 |
-| `/app/securities/watchlist`       | contextual    | session + entitlement | securities / 09     | child | Watch/unwatch canonical instrument; blocked by CG-002                |
+| `/app/securities`                 | more          | session + entitlement | securities / 09     | yes   | Portfolio, positions, valuation and refresh; CG-002 closed           |
+| `/app/securities/activity`        | contextual    | session + entitlement | securities / 09     | child | Securities activity; CG-002 closed                                   |
+| `/app/securities/trade`           | contextual    | session + entitlement | securities / 09     | child | Buy/sell command; CG-002 closed                                      |
+| `/app/securities/cash`            | contextual    | session + entitlement | securities / 09     | child | Cash movement; CG-002 closed                                         |
+| `/app/securities/import`          | contextual    | session + entitlement | securities / 09     | child | Preview/commit import; CG-002 closed                                 |
+| `/app/securities/instruments/:id` | contextual    | session + entitlement | securities / 09     | child | Instrument identity/price history; CG-002 closed                     |
+| `/app/securities/watchlist`       | contextual    | session + entitlement | securities / 09     | child | Watch/unwatch canonical instrument; CG-002 closed                    |
 | `/app/feedback`                   | more          | session               | feedback / 10       | yes   | Owned feedback list; blocked by CG-003                               |
 | `/app/feedback/new`               | contextual    | session               | feedback / 10       | child | Create feedback; blocked by CG-003                                   |
 | `/app/settings`                   | more          | session               | settings / 10       | yes   | Grouped settings hub                                                 |
@@ -93,7 +93,7 @@ in the frozen OpenAPI. The admin request action is not a user reset page.
 | `/app/settings/currencies`        | contextual    | session               | settings / 10       | child | Currency membership/main currency                                    |
 | `/app/settings/categories`        | contextual    | session               | planning reuse / 10 | child | Reuse category feature                                               |
 | `/app/settings/income`            | contextual    | session               | planning reuse / 10 | child | Reuse income feature                                                 |
-| `/app/settings/notifications`     | contextual    | session               | notifications / 10  | child | Educational preference; blocked by CG-004                            |
+| `/app/settings/notifications`     | contextual    | session               | notifications / 10  | child | Educational preference; CG-004 closed                                |
 | `/app/settings/privacy`           | contextual    | session               | privacy / 10        | child | Export request/status and deletion request                           |
 | `/app/more`                       | primary       | session               | product shell / 04  | yes   | Navigation hub only; no additional API                               |
 

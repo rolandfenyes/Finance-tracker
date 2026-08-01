@@ -4580,6 +4580,32 @@
         },
         "required": ["module", "referenceId"]
       },
+      "JournalConversionResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "enum": ["available", "stale", "unavailable"] },
+          "sourceAmount": { "type": "string", "example": "125.50" },
+          "sourceCurrency": { "type": "string", "example": "USD", "pattern": "^[A-Z]{3}$" },
+          "targetCurrency": { "type": "string", "example": "HUF", "pattern": "^[A-Z]{3}$" },
+          "convertedAmount": { "type": "string", "example": "45180.00" },
+          "sourceRate": { "type": "string", "example": "1.1" },
+          "targetRate": { "type": "string", "example": "396" },
+          "conversionRate": { "type": "string", "example": "360" },
+          "provider": { "type": "string", "example": "frankfurter" },
+          "rateAt": { "type": "string", "format": "date-time" },
+          "fetchedAt": { "type": "string", "format": "date-time" },
+          "precision": { "type": "number", "minimum": 0, "maximum": 4, "example": 2 },
+          "roundingMode": { "type": "string", "enum": ["DOWN", "UP", "HALF_UP", "HALF_EVEN"] }
+        },
+        "required": [
+          "status",
+          "sourceAmount",
+          "sourceCurrency",
+          "targetCurrency",
+          "precision",
+          "roundingMode"
+        ]
+      },
       "JournalLegResponseDto": {
         "type": "object",
         "properties": {
@@ -4619,23 +4645,8 @@
           "reversesEntryId": { "type": "string", "format": "uuid", "nullable": true },
           "replacesEntryId": { "type": "string", "format": "uuid", "nullable": true },
           "conversion": {
-            "type": "object",
             "description": "Immutable main-currency conversion snapshot. convertedAmount is absent when status is unavailable.",
-            "example": {
-              "status": "stale",
-              "sourceAmount": "125.50",
-              "sourceCurrency": "USD",
-              "targetCurrency": "HUF",
-              "convertedAmount": "45180.00",
-              "sourceRate": "1.1",
-              "targetRate": "396",
-              "conversionRate": "360",
-              "provider": "frankfurter",
-              "rateAt": "2026-07-24T00:00:00.000Z",
-              "fetchedAt": "2026-07-27T08:00:00.000Z",
-              "precision": 2,
-              "roundingMode": "HALF_EVEN"
-            }
+            "allOf": [{ "$ref": "#/components/schemas/JournalConversionResponseDto" }]
           },
           "legs": {
             "type": "array",
@@ -4654,7 +4665,6 @@
           "actorUserId",
           "reversesEntryId",
           "replacesEntryId",
-          "conversion",
           "legs"
         ]
       },
@@ -5349,7 +5359,7 @@
           },
           "categoryId": { "type": "string", "format": "uuid", "nullable": true },
           "note": { "type": "string", "nullable": true },
-          "source": { "type": "object" },
+          "source": { "$ref": "#/components/schemas/JournalSourceResponseDto" },
           "postedOn": { "type": "string", "format": "date" },
           "effectiveAt": { "type": "string", "format": "date-time" },
           "amount": { "type": "string" },

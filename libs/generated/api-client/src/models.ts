@@ -64,6 +64,7 @@ export type { GoalResponseDto } from './models/goal-response-dto';
 export type { GoalsResponseDto } from './models/goals-response-dto';
 export type { InvestmentResponseDto } from './models/investment-response-dto';
 export type { InvestmentsResponseDto } from './models/investments-response-dto';
+export type { JournalConversionResponseDto } from './models/journal-conversion-response-dto';
 export type { JournalCorrectionResponseDto } from './models/journal-correction-response-dto';
 export type { JournalEntryResponseDto } from './models/journal-entry-response-dto';
 export type { JournalLegResponseDto } from './models/journal-leg-response-dto';
